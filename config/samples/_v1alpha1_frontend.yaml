@@ -1,0 +1,7 @@
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: frontend-sample
+spec:
+  # Add fields here
+  foo: bar
