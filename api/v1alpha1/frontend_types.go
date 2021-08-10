@@ -23,13 +23,25 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+type ApiInfo struct {
+	Versions []string `json:"versions"`
+}
+
+type FrontendInfo struct {
+	Paths []string `json:"paths"`
+}
+
 // FrontendSpec defines the desired state of Frontend
 type FrontendSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of Frontend. Edit frontend_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Title          string       `json:"title"`
+	DeploymentRepo string       `json:"deploymentRepo"`
+	API            ApiInfo      `json:"API"`
+	Frontend       FrontendInfo `json:"frontend"`
+	Image          string       `json:"image"`
 }
 
 // FrontendStatus defines the observed state of Frontend
