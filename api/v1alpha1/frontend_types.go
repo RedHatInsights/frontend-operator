@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -37,6 +39,7 @@ type FrontendSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of Frontend. Edit frontend_types.go to remove/update
+	EnvName        string       `json:"envName"`
 	Title          string       `json:"title"`
 	DeploymentRepo string       `json:"deploymentRepo"`
 	API            ApiInfo      `json:"API"`
@@ -73,4 +76,9 @@ type FrontendList struct {
 
 func init() {
 	SchemeBuilder.Register(&Frontend{}, &FrontendList{})
+}
+
+// GetIdent returns an ident <env>.<app> that should be unique across the cluster.
+func (i *Frontend) GetIdent() string {
+	return fmt.Sprintf("%v.%v", i.Spec.EnvName, i.Name)
 }

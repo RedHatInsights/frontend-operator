@@ -79,6 +79,7 @@ func main() {
 	}
 
 	if err = (&controllers.FrontendReconciler{
+		Log:    ctrl.Log.WithName("controllers").WithName("Frontend"),
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {

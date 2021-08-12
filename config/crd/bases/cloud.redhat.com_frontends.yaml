@@ -36,10 +36,41 @@ spec:
           spec:
             description: FrontendSpec defines the desired state of Frontend
             properties:
-              foo:
+              API:
+                properties:
+                  versions:
+                    items:
+                      type: string
+                    type: array
+                required:
+                - versions
+                type: object
+              deploymentRepo:
+                type: string
+              envName:
                 description: Foo is an example field of Frontend. Edit frontend_types.go
                   to remove/update
                 type: string
+              frontend:
+                properties:
+                  paths:
+                    items:
+                      type: string
+                    type: array
+                required:
+                - paths
+                type: object
+              image:
+                type: string
+              title:
+                type: string
+            required:
+            - API
+            - deploymentRepo
+            - envName
+            - frontend
+            - image
+            - title
             type: object
           status:
             description: FrontendStatus defines the observed state of Frontend
