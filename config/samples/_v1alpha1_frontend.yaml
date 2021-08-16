@@ -10,8 +10,7 @@ spec:
   API:
     versions:
     - v1
-  frontendInfo:
+  frontend:
     paths:
     - test
   image: quay.io/psav/clowder-hello:latest
-

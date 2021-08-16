@@ -82,3 +82,22 @@ func init() {
 func (i *Frontend) GetIdent() string {
 	return fmt.Sprintf("%v.%v", i.Spec.EnvName, i.Name)
 }
+
+// GetLabels returns a base set of labels relating to the ClowdApp.
+func (i *Frontend) GetLabels() map[string]string {
+	if i.Labels == nil {
+		i.Labels = map[string]string{}
+	}
+
+	if _, ok := i.Labels["frontend"]; !ok {
+		i.Labels["frontend"] = i.ObjectMeta.Name
+	}
+
+	newMap := make(map[string]string, len(i.Labels))
+
+	for k, v := range i.Labels {
+		newMap[k] = v
+	}
+
+	return newMap
+}

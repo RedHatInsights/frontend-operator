@@ -23,6 +23,8 @@ import (
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+
+	apps "k8s.io/api/apps/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -38,13 +40,20 @@ import (
 
 const frontendFinalizer = "finalizer.frontend.cloud.redhat.com"
 
-var scheme = runtime.NewScheme()
+type FEKey string
 
-func init() {
+func createNewScheme() *runtime.Scheme {
+	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(crd.AddToScheme(scheme))
-	// +kubebuilder:scaffold:scheme
+	return scheme
 }
+
+var scheme = createNewScheme()
+
+var cacheConfig = resCache.NewCacheConfig(scheme, FEKey("log"))
+
+var CoreDeployment = cacheConfig.NewSingleResourceIdent("main", "deployment", &apps.Deployment{})
 
 // FrontendReconciler reconciles a Frontend object
 type FrontendReconciler struct {
@@ -71,8 +80,8 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	r.Log = log.FromContext(ctx)
 	qualifiedName := fmt.Sprintf("%s:%s", req.Namespace, req.Name)
 	log := r.Log.WithValues("frontend", qualifiedName).WithValues("id", utils.RandString(5))
-	ctx = context.WithValue(ctx, "log", &log)
-	ctx = context.WithValue(ctx, "recorder", &r.Recorder)
+	ctx = context.WithValue(ctx, FEKey("log"), &log)
+	ctx = context.WithValue(ctx, FEKey("recorder"), &r.Recorder)
 	frontend := crd.Frontend{}
 	err := r.Client.Get(ctx, req.NamespacedName, &frontend)
 
@@ -109,19 +118,28 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	log.Info("Reconciliation started", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
 
-	ctx = context.WithValue(ctx, "obj", &frontend)
+	ctx = context.WithValue(ctx, FEKey("obj"), &frontend)
 
-	cacheConfig := resCache.NewCacheConfig(scheme)
 	cache := resCache.NewObjectCache(ctx, r.Client, cacheConfig)
 
-	err = runReconciliation(&cache)
+	err = runReconciliation(&frontend, &cache)
+
+	if err != nil {
+		//	SetClowdAppConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, err)
+		return ctrl.Result{Requeue: true}, err
+	}
 
 	// if err != nil {
 	// 	SetClowdAppConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, err)
 	// 	return ctrl.Result{Requeue: true}, err
 	// }
 
-	// cacheErr := cache.ApplyAll()
+	cacheErr := cache.ApplyAll()
+
+	if cacheErr != nil {
+		//	SetClowdAppConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, err)
+		return ctrl.Result{Requeue: true}, cacheErr
+	}
 
 	// log.Info("Reconciliation successful", "app", fmt.Sprintf("%s:%s", app.Namespace, app.Name))
 	// err := cache.Reconcile(&app)
