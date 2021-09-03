@@ -54,6 +54,7 @@ var scheme = createNewScheme()
 var cacheConfig = resCache.NewCacheConfig(scheme, FEKey("log"))
 
 var CoreDeployment = cacheConfig.NewSingleResourceIdent("main", "deployment", &apps.Deployment{})
+var ConfigDeployment = cacheConfig.NewSingleResourceIdent("config", "deployment", &apps.Deployment{})
 
 // FrontendReconciler reconciles a Frontend object
 type FrontendReconciler struct {

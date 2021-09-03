@@ -10,8 +10,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+var frontendConfigNamespace = "fon"
+
 func runReconciliation(frontend *crd.Frontend, cache *resCache.ObjectCache) error {
 	if err := createFrontendDeployment(frontend, cache); err != nil {
+		return err
+	}
+
+	if err := createConfigDeployment(frontend, cache); err != nil {
 		return err
 	}
 
@@ -72,8 +78,48 @@ func createFrontendIngress() {
 	// of a backend service ingress *hint* it should be almost identical
 }
 
-func createConfigDeployment() {
-	// This will be a deployment like the example above
+func createConfigDeployment(frontend *crd.Frontend, cache *resCache.ObjectCache) error {
+	// Create new empty struct
+	d := &apps.Deployment{}
+
+	// Define name of resource
+	nn := types.NamespacedName{
+		Name:      frontend.Spec.EnvName,
+		Namespace: frontendConfigNamespace,
+	}
+
+	// Create object in cache (will populate cache if exists)
+	if err := cache.Create(ConfigDeployment, nn, d); err != nil {
+		return err
+	}
+
+	// Label with the right labels
+	labels := frontend.GetLabels()
+
+	labeler := utils.GetCustomLabeler(labels, nn, frontend)
+	labeler(d)
+
+	// Modify the obejct to set the things we care about
+	d.Spec.Template.Spec.Containers = []v1.Container{{
+		Name:  "config",
+		Image: "quay.io/redhat-cloud-services/cloud-services-config",
+		Ports: []v1.ContainerPort{{
+			Name:          "web",
+			ContainerPort: 80,
+			Protocol:      "TCP",
+		}},
+	}}
+
+	d.Spec.Template.ObjectMeta.Labels = labels
+
+	d.Spec.Selector = &metav1.LabelSelector{MatchLabels: labels}
+
+	// Inform the cache that our updates are complete
+	if err := cache.Update(ConfigDeployment, d); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func createConfigService() {
