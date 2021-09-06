@@ -1,11 +1,11 @@
 apiVersion: cloud.redhat.com/v1alpha1
 kind: Frontend
 metadata:
-  name: inventory
+  name: chrome
 spec:
   # Add fields here
-  envName: boot
-  title: Inventory
+  envName: chrome
+  title: Chrome
   deploymentRepo: http://test
   API:
     versions:
@@ -13,4 +13,4 @@ spec:
   frontend:
     paths:
     - test
-  image: quay.io/redhat-cloud-services/inventory-frontend
+  image: quay.io/redhat-cloud-services/chrome-frontend
