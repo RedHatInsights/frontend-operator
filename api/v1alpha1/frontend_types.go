@@ -83,6 +83,15 @@ func (i *Frontend) GetIdent() string {
 	return fmt.Sprintf("%v.%v", i.Spec.EnvName, i.Name)
 }
 
+func (FEInfo *FrontendInfo) HasPath(lookup string) bool {
+	for _, a := range FEInfo.Paths {
+		if a == lookup {
+			return true
+		}
+	}
+	return false
+}
+
 // GetLabels returns a base set of labels relating to the ClowdApp.
 func (i *Frontend) GetLabels() map[string]string {
 	if i.Labels == nil {

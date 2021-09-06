@@ -1,11 +1,14 @@
 package controllers
 
 import (
+	"fmt"
+
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	resCache "github.com/RedHatInsights/rhc-osdk-utils/resource_cache"
 	"github.com/RedHatInsights/rhc-osdk-utils/utils"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	networking "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -18,6 +21,10 @@ func runReconciliation(frontend *crd.Frontend, cache *resCache.ObjectCache) erro
 	}
 
 	if err := createConfigDeployment(frontend, cache); err != nil {
+		return err
+	}
+
+	if err := createConfigIngress(frontend, cache); err != nil {
 		return err
 	}
 
@@ -131,7 +138,64 @@ func createConfigConfigMap() {
 	// we need to read ALL the Frontend CRDs in the Env that we care about
 }
 
-func createConfigIngress() {
-	// https://github.com/RedHatInsights/clowder/pull/393/files#diff-ac84089738397c0bc1c32c7f4375abeaec31567072384a096e3e8c972f1359f1R183 is an example
-	// of a backend service ingress *hint* it should be almost identical
+func createConfigIngress(frontend *crd.Frontend, cache *resCache.ObjectCache) error {
+	netobj := &networking.Ingress{}
+
+	nn := types.NamespacedName{
+		Name:      frontend.Spec.EnvName,
+		Namespace: frontendConfigNamespace,
+	}
+
+	if err := cache.Create(WebIngress, nn, netobj); err != nil {
+		return err
+	}
+
+	labels := frontend.GetLabels()
+	labler := utils.MakeLabeler(nn, labels, frontend)
+	labler(netobj)
+
+	frontendPath := frontend.Spec.Frontend.Paths
+	defaultPath := fmt.Sprintf("/apps/%s", frontend.Spec.EnvName)
+
+	if !frontend.Spec.Frontend.HasPath(defaultPath) {
+		frontendPath = append(frontendPath, defaultPath)
+	}
+
+	prefixType := "Prefix"
+
+	var ingressPapths []networking.HTTPIngressPath
+	for _, a := range frontendPath {
+		newPath := networking.HTTPIngressPath{
+			Path:     a,
+			PathType: (*networking.PathType)(&prefixType),
+			Backend: networking.IngressBackend{
+				Service: &networking.IngressServiceBackend{
+					Name: nn.Name,
+					Port: networking.ServiceBackendPort{
+						Number: 80,
+					},
+				},
+			},
+		}
+		ingressPapths = append(ingressPapths, newPath)
+	}
+
+	netobj.Spec = networking.IngressSpec{
+		Rules: []networking.IngressRule{
+			{
+				Host: "main",
+				IngressRuleValue: networking.IngressRuleValue{
+					HTTP: &networking.HTTPIngressRuleValue{
+						Paths: ingressPapths,
+					},
+				},
+			},
+		},
+	}
+
+	if err := cache.Update(WebIngress, netobj); err != nil {
+		return err
+	}
+
+	return nil
 }
