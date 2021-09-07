@@ -101,6 +101,7 @@ func createFrontendService(deployment *apps.Deployment, frontend *crd.Frontend, 
 	appProtocol := "http"
 
 	labels := make(map[string]string)
+	labels["frontend"] = frontend.Name
 	labeler := utils.GetCustomLabeler(labels, nn, frontend)
 	labeler(s)
 	// We should also set owner reference to the pod
@@ -114,6 +115,7 @@ func createFrontendService(deployment *apps.Deployment, frontend *crd.Frontend, 
 	}
 
 	servicePorts = append(servicePorts, port)
+	s.Spec.Selector = labels
 
 	utils.MakeService(s, nn, labels, servicePorts, frontend, false)
 
@@ -141,7 +143,7 @@ func createFrontendIngress(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 	labler(netobj)
 
 	frontendPath := frontend.Spec.Frontend.Paths
-	defaultPath := fmt.Sprintf("/apps/%s", frontend.Spec.EnvName)
+	defaultPath := fmt.Sprintf("/apps/%s", frontend.Name)
 
 	if !frontend.Spec.Frontend.HasPath(defaultPath) {
 		frontendPath = append(frontendPath, defaultPath)
@@ -169,7 +171,7 @@ func createFrontendIngress(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 	netobj.Spec = networking.IngressSpec{
 		Rules: []networking.IngressRule{
 			{
-				Host: "main",
+				Host: frontend.Spec.EnvName,
 				IngressRuleValue: networking.IngressRuleValue{
 					HTTP: &networking.HTTPIngressRuleValue{
 						Paths: ingressPapths,
