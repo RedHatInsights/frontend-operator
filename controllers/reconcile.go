@@ -101,10 +101,8 @@ func createFrontendService(deployment *apps.Deployment, frontend *crd.Frontend, 
 	appProtocol := "http"
 
 	labels := make(map[string]string)
-	labels["frontend"] = nn.Name
-	s.SetName(nn.Name)
-	s.SetNamespace(nn.Namespace)
-	s.SetLabels(labels)
+	labeler := utils.GetCustomLabeler(labels, nn, frontend)
+	labeler(s)
 	// We should also set owner reference to the pod
 
 	port := v1.ServicePort{
