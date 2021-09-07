@@ -14,14 +14,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-var frontendConfigNamespace = "fon"
-
 func runReconciliation(frontend *crd.Frontend, cache *resCache.ObjectCache) error {
 	if err := createFrontendDeployment(frontend, cache); err != nil {
 		return err
 	}
 
-	if err := createConfigDeployment(frontend, cache); err != nil {
+	if err := createFrontendService(frontend, cache); err != nil {
 		return err
 	}
 
@@ -68,10 +66,6 @@ func createFrontendDeployment(frontend *crd.Frontend, cache *resCache.ObjectCach
 
 	d.Spec.Selector = &metav1.LabelSelector{MatchLabels: labels}
 
-	if err := createFrontendService(d, frontend, cache); err != nil {
-		return err
-	}
-
 	// Inform the cache that our updates are complete
 	if err := cache.Update(CoreDeployment, d); err != nil {
 		return err
@@ -81,7 +75,7 @@ func createFrontendDeployment(frontend *crd.Frontend, cache *resCache.ObjectCach
 }
 
 //Will need to create a service resource ident in provider like CoreDeployment
-func createFrontendService(deployment *apps.Deployment, frontend *crd.Frontend, cache *resCache.ObjectCache) error {
+func createFrontendService(frontend *crd.Frontend, cache *resCache.ObjectCache) error {
 	// Create empty service
 	s := &v1.Service{}
 
@@ -188,61 +182,7 @@ func createFrontendIngress(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 	return nil
 }
 
-func createConfigDeployment(frontend *crd.Frontend, cache *resCache.ObjectCache) error {
-	// Create new empty struct
-	d := &apps.Deployment{}
-
-	// Define name of resource
-	nn := types.NamespacedName{
-		Name:      frontend.Spec.EnvName,
-		Namespace: frontendConfigNamespace,
-	}
-
-	// Create object in cache (will populate cache if exists)
-	if err := cache.Create(ConfigDeployment, nn, d); err != nil {
-		return err
-	}
-
-	// Label with the right labels
-	labels := frontend.GetLabels()
-
-	labeler := utils.GetCustomLabeler(labels, nn, frontend)
-	labeler(d)
-
-	// Modify the obejct to set the things we care about
-	d.Spec.Template.Spec.Containers = []v1.Container{{
-		Name:  "config",
-		Image: "quay.io/redhat-cloud-services/cloud-services-config",
-		Ports: []v1.ContainerPort{{
-			Name:          "web",
-			ContainerPort: 80,
-			Protocol:      "TCP",
-		}},
-	}}
-
-	d.Spec.Template.ObjectMeta.Labels = labels
-
-	d.Spec.Selector = &metav1.LabelSelector{MatchLabels: labels}
-
-	// Inform the cache that our updates are complete
-	if err := cache.Update(ConfigDeployment, d); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func createConfigService() {
-	// This will be a service like above
-}
-
 func createConfigConfigMap() {
 	// Will need to interact directly with the client here, and not the cache because
 	// we need to read ALL the Frontend CRDs in the Env that we care about
-}
-
-func createConfigIngress(frontend *crd.Frontend, cache *resCache.ObjectCache) error {
-	// https://github.com/RedHatInsights/clowder/pull/393/files#diff-ac84089738397c0bc1c32c7f4375abeaec31567072384a096e3e8c972f1359f1R183 is an example
-	// of a backend service ingress *hint* it should be almost identical
-	return nil
 }
