@@ -4,7 +4,7 @@ metadata:
   name: chrome
 spec:
   # Add fields here
-  envName: chrome
+  envName: fon
   title: Chrome
   deploymentRepo: http://test
   API:

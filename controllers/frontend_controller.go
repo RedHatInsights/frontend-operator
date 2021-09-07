@@ -145,12 +145,12 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{Requeue: true}, cacheErr
 	}
 
-	// log.Info("Reconciliation successful", "app", fmt.Sprintf("%s:%s", app.Namespace, app.Name))
-	// err := cache.Reconcile(&app)
-	// if err != nil {
-	// 	log.Info("Reconcile error", "error", err)
-	// 	return ctrl.Result{Requeue: requeue}, nil
-	// }
+	log.Info("Reconciliation successful", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
+	err = cache.Reconcile(frontend.GetUID())
+	if err != nil {
+		log.Info("Reconcile error", "error", err)
+		return ctrl.Result{Requeue: true}, nil
+	}
 	// SetClowdAppConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil)
 
 	if err == nil {
