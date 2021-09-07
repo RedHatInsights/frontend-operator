@@ -11,6 +11,7 @@ import (
 	networking "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 var frontendConfigNamespace = "fon"
@@ -24,7 +25,7 @@ func runReconciliation(frontend *crd.Frontend, cache *resCache.ObjectCache) erro
 		return err
 	}
 
-	if err := createConfigIngress(frontend, cache); err != nil {
+	if err := createFrontendIngress(frontend, cache); err != nil {
 		return err
 	}
 
@@ -67,6 +68,10 @@ func createFrontendDeployment(frontend *crd.Frontend, cache *resCache.ObjectCach
 
 	d.Spec.Selector = &metav1.LabelSelector{MatchLabels: labels}
 
+	if err := createFrontendService(d, frontend, cache); err != nil {
+		return err
+	}
+
 	// Inform the cache that our updates are complete
 	if err := cache.Update(CoreDeployment, d); err != nil {
 		return err
@@ -75,14 +80,114 @@ func createFrontendDeployment(frontend *crd.Frontend, cache *resCache.ObjectCach
 	return nil
 }
 
-func createFrontendService() {
-	//s := v1.Service{}
-	//Will need to create a service resource ident in provider like CoreDeployment
+//Will need to create a service resource ident in provider like CoreDeployment
+func createFrontendService(deployment *apps.Deployment, frontend *crd.Frontend, cache *resCache.ObjectCache) error {
+	// Create empty service
+	s := &v1.Service{}
+
+	// Define name of resource
+	nn := types.NamespacedName{
+		Name:      frontend.Name,
+		Namespace: frontend.Namespace,
+	}
+
+	// Create object in cache (will populate cache if exists)
+	if err := cache.Create(CoreService, nn, s); err != nil {
+		return err
+	}
+
+	servicePorts := []v1.ServicePort{}
+
+	appProtocol := "http"
+
+	labels := make(map[string]string)
+	labels["frontend"] = nn.Name
+	s.SetName(nn.Name)
+	s.SetNamespace(nn.Namespace)
+	s.SetLabels(labels)
+	// We should also set owner reference to the pod
+
+	port := v1.ServicePort{
+		Name:        "public",
+		Port:        8000,
+		TargetPort:  intstr.FromInt(80),
+		Protocol:    "TCP",
+		AppProtocol: &appProtocol,
+	}
+	servicePorts = append(servicePorts, port)
+	s.Spec = v1.ServiceSpec{
+		Ports:    servicePorts,
+		Selector: labels,
+		Type:     "ClusterIP",
+	}
+
+	// Inform the cache that our updates are complete
+	if err := cache.Update(CoreService, s); err != nil {
+		return err
+	}
+	return nil
 }
 
-func createFrontendIngress() {
-	// https://github.com/RedHatInsights/clowder/pull/393/files#diff-ac84089738397c0bc1c32c7f4375abeaec31567072384a096e3e8c972f1359f1R183 is an example
-	// of a backend service ingress *hint* it should be almost identical
+func createFrontendIngress(frontend *crd.Frontend, cache *resCache.ObjectCache) error {
+	netobj := &networking.Ingress{}
+
+	nn := types.NamespacedName{
+		Name:      frontend.Spec.EnvName,
+		Namespace: frontendConfigNamespace,
+	}
+
+	if err := cache.Create(WebIngress, nn, netobj); err != nil {
+		return err
+	}
+
+	labels := frontend.GetLabels()
+	labler := utils.MakeLabeler(nn, labels, frontend)
+	labler(netobj)
+
+	frontendPath := frontend.Spec.Frontend.Paths
+	defaultPath := fmt.Sprintf("/apps/%s", frontend.Spec.EnvName)
+
+	if !frontend.Spec.Frontend.HasPath(defaultPath) {
+		frontendPath = append(frontendPath, defaultPath)
+	}
+
+	prefixType := "Prefix"
+
+	var ingressPapths []networking.HTTPIngressPath
+	for _, a := range frontendPath {
+		newPath := networking.HTTPIngressPath{
+			Path:     a,
+			PathType: (*networking.PathType)(&prefixType),
+			Backend: networking.IngressBackend{
+				Service: &networking.IngressServiceBackend{
+					Name: nn.Name,
+					Port: networking.ServiceBackendPort{
+						Number: 8000,
+					},
+				},
+			},
+		}
+		ingressPapths = append(ingressPapths, newPath)
+	}
+
+	netobj.Spec = networking.IngressSpec{
+		Rules: []networking.IngressRule{
+			{
+				Host: "main",
+				IngressRuleValue: networking.IngressRuleValue{
+					HTTP: &networking.HTTPIngressRuleValue{
+						Paths: ingressPapths,
+					},
+				},
+			},
+		},
+	}
+
+	if err := cache.Update(WebIngress, netobj); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func createConfigDeployment(frontend *crd.Frontend, cache *resCache.ObjectCache) error {
@@ -139,63 +244,7 @@ func createConfigConfigMap() {
 }
 
 func createConfigIngress(frontend *crd.Frontend, cache *resCache.ObjectCache) error {
-	netobj := &networking.Ingress{}
-
-	nn := types.NamespacedName{
-		Name:      frontend.Spec.EnvName,
-		Namespace: frontendConfigNamespace,
-	}
-
-	if err := cache.Create(WebIngress, nn, netobj); err != nil {
-		return err
-	}
-
-	labels := frontend.GetLabels()
-	labler := utils.MakeLabeler(nn, labels, frontend)
-	labler(netobj)
-
-	frontendPath := frontend.Spec.Frontend.Paths
-	defaultPath := fmt.Sprintf("/apps/%s", frontend.Spec.EnvName)
-
-	if !frontend.Spec.Frontend.HasPath(defaultPath) {
-		frontendPath = append(frontendPath, defaultPath)
-	}
-
-	prefixType := "Prefix"
-
-	var ingressPapths []networking.HTTPIngressPath
-	for _, a := range frontendPath {
-		newPath := networking.HTTPIngressPath{
-			Path:     a,
-			PathType: (*networking.PathType)(&prefixType),
-			Backend: networking.IngressBackend{
-				Service: &networking.IngressServiceBackend{
-					Name: nn.Name,
-					Port: networking.ServiceBackendPort{
-						Number: 80,
-					},
-				},
-			},
-		}
-		ingressPapths = append(ingressPapths, newPath)
-	}
-
-	netobj.Spec = networking.IngressSpec{
-		Rules: []networking.IngressRule{
-			{
-				Host: "main",
-				IngressRuleValue: networking.IngressRuleValue{
-					HTTP: &networking.HTTPIngressRuleValue{
-						Paths: ingressPapths,
-					},
-				},
-			},
-		},
-	}
-
-	if err := cache.Update(WebIngress, netobj); err != nil {
-		return err
-	}
-
+	// https://github.com/RedHatInsights/clowder/pull/393/files#diff-ac84089738397c0bc1c32c7f4375abeaec31567072384a096e3e8c972f1359f1R183 is an example
+	// of a backend service ingress *hint* it should be almost identical
 	return nil
 }

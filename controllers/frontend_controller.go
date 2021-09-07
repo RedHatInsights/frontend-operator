@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	apps "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -54,6 +55,7 @@ var scheme = createNewScheme()
 var cacheConfig = resCache.NewCacheConfig(scheme, FEKey("log"))
 
 var CoreDeployment = cacheConfig.NewSingleResourceIdent("main", "deployment", &apps.Deployment{})
+var CoreService = cacheConfig.NewSingleResourceIdent("main", "service", &v1.Service{})
 var ConfigDeployment = cacheConfig.NewSingleResourceIdent("config", "deployment", &apps.Deployment{})
 var WebIngress = cacheConfig.NewMultiResourceIdent("ingress", "web_ingress", &networking.Ingress{})
 
