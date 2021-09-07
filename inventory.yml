@@ -4,7 +4,7 @@ metadata:
   name: inventory
 spec:
   # Add fields here
-  envName: boot
+  envName: inventory
   title: Inventory
   deploymentRepo: http://test
   API:
@@ -12,5 +12,5 @@ spec:
     - v1
   frontend:
     paths:
-    - test
+    - /insights/inventory
   image: quay.io/redhat-cloud-services/inventory-frontend
