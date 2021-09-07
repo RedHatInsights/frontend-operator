@@ -116,7 +116,6 @@ func createFrontendService(deployment *apps.Deployment, frontend *crd.Frontend, 
 	s.Spec = v1.ServiceSpec{
 		Ports:    servicePorts,
 		Selector: labels,
-		Type:     "ClusterIP",
 	}
 
 	// Inform the cache that our updates are complete
@@ -130,8 +129,8 @@ func createFrontendIngress(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 	netobj := &networking.Ingress{}
 
 	nn := types.NamespacedName{
-		Name:      frontend.Spec.EnvName,
-		Namespace: frontendConfigNamespace,
+		Name:      frontend.Name,
+		Namespace: frontend.Namespace,
 	}
 
 	if err := cache.Create(WebIngress, nn, netobj); err != nil {
@@ -139,7 +138,7 @@ func createFrontendIngress(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 	}
 
 	labels := frontend.GetLabels()
-	labler := utils.MakeLabeler(nn, labels, frontend)
+	labler := utils.GetCustomLabeler(labels, nn, frontend)
 	labler(netobj)
 
 	frontendPath := frontend.Spec.Frontend.Paths
