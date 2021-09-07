@@ -112,11 +112,10 @@ func createFrontendService(deployment *apps.Deployment, frontend *crd.Frontend, 
 		Protocol:    "TCP",
 		AppProtocol: &appProtocol,
 	}
+
 	servicePorts = append(servicePorts, port)
-	s.Spec = v1.ServiceSpec{
-		Ports:    servicePorts,
-		Selector: labels,
-	}
+
+	utils.MakeService(s, nn, labels, servicePorts, frontend, false)
 
 	// Inform the cache that our updates are complete
 	if err := cache.Update(CoreService, s); err != nil {
