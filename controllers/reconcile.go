@@ -71,7 +71,7 @@ func createFrontendDeployment(frontend *crd.Frontend, cache *resCache.ObjectCach
 		}},
 		VolumeMounts: []v1.VolumeMount{{
 			Name:      "config",
-			MountPath: "/config/",
+			MountPath: "/config/chrome/",
 		}},
 	}}
 
