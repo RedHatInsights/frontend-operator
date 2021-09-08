@@ -14,3 +14,8 @@ spec:
     paths:
     - /insights/inventory
   image: quay.io/redhat-cloud-services/inventory-frontend
+  navItem:
+    appId: "inventory"
+    title: "Inventory"
+    href: "/insights/inventory"
+    product: "Red Hat Insights"

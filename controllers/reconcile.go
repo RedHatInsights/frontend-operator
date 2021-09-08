@@ -1,20 +1,29 @@
 package controllers
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	resCache "github.com/RedHatInsights/rhc-osdk-utils/resource_cache"
 	"github.com/RedHatInsights/rhc-osdk-utils/utils"
+
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func runReconciliation(frontend *crd.Frontend, cache *resCache.ObjectCache) error {
+func runReconciliation(context context.Context, pClient client.Client, frontend *crd.Frontend, cache *resCache.ObjectCache) error {
+	if err := createConfigConfigMap(context, pClient, frontend, cache); err != nil {
+		return err
+	}
+
 	if err := createFrontendDeployment(frontend, cache); err != nil {
 		return err
 	}
@@ -60,7 +69,23 @@ func createFrontendDeployment(frontend *crd.Frontend, cache *resCache.ObjectCach
 			ContainerPort: 80,
 			Protocol:      "TCP",
 		}},
+		VolumeMounts: []v1.VolumeMount{{
+			Name:      "config",
+			MountPath: "/config/",
+		}},
 	}}
+
+	d.Spec.Template.Spec.Volumes = []v1.Volume{}
+	d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, v1.Volume{
+		Name: "config",
+		VolumeSource: v1.VolumeSource{
+			ConfigMap: &v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: frontend.Spec.EnvName,
+				},
+			},
+		},
+	})
 
 	d.Spec.Template.ObjectMeta.Labels = labels
 
@@ -182,7 +207,79 @@ func createFrontendIngress(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 	return nil
 }
 
-func createConfigConfigMap() {
+func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend *crd.Frontend, cache *resCache.ObjectCache) error {
 	// Will need to interact directly with the client here, and not the cache because
 	// we need to read ALL the Frontend CRDs in the Env that we care about
+
+	frontendList := &crd.FrontendList{}
+
+	if err := pClient.List(ctx, frontendList, client.MatchingFields{"spec.envName": frontend.Spec.EnvName}); err != nil {
+		return err
+	}
+
+	cacheMap := make(map[string]crd.Frontend)
+	for _, frontend := range frontendList.Items {
+		if frontend.Spec.NavItem == nil {
+			continue
+		}
+		cacheMap[frontend.Name] = frontend
+	}
+
+	bundleList := &crd.BundleList{}
+
+	if err := pClient.List(ctx, bundleList, client.MatchingFields{"spec.envName": frontend.Spec.EnvName}); err != nil {
+		return err
+	}
+
+	cfgMap := &v1.ConfigMap{}
+
+	nn := types.NamespacedName{
+		Name:      frontend.Spec.EnvName,
+		Namespace: frontend.Namespace,
+	}
+
+	if err := cache.Create(CoreConfig, nn, cfgMap); err != nil {
+		return err
+	}
+
+	labels := frontend.GetLabels()
+	labler := utils.GetCustomLabeler(labels, nn, frontend)
+	labler(cfgMap)
+
+	cfgMap.Data = map[string]string{}
+
+	for _, bundle := range bundleList.Items {
+		newBundleObject := crd.ComputedBundle{
+			ID:       bundle.Spec.ID,
+			Title:    bundle.Spec.Title,
+			NavItems: []crd.BundleNavItem{},
+		}
+
+		bundleCacheMap := make(map[string]crd.BundleNavItem)
+		for _, extraItem := range bundle.Spec.ExtraNavItems {
+			bundleCacheMap[extraItem.Name] = extraItem.NavItem
+		}
+
+		for _, app := range bundle.Spec.AppList {
+			if retrievedFrontend, ok := cacheMap[app]; ok {
+				newBundleObject.NavItems = append(newBundleObject.NavItems, *retrievedFrontend.Spec.NavItem)
+			}
+			if bundleNavItem, ok := bundleCacheMap[app]; ok {
+				newBundleObject.NavItems = append(newBundleObject.NavItems, bundleNavItem)
+			}
+		}
+
+		jsonData, err := json.Marshal(newBundleObject)
+		if err != nil {
+			return err
+		}
+
+		cfgMap.Data[fmt.Sprintf("%s.json", bundle.Name)] = string(jsonData)
+	}
+
+	if err := cache.Update(CoreConfig, cfgMap); err != nil {
+		return err
+	}
+
+	return nil
 }

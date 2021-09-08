@@ -1,0 +1,189 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: bundles.cloud.redhat.com
+spec:
+  group: cloud.redhat.com
+  names:
+    kind: Bundle
+    listKind: BundleList
+    plural: bundles
+    singular: bundle
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Bundle is the Schema for the Bundles API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: BundleSpec defines the desired state of Bundle
+            properties:
+              appList:
+                items:
+                  type: string
+                type: array
+              envName:
+                type: string
+              extraNavItems:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    navItem:
+                      properties:
+                        appId:
+                          type: string
+                        filterable:
+                          type: boolean
+                        groupId:
+                          type: string
+                        href:
+                          type: string
+                        isExternal:
+                          type: boolean
+                        navItems:
+                          items:
+                            properties:
+                              appId:
+                                type: string
+                              filterable:
+                                type: boolean
+                              groupId:
+                                type: string
+                              href:
+                                type: string
+                              isExternal:
+                                type: boolean
+                              permissions:
+                                items:
+                                  properties:
+                                    args:
+                                      items:
+                                        items:
+                                          type: string
+                                        type: array
+                                      type: array
+                                    method:
+                                      type: string
+                                  required:
+                                  - args
+                                  - method
+                                  type: object
+                                type: array
+                              product:
+                                type: string
+                              title:
+                                type: string
+                            required:
+                            - title
+                            type: object
+                          type: array
+                        permissions:
+                          items:
+                            properties:
+                              args:
+                                items:
+                                  items:
+                                    type: string
+                                  type: array
+                                type: array
+                              method:
+                                type: string
+                            required:
+                            - args
+                            - method
+                            type: object
+                          type: array
+                        product:
+                          type: string
+                        routes:
+                          items:
+                            properties:
+                              appId:
+                                type: string
+                              filterable:
+                                type: boolean
+                              groupId:
+                                type: string
+                              href:
+                                type: string
+                              isExternal:
+                                type: boolean
+                              permissions:
+                                items:
+                                  properties:
+                                    args:
+                                      items:
+                                        items:
+                                          type: string
+                                        type: array
+                                      type: array
+                                    method:
+                                      type: string
+                                  required:
+                                  - args
+                                  - method
+                                  type: object
+                                type: array
+                              product:
+                                type: string
+                              title:
+                                type: string
+                            required:
+                            - title
+                            type: object
+                          type: array
+                        title:
+                          type: string
+                      required:
+                      - title
+                      type: object
+                  required:
+                  - name
+                  - navItem
+                  type: object
+                type: array
+              id:
+                description: Foo is an example field of Bundle. Edit Bundle_types.go
+                  to remove/update
+                type: string
+              title:
+                type: string
+            required:
+            - appList
+            - envName
+            - id
+            - title
+            type: object
+          status:
+            description: BundleStatus defines the observed state of Bundle
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

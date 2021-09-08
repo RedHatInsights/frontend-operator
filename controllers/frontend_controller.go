@@ -25,11 +25,15 @@ import (
 	networking "k8s.io/api/networking/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	resCache "github.com/RedHatInsights/rhc-osdk-utils/resource_cache"
@@ -56,7 +60,7 @@ var cacheConfig = resCache.NewCacheConfig(scheme, FEKey("log"))
 
 var CoreDeployment = cacheConfig.NewSingleResourceIdent("main", "deployment", &apps.Deployment{})
 var CoreService = cacheConfig.NewSingleResourceIdent("main", "service", &v1.Service{})
-var ConfigDeployment = cacheConfig.NewSingleResourceIdent("config", "deployment", &apps.Deployment{})
+var CoreConfig = cacheConfig.NewSingleResourceIdent("main", "config", &v1.ConfigMap{})
 var WebIngress = cacheConfig.NewMultiResourceIdent("ingress", "web_ingress", &networking.Ingress{})
 
 // FrontendReconciler reconciles a Frontend object
@@ -126,7 +130,7 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	cache := resCache.NewObjectCache(ctx, r.Client, cacheConfig)
 
-	err = runReconciliation(&frontend, &cache)
+	err = runReconciliation(ctx, r.Client, &frontend, &cache)
 
 	if err != nil {
 		//	SetClowdAppConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, err)
@@ -165,9 +169,67 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	cache := mgr.GetCache()
+
+	cache.IndexField(
+		context.TODO(), &crd.Frontend{}, "spec.envName", func(o client.Object) []string {
+			return []string{o.(*crd.Frontend).Spec.EnvName}
+		})
+
+	cache.IndexField(
+		context.TODO(), &crd.Bundle{}, "spec.envName", func(o client.Object) []string {
+			return []string{o.(*crd.Bundle).Spec.EnvName}
+		})
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&crd.Frontend{}).
+		Watches(
+			&source.Kind{Type: &crd.Bundle{}},
+			handler.EnqueueRequestsFromMapFunc(r.appsToEnqueueUponBundleUpdate),
+		).
 		Complete(r)
+}
+
+func (r *FrontendReconciler) appsToEnqueueUponBundleUpdate(a client.Object) []reconcile.Request {
+	reqs := []reconcile.Request{}
+	ctx := context.Background()
+	obj := types.NamespacedName{
+		Name:      a.GetName(),
+		Namespace: a.GetNamespace(),
+	}
+
+	// Get the Bundle resource
+
+	bundle := crd.Bundle{}
+	err := r.Client.Get(ctx, obj, &bundle)
+
+	if err != nil {
+		if k8serr.IsNotFound(err) {
+			// Must have been deleted
+			return reqs
+		}
+		r.Log.Error(err, "Failed to fetch Bundle")
+		return nil
+	}
+
+	// Get all the ClowdApp resources
+
+	frontendList := crd.FrontendList{}
+	r.Client.List(ctx, &frontendList, client.MatchingFields{"spec.envName": bundle.Spec.EnvName})
+
+	// Filter based on base attribute
+
+	for _, frontend := range frontendList.Items {
+		reqs = append(reqs, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      frontend.Name,
+				Namespace: frontend.Namespace,
+			},
+		})
+	}
+
+	return reqs
 }
 
 func (r *FrontendReconciler) finalizeApp(reqLogger logr.Logger, a *crd.Frontend) error {

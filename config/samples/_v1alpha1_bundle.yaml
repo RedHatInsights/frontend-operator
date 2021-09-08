@@ -1,0 +1,6 @@
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Bundle
+metadata:
+  name: test
+spec:
+  # Add fields here
