@@ -187,6 +187,8 @@ func createFrontendIngress(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 		ingressPapths = append(ingressPapths, newPath)
 	}
 
+	// we need to add /api fallback here as well
+
 	netobj.Spec = networking.IngressSpec{
 		Rules: []networking.IngressRule{
 			{
@@ -276,6 +278,19 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 
 		cfgMap.Data[fmt.Sprintf("%s.json", bundle.Name)] = string(jsonData)
 	}
+
+	fedModules := make(map[string]crd.FedModule)
+
+	for appName, app := range cacheMap {
+		fedModules[appName] = app.Spec.Module
+	}
+
+	jsonData, err := json.Marshal(fedModules)
+	if err != nil {
+		return err
+	}
+
+	cfgMap.Data["fed-modules.json"] = string(jsonData)
 
 	if err := cache.Update(CoreConfig, cfgMap); err != nil {
 		return err

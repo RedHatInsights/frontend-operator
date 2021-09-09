@@ -12,5 +12,5 @@ spec:
     - v1
   frontend:
     paths:
-    - /apps/chrome
+    - /
   image: quay.io/redhat-cloud-services/chrome-frontend

@@ -46,12 +46,30 @@ type FrontendSpec struct {
 	Frontend       FrontendInfo   `json:"frontend"`
 	Image          string         `json:"image"`
 	NavItem        *BundleNavItem `json:"navItem,omitempty"`
+	Module         FedModule      `json:"module,omitempty"`
 }
 
 // FrontendStatus defines the observed state of Frontend
 type FrontendStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+}
+
+type FedModule struct {
+	ManifestLocation string   `json:"manifestLocation"`
+	Modules          []Module `json:"modules,omitempty"`
+}
+
+type Module struct {
+	Id     string   `json:"id"`
+	Module string   `json:"module"`
+	Routes []Routes `json:"routes"`
+}
+
+type Routes struct {
+	Pathname string `json:"pathname"`
+	Dynamic  bool   `json:"dynamic,omitempty"`
+	Exact    bool   `json:"exact,omitempty"`
 }
 
 //+kubebuilder:object:root=true
