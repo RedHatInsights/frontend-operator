@@ -188,6 +188,10 @@ func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&source.Kind{Type: &crd.Bundle{}},
 			handler.EnqueueRequestsFromMapFunc(r.appsToEnqueueUponBundleUpdate),
 		).
+		Watches(
+			&source.Kind{Type: &crd.FrontendEnvironment{}},
+			handler.EnqueueRequestsFromMapFunc(r.appsToEnqueueUponFrontendEnvironmentUpdate),
+		).
 		Complete(r)
 }
 
@@ -217,6 +221,47 @@ func (r *FrontendReconciler) appsToEnqueueUponBundleUpdate(a client.Object) []re
 
 	frontendList := crd.FrontendList{}
 	r.Client.List(ctx, &frontendList, client.MatchingFields{"spec.envName": bundle.Spec.EnvName})
+
+	// Filter based on base attribute
+
+	for _, frontend := range frontendList.Items {
+		reqs = append(reqs, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      frontend.Name,
+				Namespace: frontend.Namespace,
+			},
+		})
+	}
+
+	return reqs
+}
+
+func (r *FrontendReconciler) appsToEnqueueUponFrontendEnvironmentUpdate(a client.Object) []reconcile.Request {
+	reqs := []reconcile.Request{}
+	ctx := context.Background()
+	obj := types.NamespacedName{
+		Name:      a.GetName(),
+		Namespace: a.GetNamespace(),
+	}
+
+	// Get the Bundle resource
+
+	fe := crd.FrontendEnvironment{}
+	err := r.Client.Get(ctx, obj, &fe)
+
+	if err != nil {
+		if k8serr.IsNotFound(err) {
+			// Must have been deleted
+			return reqs
+		}
+		r.Log.Error(err, "Failed to fetch Bundle")
+		return nil
+	}
+
+	// Get all the ClowdApp resources
+
+	frontendList := crd.FrontendList{}
+	r.Client.List(ctx, &frontendList, client.MatchingFields{"spec.envName": fe.Name})
 
 	// Filter based on base attribute
 

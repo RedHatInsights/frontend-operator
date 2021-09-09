@@ -24,7 +24,7 @@ func runReconciliation(context context.Context, pClient client.Client, frontend 
 		return err
 	}
 
-	if err := createFrontendDeployment(frontend, cache); err != nil {
+	if err := createFrontendDeployment(context, pClient, frontend, cache); err != nil {
 		return err
 	}
 
@@ -39,7 +39,13 @@ func runReconciliation(context context.Context, pClient client.Client, frontend 
 	return nil
 }
 
-func createFrontendDeployment(frontend *crd.Frontend, cache *resCache.ObjectCache) error {
+func createFrontendDeployment(context context.Context, pClient client.Client, frontend *crd.Frontend, cache *resCache.ObjectCache) error {
+	sso, err := getSSO(context, pClient, frontend, cache)
+
+	if err != nil {
+		return err
+	}
+
 	// Create new empty struct
 	d := &apps.Deployment{}
 
@@ -72,6 +78,10 @@ func createFrontendDeployment(frontend *crd.Frontend, cache *resCache.ObjectCach
 		VolumeMounts: []v1.VolumeMount{{
 			Name:      "config",
 			MountPath: "/config/chrome/",
+		}},
+		Env: []v1.EnvVar{{
+			Name:  "SSO_ADDRESS",
+			Value: sso,
 		}},
 	}}
 
@@ -297,4 +307,13 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	}
 
 	return nil
+}
+
+func getSSO(ctx context.Context, pClient client.Client, frontend *crd.Frontend, cache *resCache.ObjectCache) (string, error) {
+	fe := &crd.FrontendEnvironment{}
+	if err := pClient.Get(ctx, types.NamespacedName{Name: frontend.Spec.EnvName}, fe); err != nil {
+		return "", err
+	}
+
+	return fe.Spec.SSO, nil
 }
