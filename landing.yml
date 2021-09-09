@@ -4,7 +4,7 @@ metadata:
   name: landing
 spec:
   # Add fields here
-  envName: fon
+  envName: env-boot
   title: landing
   deploymentRepo: http://test
   API:

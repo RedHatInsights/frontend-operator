@@ -4,7 +4,7 @@ metadata:
   name: inventory
 spec:
   # Add fields here
-  envName: fon
+  envName: env-boot
   title: Inventory
   deploymentRepo: http://test
   API:

@@ -1,10 +1,10 @@
 apiVersion: cloud.redhat.com/v1alpha1
 kind: Bundle
 metadata:
-  name: rhel
+  name: insights-navigation
 spec:
-  id: rhel
+  id: insights-navigation
   title: RHEL
   appList: 
   - inventory
-  envName: fon
+  envName: env-boot

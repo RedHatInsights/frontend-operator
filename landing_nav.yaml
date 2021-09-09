@@ -4,7 +4,7 @@ metadata:
   name: landing-navigation
 spec:
   id: landing-navigation
-  envName: fon
+  envName: env-boot
 customNav:
   - id: rhel
     appId: dashboard

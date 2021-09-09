@@ -1,6 +1,6 @@
 apiVersion: cloud.redhat.com/v1alpha1
 kind: FrontendEnvironment
 metadata:
-  name: fon
+  name: env-boot
 spec:
-  sso: http://fon3
+  sso: http://env-boot3
