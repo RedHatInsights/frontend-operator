@@ -281,8 +281,8 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 
 	fedModules := make(map[string]crd.FedModule)
 
-	for appName, app := range cacheMap {
-		fedModules[appName] = app.Spec.Module
+	for _, app := range frontendList.Items {
+		fedModules[app.GetName()] = app.Spec.Module
 	}
 
 	jsonData, err := json.Marshal(fedModules)
