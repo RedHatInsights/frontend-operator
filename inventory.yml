@@ -13,9 +13,16 @@ spec:
   frontend:
     paths:
     - /insights/inventory
-  image: quay.io/redhat-cloud-services/inventory-frontend
+  image: quay.io/redhat-cloud-services/inventory
   navItem:
     appId: "inventory"
     title: "Inventory"
     href: "/insights/inventory"
     product: "Red Hat Insights"
+  module:
+    manifestLocation: "/apps/inventory/fed-mods.json"
+    modules:
+    - id: "inventory"
+      module: "./RootApp"
+      routes:
+      - pathname: /insights/inventory

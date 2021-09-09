@@ -62,6 +62,39 @@ spec:
                 type: object
               image:
                 type: string
+              module:
+                properties:
+                  manifestLocation:
+                    type: string
+                  modules:
+                    items:
+                      properties:
+                        id:
+                          type: string
+                        module:
+                          type: string
+                        routes:
+                          items:
+                            properties:
+                              dynamic:
+                                type: boolean
+                              exact:
+                                type: boolean
+                              pathname:
+                                type: string
+                            required:
+                            - pathname
+                            type: object
+                          type: array
+                      required:
+                      - id
+                      - module
+                      - routes
+                      type: object
+                    type: array
+                required:
+                - manifestLocation
+                type: object
               navItem:
                 properties:
                   appId:
