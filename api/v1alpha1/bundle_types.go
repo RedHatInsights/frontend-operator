@@ -69,9 +69,9 @@ type BundleSpec struct {
 
 	// Foo is an example field of Bundle. Edit Bundle_types.go to remove/update
 	ID            string         `json:"id"`
-	Title         string         `json:"title"`
-	AppList       []string       `json:"appList"`
-	EnvName       string         `json:"envName"`
+	Title         string         `json:"title,omitempty"`
+	AppList       []string       `json:"appList,omitempty"`
+	EnvName       string         `json:"envName,omitempty"`
 	ExtraNavItems []ExtraNavItem `json:"extraNavItems,omitempty"`
 }
 
@@ -89,8 +89,9 @@ type Bundle struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   BundleSpec   `json:"spec,omitempty"`
-	Status BundleStatus `json:"status,omitempty"`
+	Spec      BundleSpec      `json:"spec,omitempty"`
+	CustomNav []BundleNavItem `json:"customNav,omitempty"`
+	Status    BundleStatus    `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true

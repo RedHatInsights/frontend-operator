@@ -71,7 +71,7 @@ func createFrontendDeployment(frontend *crd.Frontend, cache *resCache.ObjectCach
 		}},
 		VolumeMounts: []v1.VolumeMount{{
 			Name:      "config",
-			MountPath: "/config/chrome/",
+			MountPath: "/usr/share/nginx/html/chrome",
 		}},
 	}}
 
@@ -163,9 +163,14 @@ func createFrontendIngress(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 
 	frontendPath := frontend.Spec.Frontend.Paths
 	defaultPath := fmt.Sprintf("/apps/%s", frontend.Name)
+	defaultBetaPath := fmt.Sprintf("/beta/apps/%s", frontend.Name)
 
 	if !frontend.Spec.Frontend.HasPath(defaultPath) {
 		frontendPath = append(frontendPath, defaultPath)
+	}
+
+	if !frontend.Spec.Frontend.HasPath(defaultBetaPath) {
+		frontendPath = append(frontendPath, defaultBetaPath)
 	}
 
 	prefixType := "Prefix"
@@ -251,32 +256,43 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	cfgMap.Data = map[string]string{}
 
 	for _, bundle := range bundleList.Items {
-		newBundleObject := crd.ComputedBundle{
-			ID:       bundle.Spec.ID,
-			Title:    bundle.Spec.Title,
-			NavItems: []crd.BundleNavItem{},
-		}
+		if bundle.CustomNav != nil {
+			newBundleObject := bundle.CustomNav
 
-		bundleCacheMap := make(map[string]crd.BundleNavItem)
-		for _, extraItem := range bundle.Spec.ExtraNavItems {
-			bundleCacheMap[extraItem.Name] = extraItem.NavItem
-		}
-
-		for _, app := range bundle.Spec.AppList {
-			if retrievedFrontend, ok := cacheMap[app]; ok {
-				newBundleObject.NavItems = append(newBundleObject.NavItems, *retrievedFrontend.Spec.NavItem)
+			jsonData, err := json.Marshal(newBundleObject)
+			if err != nil {
+				return err
 			}
-			if bundleNavItem, ok := bundleCacheMap[app]; ok {
-				newBundleObject.NavItems = append(newBundleObject.NavItems, bundleNavItem)
+
+			cfgMap.Data[fmt.Sprintf("%s.json", bundle.Name)] = string(jsonData)
+		} else {
+			newBundleObject := crd.ComputedBundle{
+				ID:       bundle.Spec.ID,
+				Title:    bundle.Spec.Title,
+				NavItems: []crd.BundleNavItem{},
 			}
-		}
 
-		jsonData, err := json.Marshal(newBundleObject)
-		if err != nil {
-			return err
-		}
+			bundleCacheMap := make(map[string]crd.BundleNavItem)
+			for _, extraItem := range bundle.Spec.ExtraNavItems {
+				bundleCacheMap[extraItem.Name] = extraItem.NavItem
+			}
 
-		cfgMap.Data[fmt.Sprintf("%s.json", bundle.Name)] = string(jsonData)
+			for _, app := range bundle.Spec.AppList {
+				if retrievedFrontend, ok := cacheMap[app]; ok {
+					newBundleObject.NavItems = append(newBundleObject.NavItems, *retrievedFrontend.Spec.NavItem)
+				}
+				if bundleNavItem, ok := bundleCacheMap[app]; ok {
+					newBundleObject.NavItems = append(newBundleObject.NavItems, bundleNavItem)
+				}
+			}
+
+			jsonData, err := json.Marshal(newBundleObject)
+			if err != nil {
+				return err
+			}
+
+			cfgMap.Data[fmt.Sprintf("%s.json", bundle.Name)] = string(jsonData)
+		}
 	}
 
 	fedModules := make(map[string]crd.FedModule)
