@@ -50,6 +50,13 @@ func (in *Bundle) DeepCopyInto(out *Bundle) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
+	if in.CustomNav != nil {
+		in, out := &in.CustomNav, &out.CustomNav
+		*out = make([]BundleNavItem, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	out.Status = in.Status
 }
 

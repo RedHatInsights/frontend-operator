@@ -1,0 +1,24 @@
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: landing
+spec:
+  # Add fields here
+  envName: fon
+  title: landing
+  deploymentRepo: http://test
+  API:
+    versions:
+    - v1
+  frontend:
+    paths:
+    - /apps/landing
+  image: quay.io/redhat-cloud-services/landing
+  module:
+    manifestLocation: "/apps/landing/fed-mods.json"
+    modules:
+    - id: "landing"
+      module: "./RootApp"
+      routes:
+      - pathname: /
+        exact: true

@@ -1,0 +1,12 @@
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Bundle
+metadata:
+  name: landing-navigation
+spec:
+  id: landing-navigation
+  envName: fon
+customNav:
+  - id: rhel
+    appId: dashboard
+    title: Red Hat Enterprise Linux
+    href: /insights/inventory

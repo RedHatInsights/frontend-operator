@@ -13,4 +13,5 @@ spec:
   frontend:
     paths:
     - /
-  image: quay.io/redhat-cloud-services/chrome-frontend
+    - /config/chrome
+  image: quay.io/redhat-cloud-services/chrome
