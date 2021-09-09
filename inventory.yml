@@ -12,7 +12,7 @@ spec:
     - v1
   frontend:
     paths:
-    - /insights/inventory
+    - /apps/inventory
   image: quay.io/redhat-cloud-services/inventory
   navItem:
     appId: "inventory"

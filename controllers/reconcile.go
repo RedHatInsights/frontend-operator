@@ -187,6 +187,21 @@ func createFrontendIngress(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 		ingressPapths = append(ingressPapths, newPath)
 	}
 
+	ingressPapths = append(ingressPapths, networking.HTTPIngressPath{
+		Path:     "/",
+		PathType: (*networking.PathType)(&prefixType),
+		Backend: networking.IngressBackend{
+			Service: &networking.IngressServiceBackend{
+				Name: "chrome",
+				Port: networking.ServiceBackendPort{
+					Number: 8000,
+				},
+			},
+		},
+	})
+
+	// we need to add /api here as well
+
 	netobj.Spec = networking.IngressSpec{
 		Rules: []networking.IngressRule{
 			{
