@@ -80,7 +80,7 @@ func createFrontendDeployment(context context.Context, pClient client.Client, fr
 			MountPath: "/usr/share/nginx/html/chrome",
 		}},
 		Env: []v1.EnvVar{{
-			Name:  "SSO_ADDRESS",
+			Name:  "SSO_URL",
 			Value: sso,
 		}},
 	}}
