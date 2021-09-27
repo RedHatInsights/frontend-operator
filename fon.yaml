@@ -3,4 +3,4 @@ kind: FrontendEnvironment
 metadata:
   name: env-boot
 spec:
-  sso: https://env-boot-auth
+  sso: https://env-boot-auth/auth/

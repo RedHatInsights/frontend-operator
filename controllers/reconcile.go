@@ -171,6 +171,15 @@ func createFrontendIngress(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 	labler := utils.GetCustomLabeler(labels, nn, frontend)
 	labler(netobj)
 
+	annotations := netobj.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+
+	annotations["kubernetes.io/ingress.class"] = "nginx"
+
+	netobj.SetAnnotations(annotations)
+
 	frontendPath := frontend.Spec.Frontend.Paths
 	defaultPath := fmt.Sprintf("/apps/%s", frontend.Name)
 	defaultBetaPath := fmt.Sprintf("/beta/apps/%s", frontend.Name)
