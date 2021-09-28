@@ -1,15 +1,15 @@
-# permissions for end users to edit frontends.
+# permissions for end users to edit bundles.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: frontend-editor-role
+  name: bundle-editor-role
   labels: 
     rbac.authorization.k8s.io/aggregate-to-edit: "true"
 rules:
 - apiGroups:
   - cloud.redhat.com
   resources:
-  - frontends
+  - bundles
   verbs:
   - create
   - delete
@@ -21,6 +21,6 @@ rules:
 - apiGroups:
   - cloud.redhat.com
   resources:
-  - frontends/status
+  - bundles/status
   verbs:
   - get

@@ -2,14 +2,14 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: frontend-editor-role
+  name: frontendenvironment-editor-role
   labels: 
     rbac.authorization.k8s.io/aggregate-to-edit: "true"
 rules:
 - apiGroups:
   - cloud.redhat.com
   resources:
-  - frontends
+  - frontendenvironments
   verbs:
   - create
   - delete
@@ -21,6 +21,6 @@ rules:
 - apiGroups:
   - cloud.redhat.com
   resources:
-  - frontends/status
+  - frontendenvironments/status
   verbs:
   - get
