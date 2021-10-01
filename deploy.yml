@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Template
 metadata:
-  name: clowder
+  name: frontend-operator
 objects:
 - apiVersion: v1
   kind: Namespace
@@ -948,7 +948,7 @@ parameters:
 - name: IMAGE_TAG
   value: latest
 - name: IMAGE
-  value: quay.io/cloudservices/clowder
+  value: quay.io/cloudservices/frontend-operator
 - name: DEBUG_TRIGGERS
   value: 'false'
 - name: DEBUG_CACHE_CREATE
