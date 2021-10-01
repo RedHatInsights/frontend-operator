@@ -79,6 +79,9 @@ release: manifests kustomize controller-gen
 
 ##@ Development
 
+build-template: manifests kustomize controller-gen
+	$(KUSTOMIZE) build config/deployment-template | ./manifest2template.py > deploy.yml
+
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
