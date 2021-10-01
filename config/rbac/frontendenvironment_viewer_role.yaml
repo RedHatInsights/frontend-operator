@@ -1,26 +1,22 @@
-# permissions for end users to edit frontends.
+# permissions for end users to view frontends.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: frontend-editor-role
+  name: frontendenvironment-viewer-role
   labels: 
-    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
 rules:
 - apiGroups:
   - cloud.redhat.com
   resources:
-  - frontends
+  - frontendenvironments
   verbs:
-  - create
-  - delete
   - get
   - list
-  - patch
-  - update
   - watch
 - apiGroups:
   - cloud.redhat.com
   resources:
-  - frontends/status
+  - frontendenvironments/status
   verbs:
   - get

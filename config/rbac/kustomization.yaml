@@ -16,3 +16,9 @@ resources:
 - auth_proxy_role.yaml
 - auth_proxy_role_binding.yaml
 - auth_proxy_client_clusterrole.yaml
+- frontend_editor_role.yaml
+- frontend_viewer_role.yaml
+- frontendenvironment_editor_role.yaml
+- frontendenvironment_viewer_role.yaml
+- bundle_editor_role.yaml
+- bundle_viewer_role.yaml
