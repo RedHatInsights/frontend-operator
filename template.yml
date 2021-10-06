@@ -7,16 +7,4 @@ parameters:
   value: latest
 - name: IMAGE
   value: quay.io/cloudservices/frontend-operator
-- name: DEBUG_TRIGGERS
-  value: "false"
-- name: DEBUG_CACHE_CREATE
-  value: "false"
-- name: DEBUG_CACHE_UPDATE
-  value: "false"
-- name: DEBUG_CACHE_APPLY
-  value: "false"
-- name: CREATE_SERVICE_MONITORS
-  value: "false"
-- name: WATCH_STRIMZI_RESOURCES
-  value: "false"
 objects: []
