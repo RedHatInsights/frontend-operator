@@ -785,6 +785,58 @@ objects:
   - apiGroups:
     - cloud.redhat.com
     resources:
+    - bundles
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
+    - cloud.redhat.com
+    resources:
+    - bundles/finalizers
+    verbs:
+    - update
+  - apiGroups:
+    - cloud.redhat.com
+    resources:
+    - bundles/status
+    verbs:
+    - get
+    - patch
+    - update
+  - apiGroups:
+    - cloud.redhat.com
+    resources:
+    - frontendenvironments
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
+    - cloud.redhat.com
+    resources:
+    - frontendenvironments/finalizers
+    verbs:
+    - update
+  - apiGroups:
+    - cloud.redhat.com
+    resources:
+    - frontendenvironments/status
+    verbs:
+    - get
+    - patch
+    - update
+  - apiGroups:
+    - cloud.redhat.com
+    resources:
     - frontends
     verbs:
     - create
