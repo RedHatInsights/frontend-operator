@@ -895,6 +895,21 @@ objects:
       targetPort: https
     selector:
       control-plane: controller-manager
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      control-plane: controller-manager
+      operator-name: clowder
+    name: frontend-operator-controller-manager-metrics-service-non-auth
+    namespace: frontend-operator-system
+  spec:
+    ports:
+    - name: metrics
+      port: 8080
+      targetPort: metrics
+    selector:
+      control-plane: controller-manager
 - apiVersion: apps/v1
   kind: Deployment
   metadata:
