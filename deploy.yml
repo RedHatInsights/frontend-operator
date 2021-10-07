@@ -783,6 +783,48 @@ objects:
     name: frontend-operator-manager-role
   rules:
   - apiGroups:
+    - ''
+    resources:
+    - configmaps
+    - events
+    - namespaces
+    - persistentvolumeclaims
+    - secrets
+    - serviceaccounts
+    - services
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
+    - ''
+    resources:
+    - services
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
+    - apps
+    resources:
+    - deployments
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
     - cloud.redhat.com
     resources:
     - bundles
@@ -860,6 +902,18 @@ objects:
     - get
     - patch
     - update
+  - apiGroups:
+    - networking.k8s.io
+    resources:
+    - ingresses
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
 - apiVersion: rbac.authorization.k8s.io/v1
   kind: ClusterRole
   metadata:
@@ -1000,11 +1054,11 @@ objects:
             periodSeconds: 10
           resources:
             limits:
-              cpu: 100m
-              memory: 30Mi
+              cpu: 200m
+              memory: 900Mi
             requests:
               cpu: 100m
-              memory: 20Mi
+              memory: 500Mi
           securityContext:
             allowPrivilegeEscalation: false
         securityContext:
