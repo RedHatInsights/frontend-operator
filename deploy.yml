@@ -900,7 +900,7 @@ objects:
   metadata:
     labels:
       control-plane: controller-manager
-      operator-name: clowder
+      operator-name: frontend-operator
     name: frontend-operator-controller-manager-metrics-service-non-auth
     namespace: frontend-operator-system
   spec:
