@@ -152,7 +152,7 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	cache := resCache.NewObjectCache(ctx, r.Client, cacheConfig)
 
-	err = runReconciliation(ctx, r.Client, &frontend, &fe, &cache)
+	err = runReconciliation(ctx, r.Client, &frontend, fe, &cache)
 
 	if err != nil {
 		//	SetClowdAppConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, err)
