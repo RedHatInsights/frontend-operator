@@ -134,7 +134,7 @@ func createFrontendService(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 	port := v1.ServicePort{
 		Name:        "public",
 		Port:        8000,
-		TargetPort:  intstr.FromInt(80),
+		TargetPort:  intstr.FromInt(8000),
 		Protocol:    "TCP",
 		AppProtocol: &appProtocol,
 	}
@@ -167,19 +167,10 @@ func createFrontendIngress(frontend *crd.Frontend, frontendEnvironment *crd.Fron
 	labler := utils.GetCustomLabeler(labels, nn, frontend)
 	labler(netobj)
 
-	annotations := netobj.GetAnnotations()
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-
 	ingressClass := frontendEnvironment.Spec.IngressClass
 	if ingressClass == "" {
 		ingressClass = "nginx"
 	}
-
-	annotations["kubernetes.io/ingress.class"] = ingressClass
-
-	netobj.SetAnnotations(annotations)
 
 	frontendPath := frontend.Spec.Frontend.Paths
 	defaultPath := fmt.Sprintf("/apps/%s", frontend.Name)
@@ -215,6 +206,7 @@ func createFrontendIngress(frontend *crd.Frontend, frontendEnvironment *crd.Fron
 	// we need to add /api fallback here as well
 
 	netobj.Spec = networking.IngressSpec{
+		IngressClassName: &ingressClass,
 		Rules: []networking.IngressRule{
 			{
 				Host: frontend.Spec.EnvName,
