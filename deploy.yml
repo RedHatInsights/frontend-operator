@@ -345,6 +345,9 @@ objects:
             spec:
               description: FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
               properties:
+                ingressClass:
+                  description: Ingress class
+                  type: string
                 sso:
                   description: Foo is an example field of FrontendEnvironment. Edit
                     FrontendEnvironment_types.go to remove/update
