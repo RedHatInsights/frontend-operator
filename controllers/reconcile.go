@@ -206,7 +206,9 @@ func createFrontendIngress(frontend *crd.Frontend, frontendEnvironment *crd.Fron
 	// we need to add /api fallback here as well
 
 	netobj.Spec = networking.IngressSpec{
-		TLS:              []networking.IngressTLS{},
+		TLS: []networking.IngressTLS{{
+			Hosts: []string{},
+		}},
 		IngressClassName: &ingressClass,
 		Rules: []networking.IngressRule{
 			{
