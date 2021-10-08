@@ -19,12 +19,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func runReconciliation(context context.Context, pClient client.Client, frontend *crd.Frontend, cache *resCache.ObjectCache) error {
+func runReconciliation(context context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, cache *resCache.ObjectCache) error {
 	if err := createConfigConfigMap(context, pClient, frontend, cache); err != nil {
 		return err
 	}
 
-	if err := createFrontendDeployment(context, pClient, frontend, cache); err != nil {
+	if err := createFrontendDeployment(context, pClient, frontend, frontendEnvironment, cache); err != nil {
 		return err
 	}
 
@@ -32,19 +32,15 @@ func runReconciliation(context context.Context, pClient client.Client, frontend 
 		return err
 	}
 
-	if err := createFrontendIngress(frontend, cache); err != nil {
+	if err := createFrontendIngress(frontend, frontendEnvironment, cache); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func createFrontendDeployment(context context.Context, pClient client.Client, frontend *crd.Frontend, cache *resCache.ObjectCache) error {
-	sso, err := getSSO(context, pClient, frontend, cache)
-
-	if err != nil {
-		return err
-	}
+func createFrontendDeployment(context context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, cache *resCache.ObjectCache) error {
+	sso := frontendEnvironment.Spec.SSO
 
 	// Create new empty struct
 	d := &apps.Deployment{}
@@ -155,7 +151,7 @@ func createFrontendService(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 	return nil
 }
 
-func createFrontendIngress(frontend *crd.Frontend, cache *resCache.ObjectCache) error {
+func createFrontendIngress(frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, cache *resCache.ObjectCache) error {
 	netobj := &networking.Ingress{}
 
 	nn := types.NamespacedName{
@@ -176,7 +172,12 @@ func createFrontendIngress(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 		annotations = make(map[string]string)
 	}
 
-	annotations["kubernetes.io/ingress.class"] = "nginx"
+	ingressClass := frontendEnvironment.Spec.IngressClass
+	if ingressClass == "" {
+		ingressClass = "nginx"
+	}
+
+	annotations["kubernetes.io/ingress.class"] = ingressClass
 
 	netobj.SetAnnotations(annotations)
 
@@ -332,13 +333,4 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	}
 
 	return nil
-}
-
-func getSSO(ctx context.Context, pClient client.Client, frontend *crd.Frontend, cache *resCache.ObjectCache) (string, error) {
-	fe := &crd.FrontendEnvironment{}
-	if err := pClient.Get(ctx, types.NamespacedName{Name: frontend.Spec.EnvName}, fe); err != nil {
-		return "", err
-	}
-
-	return fe.Spec.SSO, nil
 }

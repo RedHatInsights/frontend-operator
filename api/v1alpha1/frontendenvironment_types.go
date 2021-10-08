@@ -27,6 +27,9 @@ type FrontendEnvironmentSpec struct {
 
 	// Foo is an example field of FrontendEnvironment. Edit FrontendEnvironment_types.go to remove/update
 	SSO string `json:"sso"`
+
+	// Ingress class
+	IngressClass string `json:"ingressClass,omitempty"`
 }
 
 // FrontendEnvironmentStatus defines the observed state of FrontendEnvironment

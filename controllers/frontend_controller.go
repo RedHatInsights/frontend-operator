@@ -143,11 +143,16 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	log.Info("Reconciliation started", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
 
+	fe := &crd.FrontendEnvironment{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: frontend.Spec.EnvName}, fe); err != nil {
+		return ctrl.Result{Requeue: true}, err
+	}
+
 	ctx = context.WithValue(ctx, FEKey("obj"), &frontend)
 
 	cache := resCache.NewObjectCache(ctx, r.Client, cacheConfig)
 
-	err = runReconciliation(ctx, r.Client, &frontend, &cache)
+	err = runReconciliation(ctx, r.Client, &frontend, &fe, &cache)
 
 	if err != nil {
 		//	SetClowdAppConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, err)
