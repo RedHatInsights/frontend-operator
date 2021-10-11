@@ -73,7 +73,7 @@ func createFrontendDeployment(context context.Context, pClient client.Client, fr
 		}},
 		VolumeMounts: []v1.VolumeMount{{
 			Name:      "config",
-			MountPath: "/usr/share/nginx/html/chrome",
+			MountPath: "/opt/app-root/src/chrome",
 		}},
 		Env: []v1.EnvVar{{
 			Name:  "SSO_URL",
