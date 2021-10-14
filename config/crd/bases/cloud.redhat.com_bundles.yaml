@@ -31,6 +31,8 @@ spec:
               properties:
                 appId:
                   type: string
+                expandable:
+                  type: boolean
                 filterable:
                   type: boolean
                 groupId:
@@ -162,6 +164,8 @@ spec:
                       properties:
                         appId:
                           type: string
+                        expandable:
+                          type: boolean
                         filterable:
                           type: boolean
                         groupId:

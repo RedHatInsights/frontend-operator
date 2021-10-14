@@ -38,6 +38,7 @@ type BundleNavItem struct {
 	Filterable  bool                `json:"filterable,omitempty"`
 	Permissions []BundlePermission  `json:"permissions,omitempty"`
 	Routes      []LeafBundleNavItem `json:"routes,omitempty"`
+	Expandable  bool                `json:"expandable,omitempty"`
 }
 
 type LeafBundleNavItem struct {
