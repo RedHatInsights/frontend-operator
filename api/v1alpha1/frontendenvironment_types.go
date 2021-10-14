@@ -30,6 +30,9 @@ type FrontendEnvironmentSpec struct {
 
 	// Ingress class
 	IngressClass string `json:"ingressClass,omitempty"`
+
+	// Hostname
+	Hostname string `json:"hostname,omitempty"`
 }
 
 // FrontendEnvironmentStatus defines the observed state of FrontendEnvironment

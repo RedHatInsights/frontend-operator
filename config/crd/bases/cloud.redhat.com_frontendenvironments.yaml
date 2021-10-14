@@ -39,6 +39,9 @@ spec:
           spec:
             description: FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
             properties:
+              hostname:
+                description: Hostname
+                type: string
               ingressClass:
                 description: Ingress class
                 type: string

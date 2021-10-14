@@ -203,8 +203,12 @@ func createFrontendIngress(frontend *crd.Frontend, frontendEnvironment *crd.Fron
 		ingressPapths = append(ingressPapths, newPath)
 	}
 
-	// we need to add /api fallback here as well
+	host := frontendEnvironment.Spec.Hostname
+	if host == "" {
+		host = frontend.Spec.EnvName
+	}
 
+	// we need to add /api fallback here as well
 	netobj.Spec = networking.IngressSpec{
 		TLS: []networking.IngressTLS{{
 			Hosts: []string{},
@@ -212,7 +216,7 @@ func createFrontendIngress(frontend *crd.Frontend, frontendEnvironment *crd.Fron
 		IngressClassName: &ingressClass,
 		Rules: []networking.IngressRule{
 			{
-				Host: frontend.Spec.EnvName,
+				Host: host,
 				IngressRuleValue: networking.IngressRuleValue{
 					HTTP: &networking.HTTPIngressRuleValue{
 						Paths: ingressPapths,
