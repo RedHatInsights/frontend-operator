@@ -283,6 +283,8 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	labler := utils.GetCustomLabeler(labels, nn, frontend)
 	labler(cfgMap)
 
+	hashString := ""
+
 	cfgMap.Data = map[string]string{}
 
 	for _, bundle := range bundleList.Items {
@@ -322,6 +324,10 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 			}
 
 			cfgMap.Data[fmt.Sprintf("%s.json", bundle.Name)] = string(jsonData)
+
+			h := sha256.New()
+			h.Write([]byte(jsonData))
+			hashString += fmt.Sprintf("%x", h.Sum(nil))
 		}
 	}
 
@@ -344,6 +350,10 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 
 	h := sha256.New()
 	h.Write([]byte(jsonData))
+	hashString += fmt.Sprintf("%x", h.Sum(nil))
+
+	h = sha256.New()
+	h.Write([]byte(hashString))
 	hash := fmt.Sprintf("%x", h.Sum(nil))
 
 	return hash, nil
