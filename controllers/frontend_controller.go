@@ -185,7 +185,7 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 		managedFrontendsMetric.Set(float64(len(managedFrontends)))
 	}
-
+	log.Info("Finished reconcile")
 	return ctrl.Result{}, nil
 }
 
