@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 
@@ -20,11 +21,12 @@ import (
 )
 
 func runReconciliation(context context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, cache *resCache.ObjectCache) error {
-	if err := createConfigConfigMap(context, pClient, frontend, frontendEnvironment, cache); err != nil {
+	hash, err := createConfigConfigMap(context, pClient, frontend, frontendEnvironment, cache)
+	if err != nil {
 		return err
 	}
 
-	if err := createFrontendDeployment(context, pClient, frontend, frontendEnvironment, cache); err != nil {
+	if err := createFrontendDeployment(context, pClient, frontend, frontendEnvironment, hash, cache); err != nil {
 		return err
 	}
 
@@ -39,7 +41,7 @@ func runReconciliation(context context.Context, pClient client.Client, frontend 
 	return nil
 }
 
-func createFrontendDeployment(context context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, cache *resCache.ObjectCache) error {
+func createFrontendDeployment(context context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, hash string, cache *resCache.ObjectCache) error {
 	sso := frontendEnvironment.Spec.SSO
 
 	// Create new empty struct
@@ -96,6 +98,15 @@ func createFrontendDeployment(context context.Context, pClient client.Client, fr
 	d.Spec.Template.ObjectMeta.Labels = labels
 
 	d.Spec.Selector = &metav1.LabelSelector{MatchLabels: labels}
+
+	annotations := d.Spec.Template.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+
+	annotations["configHash"] = hash
+
+	d.Spec.Template.SetAnnotations(annotations)
 
 	// Inform the cache that our updates are complete
 	if err := cache.Update(CoreDeployment, d); err != nil {
@@ -233,14 +244,14 @@ func createFrontendIngress(frontend *crd.Frontend, frontendEnvironment *crd.Fron
 	return nil
 }
 
-func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, cache *resCache.ObjectCache) error {
+func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, cache *resCache.ObjectCache) (string, error) {
 	// Will need to interact directly with the client here, and not the cache because
 	// we need to read ALL the Frontend CRDs in the Env that we care about
 
 	frontendList := &crd.FrontendList{}
 
 	if err := pClient.List(ctx, frontendList, client.MatchingFields{"spec.envName": frontend.Spec.EnvName}); err != nil {
-		return err
+		return "", err
 	}
 
 	cacheMap := make(map[string]crd.Frontend)
@@ -254,7 +265,7 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	bundleList := &crd.BundleList{}
 
 	if err := pClient.List(ctx, bundleList, client.MatchingFields{"spec.envName": frontend.Spec.EnvName}); err != nil {
-		return err
+		return "", err
 	}
 
 	cfgMap := &v1.ConfigMap{}
@@ -265,7 +276,7 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	}
 
 	if err := cache.Create(CoreConfig, nn, cfgMap); err != nil {
-		return err
+		return "", err
 	}
 
 	labels := frontendEnvironment.GetLabels()
@@ -280,7 +291,7 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 
 			jsonData, err := json.Marshal(newBundleObject)
 			if err != nil {
-				return err
+				return "", err
 			}
 
 			cfgMap.Data[fmt.Sprintf("%s.json", bundle.Name)] = string(jsonData)
@@ -307,7 +318,7 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 
 			jsonData, err := json.Marshal(newBundleObject)
 			if err != nil {
-				return err
+				return "", err
 			}
 
 			cfgMap.Data[fmt.Sprintf("%s.json", bundle.Name)] = string(jsonData)
@@ -322,14 +333,18 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 
 	jsonData, err := json.Marshal(fedModules)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	cfgMap.Data["fed-modules.json"] = string(jsonData)
 
 	if err := cache.Update(CoreConfig, cfgMap); err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	h := sha256.New()
+	h.Write([]byte(jsonData))
+	hash := fmt.Sprintf("%x", h.Sum(nil))
+
+	return hash, nil
 }
