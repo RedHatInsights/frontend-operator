@@ -172,7 +172,12 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	log.Info("Reconciliation successful", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
-	err = cache.Reconcile(frontend.GetUID())
+
+	opts := []client.ListOption{
+		client.MatchingLabels{"frontend": frontend.Name},
+	}
+
+	err = cache.Reconcile(frontend.GetUID(), opts...)
 	if err != nil {
 		log.Info("Reconcile error", "error", err)
 		return ctrl.Result{Requeue: true}, nil

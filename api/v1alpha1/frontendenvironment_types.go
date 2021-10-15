@@ -73,8 +73,8 @@ func (i *FrontendEnvironment) GetLabels() map[string]string {
 		i.Labels = map[string]string{}
 	}
 
-	if _, ok := i.Labels["FrontendEnvironment"]; !ok {
-		i.Labels["FrontendEnvironment"] = i.ObjectMeta.Name
+	if _, ok := i.Labels["frontendenv"]; !ok {
+		i.Labels["frontendenv"] = i.ObjectMeta.Name
 	}
 
 	newMap := make(map[string]string, len(i.Labels))

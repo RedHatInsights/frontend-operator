@@ -20,7 +20,7 @@ import (
 )
 
 func runReconciliation(context context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, cache *resCache.ObjectCache) error {
-	if err := createConfigConfigMap(context, pClient, frontend, cache); err != nil {
+	if err := createConfigConfigMap(context, pClient, frontend, frontendEnvironment, cache); err != nil {
 		return err
 	}
 
@@ -233,7 +233,7 @@ func createFrontendIngress(frontend *crd.Frontend, frontendEnvironment *crd.Fron
 	return nil
 }
 
-func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend *crd.Frontend, cache *resCache.ObjectCache) error {
+func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, cache *resCache.ObjectCache) error {
 	// Will need to interact directly with the client here, and not the cache because
 	// we need to read ALL the Frontend CRDs in the Env that we care about
 
@@ -268,7 +268,7 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 		return err
 	}
 
-	labels := frontend.GetLabels()
+	labels := frontendEnvironment.GetLabels()
 	labler := utils.GetCustomLabeler(labels, nn, frontend)
 	labler(cfgMap)
 
