@@ -40,6 +40,8 @@ objects:
                 properties:
                   appId:
                     type: string
+                  expandable:
+                    type: boolean
                   filterable:
                     type: boolean
                   groupId:
@@ -172,6 +174,8 @@ objects:
                         properties:
                           appId:
                             type: string
+                          expandable:
+                            type: boolean
                           filterable:
                             type: boolean
                           groupId:
@@ -345,6 +349,9 @@ objects:
             spec:
               description: FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
               properties:
+                hostname:
+                  description: Hostname
+                  type: string
                 ingressClass:
                   description: Ingress class
                   type: string
@@ -470,6 +477,8 @@ objects:
                   properties:
                     appId:
                       type: string
+                    expandable:
+                      type: boolean
                     filterable:
                       type: boolean
                     groupId:
@@ -645,6 +654,7 @@ objects:
   kind: ClusterRole
   metadata:
     labels:
+      managed.openshift.io/aggregate-to-dedicated-admins: cluster
       rbac.authorization.k8s.io/aggregate-to-edit: 'true'
     name: frontend-operator-bundle-editor-role
   rules:
@@ -691,6 +701,7 @@ objects:
   kind: ClusterRole
   metadata:
     labels:
+      managed.openshift.io/aggregate-to-dedicated-admins: cluster
       rbac.authorization.k8s.io/aggregate-to-edit: 'true'
     name: frontend-operator-frontend-editor-role
   rules:
@@ -737,6 +748,7 @@ objects:
   kind: ClusterRole
   metadata:
     labels:
+      managed.openshift.io/aggregate-to-dedicated-admins: cluster
       rbac.authorization.k8s.io/aggregate-to-edit: 'true'
     name: frontend-operator-frontendenvironment-editor-role
   rules:
