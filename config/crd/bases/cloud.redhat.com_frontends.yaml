@@ -51,6 +51,20 @@ spec:
                 description: Foo is an example field of Frontend. Edit frontend_types.go
                   to remove/update
                 type: string
+              extensions:
+                items:
+                  properties:
+                    flags:
+                      x-kubernetes-preserve-unknown-fields: true
+                    properties:
+                      x-kubernetes-preserve-unknown-fields: true
+                    type:
+                      type: string
+                  required:
+                  - properties
+                  - type
+                  type: object
+                type: array
               frontend:
                 properties:
                   paths:
@@ -212,6 +226,7 @@ spec:
             - API
             - deploymentRepo
             - envName
+            - extensions
             - frontend
             - image
             - title

@@ -256,9 +256,6 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 
 	cacheMap := make(map[string]crd.Frontend)
 	for _, frontend := range frontendList.Items {
-		if frontend.Spec.NavItem == nil {
-			continue
-		}
 		cacheMap[frontend.Name] = frontend
 	}
 
@@ -311,7 +308,8 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 
 			for _, app := range bundle.Spec.AppList {
 				if retrievedFrontend, ok := cacheMap[app]; ok {
-					newBundleObject.NavItems = append(newBundleObject.NavItems, *retrievedFrontend.Spec.NavItem)
+					navitem := processApp(&retrievedFrontend)
+					newBundleObject.NavItems = append(newBundleObject.NavItems, *navitem)
 				}
 				if bundleNavItem, ok := bundleCacheMap[app]; ok {
 					newBundleObject.NavItems = append(newBundleObject.NavItems, bundleNavItem)
@@ -357,4 +355,15 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	hash := fmt.Sprintf("%x", h.Sum(nil))
 
 	return hash, nil
+}
+
+func processApp(frontend *crd.Frontend) *crd.BundleNavItem {
+	for _, extension := range frontend.Spec.Extensions {
+		if extension.Type == "cloud.redhat.com/frontend" {
+			bundleItem := &crd.BundleNavItem{}
+			json.Unmarshal(extension.Properties.Raw, bundleItem)
+			return bundleItem
+		}
+	}
+	return nil
 }

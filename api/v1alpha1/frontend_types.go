@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"fmt"
 
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -45,8 +46,15 @@ type FrontendSpec struct {
 	API            ApiInfo        `json:"API"`
 	Frontend       FrontendInfo   `json:"frontend"`
 	Image          string         `json:"image"`
+	Extensions     []Extension    `json:"extensions"`
 	NavItem        *BundleNavItem `json:"navItem,omitempty"`
 	Module         FedModule      `json:"module,omitempty"`
+}
+
+type Extension struct {
+	Type       string             `json:"type"`
+	Properties apiextensions.JSON `json:"properties"`
+	Flags      apiextensions.JSON `json:"flags,omitempty"`
 }
 
 // FrontendStatus defines the observed state of Frontend
