@@ -103,30 +103,21 @@ var _ = Describe("Frontend controller", func() {
 
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, deploymentLookupKey, createdDeployment)
-				if err != nil {
-					return false
-				}
-				return true
+				return err == nil
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdDeployment.Name).Should(Equal(FrontendName))
 
 			createdIngress := &networking.Ingress{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, ingressLookupKey, createdIngress)
-				if err != nil {
-					return false
-				}
-				return true
+				return err == nil
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdIngress.Name).Should(Equal(FrontendName))
 
 			createdConfigMap := &v1.ConfigMap{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, configMapLookupKey, createdConfigMap)
-				if err != nil {
-					return false
-				}
-				return true
+				return err == nil
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdConfigMap.Name).Should(Equal(FrontendEnvName))
 			Expect(createdConfigMap.Data).Should(Equal(map[string]string{
