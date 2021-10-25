@@ -14,8 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// +kubebuilder:docs-gen:collapse=Imports
-
 var _ = Describe("Frontend controller", func() {
 
 	const (
