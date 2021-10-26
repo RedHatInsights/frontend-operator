@@ -360,7 +360,6 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 
 func getModule(frontend *crd.Frontend) *crd.FedModule {
 	if ec := getExtensionContent(frontend); ec != nil {
-		fmt.Printf("\n%v\n", ec)
 		return &ec.Module
 	}
 	return nil
@@ -377,7 +376,6 @@ func getExtensionContent(frontend *crd.Frontend) *crd.ExtensionContent {
 	for _, extension := range frontend.Spec.Extensions {
 		if extension.Type == "cloud.redhat.com/frontend" {
 			extensionContent := &crd.ExtensionContent{}
-			fmt.Printf("%v", extension.Properties.Raw)
 			json.Unmarshal(extension.Properties.Raw, extensionContent)
 			return extensionContent
 		}
