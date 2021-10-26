@@ -19,11 +19,23 @@ var _ = Describe("Frontend controller", func() {
 	var inputJSON apiextensions.JSON
 
 	inputJSON.UnmarshalJSON([]byte(`{
-		"title": "Test",
-		"groupID": "",
-		"navItems": {},
-		"appId": "",
-		"href": "/test/href"
+		"navItem": {
+			"title": "Test",
+			"groupID": "",
+			"navItems": {},
+			"appId": "",
+			"href": "/test/href"
+		},
+		"module": {
+			"manifestLocation": "/apps/inventory/fed-mods.json",
+			"modules": [{
+				"id": "test",
+				"module": "./RootApp",
+				"routes": [{
+					"pathName": "/test/href"
+				}]
+			}]
+		}
 	}`))
 
 	const (
@@ -65,16 +77,6 @@ var _ = Describe("Frontend controller", func() {
 						Type:       "cloud.redhat.com/frontend",
 						Properties: inputJSON,
 					}},
-					Module: crd.FedModule{
-						ManifestLocation: "/apps/inventory/fed-mods.json",
-						Modules: []crd.Module{{
-							Id:     "test",
-							Module: "./RootApp",
-							Routes: []crd.Routes{{
-								Pathname: "/test/href",
-							}},
-						}},
-					},
 				},
 			}
 			Expect(k8sClient.Create(ctx, frontend)).Should(Succeed())

@@ -308,7 +308,7 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 
 			for _, app := range bundle.Spec.AppList {
 				if retrievedFrontend, ok := cacheMap[app]; ok {
-					navitem := processApp(&retrievedFrontend)
+					navitem := getNavItem(&retrievedFrontend)
 					newBundleObject.NavItems = append(newBundleObject.NavItems, *navitem)
 				}
 				if bundleNavItem, ok := bundleCacheMap[app]; ok {
@@ -331,8 +331,9 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 
 	fedModules := make(map[string]crd.FedModule)
 
-	for _, app := range frontendList.Items {
-		fedModules[app.GetName()] = app.Spec.Module
+	for _, frontend := range frontendList.Items {
+		module := getModule(&frontend)
+		fedModules[frontend.GetName()] = *module
 	}
 
 	jsonData, err := json.Marshal(fedModules)
@@ -357,12 +358,28 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	return hash, nil
 }
 
-func processApp(frontend *crd.Frontend) *crd.BundleNavItem {
+func getModule(frontend *crd.Frontend) *crd.FedModule {
+	if ec := getExtensionContent(frontend); ec != nil {
+		fmt.Printf("\n%v\n", ec)
+		return &ec.Module
+	}
+	return nil
+}
+
+func getNavItem(frontend *crd.Frontend) *crd.BundleNavItem {
+	if ec := getExtensionContent(frontend); ec != nil {
+		return ec.NavItem
+	}
+	return nil
+}
+
+func getExtensionContent(frontend *crd.Frontend) *crd.ExtensionContent {
 	for _, extension := range frontend.Spec.Extensions {
 		if extension.Type == "cloud.redhat.com/frontend" {
-			bundleItem := &crd.BundleNavItem{}
-			json.Unmarshal(extension.Properties.Raw, bundleItem)
-			return bundleItem
+			extensionContent := &crd.ExtensionContent{}
+			fmt.Printf("%v", extension.Properties.Raw)
+			json.Unmarshal(extension.Properties.Raw, extensionContent)
+			return extensionContent
 		}
 	}
 	return nil
