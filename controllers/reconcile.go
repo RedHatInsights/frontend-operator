@@ -256,9 +256,6 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 
 	cacheMap := make(map[string]crd.Frontend)
 	for _, frontend := range frontendList.Items {
-		if frontend.Spec.NavItem == nil {
-			continue
-		}
 		cacheMap[frontend.Name] = frontend
 	}
 
@@ -311,7 +308,8 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 
 			for _, app := range bundle.Spec.AppList {
 				if retrievedFrontend, ok := cacheMap[app]; ok {
-					newBundleObject.NavItems = append(newBundleObject.NavItems, *retrievedFrontend.Spec.NavItem)
+					navitem := getNavItem(&retrievedFrontend)
+					newBundleObject.NavItems = append(newBundleObject.NavItems, *navitem)
 				}
 				if bundleNavItem, ok := bundleCacheMap[app]; ok {
 					newBundleObject.NavItems = append(newBundleObject.NavItems, bundleNavItem)
@@ -333,8 +331,11 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 
 	fedModules := make(map[string]crd.FedModule)
 
-	for _, app := range frontendList.Items {
-		fedModules[app.GetName()] = app.Spec.Module
+	for _, frontend := range frontendList.Items {
+		module := getModule(&frontend)
+		if frontend.Spec.Extensions != nil {
+			fedModules[frontend.GetName()] = *module
+		}
 	}
 
 	jsonData, err := json.Marshal(fedModules)
@@ -357,4 +358,29 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	hash := fmt.Sprintf("%x", h.Sum(nil))
 
 	return hash, nil
+}
+
+func getModule(frontend *crd.Frontend) *crd.FedModule {
+	if ec := getExtensionContent(frontend); ec != nil {
+		return &ec.Module
+	}
+	return nil
+}
+
+func getNavItem(frontend *crd.Frontend) *crd.BundleNavItem {
+	if ec := getExtensionContent(frontend); ec != nil {
+		return ec.NavItem
+	}
+	return nil
+}
+
+func getExtensionContent(frontend *crd.Frontend) *crd.ExtensionContent {
+	for _, extension := range frontend.Spec.Extensions {
+		if extension.Type == "cloud.redhat.com/frontend" {
+			extensionContent := &crd.ExtensionContent{}
+			json.Unmarshal(extension.Properties.Raw, extensionContent)
+			return extensionContent
+		}
+	}
+	return nil
 }

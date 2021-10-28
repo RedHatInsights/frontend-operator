@@ -10,11 +10,33 @@ import (
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 var _ = Describe("Frontend controller", func() {
+	var inputJSON apiextensions.JSON
+
+	inputJSON.UnmarshalJSON([]byte(`{
+		"navItem": {
+			"title": "Test",
+			"groupID": "",
+			"navItems": {},
+			"appId": "",
+			"href": "/test/href"
+		},
+		"module": {
+			"manifestLocation": "/apps/inventory/fed-mods.json",
+			"modules": [{
+				"id": "test",
+				"module": "./RootApp",
+				"routes": [{
+					"pathName": "/test/href"
+				}]
+			}]
+		}
+	}`))
 
 	const (
 		FrontendName      = "test-frontend"
@@ -30,6 +52,7 @@ var _ = Describe("Frontend controller", func() {
 		It("Should create a deployment with the correct items", func() {
 			By("By creating a new Frontend")
 			ctx := context.Background()
+
 			frontend := &crd.Frontend{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "cloud.redhat.com/v1",
@@ -50,29 +73,10 @@ var _ = Describe("Frontend controller", func() {
 						Paths: []string{"/things/test"},
 					},
 					Image: "my-image:version",
-					NavItem: &crd.BundleNavItem{
-						Title:       "Test",
-						GroupID:     "",
-						NavItems:    []crd.LeafBundleNavItem{},
-						AppId:       "",
-						Href:        "/test/href",
-						Product:     "",
-						IsExternal:  false,
-						Filterable:  false,
-						Permissions: []crd.BundlePermission{},
-						Routes:      []crd.LeafBundleNavItem{},
-						Expandable:  false,
-					},
-					Module: crd.FedModule{
-						ManifestLocation: "/apps/inventory/fed-mods.json",
-						Modules: []crd.Module{{
-							Id:     "test",
-							Module: "./RootApp",
-							Routes: []crd.Routes{{
-								Pathname: "/test/href",
-							}},
-						}},
-					},
+					Extensions: []crd.Extension{{
+						Type:       "cloud.redhat.com/frontend",
+						Properties: inputJSON,
+					}},
 				},
 			}
 			Expect(k8sClient.Create(ctx, frontend)).Should(Succeed())
@@ -80,7 +84,7 @@ var _ = Describe("Frontend controller", func() {
 			frontendEnvironment := crd.FrontendEnvironment{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "cloud.redhat.com/v1",
-					Kind:       "Frontend",
+					Kind:       "FrontendEnvironment",
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      FrontendEnvName,
@@ -92,6 +96,24 @@ var _ = Describe("Frontend controller", func() {
 				},
 			}
 			Expect(k8sClient.Create(ctx, &frontendEnvironment)).Should(Succeed())
+
+			bundle := crd.Bundle{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Bundle",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendEnvName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.BundleSpec{
+					ID:      "test-bundle",
+					Title:   "",
+					AppList: []string{FrontendName},
+					EnvName: FrontendEnvName,
+				},
+			}
+			Expect(k8sClient.Create(ctx, &bundle)).Should(Succeed())
 
 			deploymentLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
 			ingressLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
@@ -120,6 +142,7 @@ var _ = Describe("Frontend controller", func() {
 			Expect(createdConfigMap.Name).Should(Equal(FrontendEnvName))
 			Expect(createdConfigMap.Data).Should(Equal(map[string]string{
 				"fed-modules.json": "{\"test-frontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]}}",
+				"test-env.json":    "{\"id\":\"test-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"}]}",
 			}))
 		})
 	})
