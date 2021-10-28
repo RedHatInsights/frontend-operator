@@ -333,7 +333,9 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 
 	for _, frontend := range frontendList.Items {
 		module := getModule(&frontend)
-		fedModules[frontend.GetName()] = *module
+		if frontend.Spec.Extensions != nil {
+			fedModules[frontend.GetName()] = *module
+		}
 	}
 
 	jsonData, err := json.Marshal(fedModules)
