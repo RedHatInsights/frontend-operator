@@ -309,7 +309,9 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 			for _, app := range bundle.Spec.AppList {
 				if retrievedFrontend, ok := cacheMap[app]; ok {
 					navitem := getNavItem(&retrievedFrontend)
-					newBundleObject.NavItems = append(newBundleObject.NavItems, *navitem)
+					if navitem != nil {
+						newBundleObject.NavItems = append(newBundleObject.NavItems, *navitem)
+					}
 				}
 				if bundleNavItem, ok := bundleCacheMap[app]; ok {
 					newBundleObject.NavItems = append(newBundleObject.NavItems, bundleNavItem)
