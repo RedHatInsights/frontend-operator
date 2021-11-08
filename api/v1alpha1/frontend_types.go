@@ -69,6 +69,7 @@ type FrontendStatus struct {
 type FedModule struct {
 	ManifestLocation string   `json:"manifestLocation"`
 	Modules          []Module `json:"modules,omitempty"`
+	ModuleID         string   `json:"moduleID,omitempty"`
 }
 
 type Module struct {
