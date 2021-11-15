@@ -454,6 +454,8 @@ objects:
                   type: object
                 image:
                   type: string
+                service:
+                  type: string
                 title:
                   type: string
               required:
@@ -461,7 +463,6 @@ objects:
               - deploymentRepo
               - envName
               - frontend
-              - image
               - title
               type: object
             status:

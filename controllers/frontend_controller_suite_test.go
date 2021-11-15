@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-var _ = Describe("Frontend controller", func() {
+var _ = Describe("Frontend controller with image", func() {
 	var inputJSON apiextensions.JSON
 
 	inputJSON.UnmarshalJSON([]byte(`{
@@ -42,6 +42,7 @@ var _ = Describe("Frontend controller", func() {
 		FrontendName      = "test-frontend"
 		FrontendNamespace = "default"
 		FrontendEnvName   = "test-env"
+		BundleName        = "test-bundle"
 
 		timeout  = time.Second * 10
 		duration = time.Second * 10
@@ -81,6 +82,149 @@ var _ = Describe("Frontend controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, frontend)).Should(Succeed())
 
+			frontendEnvironment := &crd.FrontendEnvironment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "FrontendEnvironment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendEnvName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendEnvironmentSpec{
+					SSO:      "https://something-auth",
+					Hostname: "something",
+				},
+			}
+			Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(Succeed())
+
+			bundle := &crd.Bundle{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Bundle",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendEnvName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.BundleSpec{
+					ID:      BundleName,
+					Title:   "",
+					AppList: []string{FrontendName},
+					EnvName: FrontendEnvName,
+				},
+			}
+			Expect(k8sClient.Create(ctx, bundle)).Should(Succeed())
+
+			deploymentLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
+			ingressLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
+			configMapLookupKey := types.NamespacedName{Name: frontendEnvironment.Name, Namespace: FrontendNamespace}
+			serviceLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
+
+			createdDeployment := &apps.Deployment{}
+
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, deploymentLookupKey, createdDeployment)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdDeployment.Name).Should(Equal(FrontendName))
+
+			createdIngress := &networking.Ingress{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, ingressLookupKey, createdIngress)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdIngress.Name).Should(Equal(FrontendName))
+
+			createdService := &v1.Service{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, serviceLookupKey, createdService)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdIngress.Name).Should(Equal(FrontendName))
+
+			createdConfigMap := &v1.ConfigMap{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, configMapLookupKey, createdConfigMap)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdConfigMap.Name).Should(Equal(FrontendEnvName))
+			Expect(createdConfigMap.Data).Should(Equal(map[string]string{
+				"fed-modules.json": "{\"test-frontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]}}",
+				"test-env.json":    "{\"id\":\"test-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"}]}",
+			}))
+		})
+	})
+})
+
+var _ = Describe("Frontend controller with service", func() {
+	var inputJSON apiextensions.JSON
+
+	inputJSON.UnmarshalJSON([]byte(`{
+		"navItem": {
+			"title": "Test",
+			"groupID": "",
+			"navItems": {},
+			"appId": "",
+			"href": "/test/href"
+		},
+		"module": {
+			"manifestLocation": "/apps/inventory/fed-mods.json",
+			"modules": [{
+				"id": "test",
+				"module": "./RootApp",
+				"routes": [{
+					"pathName": "/test/href"
+				}]
+			}]
+		}
+	}`))
+
+	const (
+		FrontendName      = "test-frontend-service"
+		FrontendNamespace = "default"
+		FrontendEnvName   = "test-env-service"
+		ServiceName       = "test-service"
+		BundleName        = "test-service-bundle"
+
+		timeout  = time.Second * 10
+		duration = time.Second * 10
+		interval = time.Millisecond * 250
+	)
+
+	Context("When creating a Frontend Resource", func() {
+		It("Should create a deployment with the correct items", func() {
+			By("By creating a new Frontend")
+			ctx := context.Background()
+
+			frontend := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName:        FrontendEnvName,
+					Title:          "",
+					DeploymentRepo: "",
+					API: crd.ApiInfo{
+						Versions: []string{"v1"},
+					},
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/things/test"},
+					},
+					Service: ServiceName,
+					Extensions: []crd.Extension{{
+						Type:       "cloud.redhat.com/frontend",
+						Properties: inputJSON,
+					}},
+				},
+			}
+			Expect(k8sClient.Create(ctx, frontend)).Should(Succeed())
+
 			frontendEnvironment := crd.FrontendEnvironment{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "cloud.redhat.com/v1",
@@ -107,7 +251,7 @@ var _ = Describe("Frontend controller", func() {
 					Namespace: FrontendNamespace,
 				},
 				Spec: crd.BundleSpec{
-					ID:      "test-bundle",
+					ID:      BundleName,
 					Title:   "",
 					AppList: []string{FrontendName},
 					EnvName: FrontendEnvName,
@@ -115,17 +259,8 @@ var _ = Describe("Frontend controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, &bundle)).Should(Succeed())
 
-			deploymentLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
 			ingressLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
 			configMapLookupKey := types.NamespacedName{Name: frontendEnvironment.Name, Namespace: FrontendNamespace}
-
-			createdDeployment := &apps.Deployment{}
-
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, deploymentLookupKey, createdDeployment)
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
-			Expect(createdDeployment.Name).Should(Equal(FrontendName))
 
 			createdIngress := &networking.Ingress{}
 			Eventually(func() bool {
@@ -133,6 +268,7 @@ var _ = Describe("Frontend controller", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdIngress.Name).Should(Equal(FrontendName))
+			Expect(createdIngress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).Should(Equal(ServiceName))
 
 			createdConfigMap := &v1.ConfigMap{}
 			Eventually(func() bool {
@@ -141,8 +277,8 @@ var _ = Describe("Frontend controller", func() {
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdConfigMap.Name).Should(Equal(FrontendEnvName))
 			Expect(createdConfigMap.Data).Should(Equal(map[string]string{
-				"fed-modules.json": "{\"test-frontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]}}",
-				"test-env.json":    "{\"id\":\"test-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"}]}",
+				"fed-modules.json":      "{\"test-frontend-service\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]}}",
+				"test-env-service.json": "{\"id\":\"test-service-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"}]}",
 			}))
 		})
 	})

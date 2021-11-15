@@ -45,8 +45,9 @@ type FrontendSpec struct {
 	DeploymentRepo string       `json:"deploymentRepo"`
 	API            ApiInfo      `json:"API"`
 	Frontend       FrontendInfo `json:"frontend"`
-	Image          string       `json:"image"`
+	Image          string       `json:"image,omitempty"`
 	Extensions     []Extension  `json:"extensions,omitempty"`
+	Service        string       `json:"service,omitempty"`
 }
 
 type ExtensionContent struct {

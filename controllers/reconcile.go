@@ -26,12 +26,13 @@ func runReconciliation(context context.Context, pClient client.Client, frontend 
 		return err
 	}
 
-	if err := createFrontendDeployment(context, pClient, frontend, frontendEnvironment, hash, cache); err != nil {
-		return err
-	}
-
-	if err := createFrontendService(frontend, cache); err != nil {
-		return err
+	if frontend.Spec.Image != "" {
+		if err := createFrontendDeployment(context, pClient, frontend, frontendEnvironment, hash, cache); err != nil {
+			return err
+		}
+		if err := createFrontendService(frontend, cache); err != nil {
+			return err
+		}
 	}
 
 	if err := createFrontendIngress(frontend, frontendEnvironment, cache); err != nil {
@@ -183,6 +184,20 @@ func createFrontendIngress(frontend *crd.Frontend, frontendEnvironment *crd.Fron
 		ingressClass = "nginx"
 	}
 
+	if frontend.Spec.Image != "" {
+		populateConesoleDotIngress(nn, frontend, frontendEnvironment, netobj, ingressClass)
+	} else {
+		populateHACIngress(nn, frontend, frontendEnvironment, netobj, ingressClass)
+	}
+
+	if err := cache.Update(WebIngress, netobj); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func populateConesoleDotIngress(nn types.NamespacedName, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, netobj *networking.Ingress, ingressClass string) {
 	frontendPath := frontend.Spec.Frontend.Paths
 	defaultPath := fmt.Sprintf("/apps/%s", frontend.Name)
 	defaultBetaPath := fmt.Sprintf("/beta/apps/%s", frontend.Name)
@@ -236,12 +251,62 @@ func createFrontendIngress(frontend *crd.Frontend, frontendEnvironment *crd.Fron
 			},
 		},
 	}
+}
 
-	if err := cache.Update(WebIngress, netobj); err != nil {
-		return err
+func populateHACIngress(nn types.NamespacedName, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, netobj *networking.Ingress, ingressClass string) {
+	frontendPath := frontend.Spec.Frontend.Paths
+	defaultPath := fmt.Sprintf("/apps/%s", frontend.Name)
+	defaultBetaPath := fmt.Sprintf("/beta/apps/%s", frontend.Name)
+
+	if !frontend.Spec.Frontend.HasPath(defaultPath) {
+		frontendPath = append(frontendPath, defaultPath)
 	}
 
-	return nil
+	if !frontend.Spec.Frontend.HasPath(defaultBetaPath) {
+		frontendPath = append(frontendPath, defaultBetaPath)
+	}
+
+	prefixType := "Prefix"
+
+	var ingressPapths []networking.HTTPIngressPath
+	for _, a := range frontendPath {
+		newPath := networking.HTTPIngressPath{
+			Path:     a,
+			PathType: (*networking.PathType)(&prefixType),
+			Backend: networking.IngressBackend{
+				Service: &networking.IngressServiceBackend{
+					Name: frontend.Spec.Service,
+					Port: networking.ServiceBackendPort{
+						Number: 8000,
+					},
+				},
+			},
+		}
+		ingressPapths = append(ingressPapths, newPath)
+	}
+
+	host := frontendEnvironment.Spec.Hostname
+	if host == "" {
+		host = frontend.Spec.EnvName
+	}
+
+	// we need to add /api fallback here as well
+	netobj.Spec = networking.IngressSpec{
+		TLS: []networking.IngressTLS{{
+			Hosts: []string{},
+		}},
+		IngressClassName: &ingressClass,
+		Rules: []networking.IngressRule{
+			{
+				Host: host,
+				IngressRuleValue: networking.IngressRuleValue{
+					HTTP: &networking.HTTPIngressRuleValue{
+						Paths: ingressPapths,
+					},
+				},
+			},
+		},
+	}
 }
 
 func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, cache *resCache.ObjectCache) (string, error) {
