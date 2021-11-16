@@ -35,119 +35,6 @@ objects:
                 of an object. Servers should convert recognized schemas to the latest
                 internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
               type: string
-            customNav:
-              items:
-                properties:
-                  appId:
-                    type: string
-                  expandable:
-                    type: boolean
-                  filterable:
-                    type: boolean
-                  groupId:
-                    type: string
-                  href:
-                    type: string
-                  isExternal:
-                    type: boolean
-                  navItems:
-                    items:
-                      properties:
-                        appId:
-                          type: string
-                        filterable:
-                          type: boolean
-                        groupId:
-                          type: string
-                        href:
-                          type: string
-                        isExternal:
-                          type: boolean
-                        permissions:
-                          items:
-                            properties:
-                              args:
-                                items:
-                                  items:
-                                    type: string
-                                  type: array
-                                type: array
-                              method:
-                                type: string
-                            required:
-                            - args
-                            - method
-                            type: object
-                          type: array
-                        product:
-                          type: string
-                        title:
-                          type: string
-                      required:
-                      - title
-                      type: object
-                    type: array
-                  permissions:
-                    items:
-                      properties:
-                        args:
-                          items:
-                            items:
-                              type: string
-                            type: array
-                          type: array
-                        method:
-                          type: string
-                      required:
-                      - args
-                      - method
-                      type: object
-                    type: array
-                  product:
-                    type: string
-                  routes:
-                    items:
-                      properties:
-                        appId:
-                          type: string
-                        filterable:
-                          type: boolean
-                        groupId:
-                          type: string
-                        href:
-                          type: string
-                        isExternal:
-                          type: boolean
-                        permissions:
-                          items:
-                            properties:
-                              args:
-                                items:
-                                  items:
-                                    type: string
-                                  type: array
-                                type: array
-                              method:
-                                type: string
-                            required:
-                            - args
-                            - method
-                            type: object
-                          type: array
-                        product:
-                          type: string
-                        title:
-                          type: string
-                      required:
-                      - title
-                      type: object
-                    type: array
-                  title:
-                    type: string
-                required:
-                - title
-                type: object
-              type: array
             kind:
               description: 'Kind is a string value representing the REST resource
                 this object represents. Servers may infer this from the endpoint the
@@ -162,6 +49,119 @@ objects:
                 appList:
                   items:
                     type: string
+                  type: array
+                customNav:
+                  items:
+                    properties:
+                      appId:
+                        type: string
+                      expandable:
+                        type: boolean
+                      filterable:
+                        type: boolean
+                      groupId:
+                        type: string
+                      href:
+                        type: string
+                      isExternal:
+                        type: boolean
+                      navItems:
+                        items:
+                          properties:
+                            appId:
+                              type: string
+                            filterable:
+                              type: boolean
+                            groupId:
+                              type: string
+                            href:
+                              type: string
+                            isExternal:
+                              type: boolean
+                            permissions:
+                              items:
+                                properties:
+                                  args:
+                                    items:
+                                      items:
+                                        type: string
+                                      type: array
+                                    type: array
+                                  method:
+                                    type: string
+                                required:
+                                - args
+                                - method
+                                type: object
+                              type: array
+                            product:
+                              type: string
+                            title:
+                              type: string
+                          required:
+                          - title
+                          type: object
+                        type: array
+                      permissions:
+                        items:
+                          properties:
+                            args:
+                              items:
+                                items:
+                                  type: string
+                                type: array
+                              type: array
+                            method:
+                              type: string
+                          required:
+                          - args
+                          - method
+                          type: object
+                        type: array
+                      product:
+                        type: string
+                      routes:
+                        items:
+                          properties:
+                            appId:
+                              type: string
+                            filterable:
+                              type: boolean
+                            groupId:
+                              type: string
+                            href:
+                              type: string
+                            isExternal:
+                              type: boolean
+                            permissions:
+                              items:
+                                properties:
+                                  args:
+                                    items:
+                                      items:
+                                        type: string
+                                      type: array
+                                    type: array
+                                  method:
+                                    type: string
+                                required:
+                                - args
+                                - method
+                                type: object
+                              type: array
+                            product:
+                              type: string
+                            title:
+                              type: string
+                          required:
+                          - title
+                          type: object
+                        type: array
+                      title:
+                        type: string
+                    required:
+                    - title
+                    type: object
                   type: array
                 envName:
                   type: string
@@ -429,20 +429,6 @@ objects:
                   description: Foo is an example field of Frontend. Edit frontend_types.go
                     to remove/update
                   type: string
-                extensions:
-                  items:
-                    properties:
-                      flags:
-                        x-kubernetes-preserve-unknown-fields: true
-                      properties:
-                        x-kubernetes-preserve-unknown-fields: true
-                      type:
-                        type: string
-                    required:
-                    - properties
-                    - type
-                    type: object
-                  type: array
                 frontend:
                   properties:
                     paths:
@@ -454,6 +440,154 @@ objects:
                   type: object
                 image:
                   type: string
+                module:
+                  properties:
+                    manifestLocation:
+                      type: string
+                    moduleID:
+                      type: string
+                    modules:
+                      items:
+                        properties:
+                          id:
+                            type: string
+                          module:
+                            type: string
+                          routes:
+                            items:
+                              properties:
+                                dynamic:
+                                  type: boolean
+                                exact:
+                                  type: boolean
+                                pathname:
+                                  type: string
+                              required:
+                              - pathname
+                              type: object
+                            type: array
+                        required:
+                        - id
+                        - module
+                        - routes
+                        type: object
+                      type: array
+                  required:
+                  - manifestLocation
+                  type: object
+                navItem:
+                  items:
+                    properties:
+                      appId:
+                        type: string
+                      expandable:
+                        type: boolean
+                      filterable:
+                        type: boolean
+                      groupId:
+                        type: string
+                      href:
+                        type: string
+                      isExternal:
+                        type: boolean
+                      navItems:
+                        items:
+                          properties:
+                            appId:
+                              type: string
+                            filterable:
+                              type: boolean
+                            groupId:
+                              type: string
+                            href:
+                              type: string
+                            isExternal:
+                              type: boolean
+                            permissions:
+                              items:
+                                properties:
+                                  args:
+                                    items:
+                                      items:
+                                        type: string
+                                      type: array
+                                    type: array
+                                  method:
+                                    type: string
+                                required:
+                                - args
+                                - method
+                                type: object
+                              type: array
+                            product:
+                              type: string
+                            title:
+                              type: string
+                          required:
+                          - title
+                          type: object
+                        type: array
+                      permissions:
+                        items:
+                          properties:
+                            args:
+                              items:
+                                items:
+                                  type: string
+                                type: array
+                              type: array
+                            method:
+                              type: string
+                          required:
+                          - args
+                          - method
+                          type: object
+                        type: array
+                      product:
+                        type: string
+                      routes:
+                        items:
+                          properties:
+                            appId:
+                              type: string
+                            filterable:
+                              type: boolean
+                            groupId:
+                              type: string
+                            href:
+                              type: string
+                            isExternal:
+                              type: boolean
+                            permissions:
+                              items:
+                                properties:
+                                  args:
+                                    items:
+                                      items:
+                                        type: string
+                                      type: array
+                                    type: array
+                                  method:
+                                    type: string
+                                required:
+                                - args
+                                - method
+                                type: object
+                              type: array
+                            product:
+                              type: string
+                            title:
+                              type: string
+                          required:
+                          - title
+                          type: object
+                        type: array
+                      title:
+                        type: string
+                    required:
+                    - title
+                    type: object
+                  type: array
                 service:
                   type: string
                 title:
