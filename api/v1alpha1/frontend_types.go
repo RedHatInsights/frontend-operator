@@ -47,7 +47,7 @@ type FrontendSpec struct {
 	Image          string           `json:"image,omitempty"`
 	Service        string           `json:"service,omitempty"`
 	Module         *FedModule       `json:"module,omitempty"`
-	NavItems       []*BundleNavItem `json:"navItem,omitempty"`
+	NavItems       []*BundleNavItem `json:"navItems,omitempty"`
 }
 
 // FrontendStatus defines the observed state of Frontend
