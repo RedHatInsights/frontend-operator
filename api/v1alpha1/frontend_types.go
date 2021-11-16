@@ -19,7 +19,6 @@ package v1alpha1
 import (
 	"fmt"
 
-	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -40,24 +39,15 @@ type FrontendSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of Frontend. Edit frontend_types.go to remove/update
-	EnvName        string       `json:"envName"`
-	Title          string       `json:"title"`
-	DeploymentRepo string       `json:"deploymentRepo"`
-	API            ApiInfo      `json:"API"`
-	Frontend       FrontendInfo `json:"frontend"`
-	Image          string       `json:"image"`
-	Extensions     []Extension  `json:"extensions,omitempty"`
-}
-
-type ExtensionContent struct {
-	Module  FedModule      `json:"module,omitempty"`
-	NavItem *BundleNavItem `json:"navItem,omitempty"`
-}
-
-type Extension struct {
-	Type       string             `json:"type"`
-	Properties apiextensions.JSON `json:"properties"`
-	Flags      apiextensions.JSON `json:"flags,omitempty"`
+	EnvName        string           `json:"envName"`
+	Title          string           `json:"title"`
+	DeploymentRepo string           `json:"deploymentRepo"`
+	API            ApiInfo          `json:"API"`
+	Frontend       FrontendInfo     `json:"frontend"`
+	Image          string           `json:"image,omitempty"`
+	Service        string           `json:"service,omitempty"`
+	Module         *FedModule       `json:"module,omitempty"`
+	NavItems       []*BundleNavItem `json:"navItem,omitempty"`
 }
 
 // FrontendStatus defines the observed state of Frontend
@@ -73,12 +63,12 @@ type FedModule struct {
 }
 
 type Module struct {
-	Id     string   `json:"id"`
-	Module string   `json:"module"`
-	Routes []Routes `json:"routes"`
+	Id     string  `json:"id"`
+	Module string  `json:"module"`
+	Routes []Route `json:"routes"`
 }
 
-type Routes struct {
+type Route struct {
 	Pathname string `json:"pathname"`
 	Dynamic  bool   `json:"dynamic,omitempty"`
 	Exact    bool   `json:"exact,omitempty"`

@@ -26,12 +26,13 @@ func runReconciliation(context context.Context, pClient client.Client, frontend 
 		return err
 	}
 
-	if err := createFrontendDeployment(context, pClient, frontend, frontendEnvironment, hash, cache); err != nil {
-		return err
-	}
-
-	if err := createFrontendService(frontend, cache); err != nil {
-		return err
+	if frontend.Spec.Image != "" {
+		if err := createFrontendDeployment(context, pClient, frontend, frontendEnvironment, hash, cache); err != nil {
+			return err
+		}
+		if err := createFrontendService(frontend, cache); err != nil {
+			return err
+		}
 	}
 
 	if err := createFrontendIngress(frontend, frontendEnvironment, cache); err != nil {
@@ -183,6 +184,20 @@ func createFrontendIngress(frontend *crd.Frontend, frontendEnvironment *crd.Fron
 		ingressClass = "nginx"
 	}
 
+	if frontend.Spec.Image != "" {
+		populateConesoleDotIngress(nn, frontend, frontendEnvironment, netobj, ingressClass)
+	} else {
+		populateHACIngress(nn, frontend, frontendEnvironment, netobj, ingressClass)
+	}
+
+	if err := cache.Update(WebIngress, netobj); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func populateConesoleDotIngress(nn types.NamespacedName, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, netobj *networking.Ingress, ingressClass string) {
 	frontendPath := frontend.Spec.Frontend.Paths
 	defaultPath := fmt.Sprintf("/apps/%s", frontend.Name)
 	defaultBetaPath := fmt.Sprintf("/beta/apps/%s", frontend.Name)
@@ -236,12 +251,62 @@ func createFrontendIngress(frontend *crd.Frontend, frontendEnvironment *crd.Fron
 			},
 		},
 	}
+}
 
-	if err := cache.Update(WebIngress, netobj); err != nil {
-		return err
+func populateHACIngress(nn types.NamespacedName, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, netobj *networking.Ingress, ingressClass string) {
+	frontendPath := frontend.Spec.Frontend.Paths
+	defaultPath := fmt.Sprintf("/apps/%s", frontend.Name)
+	defaultBetaPath := fmt.Sprintf("/beta/apps/%s", frontend.Name)
+
+	if !frontend.Spec.Frontend.HasPath(defaultPath) {
+		frontendPath = append(frontendPath, defaultPath)
 	}
 
-	return nil
+	if !frontend.Spec.Frontend.HasPath(defaultBetaPath) {
+		frontendPath = append(frontendPath, defaultBetaPath)
+	}
+
+	prefixType := "Prefix"
+
+	var ingressPapths []networking.HTTPIngressPath
+	for _, a := range frontendPath {
+		newPath := networking.HTTPIngressPath{
+			Path:     a,
+			PathType: (*networking.PathType)(&prefixType),
+			Backend: networking.IngressBackend{
+				Service: &networking.IngressServiceBackend{
+					Name: frontend.Spec.Service,
+					Port: networking.ServiceBackendPort{
+						Number: 8000,
+					},
+				},
+			},
+		}
+		ingressPapths = append(ingressPapths, newPath)
+	}
+
+	host := frontendEnvironment.Spec.Hostname
+	if host == "" {
+		host = frontend.Spec.EnvName
+	}
+
+	// we need to add /api fallback here as well
+	netobj.Spec = networking.IngressSpec{
+		TLS: []networking.IngressTLS{{
+			Hosts: []string{},
+		}},
+		IngressClassName: &ingressClass,
+		Rules: []networking.IngressRule{
+			{
+				Host: host,
+				IngressRuleValue: networking.IngressRuleValue{
+					HTTP: &networking.HTTPIngressRuleValue{
+						Paths: ingressPapths,
+					},
+				},
+			},
+		},
+	}
 }
 
 func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, cache *resCache.ObjectCache) (string, error) {
@@ -285,8 +350,8 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	cfgMap.Data = map[string]string{}
 
 	for _, bundle := range bundleList.Items {
-		if bundle.CustomNav != nil {
-			newBundleObject := bundle.CustomNav
+		if bundle.Spec.CustomNav != nil {
+			newBundleObject := bundle.Spec.CustomNav
 
 			jsonData, err := json.Marshal(newBundleObject)
 			if err != nil {
@@ -308,9 +373,10 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 
 			for _, app := range bundle.Spec.AppList {
 				if retrievedFrontend, ok := cacheMap[app]; ok {
-					navitem := getNavItem(&retrievedFrontend)
-					if navitem != nil {
-						newBundleObject.NavItems = append(newBundleObject.NavItems, *navitem)
+					if retrievedFrontend.Spec.NavItems != nil {
+						for _, navItem := range retrievedFrontend.Spec.NavItems {
+							newBundleObject.NavItems = append(newBundleObject.NavItems, *navItem)
+						}
 					}
 				}
 				if bundleNavItem, ok := bundleCacheMap[app]; ok {
@@ -334,13 +400,12 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	fedModules := make(map[string]crd.FedModule)
 
 	for _, frontend := range frontendList.Items {
-		module := getModule(&frontend)
-		if frontend.Spec.Extensions != nil {
+		if frontend.Spec.Module != nil {
 			modName := frontend.GetName()
-			if module.ModuleID != "" {
-				modName = module.ModuleID
+			if frontend.Spec.Module.ModuleID != "" {
+				modName = frontend.Spec.Module.ModuleID
 			}
-			fedModules[modName] = *module
+			fedModules[modName] = *frontend.Spec.Module
 		}
 	}
 
@@ -364,29 +429,4 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	hash := fmt.Sprintf("%x", h.Sum(nil))
 
 	return hash, nil
-}
-
-func getModule(frontend *crd.Frontend) *crd.FedModule {
-	if ec := getExtensionContent(frontend); ec != nil {
-		return &ec.Module
-	}
-	return nil
-}
-
-func getNavItem(frontend *crd.Frontend) *crd.BundleNavItem {
-	if ec := getExtensionContent(frontend); ec != nil {
-		return ec.NavItem
-	}
-	return nil
-}
-
-func getExtensionContent(frontend *crd.Frontend) *crd.ExtensionContent {
-	for _, extension := range frontend.Spec.Extensions {
-		if extension.Type == "cloud.redhat.com/frontend" {
-			extensionContent := &crd.ExtensionContent{}
-			json.Unmarshal(extension.Properties.Raw, extensionContent)
-			return extensionContent
-		}
-	}
-	return nil
 }
