@@ -45,6 +45,8 @@ spec:
                   properties:
                     appId:
                       type: string
+                    dynamicNav:
+                      type: string
                     expandable:
                       type: boolean
                     filterable:
@@ -163,6 +165,8 @@ spec:
                     navItem:
                       properties:
                         appId:
+                          type: string
+                        dynamicNav:
                           type: string
                         expandable:
                           type: boolean

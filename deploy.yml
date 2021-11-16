@@ -55,6 +55,8 @@ objects:
                     properties:
                       appId:
                         type: string
+                      dynamicNav:
+                        type: string
                       expandable:
                         type: boolean
                       filterable:
@@ -173,6 +175,8 @@ objects:
                       navItem:
                         properties:
                           appId:
+                            type: string
+                          dynamicNav:
                             type: string
                           expandable:
                             type: boolean
@@ -479,6 +483,8 @@ objects:
                   items:
                     properties:
                       appId:
+                        type: string
+                      dynamicNav:
                         type: string
                       expandable:
                         type: boolean

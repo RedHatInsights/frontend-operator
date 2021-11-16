@@ -97,10 +97,12 @@ spec:
                 required:
                 - manifestLocation
                 type: object
-              navItem:
+              navItems:
                 items:
                   properties:
                     appId:
+                      type: string
+                    dynamicNav:
                       type: string
                     expandable:
                       type: boolean
