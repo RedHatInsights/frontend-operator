@@ -350,8 +350,8 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	cfgMap.Data = map[string]string{}
 
 	for _, bundle := range bundleList.Items {
-		if bundle.CustomNav != nil {
-			newBundleObject := bundle.CustomNav
+		if bundle.Spec.CustomNav != nil {
+			newBundleObject := bundle.Spec.CustomNav
 
 			jsonData, err := json.Marshal(newBundleObject)
 			if err != nil {
@@ -373,9 +373,10 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 
 			for _, app := range bundle.Spec.AppList {
 				if retrievedFrontend, ok := cacheMap[app]; ok {
-					navitem := getNavItem(&retrievedFrontend)
-					if navitem != nil {
-						newBundleObject.NavItems = append(newBundleObject.NavItems, *navitem)
+					if retrievedFrontend.Spec.NavItems != nil {
+						for _, navItem := range retrievedFrontend.Spec.NavItems {
+							newBundleObject.NavItems = append(newBundleObject.NavItems, *navItem)
+						}
 					}
 				}
 				if bundleNavItem, ok := bundleCacheMap[app]; ok {
@@ -399,13 +400,12 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	fedModules := make(map[string]crd.FedModule)
 
 	for _, frontend := range frontendList.Items {
-		module := getModule(&frontend)
-		if frontend.Spec.Extensions != nil {
+		if frontend.Spec.Module != nil {
 			modName := frontend.GetName()
-			if module.ModuleID != "" {
-				modName = module.ModuleID
+			if frontend.Spec.Module.ModuleID != "" {
+				modName = frontend.Spec.Module.ModuleID
 			}
-			fedModules[modName] = *module
+			fedModules[modName] = *frontend.Spec.Module
 		}
 	}
 
@@ -429,29 +429,4 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	hash := fmt.Sprintf("%x", h.Sum(nil))
 
 	return hash, nil
-}
-
-func getModule(frontend *crd.Frontend) *crd.FedModule {
-	if ec := getExtensionContent(frontend); ec != nil {
-		return &ec.Module
-	}
-	return nil
-}
-
-func getNavItem(frontend *crd.Frontend) *crd.BundleNavItem {
-	if ec := getExtensionContent(frontend); ec != nil {
-		return ec.NavItem
-	}
-	return nil
-}
-
-func getExtensionContent(frontend *crd.Frontend) *crd.ExtensionContent {
-	for _, extension := range frontend.Spec.Extensions {
-		if extension.Type == "cloud.redhat.com/frontend" {
-			extensionContent := &crd.ExtensionContent{}
-			json.Unmarshal(extension.Properties.Raw, extensionContent)
-			return extensionContent
-		}
-	}
-	return nil
 }
