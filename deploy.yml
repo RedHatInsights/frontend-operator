@@ -475,7 +475,7 @@ objects:
                   required:
                   - manifestLocation
                   type: object
-                navItem:
+                navItems:
                   items:
                     properties:
                       appId:
