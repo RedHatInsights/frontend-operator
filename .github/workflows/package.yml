@@ -10,11 +10,14 @@ jobs:
   testing:
     runs-on: ubuntu-20.04
     steps:
+      - uses: actions/setup-go@v2
+        name: Set up golang 1.16
+        with:
+          go-version: '1.16.7'
       - name: Check out source code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
       - name: Install package and dependencies
         run: |
-          sudo apt-get install golang-1.13
           make
       - name: Run Tests
         run: make test
