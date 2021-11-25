@@ -25,6 +25,7 @@ import (
 	networking "k8s.io/api/networking/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -56,7 +57,7 @@ func createNewScheme() *runtime.Scheme {
 
 var scheme = createNewScheme()
 
-var cacheConfig = resCache.NewCacheConfig(scheme, FEKey("log"))
+var cacheConfig = resCache.NewCacheConfig(scheme, FEKey("log"), map[schema.GroupVersionKind]bool{}, resCache.DebugOptions{})
 
 var CoreDeployment = cacheConfig.NewSingleResourceIdent("main", "deployment", &apps.Deployment{})
 var CoreService = cacheConfig.NewSingleResourceIdent("main", "service", &v1.Service{})
