@@ -24,6 +24,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,7 +38,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
+	cond "github.com/RedHatInsights/rhc-osdk-utils/conditionhandler"
 	resCache "github.com/RedHatInsights/rhc-osdk-utils/resource_cache"
+
 	"github.com/RedHatInsights/rhc-osdk-utils/utils"
 	"github.com/go-logr/logr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -173,6 +176,16 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	log.Info("Reconciliation successful", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
+	cond.UpdateCondition(&frontend.Status.Conditions, &cond.Condition{
+		Type:    crd.SuccessfulReconciliation,
+		Status:  metav1.ConditionTrue,
+		Reason:  "Reconciliation successful",
+		Message: "",
+	})
+
+	if err := r.Client.Status().Update(ctx, &frontend); err != nil {
+		return ctrl.Result{Requeue: true}, err
+	}
 
 	opts := []client.ListOption{
 		client.MatchingLabels{"frontend": frontend.Name},

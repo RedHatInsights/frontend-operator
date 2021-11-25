@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"fmt"
 
+	cond "github.com/RedHatInsights/rhc-osdk-utils/conditionhandler"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -50,10 +51,13 @@ type FrontendSpec struct {
 	NavItems       []*BundleNavItem `json:"navItems,omitempty"`
 }
 
+var SuccessfulReconciliation cond.ConditionType = "SuccessfulReconciliation"
+
 // FrontendStatus defines the observed state of Frontend
 type FrontendStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	Conditions []cond.Condition `json:"conditions,omitempty"`
 }
 
 type FedModule struct {

@@ -264,6 +264,17 @@ var _ = Describe("Frontend controller with service", func() {
 				"fed-modules.json":      "{\"test-frontend-service\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]}}",
 				"test-env-service.json": "{\"id\":\"test-service-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test2\",\"href\":\"/test/href2\"}]}",
 			}))
+
+			Eventually(func() bool {
+				nfe := &crd.Frontend{}
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: frontend.Name, Namespace: frontend.Namespace}, nfe)
+				if err != nil {
+					return false
+				}
+				Expect(nfe.Status.Conditions[0].Type).Should(Equal(crd.SuccessfulReconciliation))
+				Expect(nfe.Status.Conditions[0].Status).Should(Equal(metav1.ConditionTrue))
+				return true
+			}, timeout, interval).Should(BeTrue())
 		})
 	})
 })
