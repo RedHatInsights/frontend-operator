@@ -26,11 +26,11 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 type ApiInfo struct {
-	Versions []string `json:"versions"`
+	Versions []string `json:"versions" yaml:"versions"`
 }
 
 type FrontendInfo struct {
-	Paths []string `json:"paths"`
+	Paths []string `json:"paths" yaml:"paths"`
 }
 
 // FrontendSpec defines the desired state of Frontend
@@ -39,15 +39,15 @@ type FrontendSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of Frontend. Edit frontend_types.go to remove/update
-	EnvName        string           `json:"envName"`
-	Title          string           `json:"title"`
-	DeploymentRepo string           `json:"deploymentRepo"`
-	API            ApiInfo          `json:"API"`
-	Frontend       FrontendInfo     `json:"frontend"`
-	Image          string           `json:"image,omitempty"`
-	Service        string           `json:"service,omitempty"`
-	Module         *FedModule       `json:"module,omitempty"`
-	NavItems       []*BundleNavItem `json:"navItems,omitempty"`
+	EnvName        string           `json:"envName" yaml:"envName"`
+	Title          string           `json:"title" yaml:"title"`
+	DeploymentRepo string           `json:"deploymentRepo" yaml:"deploymentRepo"`
+	API            ApiInfo          `json:"API" yaml:"API"`
+	Frontend       FrontendInfo     `json:"frontend" yaml:"frontend"`
+	Image          string           `json:"image,omitempty" yaml:"image,omitempty"`
+	Service        string           `json:"service,omitempty" yaml:"service,omitempty"`
+	Module         *FedModule       `json:"module,omitempty" yaml:"module,omitempty"`
+	NavItems       []*BundleNavItem `json:"navItems,omitempty" yaml:"navItems,omitempty"`
 }
 
 // FrontendStatus defines the observed state of Frontend
@@ -57,21 +57,21 @@ type FrontendStatus struct {
 }
 
 type FedModule struct {
-	ManifestLocation string   `json:"manifestLocation"`
-	Modules          []Module `json:"modules,omitempty"`
-	ModuleID         string   `json:"moduleID,omitempty"`
+	ManifestLocation string   `json:"manifestLocation" yaml:"manifestLocation"`
+	Modules          []Module `json:"modules,omitempty" yaml:"modules,omitempty"`
+	ModuleID         string   `json:"moduleID,omitempty" yaml:"moduleID,omitempty"`
 }
 
 type Module struct {
-	Id     string  `json:"id"`
-	Module string  `json:"module"`
-	Routes []Route `json:"routes"`
+	Id     string  `json:"id" yaml:"id"`
+	Module string  `json:"module" yaml:"module"`
+	Routes []Route `json:"routes" yaml:"routes"`
 }
 
 type Route struct {
-	Pathname string `json:"pathname"`
-	Dynamic  bool   `json:"dynamic,omitempty"`
-	Exact    bool   `json:"exact,omitempty"`
+	Pathname string `json:"pathname" yaml:"pathname"`
+	Dynamic  bool   `json:"dynamic,omitempty" yaml:"dynamic,omitempty"`
+	Exact    bool   `json:"exact,omitempty" yaml:"exact,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -79,20 +79,20 @@ type Route struct {
 
 // Frontend is the Schema for the frontends API
 type Frontend struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.TypeMeta   `json:",inline" yaml:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 
-	Spec   FrontendSpec   `json:"spec,omitempty"`
-	Status FrontendStatus `json:"status,omitempty"`
+	Spec   FrontendSpec   `json:"spec,omitempty" yaml:"spec,omitempty"`
+	Status FrontendStatus `json:"status,omitempty" yaml:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
 // FrontendList contains a list of Frontend
 type FrontendList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Frontend `json:"items"`
+	metav1.TypeMeta `json:",inline" yaml:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	Items           []Frontend `json:"items" yaml:"items"`
 }
 
 func init() {
