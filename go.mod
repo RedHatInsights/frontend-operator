@@ -3,7 +3,7 @@ module github.com/RedHatInsights/frontend-operator
 go 1.16
 
 require (
-	github.com/RedHatInsights/rhc-osdk-utils v0.1.1
+	github.com/RedHatInsights/rhc-osdk-utils v0.2.1
 	github.com/go-logr/logr v0.4.0
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.16.0
