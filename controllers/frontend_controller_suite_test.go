@@ -272,7 +272,7 @@ var _ = Describe("Frontend controller with service", func() {
 					return false
 				}
 				Expect(nfe.Status.Conditions[0].Type).Should(Equal(crd.SuccessfulReconciliation))
-				Expect(nfe.Status.Conditions[0].Status).Should(Equal(metav1.ConditionTrue))
+				Expect(nfe.Status.Conditions[0].Status).Should(Equal(v1.ConditionTrue))
 				return true
 			}, timeout, interval).Should(BeTrue())
 		})
