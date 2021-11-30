@@ -24,7 +24,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -38,8 +37,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
-	cond "github.com/RedHatInsights/rhc-osdk-utils/conditionhandler"
 	resCache "github.com/RedHatInsights/rhc-osdk-utils/resource_cache"
+	cond "sigs.k8s.io/cluster-api/util/conditions"
+
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 
 	"github.com/RedHatInsights/rhc-osdk-utils/utils"
 	"github.com/go-logr/logr"
@@ -60,12 +61,10 @@ func createNewScheme() *runtime.Scheme {
 
 var scheme = createNewScheme()
 
-var cacheConfig = resCache.NewCacheConfig(scheme, FEKey("log"), map[schema.GroupVersionKind]bool{}, resCache.DebugOptions{})
-
-var CoreDeployment = cacheConfig.NewSingleResourceIdent("main", "deployment", &apps.Deployment{})
-var CoreService = cacheConfig.NewSingleResourceIdent("main", "service", &v1.Service{})
-var CoreConfig = cacheConfig.NewSingleResourceIdent("main", "config", &v1.ConfigMap{})
-var WebIngress = cacheConfig.NewMultiResourceIdent("ingress", "web_ingress", &networking.Ingress{})
+var CoreDeployment = resCache.NewSingleResourceIdent("main", "deployment", &apps.Deployment{})
+var CoreService = resCache.NewSingleResourceIdent("main", "service", &v1.Service{})
+var CoreConfig = resCache.NewSingleResourceIdent("main", "config", &v1.ConfigMap{})
+var WebIngress = resCache.NewMultiResourceIdent("ingress", "web_ingress", &networking.Ingress{})
 
 // FrontendReconciler reconciles a Frontend object
 type FrontendReconciler struct {
@@ -154,6 +153,8 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	ctx = context.WithValue(ctx, FEKey("obj"), &frontend)
 
+	cacheConfig := resCache.NewCacheConfig(scheme, FEKey("log"), map[schema.GroupVersionKind]bool{}, resCache.DebugOptions{})
+
 	cache := resCache.NewObjectCache(ctx, r.Client, cacheConfig)
 
 	err = runReconciliation(ctx, r.Client, &frontend, fe, &cache)
@@ -176,10 +177,10 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	log.Info("Reconciliation successful", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
-	cond.UpdateCondition(&frontend.Status.Conditions, &cond.Condition{
+	cond.Set(&frontend, &clusterv1.Condition{
 		Type:    crd.SuccessfulReconciliation,
-		Status:  metav1.ConditionTrue,
-		Reason:  "Reconciliation successful",
+		Status:  v1.ConditionTrue,
+		Reason:  "ReconciliationSuccessful",
 		Message: "",
 	})
 
