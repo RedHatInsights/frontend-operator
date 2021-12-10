@@ -29,10 +29,11 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	cloudredhatcomv1alpha1 "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	"github.com/RedHatInsights/frontend-operator/controllers"
+	"github.com/RedHatInsights/rhc-osdk-utils/logging"
+	"github.com/go-logr/zapr"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -57,13 +58,16 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	opts := zap.Options{
-		Development: true,
-	}
-	opts.BindFlags(flag.CommandLine)
-	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	logger, err := logging.SetupLogging(true)
+
+	if err != nil {
+		panic(err)
+	}
+
+	ctrl.SetLogger(zapr.NewLogger(logger))
+
+	defer logger.Sync()
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
