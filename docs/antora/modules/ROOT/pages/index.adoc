@@ -1,3 +1,5 @@
 = Main docs
 
+Main docs for Frontend Operator
+
 - xref:api_reference.adoc[API Reference]
