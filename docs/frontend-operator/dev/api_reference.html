@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Untitled :: Frontend Operator Documentation</title>
+    <link rel="canonical" href="https://redhatinsights.github.io/frontend-operator/frontend-operator/dev/api_reference.html">
+    <meta name="generator" content="Antora 2.3.4">
+    <link rel="stylesheet" href="../../ui/css/site.css">
+    <script>var uiRootPath = '../../ui'</script>
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://redhatinsights.github.io/frontend-operator">Frontend Operator Documentation</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Resources</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Resource A</a>
+            <a class="navbar-item" href="#">Resource B</a>
+            <a class="navbar-item" href="#">Resource C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="frontend-operator" data-version="dev">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <h3 class="title"><a href="index.html">Frontend Operator</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="api_reference.html">API Reference</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Frontend Operator</span>
+    <span class="version">dev</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <a class="title" href="index.html">Frontend Operator</a>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="index.html">dev</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="index.html">Frontend Operator</a></li>
+    <li><a href="api_reference.html">API Reference</a></li>
+  </ul>
+</nav>
+  <div class="edit-this-page"><a href="https://github.com/RedHatInsights/frontend-operator/edit/main/docs/antora/modules/ROOT/pages/api_reference.adoc">Edit this Page</a></div>
+  </div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<div class="sect1">
+<h2 id="{p}-api-reference"><a class="anchor" href="#{p}-api-reference"></a>API Reference</h2>
+<div class="sectionbody">
+<div class="ulist">
+<div class="title">Packages</div>
+<ul>
+<li>
+<p><a href="#k8s-api-cloud-redhat-com-v1alpha1">cloud.redhat.com/v1alpha1</a></p>
+</li>
+</ul>
+</div>
+<div class="sect2">
+<h3 id="k8s-api-cloud-redhat-com-v1alpha1"><a class="anchor" href="#k8s-api-cloud-redhat-com-v1alpha1"></a>cloud.redhat.com/v1alpha1</h3>
+<div class="paragraph">
+<p>Package v1alpha1 contains API Schema definitions for the  v1alpha1 API group</p>
+</div>
+<div class="ulist">
+<div class="title">Resource Types</div>
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle">Bundle</a></p>
+</li>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlelist">BundleList</a></p>
+</li>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend">Frontend</a></p>
+</li>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment">FrontendEnvironment</a></p>
+</li>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentlist">FrontendEnvironmentList</a></p>
+</li>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendlist">FrontendList</a></p>
+</li>
+</ul>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-apiinfo"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-apiinfo"></a>ApiInfo</h4>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Appears In:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec">FrontendSpec</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>versions</code></strong> <em>string array</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle"></a>Bundle</h4>
+<div class="paragraph">
+<p>Bundle is the Schema for the Bundles API</p>
+</div>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Appears In:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlelist">BundleList</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>apiVersion</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>cloud.redhat.com/v1alpha1</code></p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>kind</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>Bundle</code></p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>metadata</code></strong> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">ObjectMeta</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>spec</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec">BundleSpec</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlelist"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlelist"></a>BundleList</h4>
+<div class="paragraph">
+<p>BundleList contains a list of Bundle</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>apiVersion</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>cloud.redhat.com/v1alpha1</code></p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>kind</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>BundleList</code></p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>metadata</code></strong> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#listmeta-v1-meta">ListMeta</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>items</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle">Bundle</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem"></a>BundleNavItem</h4>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Appears In:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec">BundleSpec</a></p>
+</li>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-computedbundle">ComputedBundle</a></p>
+</li>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem">ExtraNavItem</a></p>
+</li>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec">FrontendSpec</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>title</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>groupId</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>navItems</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem">LeafBundleNavItem</a> array</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>appId</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>href</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>product</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>isExternal</code></strong> <em>boolean</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>filterable</code></strong> <em>boolean</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>permissions</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission">BundlePermission</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>routes</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem">LeafBundleNavItem</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>expandable</code></strong> <em>boolean</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>dynamicNav</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission"></a>BundlePermission</h4>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Appears In:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem">BundleNavItem</a></p>
+</li>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem">LeafBundleNavItem</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>method</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>args</code></strong> <em>string array</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec"></a>BundleSpec</h4>
+<div class="paragraph">
+<p>BundleSpec defines the desired state of Bundle</p>
+</div>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Appears In:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle">Bundle</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>id</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Foo is an example field of Bundle. Edit Bundle_types.go to remove/update</p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>title</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>appList</code></strong> <em>string array</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>envName</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>extraNavItems</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem">ExtraNavItem</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>customNav</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem">BundleNavItem</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem"></a>ExtraNavItem</h4>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Appears In:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec">BundleSpec</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>name</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>navItem</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem">BundleNavItem</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule"></a>FedModule</h4>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Appears In:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec">FrontendSpec</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>manifestLocation</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>modules</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-module">Module</a> array</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>moduleID</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend"></a>Frontend</h4>
+<div class="paragraph">
+<p>Frontend is the Schema for the frontends API</p>
+</div>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Appears In:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendlist">FrontendList</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>apiVersion</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>cloud.redhat.com/v1alpha1</code></p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>kind</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>Frontend</code></p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>metadata</code></strong> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">ObjectMeta</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>spec</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec">FrontendSpec</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment"></a>FrontendEnvironment</h4>
+<div class="paragraph">
+<p>FrontendEnvironment is the Schema for the FrontendEnvironments API</p>
+</div>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Appears In:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentlist">FrontendEnvironmentList</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>apiVersion</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>cloud.redhat.com/v1alpha1</code></p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>kind</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>FrontendEnvironment</code></p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>metadata</code></strong> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta">ObjectMeta</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>spec</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentspec">FrontendEnvironmentSpec</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentlist"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentlist"></a>FrontendEnvironmentList</h4>
+<div class="paragraph">
+<p>FrontendEnvironmentList contains a list of FrontendEnvironment</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>apiVersion</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>cloud.redhat.com/v1alpha1</code></p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>kind</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>FrontendEnvironmentList</code></p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>metadata</code></strong> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#listmeta-v1-meta">ListMeta</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>items</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment">FrontendEnvironment</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentspec"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentspec"></a>FrontendEnvironmentSpec</h4>
+<div class="paragraph">
+<p>FrontendEnvironmentSpec defines the desired state of FrontendEnvironment</p>
+</div>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Appears In:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment">FrontendEnvironment</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>sso</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Foo is an example field of FrontendEnvironment. Edit FrontendEnvironment_types.go to remove/update</p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>ingressClass</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Ingress class</p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>hostname</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Hostname</p>
+</div></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendinfo"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendinfo"></a>FrontendInfo</h4>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Appears In:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec">FrontendSpec</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>paths</code></strong> <em>string array</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendlist"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendlist"></a>FrontendList</h4>
+<div class="paragraph">
+<p>FrontendList contains a list of Frontend</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>apiVersion</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>cloud.redhat.com/v1alpha1</code></p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>kind</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><code>FrontendList</code></p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>metadata</code></strong> <em><a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#listmeta-v1-meta">ListMeta</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Refer to Kubernetes API documentation for fields of <code>metadata</code>.</p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>items</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend">Frontend</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec"></a>FrontendSpec</h4>
+<div class="paragraph">
+<p>FrontendSpec defines the desired state of Frontend</p>
+</div>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Appears In:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend">Frontend</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>envName</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Foo is an example field of Frontend. Edit frontend_types.go to remove/update</p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>title</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>deploymentRepo</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>API</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-apiinfo">ApiInfo</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>frontend</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendinfo">FrontendInfo</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>image</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>service</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>module</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule">FedModule</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>navItems</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem">BundleNavItem</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem"></a>LeafBundleNavItem</h4>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Appears In:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem">BundleNavItem</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>title</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>groupId</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>appId</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>href</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>product</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>isExternal</code></strong> <em>boolean</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>filterable</code></strong> <em>boolean</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>permissions</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission">BundlePermission</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-module"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-module"></a>Module</h4>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Appears In:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule">FedModule</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>id</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>module</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>routes</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-route">Route</a> array</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-route"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-route"></a>Route</h4>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Appears In:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-module">Module</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>pathname</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>dynamic</code></strong> <em>boolean</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>exact</code></strong> <em>boolean</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>This page was built using the Antora default UI.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+</footer>
+<script src="../../ui/js/site.js"></script>
+<script async src="../../ui/js/vendor/highlight.js"></script>
+  </body>
+</html>
