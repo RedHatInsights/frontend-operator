@@ -1,0 +1,5 @@
+name: frontend-operator
+title: Frontend Operator
+version: dev
+nav:
+- modules/ROOT/nav.adoc
