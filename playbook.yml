@@ -4,8 +4,7 @@ site:
   start_page: frontend-operator::index.adoc
 content:
   sources:
-  #- url: https://github.com/RedHatInsights/frontend-operator.git
-  - url: /home/psavage/workspace/frontend-operator
+  - url: https://github.com/RedHatInsights/frontend-operator.git
     branches: main
     start_path: docs/antora
 ui:
