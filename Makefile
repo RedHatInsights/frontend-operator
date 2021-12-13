@@ -55,6 +55,9 @@ SHELL = /usr/bin/env bash -o pipefail
 
 all: build
 
+api-docs:
+	./build/build_api_docs.sh
+
 ##@ General
 
 # The help target prints out all targets with their descriptions organized

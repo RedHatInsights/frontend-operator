@@ -1,0 +1,401 @@
+// Generated documentation. Please do not edit.
+:anchor_prefix: k8s-api
+
+[id="{p}-api-reference"]
+== API Reference
+
+.Packages
+- xref:{anchor_prefix}-cloud-redhat-com-v1alpha1[$$cloud.redhat.com/v1alpha1$$]
+
+
+[id="{anchor_prefix}-cloud-redhat-com-v1alpha1"]
+=== cloud.redhat.com/v1alpha1
+
+Package v1alpha1 contains API Schema definitions for the  v1alpha1 API group
+
+.Resource Types
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle[$$Bundle$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlelist[$$BundleList$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend[$$Frontend$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment[$$FrontendEnvironment$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentlist[$$FrontendEnvironmentList$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendlist[$$FrontendList$$]
+
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-apiinfo"]
+==== ApiInfo 
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`versions`* __string array__ | 
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle"]
+==== Bundle 
+
+Bundle is the Schema for the Bundles API
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlelist[$$BundleList$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`apiVersion`* __string__ | `cloud.redhat.com/v1alpha1`
+| *`kind`* __string__ | `Bundle`
+| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta[$$ObjectMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
+
+| *`spec`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec[$$BundleSpec$$]__ | 
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlelist"]
+==== BundleList 
+
+BundleList contains a list of Bundle
+
+
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`apiVersion`* __string__ | `cloud.redhat.com/v1alpha1`
+| *`kind`* __string__ | `BundleList`
+| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#listmeta-v1-meta[$$ListMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
+
+| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle[$$Bundle$$]__ | 
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem"]
+==== BundleNavItem 
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec[$$BundleSpec$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-computedbundle[$$ComputedBundle$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem[$$ExtraNavItem$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`title`* __string__ | 
+| *`groupId`* __string__ | 
+| *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem[$$LeafBundleNavItem$$] array__ | 
+| *`appId`* __string__ | 
+| *`href`* __string__ | 
+| *`product`* __string__ | 
+| *`isExternal`* __boolean__ | 
+| *`filterable`* __boolean__ | 
+| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$]__ | 
+| *`routes`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem[$$LeafBundleNavItem$$]__ | 
+| *`expandable`* __boolean__ | 
+| *`dynamicNav`* __string__ | 
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission"]
+==== BundlePermission 
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem[$$LeafBundleNavItem$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`method`* __string__ | 
+| *`args`* __string array__ | 
+|===
+
+
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec"]
+==== BundleSpec 
+
+BundleSpec defines the desired state of Bundle
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle[$$Bundle$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`id`* __string__ | Foo is an example field of Bundle. Edit Bundle_types.go to remove/update
+| *`title`* __string__ | 
+| *`appList`* __string array__ | 
+| *`envName`* __string__ | 
+| *`extraNavItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem[$$ExtraNavItem$$]__ | 
+| *`customNav`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$]__ | 
+|===
+
+
+
+
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem"]
+==== ExtraNavItem 
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec[$$BundleSpec$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`name`* __string__ | 
+| *`navItem`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$]__ | 
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule"]
+==== FedModule 
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`manifestLocation`* __string__ | 
+| *`modules`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-module[$$Module$$] array__ | 
+| *`moduleID`* __string__ | 
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend"]
+==== Frontend 
+
+Frontend is the Schema for the frontends API
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendlist[$$FrontendList$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`apiVersion`* __string__ | `cloud.redhat.com/v1alpha1`
+| *`kind`* __string__ | `Frontend`
+| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta[$$ObjectMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
+
+| *`spec`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]__ | 
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment"]
+==== FrontendEnvironment 
+
+FrontendEnvironment is the Schema for the FrontendEnvironments API
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentlist[$$FrontendEnvironmentList$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`apiVersion`* __string__ | `cloud.redhat.com/v1alpha1`
+| *`kind`* __string__ | `FrontendEnvironment`
+| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#objectmeta-v1-meta[$$ObjectMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
+
+| *`spec`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentspec[$$FrontendEnvironmentSpec$$]__ | 
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentlist"]
+==== FrontendEnvironmentList 
+
+FrontendEnvironmentList contains a list of FrontendEnvironment
+
+
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`apiVersion`* __string__ | `cloud.redhat.com/v1alpha1`
+| *`kind`* __string__ | `FrontendEnvironmentList`
+| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#listmeta-v1-meta[$$ListMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
+
+| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment[$$FrontendEnvironment$$]__ | 
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentspec"]
+==== FrontendEnvironmentSpec 
+
+FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment[$$FrontendEnvironment$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`sso`* __string__ | Foo is an example field of FrontendEnvironment. Edit FrontendEnvironment_types.go to remove/update
+| *`ingressClass`* __string__ | Ingress class
+| *`hostname`* __string__ | Hostname
+|===
+
+
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendinfo"]
+==== FrontendInfo 
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`paths`* __string array__ | 
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendlist"]
+==== FrontendList 
+
+FrontendList contains a list of Frontend
+
+
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`apiVersion`* __string__ | `cloud.redhat.com/v1alpha1`
+| *`kind`* __string__ | `FrontendList`
+| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#listmeta-v1-meta[$$ListMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
+
+| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend[$$Frontend$$]__ | 
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec"]
+==== FrontendSpec 
+
+FrontendSpec defines the desired state of Frontend
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend[$$Frontend$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`envName`* __string__ | Foo is an example field of Frontend. Edit frontend_types.go to remove/update
+| *`title`* __string__ | 
+| *`deploymentRepo`* __string__ | 
+| *`API`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-apiinfo[$$ApiInfo$$]__ | 
+| *`frontend`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendinfo[$$FrontendInfo$$]__ | 
+| *`image`* __string__ | 
+| *`service`* __string__ | 
+| *`module`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule[$$FedModule$$]__ | 
+| *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$]__ | 
+|===
+
+
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem"]
+==== LeafBundleNavItem 
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`title`* __string__ | 
+| *`groupId`* __string__ | 
+| *`appId`* __string__ | 
+| *`href`* __string__ | 
+| *`product`* __string__ | 
+| *`isExternal`* __boolean__ | 
+| *`filterable`* __boolean__ | 
+| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$]__ | 
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-module"]
+==== Module 
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule[$$FedModule$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`id`* __string__ | 
+| *`module`* __string__ | 
+| *`routes`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-route[$$Route$$] array__ | 
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-route"]
+==== Route 
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-module[$$Module$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`pathname`* __string__ | 
+| *`dynamic`* __boolean__ | 
+| *`exact`* __boolean__ | 
+|===
+
+

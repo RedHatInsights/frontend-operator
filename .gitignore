@@ -23,3 +23,11 @@ testbin/*
 *.swp
 *.swo
 *~
+
+docs/build
+docs/frontend-operator
+docs/ui
+docs/*.html
+docs/*.xml
+.docs/
+node_modules
