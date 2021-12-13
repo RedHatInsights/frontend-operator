@@ -1,0 +1,19 @@
+site:
+  title: Frontend Operator Documentation
+  url: https://redhatinsights.github.io/frontend-operator/
+  start_page: frontend-operator::index.adoc
+content:
+  sources:
+  #- url: https://github.com/RedHatInsights/frontend-operator.git
+  - url: /home/psavage/workspace/frontend-operator
+    branches: main
+    start_path: docs/antora
+ui:
+  bundle:
+    url: https://gitlab.com/antora/antora-ui-default/-/jobs/artifacts/master/raw/build/ui-bundle.zip?job=bundle-stable
+    snapshot: true
+  output_dir: ui
+runtime:
+  fetch: true
+output:
+  dir: docs
