@@ -105,6 +105,10 @@ envtest: ## Download envtest-setup locally if necessary.
 test: manifests envtest generate fmt vet
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
 
+# gotestsum is used to generate xml for the tests. Embedded in the Dockerfile.pr
+junit: manifests envtest generate fmt vet
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GOPATH)/bin/gotestsum --junitfile artifacts/junit-ginko.xml -- ./... -coverprofile cover.out
+
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.
