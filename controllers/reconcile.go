@@ -212,7 +212,7 @@ func populateConesoleDotIngress(nn types.NamespacedName, frontend *crd.Frontend,
 
 	prefixType := "Prefix"
 
-	var ingressPapths []networking.HTTPIngressPath
+	var ingressPaths []networking.HTTPIngressPath
 	for _, a := range frontendPath {
 		newPath := networking.HTTPIngressPath{
 			Path:     a,
@@ -226,7 +226,7 @@ func populateConesoleDotIngress(nn types.NamespacedName, frontend *crd.Frontend,
 				},
 			},
 		}
-		ingressPapths = append(ingressPapths, newPath)
+		ingressPaths = append(ingressPaths, newPath)
 	}
 
 	host := frontendEnvironment.Spec.Hostname
@@ -245,7 +245,7 @@ func populateConesoleDotIngress(nn types.NamespacedName, frontend *crd.Frontend,
 				Host: host,
 				IngressRuleValue: networking.IngressRuleValue{
 					HTTP: &networking.HTTPIngressRuleValue{
-						Paths: ingressPapths,
+						Paths: ingressPaths,
 					},
 				},
 			},
@@ -268,7 +268,7 @@ func populateHACIngress(nn types.NamespacedName, frontend *crd.Frontend, fronten
 
 	prefixType := "Prefix"
 
-	var ingressPapths []networking.HTTPIngressPath
+	var ingressPaths []networking.HTTPIngressPath
 	for _, a := range frontendPath {
 		newPath := networking.HTTPIngressPath{
 			Path:     a,
@@ -282,7 +282,7 @@ func populateHACIngress(nn types.NamespacedName, frontend *crd.Frontend, fronten
 				},
 			},
 		}
-		ingressPapths = append(ingressPapths, newPath)
+		ingressPaths = append(ingressPaths, newPath)
 	}
 
 	host := frontendEnvironment.Spec.Hostname
@@ -301,7 +301,7 @@ func populateHACIngress(nn types.NamespacedName, frontend *crd.Frontend, fronten
 				Host: host,
 				IngressRuleValue: networking.IngressRuleValue{
 					HTTP: &networking.HTTPIngressRuleValue{
-						Paths: ingressPapths,
+						Paths: ingressPaths,
 					},
 				},
 			},

@@ -7,4 +7,5 @@ spec:
   title: RHEL
   appList: 
   - inventory
+  - hac
   envName: env-boot

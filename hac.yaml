@@ -1,0 +1,36 @@
+
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: hac
+spec:
+  envName: env-boot
+  title: HAC
+  deploymentRepo: http://github.com/Openshift/hac-dev
+  API:
+    versions:
+    - v1
+  frontend:
+    paths:
+      - /hac
+      - /hac/app-studio
+  navItems: 
+    - appId: "hacCore"
+      title: "HAC"
+      href:  "/hac"
+    - appId: "hacDev"
+      title: "App Studio"
+      href: "/hac/app-studio"
+  module:
+    manifestLocation: "/apps/hac-core/fed-mods.json"
+    modules:
+      - id: "hacCore"
+        module: "./RootApp"
+        routes:
+          - pathname: /hac
+            exact: true
+      - id: "hacDev"
+        module: "./RootApp"
+        routes:
+          - pathname: /hac/app-studio
+            exact: true
