@@ -14,6 +14,8 @@ spec:
     paths:
       - /hac
       - /hac/app-studio
+  # image: quay.io/redhat-cloud-services/hac-core:ci-beta
+  image: quay.io/bholifie/hac-core:blake-test
   navItems: 
     - appId: "hacCore"
       title: "HAC"
