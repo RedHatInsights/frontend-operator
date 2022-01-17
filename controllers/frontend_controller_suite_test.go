@@ -138,7 +138,7 @@ var _ = Describe("Frontend controller with image", func() {
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdConfigMap.Name).Should(Equal(FrontendEnvName))
 			Expect(createdConfigMap.Data).Should(Equal(map[string]string{
-				"fed-modules.json": "{\"test-frontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]}}",
+				"fed-modules.json": "{\"testFrontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]}}",
 				"test-env.json":    "{\"id\":\"test-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"}]}",
 			}))
 		})
@@ -261,7 +261,7 @@ var _ = Describe("Frontend controller with service", func() {
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdConfigMap.Name).Should(Equal(FrontendEnvName))
 			Expect(createdConfigMap.Data).Should(Equal(map[string]string{
-				"fed-modules.json":      "{\"test-frontend-service\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]}}",
+				"fed-modules.json":      "{\"testFrontendService\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]}}",
 				"test-env-service.json": "{\"id\":\"test-service-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test2\",\"href\":\"/test/href2\"}]}",
 			}))
 

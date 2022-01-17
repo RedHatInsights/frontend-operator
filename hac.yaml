@@ -1,25 +1,22 @@
-
 apiVersion: cloud.redhat.com/v1alpha1
 kind: Frontend
 metadata:
-  name: hac
+  name: hac-core
 spec:
   envName: env-boot
   title: HAC
-  deploymentRepo: http://github.com/Openshift/hac-dev
+  deploymentRepo: http://github.com/RedHatInsights/hac-core-frontend
   API:
     versions:
-    - v1
+      - v1
   frontend:
     paths:
-      - /hac
-      - /hac/app-studio
-  # image: quay.io/redhat-cloud-services/hac-core:ci-beta
-  image: quay.io/bholifie/hac-core:blake-test
-  navItems: 
+      - /apps/hac-core
+  image: quay.io/redhat-cloud-services/hac-core:ci-beta
+  navItems:
     - appId: "hacCore"
-      title: "HAC"
-      href:  "/hac"
+      title: "Core"
+      href: "/hac"
     - appId: "hacDev"
       title: "App Studio"
       href: "/hac/app-studio"
@@ -30,9 +27,7 @@ spec:
         module: "./RootApp"
         routes:
           - pathname: /hac
-            exact: true
       - id: "hacDev"
         module: "./RootApp"
         routes:
           - pathname: /hac/app-studio
-            exact: true

@@ -46,7 +46,13 @@ kubectl apply -f inventory.yml -n boot
 kubectl apply -f bundle.yaml -n boot
 ```
 
-7. run the reconciler
+7. create bundle
+
+```
+kubectl apply -f chrome.yml -n boot
+```
+
+8. run the reconciler
 
 ```
 make run

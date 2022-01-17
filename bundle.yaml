@@ -5,7 +5,7 @@ metadata:
 spec:
   id: insights-navigation
   title: RHEL
-  appList: 
-  - inventory
-  - hac
+  appList:
+    - inventory
+    - hac-core
   envName: env-boot
