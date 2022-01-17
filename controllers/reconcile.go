@@ -6,9 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/iancoleman/strcase"
-
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
+	localUtil "github.com/RedHatInsights/frontend-operator/controllers/utils"
 	resCache "github.com/RedHatInsights/rhc-osdk-utils/resource_cache"
 	"github.com/RedHatInsights/rhc-osdk-utils/utils"
 
@@ -407,7 +406,7 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 			// module names in fed-modules.json must be camelCase
 			// K8s does not allow camelCase names, only
 			// whatever-this-case-is, so we convert.
-			modName := strcase.ToLowerCamel(frontend.GetName())
+			modName := localUtil.ToCamelCase(frontend.GetName())
 			if frontend.Spec.Module.ModuleID != "" {
 				modName = frontend.Spec.Module.ModuleID
 			}
