@@ -17,6 +17,12 @@ spec:
     - appId: "hacCore"
       title: "Core"
       href: "/hac"
+    - title: Demo Plugin
+      dynamicNav: "hacCore/admin-demo-section"
+    - title: Demo Plugin
+      dynamicNav: "hacCore/dev-demo-section"
+    - title: Flat nav
+      dynamicNav: hacCore
     - appId: "hacDev"
       title: "App Studio"
       href: "/hac/app-studio"

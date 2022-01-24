@@ -6,26 +6,6 @@ spec:
   id: hac
   envName: env-boot
   title: HAC
-  extraNavItems:
-    - name: hacCore
-      navItem:
-        title: "Example"
-        appId: "hacCore"
-        href: "/hac"
-    - name: demo-section
-      navItem:
-        title: Demo Plugin
-        dynamicNav: "hacCore/admin-demo-section"
-    - name: dev-section
-      navItem:
-        title: "Demo Plugin"
-        dynamicNav: "hacCore/dev-demo-section"
-    - name: flat-nav
-      navItem:
-        title: Flat nav
-        dynamicNav: hacCore
-    - name: hacDev
-      navItem:
-        title: App Studio
-        appId: "hacDev"
-        href: "/hac/app-studio"
+  appList:
+  - inventory
+  - hac-core
