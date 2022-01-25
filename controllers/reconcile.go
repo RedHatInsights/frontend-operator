@@ -370,7 +370,6 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 			bundleCacheMap := make(map[string]crd.BundleNavItem)
 			for _, extraItem := range bundle.Spec.ExtraNavItems {
 				bundleCacheMap[extraItem.Name] = extraItem.NavItem
-				newBundleObject.NavItems = append(newBundleObject.NavItems, extraItem.NavItem)
 			}
 
 			for _, app := range bundle.Spec.AppList {

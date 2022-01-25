@@ -6,7 +6,7 @@ spec:
   id: landing-navigation
   envName: env-boot
 customNav:
-  - id: Example
+  - id: rhel
     appId: dashboard
     title: Red Hat Enterprise Linux
     href: /insights/inventory
