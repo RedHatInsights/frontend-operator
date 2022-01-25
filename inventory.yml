@@ -3,7 +3,6 @@ kind: Frontend
 metadata:
   name: inventory
 spec:
-  # Add fields here
   envName: env-boot
   title: Inventory
   deploymentRepo: http://test
@@ -13,12 +12,12 @@ spec:
   frontend:
     paths:
     - /apps/inventory
-  image: quay.io/redhat-cloud-services/inventory
-  navItem:
-    appId: "inventory"
-    title: "Inventory"
-    href: "/insights/inventory"
-    product: "Red Hat Insights"
+  image: quay.io/cloudservices/insights-inventory-frontend:a82f241
+  navItems:
+    - appId: "inventory"
+      title: "Inventory"
+      href: "/insights/inventory"
+      product: "Red Hat Insights"
   module:
     manifestLocation: "/apps/inventory/fed-mods.json"
     modules:

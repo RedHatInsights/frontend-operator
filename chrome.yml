@@ -9,9 +9,10 @@ spec:
   deploymentRepo: http://test
   API:
     versions:
-    - v1
+      - v1
   frontend:
     paths:
-    - /
-    - /config/chrome
-  image: quay.io/redhat-cloud-services/chrome:5593f1afd0da611b50a45995027cd25afb91e8c54
+      - /
+      - /config/chrome
+  # image: quay.io/redhat-cloud-services/chrome:ci-beta
+  image: quay.io/bholifie/chrome:v0.0.4

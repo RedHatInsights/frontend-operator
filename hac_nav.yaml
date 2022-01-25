@@ -1,0 +1,11 @@
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Bundle
+metadata:
+  name: hac-navigation
+spec:
+  id: hac
+  envName: env-boot
+  title: HAC
+  appList:
+  - inventory
+  - hac-core

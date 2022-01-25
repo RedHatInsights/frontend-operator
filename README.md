@@ -1,48 +1,70 @@
 # Insights Frontend Operator
 
 ### Local development
+
 You need to run kubernetess locally, we rocommend using [minikube](https://minikube.sigs.k8s.io/docs/).
 
-1) start minikube
+0. start minikube [Prerequisite]
+
 ```
 minikube start --addons=ingress
 ```
 
-2) apply frontend CRD
+1. apply frontend CRD
+
 ```
 kubectl apply -f config/crd/bases/cloud.redhat.com_frontends.yaml
 ```
 
-3) apply bundle CRD
+2. apply bundle CRD
+
 ```
-kubectl apply -f config/crd/bases/cloud.redhat.com_bunldes.yaml
+kubectl apply -f config/crd/bases/cloud.redhat.com_bundles.yaml
 ```
 
-4) create custom object inventory
+3. create boot namespace
+
 ```
-kubectl apply -f inventory.yml
+kubectl create namespace boot
 ```
 
-5) create custom object
+4. create frontend env
+
 ```
-kubectl apply -f bundle.yml
+kubectl apply -f environment.yaml -n boot
 ```
 
-6) create fon namespace
+5. create custom object inventory
+
 ```
-kubect create namespace fon
+kubectl apply -f inventory.yml -n boot
 ```
 
-7) run the reconciler
+6. create bundle
+
+```
+kubectl apply -f bundle.yaml -n boot
+```
+
+7. create bundle
+
+```
+kubectl apply -f chrome.yml -n boot
+```
+
+8. run the reconciler
+
 ```
 make run
 ```
+
 ### Access it from your computer
-If you want to access the app from your computer, you have to update /etc/hots where the IP is the one from `minikube ip`
+
+If you want to access the app from your computer, you have to update /etc/hosts where the IP is the one from `minikube ip`
 
 ```
-192.168.99.102 fon
+192.168.99.102 env-boot
+192.168.99.102 env-boot-auth
 ```
 
-Once you update it you can access the app from `https://fon:32078/` where the port is from `minikube service list` and look for `ingress-nginx-controller`
-
+Once you update it you can access the app from `https://env-boot/insights/inventory`
