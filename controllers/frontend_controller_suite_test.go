@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
@@ -107,6 +108,7 @@ var _ = Describe("Frontend controller with image", func() {
 			deploymentLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
 			ingressLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
 			configMapLookupKey := types.NamespacedName{Name: frontendEnvironment.Name, Namespace: FrontendNamespace}
+			configSSOMapLookupKey := types.NamespacedName{Name: fmt.Sprintf("%s-sso", frontendEnvironment.Name), Namespace: FrontendNamespace}
 			serviceLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
 
 			createdDeployment := &apps.Deployment{}
@@ -141,6 +143,11 @@ var _ = Describe("Frontend controller with image", func() {
 				"fed-modules.json": "{\"testFrontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]}}",
 				"test-env.json":    "{\"id\":\"test-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"}]}",
 			}))
+			createdSSOConfigMap := &v1.ConfigMap{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, configSSOMapLookupKey, createdSSOConfigMap)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
 		})
 	})
 })
@@ -245,6 +252,7 @@ var _ = Describe("Frontend controller with service", func() {
 
 			ingressLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
 			configMapLookupKey := types.NamespacedName{Name: frontendEnvironment.Name, Namespace: FrontendNamespace}
+			configSSOMapLookupKey := types.NamespacedName{Name: fmt.Sprintf("%s-sso", frontendEnvironment.Name), Namespace: FrontendNamespace}
 
 			createdIngress := &networking.Ingress{}
 			Eventually(func() bool {
@@ -264,6 +272,12 @@ var _ = Describe("Frontend controller with service", func() {
 				"fed-modules.json":      "{\"testFrontendService\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]}}",
 				"test-env-service.json": "{\"id\":\"test-service-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test2\",\"href\":\"/test/href2\"}]}",
 			}))
+
+			createdSSOConfigMap := &v1.ConfigMap{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, configSSOMapLookupKey, createdSSOConfigMap)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
 
 			Eventually(func() bool {
 				nfe := &crd.Frontend{}

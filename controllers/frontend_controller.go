@@ -64,6 +64,7 @@ var scheme = createNewScheme()
 var CoreDeployment = resCache.NewSingleResourceIdent("main", "deployment", &apps.Deployment{})
 var CoreService = resCache.NewSingleResourceIdent("main", "service", &v1.Service{})
 var CoreConfig = resCache.NewSingleResourceIdent("main", "config", &v1.ConfigMap{})
+var SSOConfig = resCache.NewSingleResourceIdent("main", "sso_config", &v1.ConfigMap{})
 var WebIngress = resCache.NewMultiResourceIdent("ingress", "web_ingress", &networking.Ingress{})
 
 // FrontendReconciler reconciles a Frontend object

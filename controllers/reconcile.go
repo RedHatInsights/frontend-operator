@@ -27,6 +27,11 @@ func runReconciliation(context context.Context, pClient client.Client, frontend 
 		return err
 	}
 
+	err = createSSOConfigMap(context, pClient, frontend, frontendEnvironment, cache)
+	if err != nil {
+		return err
+	}
+
 	if frontend.Spec.Image != "" {
 		if err := createFrontendDeployment(context, pClient, frontend, frontendEnvironment, hash, cache); err != nil {
 			return err
@@ -75,27 +80,45 @@ func createFrontendDeployment(context context.Context, pClient client.Client, fr
 			ContainerPort: 80,
 			Protocol:      "TCP",
 		}},
-		VolumeMounts: []v1.VolumeMount{{
-			Name:      "config",
-			MountPath: "/opt/app-root/src/chrome",
-		}},
+		VolumeMounts: []v1.VolumeMount{
+			{
+				Name:      "config",
+				MountPath: "/opt/app-root/src/build/chrome",
+			},
+			{
+				Name:      "sso",
+				MountPath: "/opt/app-root/src/build/js/sso-url.js",
+				SubPath:   "sso-url.js",
+			},
+		},
 		Env: []v1.EnvVar{{
 			Name:  "SSO_URL",
 			Value: sso,
 		}},
 	}}
 
-	d.Spec.Template.Spec.Volumes = []v1.Volume{}
-	d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, v1.Volume{
-		Name: "config",
-		VolumeSource: v1.VolumeSource{
-			ConfigMap: &v1.ConfigMapVolumeSource{
-				LocalObjectReference: v1.LocalObjectReference{
-					Name: frontend.Spec.EnvName,
+	d.Spec.Template.Spec.Volumes = []v1.Volume{
+		{
+			Name: "config",
+			VolumeSource: v1.VolumeSource{
+				ConfigMap: &v1.ConfigMapVolumeSource{
+					LocalObjectReference: v1.LocalObjectReference{
+						Name: frontend.Spec.EnvName,
+					},
 				},
 			},
 		},
-	})
+		{
+			Name: "sso",
+			VolumeSource: v1.VolumeSource{
+				ConfigMap: &v1.ConfigMapVolumeSource{
+					LocalObjectReference: v1.LocalObjectReference{
+						Name: fmt.Sprintf("%s-sso", frontend.Spec.EnvName),
+					},
+				},
+			},
+		},
+	}
 
 	d.Spec.Template.ObjectMeta.Labels = labels
 
@@ -433,4 +456,36 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	hash := fmt.Sprintf("%x", h.Sum(nil))
 
 	return hash, nil
+}
+
+func createSSOConfigMap(ctx context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, cache *resCache.ObjectCache) error {
+	// Will need to interact directly with the client here, and not the cache because
+	// we need to read ALL the Frontend CRDs in the Env that we care about
+
+	cfgMap := &v1.ConfigMap{}
+
+	nn := types.NamespacedName{
+		Name:      fmt.Sprintf("%s-sso", frontend.Spec.EnvName),
+		Namespace: frontend.Namespace,
+	}
+
+	if err := cache.Create(SSOConfig, nn, cfgMap); err != nil {
+		return err
+	}
+
+	labels := frontendEnvironment.GetLabels()
+	labler := utils.GetCustomLabeler(labels, nn, frontend)
+	labler(cfgMap)
+
+	ssoData := fmt.Sprintf(`"use strict";(self.webpackChunkinsights_chrome=self.webpackChunkinsights_chrome||[]).push([[435],{16061:(s,e,h)=>{h.r(e),h.d(e,{default:()=>c});const c="%s"}}]);`, frontendEnvironment.Spec.SSO)
+
+	cfgMap.Data = map[string]string{
+		"sso-url.js": ssoData,
+	}
+
+	if err := cache.Update(SSOConfig, cfgMap); err != nil {
+		return err
+	}
+
+	return nil
 }
