@@ -477,7 +477,7 @@ func createSSOConfigMap(ctx context.Context, pClient client.Client, frontend *cr
 	labler := utils.GetCustomLabeler(labels, nn, frontend)
 	labler(cfgMap)
 
-	ssoData := fmt.Sprintf(`"use strict";(self.webpackChunkinsights_chrome=self.webpackChunkinsights_chrome||[]).push([[435],{16061:(s,e,h)=>{h.r(e),h.d(e,{default:()=>c});const c="%s"}}]);`, frontendEnvironment.Spec.SSO)
+	ssoData := fmt.Sprintf(`"use strict";(self.webpackChunkinsights_chrome=self.webpackChunkinsights_chrome||[]).push([[172],{30701:(s,e,h)=>{h.r(e),h.d(e,{default:()=>c});const c="%s"}}]);`, frontendEnvironment.Spec.SSO)
 
 	cfgMap.Data = map[string]string{
 		"sso-url.js": ssoData,
