@@ -1121,6 +1121,9 @@ objects:
             initialDelaySeconds: 15
             periodSeconds: 20
           name: manager
+          ports:
+          - containerPort: 8080
+            name: metrics
           readinessProbe:
             httpGet:
               path: /readyz
