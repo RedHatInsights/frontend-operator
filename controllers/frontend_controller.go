@@ -235,6 +235,8 @@ func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&source.Kind{Type: &crd.FrontendEnvironment{}},
 			handler.EnqueueRequestsFromMapFunc(r.appsToEnqueueUponFrontendEnvironmentUpdate),
 		).
+		Owns(&apps.Deployment{}).
+		Owns(&networking.Ingress{}).
 		Complete(r)
 }
 
