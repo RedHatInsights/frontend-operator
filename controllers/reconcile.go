@@ -27,13 +27,13 @@ func runReconciliation(context context.Context, pClient client.Client, frontend 
 		return err
 	}
 
-	err = createSSOConfigMap(context, pClient, frontend, frontendEnvironment, cache)
+	ssoHash, err := createSSOConfigMap(context, pClient, frontend, frontendEnvironment, cache)
 	if err != nil {
 		return err
 	}
 
 	if frontend.Spec.Image != "" {
-		if err := createFrontendDeployment(context, pClient, frontend, frontendEnvironment, hash, cache); err != nil {
+		if err := createFrontendDeployment(context, pClient, frontend, frontendEnvironment, hash, ssoHash, cache); err != nil {
 			return err
 		}
 		if err := createFrontendService(frontend, cache); err != nil {
@@ -48,7 +48,7 @@ func runReconciliation(context context.Context, pClient client.Client, frontend 
 	return nil
 }
 
-func createFrontendDeployment(context context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, hash string, cache *resCache.ObjectCache) error {
+func createFrontendDeployment(context context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, hash string, ssoHash string, cache *resCache.ObjectCache) error {
 	sso := frontendEnvironment.Spec.SSO
 
 	// Create new empty struct
@@ -130,6 +130,7 @@ func createFrontendDeployment(context context.Context, pClient client.Client, fr
 	}
 
 	annotations["configHash"] = hash
+	annotations["ssoHash"] = ssoHash
 
 	d.Spec.Template.SetAnnotations(annotations)
 
@@ -458,7 +459,7 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	return hash, nil
 }
 
-func createSSOConfigMap(ctx context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, cache *resCache.ObjectCache) error {
+func createSSOConfigMap(ctx context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, cache *resCache.ObjectCache) (string, error) {
 	// Will need to interact directly with the client here, and not the cache because
 	// we need to read ALL the Frontend CRDs in the Env that we care about
 
@@ -470,8 +471,10 @@ func createSSOConfigMap(ctx context.Context, pClient client.Client, frontend *cr
 	}
 
 	if err := cache.Create(SSOConfig, nn, cfgMap); err != nil {
-		return err
+		return "", err
 	}
+
+	hashString := ""
 
 	labels := frontendEnvironment.GetLabels()
 	labler := utils.GetCustomLabeler(labels, nn, frontend)
@@ -483,9 +486,17 @@ func createSSOConfigMap(ctx context.Context, pClient client.Client, frontend *cr
 		"sso-url.js": ssoData,
 	}
 
+	h := sha256.New()
+	h.Write([]byte(ssoData))
+	hashString += fmt.Sprintf("%x", h.Sum(nil))
+
+	h = sha256.New()
+	h.Write([]byte(hashString))
+	hash := fmt.Sprintf("%x", h.Sum(nil))
+
 	if err := cache.Update(SSOConfig, cfgMap); err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return hash, nil
 }

@@ -118,6 +118,9 @@ var _ = Describe("Frontend controller with image", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdDeployment.Name).Should(Equal(FrontendName))
+			fmt.Printf("\n%v\n", createdDeployment.GetAnnotations())
+			Expect(createdDeployment.Spec.Template.GetAnnotations()["ssoHash"]).ShouldNot(Equal(""))
+			Expect(createdDeployment.Spec.Template.GetAnnotations()["configHash"]).ShouldNot(Equal(""))
 
 			createdIngress := &networking.Ingress{}
 			Eventually(func() bool {
