@@ -331,7 +331,14 @@ objects:
       singular: frontendenvironment
     scope: Cluster
     versions:
-    - name: v1alpha1
+    - additionalPrinterColumns:
+      - jsonPath: .status.targetNamespace
+        name: Namespace
+        type: string
+      - jsonPath: .metadata.creationTimestamp
+        name: Age
+        type: date
+      name: v1alpha1
       schema:
         openAPIV3Schema:
           description: FrontendEnvironment is the Schema for the FrontendEnvironments
