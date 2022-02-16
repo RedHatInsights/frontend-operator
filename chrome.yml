@@ -6,7 +6,7 @@ spec:
   # Add fields here
   envName: env-boot
   title: Chrome
-  deploymentRepo: http://test
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome/
   API:
     versions:
       - v1
@@ -14,5 +14,4 @@ spec:
     paths:
       - /
       - /config/chrome
-  # image: quay.io/redhat-cloud-services/chrome:ci-beta
-  image: quay.io/bholifie/chrome:v0.0.4
+  image: quay.io/cloudservices/insights-chrome-frontend:1ddc0de

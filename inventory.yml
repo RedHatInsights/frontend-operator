@@ -5,7 +5,7 @@ metadata:
 spec:
   envName: env-boot
   title: Inventory
-  deploymentRepo: http://test
+  deploymentRepo: https://github.com/RedHatInsights/insights-inventory-frontend
   API:
     versions:
     - v1

@@ -288,8 +288,13 @@ var _ = Describe("Frontend controller with service", func() {
 				if err != nil {
 					return false
 				}
-				Expect(nfe.Status.Conditions[0].Type).Should(Equal(crd.SuccessfulReconciliation))
+				Expect(nfe.Status.Conditions[0].Type).Should(Equal(crd.FrontendsReady))
 				Expect(nfe.Status.Conditions[0].Status).Should(Equal(v1.ConditionTrue))
+				Expect(nfe.Status.Conditions[1].Type).Should(Equal(crd.ReconciliationFailed))
+				Expect(nfe.Status.Conditions[1].Status).Should(Equal(v1.ConditionFalse))
+				Expect(nfe.Status.Conditions[2].Type).Should(Equal(crd.ReconciliationSuccessful))
+				Expect(nfe.Status.Conditions[2].Status).Should(Equal(v1.ConditionTrue))
+				Expect(nfe.Status.Ready).Should(Equal(true))
 				return true
 			}, timeout, interval).Should(BeTrue())
 		})

@@ -17,23 +17,24 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func runReconciliation(context context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, cache *resCache.ObjectCache) error {
-	hash, err := createConfigConfigMap(context, pClient, frontend, frontendEnvironment, cache)
+func runReconciliation(context context.Context, r *FrontendReconciler, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, cache *resCache.ObjectCache) error {
+	hash, err := createConfigConfigMap(context, r.Client, frontend, frontendEnvironment, cache)
 	if err != nil {
 		return err
 	}
 
-	ssoHash, err := createSSOConfigMap(context, pClient, frontend, frontendEnvironment, cache)
+	ssoHash, err := createSSOConfigMap(context, r.Client, frontend, frontendEnvironment, cache)
 	if err != nil {
 		return err
 	}
 
 	if frontend.Spec.Image != "" {
-		if err := createFrontendDeployment(context, pClient, frontend, frontendEnvironment, hash, ssoHash, cache); err != nil {
+		if err := createFrontendDeployment(context, r, frontend, frontendEnvironment, hash, ssoHash, cache); err != nil {
 			return err
 		}
 		if err := createFrontendService(frontend, cache); err != nil {
@@ -48,7 +49,7 @@ func runReconciliation(context context.Context, pClient client.Client, frontend 
 	return nil
 }
 
-func createFrontendDeployment(context context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, hash string, ssoHash string, cache *resCache.ObjectCache) error {
+func createFrontendDeployment(context context.Context, r *FrontendReconciler, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, hash string, ssoHash string, cache *resCache.ObjectCache) error {
 	sso := frontendEnvironment.Spec.SSO
 
 	// Create new empty struct
@@ -70,6 +71,7 @@ func createFrontendDeployment(context context.Context, pClient client.Client, fr
 
 	labeler := utils.GetCustomLabeler(labels, nn, frontend)
 	labeler(d)
+	d.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 
 	// Modify the obejct to set the things we care about
 	d.Spec.Template.Spec.Containers = []v1.Container{{
@@ -139,6 +141,8 @@ func createFrontendDeployment(context context.Context, pClient client.Client, fr
 		return err
 	}
 
+	ctrl.SetControllerReference(frontend, d, r.Scheme)
+
 	return nil
 }
 
@@ -167,6 +171,7 @@ func createFrontendService(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 	labeler := utils.GetCustomLabeler(labels, nn, frontend)
 	labeler(s)
 	// We should also set owner reference to the pod
+	s.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 
 	port := v1.ServicePort{
 		Name:        "public",
@@ -203,6 +208,8 @@ func createFrontendIngress(frontend *crd.Frontend, frontendEnvironment *crd.Fron
 	labels := frontend.GetLabels()
 	labler := utils.GetCustomLabeler(labels, nn, frontend)
 	labler(netobj)
+
+	netobj.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 
 	ingressClass := frontendEnvironment.Spec.IngressClass
 	if ingressClass == "" {
@@ -369,6 +376,7 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	labels := frontendEnvironment.GetLabels()
 	labler := utils.GetCustomLabeler(labels, nn, frontend)
 	labler(cfgMap)
+	cfgMap.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 
 	hashString := ""
 
@@ -479,6 +487,7 @@ func createSSOConfigMap(ctx context.Context, pClient client.Client, frontend *cr
 	labels := frontendEnvironment.GetLabels()
 	labler := utils.GetCustomLabeler(labels, nn, frontend)
 	labler(cfgMap)
+	cfgMap.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 
 	ssoData := fmt.Sprintf(`"use strict";(self.webpackChunkinsights_chrome=self.webpackChunkinsights_chrome||[]).push([[172],{30701:(s,e,h)=>{h.r(e),h.d(e,{default:()=>c});const c="%s"}}]);`, frontendEnvironment.Spec.SSO)
 

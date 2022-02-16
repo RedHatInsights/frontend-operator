@@ -38,9 +38,6 @@ import (
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	resCache "github.com/RedHatInsights/rhc-osdk-utils/resource_cache"
-	cond "sigs.k8s.io/cluster-api/util/conditions"
-
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 
 	"github.com/RedHatInsights/rhc-osdk-utils/utils"
 	"github.com/go-logr/logr"
@@ -87,21 +84,11 @@ type FrontendReconciler struct {
 //+kubebuilder:rbac:groups=cloud.redhat.com,resources=bundles/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=cloud.redhat.com,resources=bundles/finalizers,verbs=update
 
-//+kubebuilder:rbac:groups=cloud.redhat.com,resources=bundles,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=cloud.redhat.com,resources=bundles/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=cloud.redhat.com,resources=bundles/finalizers,verbs=update
-
 // +kubebuilder:rbac:groups="",resources=serviceaccounts;configmaps;services;persistentvolumeclaims;secrets;events;namespaces,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the Frontend object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
@@ -149,8 +136,14 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	fe := &crd.FrontendEnvironment{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: frontend.Spec.EnvName}, fe); err != nil {
-		return ctrl.Result{Requeue: true}, err
+		return ctrl.Result{Requeue: false}, err
 	}
+
+	// fe.Status.TargetNamespace = fe.Spec.TargetNamespace
+
+	// if err := r.Client.Status().Update(ctx, fe); err != nil {
+	// 	return ctrl.Result{Requeue: false}, err
+	// }
 
 	ctx = context.WithValue(ctx, FEKey("obj"), &frontend)
 
@@ -158,36 +151,22 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	cache := resCache.NewObjectCache(ctx, r.Client, cacheConfig)
 
-	err = runReconciliation(ctx, r.Client, &frontend, fe, &cache)
+	err = runReconciliation(ctx, r, &frontend, fe, &cache)
 
 	if err != nil {
-		//	SetClowdAppConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, err)
+		SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, err)
 		return ctrl.Result{Requeue: true}, err
 	}
-
-	// if err != nil {
-	// 	SetClowdAppConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, err)
-	// 	return ctrl.Result{Requeue: true}, err
-	// }
 
 	cacheErr := cache.ApplyAll()
 
 	if cacheErr != nil {
-		//	SetClowdAppConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, err)
+		SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, nil)
 		return ctrl.Result{Requeue: true}, cacheErr
 	}
 
 	log.Info("Reconciliation successful", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
-	cond.Set(&frontend, &clusterv1.Condition{
-		Type:    crd.SuccessfulReconciliation,
-		Status:  v1.ConditionTrue,
-		Reason:  "ReconciliationSuccessful",
-		Message: "",
-	})
-
-	if err := r.Client.Status().Update(ctx, &frontend); err != nil {
-		return ctrl.Result{Requeue: true}, err
-	}
+	SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil)
 
 	opts := []client.ListOption{
 		client.MatchingLabels{"frontend": frontend.Name},
@@ -196,9 +175,10 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	err = cache.Reconcile(frontend.GetUID(), opts...)
 	if err != nil {
 		log.Info("Reconcile error", "error", err)
+		SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, nil)
 		return ctrl.Result{Requeue: true}, nil
 	}
-	// SetClowdAppConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil)
+	SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil)
 
 	if err == nil {
 		if _, ok := managedFrontends[frontend.GetIdent()]; !ok {
