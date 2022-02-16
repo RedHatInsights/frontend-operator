@@ -17,24 +17,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	ctrl "sigs.k8s.io/controller-runtime"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func runReconciliation(context context.Context, r *FrontendReconciler, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, cache *resCache.ObjectCache) error {
-	hash, err := createConfigConfigMap(context, r.Client, frontend, frontendEnvironment, cache)
+func runReconciliation(context context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, cache *resCache.ObjectCache) error {
+	hash, err := createConfigConfigMap(context, pClient, frontend, frontendEnvironment, cache)
 	if err != nil {
 		return err
 	}
 
-	ssoHash, err := createSSOConfigMap(context, r.Client, frontend, frontendEnvironment, cache)
+	ssoHash, err := createSSOConfigMap(context, pClient, frontend, frontendEnvironment, cache)
 	if err != nil {
 		return err
 	}
 
 	if frontend.Spec.Image != "" {
-		if err := createFrontendDeployment(context, r, frontend, frontendEnvironment, hash, ssoHash, cache); err != nil {
+		if err := createFrontendDeployment(context, pClient, frontend, frontendEnvironment, hash, ssoHash, cache); err != nil {
 			return err
 		}
 		if err := createFrontendService(frontend, cache); err != nil {
@@ -49,7 +48,7 @@ func runReconciliation(context context.Context, r *FrontendReconciler, frontend 
 	return nil
 }
 
-func createFrontendDeployment(context context.Context, r *FrontendReconciler, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, hash string, ssoHash string, cache *resCache.ObjectCache) error {
+func createFrontendDeployment(context context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, hash string, ssoHash string, cache *resCache.ObjectCache) error {
 	sso := frontendEnvironment.Spec.SSO
 
 	// Create new empty struct
@@ -140,8 +139,6 @@ func createFrontendDeployment(context context.Context, r *FrontendReconciler, fr
 	if err := cache.Update(CoreDeployment, d); err != nil {
 		return err
 	}
-
-	ctrl.SetControllerReference(frontend, d, r.Scheme)
 
 	return nil
 }
