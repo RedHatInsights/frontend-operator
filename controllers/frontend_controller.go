@@ -161,7 +161,7 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	cacheErr := cache.ApplyAll()
 
 	if cacheErr != nil {
-		SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, nil)
+		SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, cacheErr)
 		return ctrl.Result{Requeue: true}, cacheErr
 	}
 
@@ -175,7 +175,7 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	err = cache.Reconcile(frontend.GetUID(), opts...)
 	if err != nil {
 		log.Info("Reconcile error", "error", err)
-		SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, nil)
+		SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, err)
 		return ctrl.Result{Requeue: true}, nil
 	}
 	SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil)
