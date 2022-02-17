@@ -46,10 +46,10 @@ func SetFrontendConditions(ctx context.Context, client client.Client, o *crd.Fro
 	condition.Message = "Deployments are not yet ready"
 	if frontendStatus {
 		condition.Status = core.ConditionTrue
-		condition.Type = crd.FrontendsReady
 		condition.Message = "All managed deployments ready"
 	}
 
+	condition.Type = crd.FrontendsReady
 	condition.LastTransitionTime = v1.Now()
 	if err != nil {
 		condition.Reason = err.Error()
@@ -59,6 +59,7 @@ func SetFrontendConditions(ctx context.Context, client client.Client, o *crd.Fro
 	for _, condition := range conditions {
 		cond.Set(o, &condition)
 	}
+
 	o.Status.Ready = frontendStatus
 	stats, _, err := GetFrontendFigures(ctx, client, o)
 	if err != nil {
