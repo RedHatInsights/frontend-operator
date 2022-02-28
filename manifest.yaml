@@ -1,0 +1,1134 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: frontend-operator-system
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: bundles.cloud.redhat.com
+spec:
+  group: cloud.redhat.com
+  names:
+    kind: Bundle
+    listKind: BundleList
+    plural: bundles
+    singular: bundle
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Bundle is the Schema for the Bundles API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: BundleSpec defines the desired state of Bundle
+            properties:
+              appList:
+                items:
+                  type: string
+                type: array
+              customNav:
+                items:
+                  properties:
+                    appId:
+                      type: string
+                    dynamicNav:
+                      type: string
+                    expandable:
+                      type: boolean
+                    filterable:
+                      type: boolean
+                    groupId:
+                      type: string
+                    href:
+                      type: string
+                    isExternal:
+                      type: boolean
+                    navItems:
+                      items:
+                        properties:
+                          appId:
+                            type: string
+                          filterable:
+                            type: boolean
+                          groupId:
+                            type: string
+                          href:
+                            type: string
+                          isExternal:
+                            type: boolean
+                          permissions:
+                            items:
+                              properties:
+                                args:
+                                  items:
+                                    items:
+                                      type: string
+                                    type: array
+                                  type: array
+                                method:
+                                  type: string
+                              required:
+                              - args
+                              - method
+                              type: object
+                            type: array
+                          product:
+                            type: string
+                          title:
+                            type: string
+                        required:
+                        - title
+                        type: object
+                      type: array
+                    permissions:
+                      items:
+                        properties:
+                          args:
+                            items:
+                              items:
+                                type: string
+                              type: array
+                            type: array
+                          method:
+                            type: string
+                        required:
+                        - args
+                        - method
+                        type: object
+                      type: array
+                    product:
+                      type: string
+                    routes:
+                      items:
+                        properties:
+                          appId:
+                            type: string
+                          filterable:
+                            type: boolean
+                          groupId:
+                            type: string
+                          href:
+                            type: string
+                          isExternal:
+                            type: boolean
+                          permissions:
+                            items:
+                              properties:
+                                args:
+                                  items:
+                                    items:
+                                      type: string
+                                    type: array
+                                  type: array
+                                method:
+                                  type: string
+                              required:
+                              - args
+                              - method
+                              type: object
+                            type: array
+                          product:
+                            type: string
+                          title:
+                            type: string
+                        required:
+                        - title
+                        type: object
+                      type: array
+                    title:
+                      type: string
+                  required:
+                  - title
+                  type: object
+                type: array
+              envName:
+                type: string
+              extraNavItems:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    navItem:
+                      properties:
+                        appId:
+                          type: string
+                        dynamicNav:
+                          type: string
+                        expandable:
+                          type: boolean
+                        filterable:
+                          type: boolean
+                        groupId:
+                          type: string
+                        href:
+                          type: string
+                        isExternal:
+                          type: boolean
+                        navItems:
+                          items:
+                            properties:
+                              appId:
+                                type: string
+                              filterable:
+                                type: boolean
+                              groupId:
+                                type: string
+                              href:
+                                type: string
+                              isExternal:
+                                type: boolean
+                              permissions:
+                                items:
+                                  properties:
+                                    args:
+                                      items:
+                                        items:
+                                          type: string
+                                        type: array
+                                      type: array
+                                    method:
+                                      type: string
+                                  required:
+                                  - args
+                                  - method
+                                  type: object
+                                type: array
+                              product:
+                                type: string
+                              title:
+                                type: string
+                            required:
+                            - title
+                            type: object
+                          type: array
+                        permissions:
+                          items:
+                            properties:
+                              args:
+                                items:
+                                  items:
+                                    type: string
+                                  type: array
+                                type: array
+                              method:
+                                type: string
+                            required:
+                            - args
+                            - method
+                            type: object
+                          type: array
+                        product:
+                          type: string
+                        routes:
+                          items:
+                            properties:
+                              appId:
+                                type: string
+                              filterable:
+                                type: boolean
+                              groupId:
+                                type: string
+                              href:
+                                type: string
+                              isExternal:
+                                type: boolean
+                              permissions:
+                                items:
+                                  properties:
+                                    args:
+                                      items:
+                                        items:
+                                          type: string
+                                        type: array
+                                      type: array
+                                    method:
+                                      type: string
+                                  required:
+                                  - args
+                                  - method
+                                  type: object
+                                type: array
+                              product:
+                                type: string
+                              title:
+                                type: string
+                            required:
+                            - title
+                            type: object
+                          type: array
+                        title:
+                          type: string
+                      required:
+                      - title
+                      type: object
+                  required:
+                  - name
+                  - navItem
+                  type: object
+                type: array
+              id:
+                description: Foo is an example field of Bundle. Edit Bundle_types.go to remove/update
+                type: string
+              title:
+                type: string
+            required:
+            - id
+            type: object
+          status:
+            description: BundleStatus defines the observed state of Bundle
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: frontendenvironments.cloud.redhat.com
+spec:
+  group: cloud.redhat.com
+  names:
+    kind: FrontendEnvironment
+    listKind: FrontendEnvironmentList
+    plural: frontendenvironments
+    shortNames:
+    - feenv
+    singular: frontendenvironment
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: FrontendEnvironment is the Schema for the FrontendEnvironments API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
+            properties:
+              hostname:
+                description: Hostname
+                type: string
+              ingressClass:
+                description: Ingress class
+                type: string
+              sso:
+                description: Foo is an example field of FrontendEnvironment. Edit FrontendEnvironment_types.go to remove/update
+                type: string
+            required:
+            - sso
+            type: object
+          status:
+            description: FrontendEnvironmentStatus defines the observed state of FrontendEnvironment
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: frontends.cloud.redhat.com
+spec:
+  group: cloud.redhat.com
+  names:
+    kind: Frontend
+    listKind: FrontendList
+    plural: frontends
+    singular: frontend
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Frontend is the Schema for the frontends API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: FrontendSpec defines the desired state of Frontend
+            properties:
+              API:
+                properties:
+                  versions:
+                    items:
+                      type: string
+                    type: array
+                required:
+                - versions
+                type: object
+              assetsPrefix:
+                type: string
+              deploymentRepo:
+                type: string
+              envName:
+                description: Foo is an example field of Frontend. Edit frontend_types.go to remove/update
+                type: string
+              frontend:
+                properties:
+                  paths:
+                    items:
+                      type: string
+                    type: array
+                required:
+                - paths
+                type: object
+              image:
+                type: string
+              module:
+                properties:
+                  manifestLocation:
+                    type: string
+                  moduleID:
+                    type: string
+                  modules:
+                    items:
+                      properties:
+                        id:
+                          type: string
+                        module:
+                          type: string
+                        routes:
+                          items:
+                            properties:
+                              dynamic:
+                                type: boolean
+                              exact:
+                                type: boolean
+                              pathname:
+                                type: string
+                            required:
+                            - pathname
+                            type: object
+                          type: array
+                      required:
+                      - id
+                      - module
+                      - routes
+                      type: object
+                    type: array
+                required:
+                - manifestLocation
+                type: object
+              navItems:
+                items:
+                  properties:
+                    appId:
+                      type: string
+                    dynamicNav:
+                      type: string
+                    expandable:
+                      type: boolean
+                    filterable:
+                      type: boolean
+                    groupId:
+                      type: string
+                    href:
+                      type: string
+                    isExternal:
+                      type: boolean
+                    navItems:
+                      items:
+                        properties:
+                          appId:
+                            type: string
+                          filterable:
+                            type: boolean
+                          groupId:
+                            type: string
+                          href:
+                            type: string
+                          isExternal:
+                            type: boolean
+                          permissions:
+                            items:
+                              properties:
+                                args:
+                                  items:
+                                    items:
+                                      type: string
+                                    type: array
+                                  type: array
+                                method:
+                                  type: string
+                              required:
+                              - args
+                              - method
+                              type: object
+                            type: array
+                          product:
+                            type: string
+                          title:
+                            type: string
+                        required:
+                        - title
+                        type: object
+                      type: array
+                    permissions:
+                      items:
+                        properties:
+                          args:
+                            items:
+                              items:
+                                type: string
+                              type: array
+                            type: array
+                          method:
+                            type: string
+                        required:
+                        - args
+                        - method
+                        type: object
+                      type: array
+                    product:
+                      type: string
+                    routes:
+                      items:
+                        properties:
+                          appId:
+                            type: string
+                          filterable:
+                            type: boolean
+                          groupId:
+                            type: string
+                          href:
+                            type: string
+                          isExternal:
+                            type: boolean
+                          permissions:
+                            items:
+                              properties:
+                                args:
+                                  items:
+                                    items:
+                                      type: string
+                                    type: array
+                                  type: array
+                                method:
+                                  type: string
+                              required:
+                              - args
+                              - method
+                              type: object
+                            type: array
+                          product:
+                            type: string
+                          title:
+                            type: string
+                        required:
+                        - title
+                        type: object
+                      type: array
+                    title:
+                      type: string
+                  required:
+                  - title
+                  type: object
+                type: array
+              service:
+                type: string
+              title:
+                type: string
+            required:
+            - API
+            - deploymentRepo
+            - envName
+            - frontend
+            - title
+            type: object
+          status:
+            description: FrontendStatus defines the observed state of Frontend
+            properties:
+              conditions:
+                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "make" to regenerate code after modifying this file'
+                items:
+                  description: Condition defines an observation of a Cluster API resource operational state.
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status to another. This should be when the underlying condition changed. If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: A human readable message indicating details about the transition. This field may be empty.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition in CamelCase. The specific API may choose whether or not this field is considered a guaranteed API. This field may not be empty.
+                      type: string
+                    severity:
+                      description: Severity provides an explicit classification of Reason code, so the users or machines can immediately understand the current situation and act accordingly. The Severity field MUST be set only when Status=False.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of condition in CamelCase or in foo.example.com/CamelCase. Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - status
+                  - type
+                  type: object
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: frontend-operator-controller-manager
+  namespace: frontend-operator-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: frontend-operator-leader-election-role
+  namespace: frontend-operator-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    managed.openshift.io/aggregate-to-dedicated-admins: cluster
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+  name: frontend-operator-bundle-editor-role
+rules:
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - bundles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - bundles/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+  name: frontend-operator-bundle-viewer-role
+rules:
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - bundles
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - bundles/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    managed.openshift.io/aggregate-to-dedicated-admins: cluster
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+  name: frontend-operator-frontend-editor-role
+rules:
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - frontends
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - frontends/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+  name: frontend-operator-frontend-viewer-role
+rules:
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - frontends
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - frontends/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    managed.openshift.io/aggregate-to-dedicated-admins: cluster
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+  name: frontend-operator-frontendenvironment-editor-role
+rules:
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - frontendenvironments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - frontendenvironments/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+  name: frontend-operator-frontendenvironment-viewer-role
+rules:
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - frontendenvironments
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - frontendenvironments/status
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: frontend-operator-manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - events
+  - namespaces
+  - persistentvolumeclaims
+  - secrets
+  - serviceaccounts
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - bundles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - bundles/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - bundles/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - frontendenvironments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - frontendenvironments/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - frontendenvironments/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - frontends
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - frontends/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - cloud.redhat.com
+  resources:
+  - frontends/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: frontend-operator-metrics-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: frontend-operator-proxy-role
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: frontend-operator-leader-election-rolebinding
+  namespace: frontend-operator-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: frontend-operator-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: frontend-operator-controller-manager
+  namespace: frontend-operator-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: frontend-operator-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: frontend-operator-manager-role
+subjects:
+- kind: ServiceAccount
+  name: frontend-operator-controller-manager
+  namespace: frontend-operator-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: frontend-operator-proxy-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: frontend-operator-proxy-role
+subjects:
+- kind: ServiceAccount
+  name: frontend-operator-controller-manager
+  namespace: frontend-operator-system
+---
+apiVersion: v1
+data:
+  controller_manager_config.yaml: |
+    apiVersion: controller-runtime.sigs.k8s.io/v1alpha1
+    kind: ControllerManagerConfig
+    health:
+      healthProbeBindAddress: :8081
+    metrics:
+      bindAddress: 127.0.0.1:8080
+    webhook:
+      port: 9443
+    leaderElection:
+      leaderElect: true
+      resourceName: 1dd43857.cloud.redhat.com
+kind: ConfigMap
+metadata:
+  name: frontend-operator-manager-config
+  namespace: frontend-operator-system
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: frontend-operator-controller-manager-metrics-service
+  namespace: frontend-operator-system
+spec:
+  ports:
+  - name: https
+    port: 8443
+    targetPort: https
+  selector:
+    control-plane: controller-manager
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: controller-manager
+    operator-name: frontend-operator
+  name: frontend-operator-controller-manager-metrics-service-non-auth
+  namespace: frontend-operator-system
+spec:
+  ports:
+  - name: metrics
+    port: 8080
+    targetPort: metrics
+  selector:
+    control-plane: controller-manager
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: frontend-operator-controller-manager
+  namespace: frontend-operator-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  template:
+    metadata:
+      labels:
+        control-plane: controller-manager
+    spec:
+      containers:
+      - args:
+        - --leader-elect
+        command:
+        - /manager
+        image: controller:latest
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        ports:
+        - containerPort: 8080
+          name: metrics
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 200m
+            memory: 900Mi
+          requests:
+            cpu: 100m
+            memory: 500Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: frontend-operator-controller-manager
+      terminationGracePeriodSeconds: 10
