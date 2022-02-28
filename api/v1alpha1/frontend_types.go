@@ -49,6 +49,7 @@ type FrontendSpec struct {
 	Service        string           `json:"service,omitempty" yaml:"service,omitempty"`
 	Module         *FedModule       `json:"module,omitempty" yaml:"module,omitempty"`
 	NavItems       []*BundleNavItem `json:"navItems,omitempty" yaml:"navItems,omitempty"`
+	AssetsPrefix   string           `json:"assetsPrefix,omitempty" yaml:"assetsPrefix,omitempty"`
 }
 
 var SuccessfulReconciliation clusterv1.ConditionType = "SuccessfulReconciliation"
