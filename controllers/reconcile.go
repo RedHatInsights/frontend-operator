@@ -226,10 +226,6 @@ func populateConesoleDotIngress(nn types.NamespacedName, frontend *crd.Frontend,
 	frontendPath := frontend.Spec.Frontend.Paths
 	defaultPath := fmt.Sprintf("/apps/%s", frontend.Name)
 	defaultBetaPath := fmt.Sprintf("/beta/apps/%s", frontend.Name)
-	if frontend.Spec.AssetsPrefix != "" {
-		defaultPath = fmt.Sprintf("/%s/%s", frontend.Spec.AssetsPrefix, frontend.Name)
-		defaultBetaPath = fmt.Sprintf("/beta/%s/%s", frontend.Spec.AssetsPrefix, frontend.Name)
-	}
 
 	if !frontend.Spec.Frontend.HasPath(defaultPath) {
 		frontendPath = append(frontendPath, defaultPath)
@@ -286,6 +282,10 @@ func populateHACIngress(nn types.NamespacedName, frontend *crd.Frontend, fronten
 	frontendPath := frontend.Spec.Frontend.Paths
 	defaultPath := fmt.Sprintf("/apps/%s", frontend.Name)
 	defaultBetaPath := fmt.Sprintf("/beta/apps/%s", frontend.Name)
+	if frontend.Spec.AssetsPrefix != "" {
+		defaultPath = fmt.Sprintf("/%s/%s", frontend.Spec.AssetsPrefix, frontend.Name)
+		defaultBetaPath = fmt.Sprintf("/beta/%s/%s", frontend.Spec.AssetsPrefix, frontend.Name)
+	}
 
 	if !frontend.Spec.Frontend.HasPath(defaultPath) {
 		frontendPath = append(frontendPath, defaultPath)

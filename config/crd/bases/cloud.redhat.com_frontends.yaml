@@ -45,6 +45,8 @@ spec:
                 required:
                 - versions
                 type: object
+              assetsPrefix:
+                type: string
               deploymentRepo:
                 type: string
               envName:
