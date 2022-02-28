@@ -332,6 +332,7 @@ FrontendSpec defines the desired state of Frontend
 | *`service`* __string__ | 
 | *`module`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule[$$FedModule$$]__ | 
 | *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$]__ | 
+| *`assetsPrefix`* __string__ | 
 |===
 
 
