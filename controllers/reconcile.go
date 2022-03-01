@@ -83,11 +83,12 @@ func createFrontendDeployment(context context.Context, pClient client.Client, fr
 			Name:          "web",
 			ContainerPort: 80,
 			Protocol:      "TCP",
-		}, {
-			Name:          "metrics",
-			ContainerPort: 9113,
-			Protocol:      "TCP",
 		}},
+		// }, {
+		// 	Name:          "metrics",
+		// 	ContainerPort: 9113,
+		// 	Protocol:      "TCP",
+		// }},
 		VolumeMounts: []v1.VolumeMount{
 			{
 				Name:      "config",
@@ -103,6 +104,19 @@ func createFrontendDeployment(context context.Context, pClient client.Client, fr
 			Name:  "SSO_URL",
 			Value: sso,
 		}},
+	}, {
+		// TODO: Refactor after spike
+		Name:  "metrics",
+		Image: "nginx/nginx-prometheus-exporter:0.10.0",
+		Ports: []v1.ContainerPort{{
+			Name:          "metrics",
+			ContainerPort: 9000,
+			Protocol:      "TCP",
+		}},
+		Args: []string{
+			"-nginx.scrape-uri=http://localhost:9113/metrics",
+			"-web.listen-address=:9000",
+		},
 	}}
 
 	d.Spec.Template.Spec.Volumes = []v1.Volume{
@@ -182,8 +196,8 @@ func createFrontendService(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 		AppProtocol: &appProtocol,
 	}, {
 		Name:        "metrics",
-		Port:        9113,
-		TargetPort:  intstr.FromInt(9113),
+		Port:        9000,
+		TargetPort:  intstr.FromInt(9000),
 		Protocol:    "TCP",
 		AppProtocol: &appProtocol,
 	}}
