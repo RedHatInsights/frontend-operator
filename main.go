@@ -34,6 +34,7 @@ import (
 	"github.com/RedHatInsights/frontend-operator/controllers"
 	"github.com/RedHatInsights/rhc-osdk-utils/logging"
 	"github.com/go-logr/zapr"
+	prom "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -46,6 +47,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(cloudredhatcomv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(prom.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 

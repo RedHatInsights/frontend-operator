@@ -38,6 +38,7 @@ import (
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	resCache "github.com/RedHatInsights/rhc-osdk-utils/resource_cache"
+	prom "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	cond "sigs.k8s.io/cluster-api/util/conditions"
 
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -56,6 +57,7 @@ func createNewScheme() *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(crd.AddToScheme(scheme))
+	utilruntime.Must(prom.AddToScheme(scheme))
 	return scheme
 }
 
@@ -65,6 +67,7 @@ var CoreDeployment = resCache.NewSingleResourceIdent("main", "deployment", &apps
 var CoreService = resCache.NewSingleResourceIdent("main", "service", &v1.Service{})
 var CoreConfig = resCache.NewSingleResourceIdent("main", "config", &v1.ConfigMap{})
 var SSOConfig = resCache.NewSingleResourceIdent("main", "sso_config", &v1.ConfigMap{})
+var MetricsServiceMonitor = resCache.NewMultiResourceIdent("metrics", "metrics-service-monitor", &prom.ServiceMonitor{})
 var WebIngress = resCache.NewMultiResourceIdent("ingress", "web_ingress", &networking.Ingress{})
 
 // FrontendReconciler reconciles a Frontend object
@@ -95,6 +98,7 @@ type FrontendReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheuses;servicemonitors,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.

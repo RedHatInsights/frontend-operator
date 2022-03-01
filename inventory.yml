@@ -12,7 +12,8 @@ spec:
   frontend:
     paths:
     - /apps/inventory
-  image: quay.io/cloudservices/insights-inventory-frontend:a82f241
+  # image: quay.io/cloudservices/insights-inventory-frontend:a82f241
+  image: quay.io/cloudservices/insights-inventory-frontend:f0408cf
   navItems:
     - appId: "inventory"
       title: "Inventory"

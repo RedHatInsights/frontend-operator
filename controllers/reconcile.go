@@ -10,7 +10,7 @@ import (
 	localUtil "github.com/RedHatInsights/frontend-operator/controllers/utils"
 	resCache "github.com/RedHatInsights/rhc-osdk-utils/resource_cache"
 	"github.com/RedHatInsights/rhc-osdk-utils/utils"
-
+	prom "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
@@ -42,6 +42,10 @@ func runReconciliation(context context.Context, pClient client.Client, frontend 
 	}
 
 	if err := createFrontendIngress(frontend, frontendEnvironment, cache); err != nil {
+		return err
+	}
+
+	if err := createServiceMonitorObjects(cache, frontend, "env-boot", "boot"); err != nil {
 		return err
 	}
 
@@ -78,6 +82,10 @@ func createFrontendDeployment(context context.Context, pClient client.Client, fr
 		Ports: []v1.ContainerPort{{
 			Name:          "web",
 			ContainerPort: 80,
+			Protocol:      "TCP",
+		}, {
+			Name:          "metrics",
+			ContainerPort: 9113,
 			Protocol:      "TCP",
 		}},
 		VolumeMounts: []v1.VolumeMount{
@@ -158,8 +166,6 @@ func createFrontendService(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 		return err
 	}
 
-	servicePorts := []v1.ServicePort{}
-
 	appProtocol := "http"
 
 	labels := make(map[string]string)
@@ -168,15 +174,20 @@ func createFrontendService(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 	labeler(s)
 	// We should also set owner reference to the pod
 
-	port := v1.ServicePort{
+	servicePorts := []v1.ServicePort{{
 		Name:        "public",
 		Port:        8000,
 		TargetPort:  intstr.FromInt(8000),
 		Protocol:    "TCP",
 		AppProtocol: &appProtocol,
-	}
+	}, {
+		Name:        "metrics",
+		Port:        9113,
+		TargetPort:  intstr.FromInt(9113),
+		Protocol:    "TCP",
+		AppProtocol: &appProtocol,
+	}}
 
-	servicePorts = append(servicePorts, port)
 	s.Spec.Selector = labels
 
 	utils.MakeService(s, nn, labels, servicePorts, frontend, false)
@@ -499,4 +510,46 @@ func createSSOConfigMap(ctx context.Context, pClient client.Client, frontend *cr
 	}
 
 	return hash, nil
+}
+
+func createServiceMonitorObjects(cache *resCache.ObjectCache, fe *crd.Frontend, promLabel string, namespace string) error {
+	sm := &prom.ServiceMonitor{}
+	name := fe.Name
+
+	nn := types.NamespacedName{
+		Name:      name,
+		Namespace: namespace,
+	}
+
+	if err := cache.Create(MetricsServiceMonitor, nn, sm); err != nil {
+		return err
+	}
+	sm.Spec.Endpoints = []prom.Endpoint{{
+		Interval: "15s",
+		Path:     "/metrics",
+		Port:     "metrics",
+	}}
+
+	sm.Spec.NamespaceSelector = prom.NamespaceSelector{
+		MatchNames: []string{fe.Namespace},
+	}
+
+	sm.Spec.Selector = metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"frontend": nn.Name,
+		},
+	}
+	labels := map[string]string{
+		"prometheus": promLabel,
+		"app":        "env-boot",
+	}
+	labeler := utils.GetCustomLabeler(labels, nn, fe)
+	labeler(sm)
+
+	sm.SetNamespace(namespace)
+
+	if err := cache.Update(MetricsServiceMonitor, sm); err != nil {
+		return err
+	}
+	return nil
 }
