@@ -1106,10 +1106,12 @@ objects:
     selector:
       matchLabels:
         control-plane: controller-manager
+        operator-name: frontend-operator
     template:
       metadata:
         labels:
           control-plane: controller-manager
+          operator-name: frontend-operator
       spec:
         containers:
         - args:
