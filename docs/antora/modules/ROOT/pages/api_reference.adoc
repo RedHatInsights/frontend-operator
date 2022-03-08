@@ -215,6 +215,24 @@ Frontend is the Schema for the frontends API
 |===
 
 
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontenddeployments"]
+==== FrontendDeployments 
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendstatus[$$FrontendStatus$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`managedDeployments`* __integer__ | 
+| *`readyDeployments`* __integer__ | 
+|===
+
+
 [id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment"]
 ==== FrontendEnvironment 
 
@@ -323,7 +341,7 @@ FrontendSpec defines the desired state of Frontend
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
-| *`envName`* __string__ | Foo is an example field of Frontend. Edit frontend_types.go to remove/update
+| *`envName`* __string__ | 
 | *`title`* __string__ | 
 | *`deploymentRepo`* __string__ | 
 | *`API`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-apiinfo[$$ApiInfo$$]__ | 

@@ -331,7 +331,14 @@ objects:
       singular: frontendenvironment
     scope: Cluster
     versions:
-    - name: v1alpha1
+    - additionalPrinterColumns:
+      - jsonPath: .status.targetNamespace
+        name: Namespace
+        type: string
+      - jsonPath: .metadata.creationTimestamp
+        name: Age
+        type: date
+      name: v1alpha1
       schema:
         openAPIV3Schema:
           description: FrontendEnvironment is the Schema for the FrontendEnvironments
@@ -394,10 +401,25 @@ objects:
       kind: Frontend
       listKind: FrontendList
       plural: frontends
+      shortNames:
+      - fe
       singular: frontend
     scope: Namespaced
     versions:
-    - name: v1alpha1
+    - additionalPrinterColumns:
+      - jsonPath: .status.deployments.readyDeployments
+        name: Ready
+        type: integer
+      - jsonPath: .status.deployments.managedDeployments
+        name: Managed
+        type: integer
+      - jsonPath: .spec.envName
+        name: EnvName
+        type: string
+      - jsonPath: .metadata.creationTimestamp
+        name: Age
+        type: date
+      name: v1alpha1
       schema:
         openAPIV3Schema:
           description: Frontend is the Schema for the frontends API
@@ -432,8 +454,6 @@ objects:
                 deploymentRepo:
                   type: string
                 envName:
-                  description: Foo is an example field of Frontend. Edit frontend_types.go
-                    to remove/update
                   type: string
                 frontend:
                   properties:
@@ -611,9 +631,6 @@ objects:
               description: FrontendStatus defines the observed state of Frontend
               properties:
                 conditions:
-                  description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                    of cluster Important: Run "make" to regenerate code after modifying
-                    this file'
                   items:
                     description: Condition defines an observation of a Cluster API
                       resource operational state.
@@ -658,6 +675,22 @@ objects:
                     - type
                     type: object
                   type: array
+                deployments:
+                  properties:
+                    managedDeployments:
+                      format: int32
+                      type: integer
+                    readyDeployments:
+                      format: int32
+                      type: integer
+                  required:
+                  - managedDeployments
+                  - readyDeployments
+                  type: object
+                ready:
+                  type: boolean
+              required:
+              - ready
               type: object
           type: object
       served: true

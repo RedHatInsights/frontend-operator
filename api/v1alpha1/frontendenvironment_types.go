@@ -17,7 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
+
+	errors "github.com/RedHatInsights/clowder/controllers/cloud.redhat.com/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
@@ -37,13 +41,13 @@ type FrontendEnvironmentSpec struct {
 
 // FrontendEnvironmentStatus defines the observed state of FrontendEnvironment
 type FrontendEnvironmentStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=feenv
+// +kubebuilder:printcolumn:name="Namespace",type="string",JSONPath=".status.targetNamespace"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // FrontendEnvironment is the Schema for the FrontendEnvironments API
 type FrontendEnvironment struct {
@@ -84,4 +88,21 @@ func (i *FrontendEnvironment) GetLabels() map[string]string {
 	}
 
 	return newMap
+}
+
+func (i *FrontendEnvironment) GetFrontendsInEnv(ctx context.Context, pClient client.Client) (*FrontendList, error) {
+
+	feList := &FrontendList{}
+
+	err := pClient.List(ctx, feList, client.MatchingFields{"spec.envName": i.Name})
+
+	if err != nil {
+		return feList, errors.Wrap("could not list apps", err)
+	}
+
+	return feList, nil
+}
+
+func (i *FrontendEnvironment) GenerateTargetNamespace() string {
+	return i.Name
 }

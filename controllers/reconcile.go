@@ -70,6 +70,7 @@ func createFrontendDeployment(context context.Context, pClient client.Client, fr
 
 	labeler := utils.GetCustomLabeler(labels, nn, frontend)
 	labeler(d)
+	d.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 
 	// Modify the obejct to set the things we care about
 	d.Spec.Template.Spec.Containers = []v1.Container{{
@@ -167,6 +168,7 @@ func createFrontendService(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 	labeler := utils.GetCustomLabeler(labels, nn, frontend)
 	labeler(s)
 	// We should also set owner reference to the pod
+	s.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 
 	port := v1.ServicePort{
 		Name:        "public",
@@ -203,6 +205,8 @@ func createFrontendIngress(frontend *crd.Frontend, frontendEnvironment *crd.Fron
 	labels := frontend.GetLabels()
 	labler := utils.GetCustomLabeler(labels, nn, frontend)
 	labler(netobj)
+
+	netobj.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 
 	ingressClass := frontendEnvironment.Spec.IngressClass
 	if ingressClass == "" {
@@ -377,6 +381,7 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	labels := frontendEnvironment.GetLabels()
 	labler := utils.GetCustomLabeler(labels, nn, frontend)
 	labler(cfgMap)
+	cfgMap.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 
 	hashString := ""
 
@@ -487,6 +492,7 @@ func createSSOConfigMap(ctx context.Context, pClient client.Client, frontend *cr
 	labels := frontendEnvironment.GetLabels()
 	labler := utils.GetCustomLabeler(labels, nn, frontend)
 	labler(cfgMap)
+	cfgMap.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 
 	ssoData := fmt.Sprintf(`"use strict";(self.webpackChunkinsights_chrome=self.webpackChunkinsights_chrome||[]).push([[172],{30701:(s,e,h)=>{h.r(e),h.d(e,{default:()=>c});const c="%s"}}]);`, frontendEnvironment.Spec.SSO)
 
