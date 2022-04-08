@@ -24,7 +24,7 @@ type BundlePermissionArgs []string
 
 type BundlePermission struct {
 	Method string                 `json:"method" yaml:"method"`
-	Args   []BundlePermissionArgs `json:"args" yaml:"args"`
+	Args   []BundlePermissionArgs `json:"args,omitempty" yaml:"args,omitempty"`
 }
 
 type BundleNavItem struct {
@@ -50,6 +50,7 @@ type LeafBundleNavItem struct {
 	Product     string             `json:"product,omitempty" yaml:"product,omitempty"`
 	IsExternal  bool               `json:"isExternal,omitempty" yaml:"isExternal,omitempty"`
 	Filterable  bool               `json:"filterable,omitempty" yaml:"filterable,omitempty"`
+	Notifier    string             `json:"notifier,omitempty" yaml:"notifier,omitempty"`
 	Permissions []BundlePermission `json:"permissions,omitempty" yaml:"permissions,omitempty"`
 }
 
