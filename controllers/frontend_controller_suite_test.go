@@ -173,6 +173,26 @@ var _ = Describe("Frontend controller with service", func() {
 			By("By creating a new Frontend")
 			ctx := context.Background()
 
+			frontendEnvironment := crd.FrontendEnvironment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "FrontendEnvironment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendEnvName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendEnvironmentSpec{
+					SSO:      "https://something-auth",
+					Hostname: "something",
+					Whitelist: []string{
+						"192.168.0.0/24",
+						"10.10.0.0/24",
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, &frontendEnvironment)).Should(Succeed())
+
 			frontend := &crd.Frontend{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "cloud.redhat.com/v1",
@@ -219,22 +239,6 @@ var _ = Describe("Frontend controller with service", func() {
 			}
 			Expect(k8sClient.Create(ctx, frontend)).Should(Succeed())
 
-			frontendEnvironment := crd.FrontendEnvironment{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "cloud.redhat.com/v1",
-					Kind:       "FrontendEnvironment",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      FrontendEnvName,
-					Namespace: FrontendNamespace,
-				},
-				Spec: crd.FrontendEnvironmentSpec{
-					SSO:      "https://something-auth",
-					Hostname: "something",
-				},
-			}
-			Expect(k8sClient.Create(ctx, &frontendEnvironment)).Should(Succeed())
-
 			bundle := crd.Bundle{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "cloud.redhat.com/v1",
@@ -264,6 +268,8 @@ var _ = Describe("Frontend controller with service", func() {
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdIngress.Name).Should(Equal(FrontendName))
 			Expect(createdIngress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).Should(Equal(ServiceName))
+			Expect(createdIngress.Annotations["nginx.ingress.kubernetes.io/whitelist-source-range"]).Should(Equal("192.168.0.0/24,10.10.0.0/24"))
+			Expect(createdIngress.Annotations["haproxy.router.openshift.io/ip_whitelist"]).Should(Equal("192.168.0.0/24 10.10.0.0/24"))
 
 			createdConfigMap := &v1.ConfigMap{}
 			Eventually(func() bool {

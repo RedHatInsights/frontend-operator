@@ -33,6 +33,9 @@ type FrontendEnvironmentSpec struct {
 
 	// Hostname
 	Hostname string `json:"hostname,omitempty"`
+
+	//Whitelist CIDRs
+	Whitelist []string `json:"whitelist,omitempty"`
 }
 
 // FrontendEnvironmentStatus defines the observed state of FrontendEnvironment

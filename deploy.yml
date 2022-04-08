@@ -363,6 +363,11 @@ objects:
                   description: Foo is an example field of FrontendEnvironment. Edit
                     FrontendEnvironment_types.go to remove/update
                   type: string
+                whitelist:
+                  description: Whitelist CIDRs
+                  items:
+                    type: string
+                  type: array
               required:
               - sso
               type: object

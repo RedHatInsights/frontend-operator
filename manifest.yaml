@@ -1085,6 +1085,7 @@ kind: Deployment
 metadata:
   labels:
     control-plane: controller-manager
+    operator-name: frontend-operator
   name: frontend-operator-controller-manager
   namespace: frontend-operator-system
 spec:
@@ -1092,10 +1093,12 @@ spec:
   selector:
     matchLabels:
       control-plane: controller-manager
+      operator-name: frontend-operator
   template:
     metadata:
       labels:
         control-plane: controller-manager
+        operator-name: frontend-operator
     spec:
       containers:
       - args:
