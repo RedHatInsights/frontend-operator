@@ -142,6 +142,8 @@ spec:
                             type: string
                           isExternal:
                             type: boolean
+                          notifier:
+                            type: string
                           permissions:
                             items:
                               properties:
@@ -154,7 +156,6 @@ spec:
                                 method:
                                   type: string
                               required:
-                              - args
                               - method
                               type: object
                             type: array
@@ -178,7 +179,6 @@ spec:
                           method:
                             type: string
                         required:
-                        - args
                         - method
                         type: object
                       type: array
@@ -197,6 +197,8 @@ spec:
                             type: string
                           isExternal:
                             type: boolean
+                          notifier:
+                            type: string
                           permissions:
                             items:
                               properties:
@@ -209,7 +211,6 @@ spec:
                                 method:
                                   type: string
                               required:
-                              - args
                               - method
                               type: object
                             type: array

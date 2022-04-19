@@ -80,6 +80,8 @@ objects:
                               type: string
                             isExternal:
                               type: boolean
+                            notifier:
+                              type: string
                             permissions:
                               items:
                                 properties:
@@ -92,7 +94,6 @@ objects:
                                   method:
                                     type: string
                                 required:
-                                - args
                                 - method
                                 type: object
                               type: array
@@ -116,7 +117,6 @@ objects:
                             method:
                               type: string
                           required:
-                          - args
                           - method
                           type: object
                         type: array
@@ -135,6 +135,8 @@ objects:
                               type: string
                             isExternal:
                               type: boolean
+                            notifier:
+                              type: string
                             permissions:
                               items:
                                 properties:
@@ -147,7 +149,6 @@ objects:
                                   method:
                                     type: string
                                 required:
-                                - args
                                 - method
                                 type: object
                               type: array
@@ -201,6 +202,8 @@ objects:
                                   type: string
                                 isExternal:
                                   type: boolean
+                                notifier:
+                                  type: string
                                 permissions:
                                   items:
                                     properties:
@@ -213,7 +216,6 @@ objects:
                                       method:
                                         type: string
                                     required:
-                                    - args
                                     - method
                                     type: object
                                   type: array
@@ -237,7 +239,6 @@ objects:
                                 method:
                                   type: string
                               required:
-                              - args
                               - method
                               type: object
                             type: array
@@ -256,6 +257,8 @@ objects:
                                   type: string
                                 isExternal:
                                   type: boolean
+                                notifier:
+                                  type: string
                                 permissions:
                                   items:
                                     properties:
@@ -268,7 +271,6 @@ objects:
                                       method:
                                         type: string
                                     required:
-                                    - args
                                     - method
                                     type: object
                                   type: array
@@ -531,6 +533,8 @@ objects:
                               type: string
                             isExternal:
                               type: boolean
+                            notifier:
+                              type: string
                             permissions:
                               items:
                                 properties:
@@ -543,7 +547,6 @@ objects:
                                   method:
                                     type: string
                                 required:
-                                - args
                                 - method
                                 type: object
                               type: array
@@ -567,7 +570,6 @@ objects:
                             method:
                               type: string
                           required:
-                          - args
                           - method
                           type: object
                         type: array
@@ -586,6 +588,8 @@ objects:
                               type: string
                             isExternal:
                               type: boolean
+                            notifier:
+                              type: string
                             permissions:
                               items:
                                 properties:
@@ -598,7 +602,6 @@ objects:
                                   method:
                                     type: string
                                 required:
-                                - args
                                 - method
                                 type: object
                               type: array

@@ -376,6 +376,7 @@ FrontendSpec defines the desired state of Frontend
 | *`product`* __string__ | 
 | *`isExternal`* __boolean__ | 
 | *`filterable`* __boolean__ | 
+| *`notifier`* __string__ | 
 | *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$]__ | 
 |===
 
