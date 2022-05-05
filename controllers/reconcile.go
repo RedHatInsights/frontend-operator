@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	localUtil "github.com/RedHatInsights/frontend-operator/controllers/utils"
@@ -211,6 +212,16 @@ func createFrontendIngress(frontend *crd.Frontend, frontendEnvironment *crd.Fron
 	ingressClass := frontendEnvironment.Spec.IngressClass
 	if ingressClass == "" {
 		ingressClass = "nginx"
+	}
+
+	if len(frontendEnvironment.Spec.Whitelist) != 0 {
+		annotations := netobj.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+		annotations["haproxy.router.openshift.io/ip_whitelist"] = strings.Join(frontendEnvironment.Spec.Whitelist, " ")
+		annotations["nginx.ingress.kubernetes.io/whitelist-source-range"] = strings.Join(frontendEnvironment.Spec.Whitelist, ",")
+		netobj.SetAnnotations(annotations)
 	}
 
 	if frontend.Spec.Image != "" {
