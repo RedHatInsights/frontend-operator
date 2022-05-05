@@ -4,7 +4,7 @@ metadata:
   name: frontend-operator
 parameters:
 - name: IMAGE_TAG
-  value: latest
+  required: true
 - name: IMAGE
   value: quay.io/cloudservices/frontend-operator
 objects: []

@@ -13,7 +13,6 @@ rules:
   - events
   - namespaces
   - persistentvolumeclaims
-  - secrets
   - serviceaccounts
   - services
   verbs:
