@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/RedHatInsights/clowder v0.28.0
-	github.com/RedHatInsights/rhc-osdk-utils v0.4.1
+	github.com/RedHatInsights/rhc-osdk-utils v0.4.2-0.20220509135613-9adf0d37134e
 	github.com/go-logr/logr v0.4.0
 	github.com/go-logr/zapr v0.4.0
 	github.com/onsi/ginkgo v1.16.5
