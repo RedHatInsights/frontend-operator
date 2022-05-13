@@ -128,10 +128,9 @@ github.com/RedHatInsights/clowder v0.28.0/go.mod h1:TRyngQP2IfiYTvcfoWZu/nMjAue9
 github.com/RedHatInsights/cyndi-operator v0.1.4/go.mod h1:lHxzGinQkZvGzGnTWT6X39CihCrOpTIt9YCsyymuowI=
 github.com/RedHatInsights/go-difflib v1.0.0 h1:BoruyjZfxO81sEynhkG6c4SMAQOjuBWezcJxtGK8dyw=
 github.com/RedHatInsights/go-difflib v1.0.0/go.mod h1:UMKOFdypYfrKT1B1nbGodM09nhOiAmcjes8qWP7Myrs=
-github.com/RedHatInsights/rhc-osdk-utils v0.4.1 h1:wAd0oy+O9e6hsy13VG0mqhX0EHBwIZgtJZDzqWbyKKE=
 github.com/RedHatInsights/rhc-osdk-utils v0.4.1/go.mod h1:kzhoWdsajLo0R2/S8f2EEtozJgkooUAmadB8giwuq+4=
-github.com/RedHatInsights/rhc-osdk-utils v0.4.2-0.20220509135613-9adf0d37134e h1:07EDFOXWfvBxl0k+qqMURBEPfjnLdzxM/DSzx6azhgk=
-github.com/RedHatInsights/rhc-osdk-utils v0.4.2-0.20220509135613-9adf0d37134e/go.mod h1:n4qCLh67dIDdumbHHSknxQjn3jK8z/4S9f6pMnMxhCs=
+github.com/RedHatInsights/rhc-osdk-utils v0.5.0 h1:f+WGlaonoQcVo6vkuV6HJ7gHy5REjREmTP8K/EDQad8=
+github.com/RedHatInsights/rhc-osdk-utils v0.5.0/go.mod h1:n4qCLh67dIDdumbHHSknxQjn3jK8z/4S9f6pMnMxhCs=
 github.com/RedHatInsights/strimzi-client-go v0.26.0/go.mod h1:Z488n7yGdCVT3AFYuamQ9F7b6c99OSMr4lPYzgEEpzY=
 github.com/Shopify/sarama v1.19.0/go.mod h1:FVkBWblsNy7DGZRfXLU0O9RCGt5g3g3yEuWXgklEdEo=
 github.com/Shopify/sarama v1.30.0/go.mod h1:zujlQQx1kzHsh4jfV1USnptCQrHAEZ2Hk8fTKCulPVs=
@@ -908,8 +907,9 @@ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UV
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5cxcmMvtA=
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
-github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5CcY=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
+github.com/stretchr/testify v1.7.1 h1:5TQK59W5E3v0r2duFAb7P95B6hEeOyEnHRa8MjYSMTY=
+github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69rRypqCw=
 github.com/tidwall/gjson v1.11.0/go.mod h1:/wbyibRr2FHMks5tjHJ5F8dMZh3AcwJEMf5vlfC0lxk=
 github.com/tidwall/match v1.1.1/go.mod h1:eRSPERbgtNPcGhD8UCthc6PmLEQXEWd3PRB5JTxsfmM=

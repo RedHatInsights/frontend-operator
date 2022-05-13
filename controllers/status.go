@@ -76,13 +76,10 @@ func SetFrontendConditions(ctx context.Context, client client.Client, o *crd.Fro
 
 func GetFrontendResources(ctx context.Context, client client.Client, o *crd.Frontend) (bool, error) {
 	stats, _, err := GetFrontendFigures(ctx, client, o)
-	if err != nil {
-		return false, err
+	if err == nil {
+		return stats.ManagedDeployments == stats.ReadyDeployments, err
 	}
-	if stats.ManagedDeployments == stats.ReadyDeployments {
-		return true, nil
-	}
-	return false, nil
+	return false, err
 }
 
 func GetFrontendFigures(ctx context.Context, client client.Client, o *crd.Frontend) (crd.FrontendDeployments, string, error) {
@@ -107,7 +104,7 @@ func GetFrontendFigures(ctx context.Context, client client.Client, o *crd.Fronte
 		}},
 	}
 
-	results := counter.Count(ctx, pClient)
+	results := counter.Count(ctx, client)
 
 	deploymentStats.ManagedDeployments = int32(results.Managed)
 	deploymentStats.ReadyDeployments = int32(results.Ready)
