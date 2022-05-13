@@ -1,5 +1,7 @@
 # Insights Frontend Operator
 
+A dummy PR
+
 ### Local development
 
 You need to run kubernetess locally, we rocommend using [minikube](https://minikube.sigs.k8s.io/docs/).
