@@ -24,6 +24,9 @@ BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
 endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
+# ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
+ENVTEST_K8S_VERSION = 1.23
+
 # IMAGE_TAG_BASE defines the docker.io namespace and part of the image name for remote images.
 # This variable is used to construct full image tags for bundle and catalog images.
 #
@@ -82,6 +85,8 @@ release: manifests kustomize controller-gen
 
 ##@ Development
 
+pre-push: manifests generate fmt vet build-template api-docs
+
 build-template: manifests kustomize controller-gen
 	$(KUSTOMIZE) build config/deployment-template | ./manifest2template.py > deploy.yml
 
@@ -98,7 +103,7 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 
-ENVTEST = $(shell pwd)/bin/setup-envtest
+ENVTEST = $(shell pwd)/testbin/bin/setup-envtest
 envtest: ## Download envtest-setup locally if necessary.
 	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
 
@@ -106,8 +111,8 @@ test: manifests envtest generate fmt vet
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
 
 # gotestsum is used to generate xml for the tests. Embedded in the Dockerfile.pr
-junit: manifests envtest generate fmt vet
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GOPATH)/bin/gotestsum --junitfile artifacts/junit-ginko.xml -- ./... -coverprofile cover.out
+junit: gotestsum manifests envtest generate fmt vet
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(PROJECT_DIR)/testbin/bin/gotestsum --junitfile artifacts/junit-ginko.xml -- ./... -coverprofile cover.out
 
 ##@ Build
 
@@ -139,25 +144,24 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
 
-CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
+CONTROLLER_GEN = $(shell pwd)/testbin/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.4.1)
+	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0)
 
-KUSTOMIZE = $(shell pwd)/bin/kustomize
+KUSTOMIZE = $(shell pwd)/testbin/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
+	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.5.2)
+
+GOTESTSUM = $(shell pwd)/testbin/bin/gotestsum
+gotestsum: ## Download if necessary
+	$(call go-get-tool,$(GOTESTSUM),gotest.tools/gotestsum@v1.8.1)
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
 @[ -f $(1) ] || { \
 set -e ;\
-TMP_DIR=$$(mktemp -d) ;\
-cd $$TMP_DIR ;\
-go mod init tmp ;\
-echo "Downloading $(2)" ;\
-GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
-rm -rf $$TMP_DIR ;\
+GOBIN=$(PROJECT_DIR)/testbin/bin go install $(2) ;\
 }
 endef
 
