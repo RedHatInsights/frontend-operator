@@ -75,7 +75,7 @@ BundleList contains a list of Bundle
 | *`kind`* __string__ | `BundleList`
 | *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta[$$ListMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
 
-| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle[$$Bundle$$]__ | 
+| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle[$$Bundle$$] array__ | 
 |===
 
 
@@ -103,7 +103,7 @@ BundleList contains a list of Bundle
 | *`product`* __string__ | 
 | *`isExternal`* __boolean__ | 
 | *`filterable`* __boolean__ | 
-| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$]__ | 
+| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$] array__ | 
 | *`routes`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem[$$LeafBundleNavItem$$] array__ | 
 | *`expandable`* __boolean__ | 
 | *`dynamicNav`* __string__ | 
@@ -125,9 +125,19 @@ BundleList contains a list of Bundle
 |===
 | Field | Description
 | *`method`* __string__ | 
-| *`args`* __string array__ | 
+| *`args`* __string array array__ | 
 |===
 
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermissionargs"]
+==== BundlePermissionArgs 
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$]
+****
 
 
 
@@ -148,8 +158,8 @@ BundleSpec defines the desired state of Bundle
 | *`title`* __string__ | 
 | *`appList`* __string array__ | 
 | *`envName`* __string__ | 
-| *`extraNavItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem[$$ExtraNavItem$$]__ | 
-| *`customNav`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$]__ | 
+| *`extraNavItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem[$$ExtraNavItem$$] array__ | 
+| *`customNav`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$] array__ | 
 |===
 
 
@@ -268,7 +278,7 @@ FrontendEnvironmentList contains a list of FrontendEnvironment
 | *`kind`* __string__ | `FrontendEnvironmentList`
 | *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta[$$ListMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
 
-| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment[$$FrontendEnvironment$$]__ | 
+| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment[$$FrontendEnvironment$$] array__ | 
 |===
 
 
@@ -288,6 +298,7 @@ FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
 | *`sso`* __string__ | Foo is an example field of FrontendEnvironment. Edit FrontendEnvironment_types.go to remove/update
 | *`ingressClass`* __string__ | Ingress class
 | *`hostname`* __string__ | Hostname
+| *`whitelist`* __string array__ | Whitelist CIDRs
 |===
 
 
@@ -324,7 +335,7 @@ FrontendList contains a list of Frontend
 | *`kind`* __string__ | `FrontendList`
 | *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta[$$ListMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
 
-| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend[$$Frontend$$]__ | 
+| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend[$$Frontend$$] array__ | 
 |===
 
 
@@ -349,7 +360,7 @@ FrontendSpec defines the desired state of Frontend
 | *`image`* __string__ | 
 | *`service`* __string__ | 
 | *`module`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule[$$FedModule$$]__ | 
-| *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$]__ | 
+| *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$] array__ | 
 | *`assetsPrefix`* __string__ | 
 |===
 
@@ -377,7 +388,7 @@ FrontendSpec defines the desired state of Frontend
 | *`isExternal`* __boolean__ | 
 | *`filterable`* __boolean__ | 
 | *`notifier`* __string__ | 
-| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$]__ | 
+| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$] array__ | 
 |===
 
 
