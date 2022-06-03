@@ -97,6 +97,7 @@ BundleList contains a list of Bundle
 | Field | Description
 | *`title`* __string__ | 
 | *`groupId`* __string__ | 
+| *`icon`* __string__ | 
 | *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem[$$LeafBundleNavItem$$] array__ | 
 | *`appId`* __string__ | 
 | *`href`* __string__ | 
@@ -104,7 +105,7 @@ BundleList contains a list of Bundle
 | *`isExternal`* __boolean__ | 
 | *`filterable`* __boolean__ | 
 | *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$]__ | 
-| *`routes`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem[$$LeafBundleNavItem$$] array__ | 
+| *`routes`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute[$$EmbeddedRoute$$]__ | 
 | *`expandable`* __boolean__ | 
 | *`dynamicNav`* __string__ | 
 |===
@@ -155,6 +156,27 @@ BundleSpec defines the desired state of Bundle
 
 
 
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute"]
+==== EmbeddedRoute 
+
+EmbeddedRoutes allow deeply nested navs to have support for routes
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem[$$LeafBundleNavItem$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`title`* __string__ | 
+| *`appId`* __string__ | 
+| *`href`* __string__ | 
+| *`product`* __string__ | 
+|===
 
 
 [id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem"]
@@ -288,6 +310,7 @@ FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
 | *`sso`* __string__ | Foo is an example field of FrontendEnvironment. Edit FrontendEnvironment_types.go to remove/update
 | *`ingressClass`* __string__ | Ingress class
 | *`hostname`* __string__ | Hostname
+| *`whitelist`* __string array__ | Whitelist CIDRs
 |===
 
 
@@ -376,7 +399,9 @@ FrontendSpec defines the desired state of Frontend
 | *`product`* __string__ | 
 | *`isExternal`* __boolean__ | 
 | *`filterable`* __boolean__ | 
+| *`expandable`* __boolean__ | 
 | *`notifier`* __string__ | 
+| *`routes`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute[$$EmbeddedRoute$$]__ | 
 | *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$]__ | 
 |===
 
