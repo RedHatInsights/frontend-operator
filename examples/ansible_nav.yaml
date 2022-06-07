@@ -15,12 +15,12 @@ spec:
   - remediations
   - tasks
   customNav:
-  - groupId: operations # Bundle
+  - groupId: operations
     title: "Red Hat Insights"
     navItems:
-    - title: "Advisor" # Leaf
+    - title: "Advisor"
       expandable: true
-      routes: # Can't have routes on leaf
+      routes:
       - appId: "advisor"
         title: "Recommendations"
         href: "/ansible/advisor/recommendations"

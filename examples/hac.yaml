@@ -12,20 +12,10 @@ spec:
   frontend:
     paths:
       - /apps/hac-core
-  image: quay.io/redhat-cloud-services/hac-core:ci-beta
+  image: quay.io/cloudservices/hac-core-frontend:ba805b6
   navItems:
-    - appId: "hacCore"
-      title: "Core"
-      href: "/hac"
-    - title: Demo Plugin
-      dynamicNav: "hacCore/admin-demo-section"
-    - title: Demo Plugin
-      dynamicNav: "hacCore/dev-demo-section"
-    - title: Flat nav
-      dynamicNav: hacCore
-    - appId: "hacDev"
-      title: "App Studio"
-      href: "/hac/app-studio"
+  - dynamicNav: hacCore
+    title: Plugin navigation
   module:
     manifestLocation: "/apps/hac-core/fed-mods.json"
     modules:
@@ -33,7 +23,3 @@ spec:
         module: "./RootApp"
         routes:
           - pathname: /hac
-      - id: "hacDev"
-        module: "./RootApp"
-        routes:
-          - pathname: /hac/app-studio

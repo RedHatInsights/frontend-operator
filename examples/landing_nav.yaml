@@ -6,29 +6,29 @@ spec:
   id: landing-navigation
   envName: env-boot
   customNav:
-    - groupId: application-services # BundleNavItem
+    - groupId: application-services
       title: "Build and Deploy Applications"
       icon: "code"
-      navItems: # LeafNavItem
+      navItems:
       - appId: "applicationServices"
         title: "Application and Data Services"
         href: "/application-services/overview"
-    - groupId: manage-infrastructure # BundleNavItem
+    - groupId: manage-infrastructure
       title: "Manage Infrastructure"
       icon: "wrench"
       navItems:
-      - appId: "openshift" # LeafNavItem
+      - appId: "openshift"
         title: "Openshift"
         href: "/openshift"
-      - title: "Red Hat Enterprise Linux" # LeafNavItem
+      - title: "Red Hat Enterprise Linux"
         expandable: true
-        routes: # Can't have routes
+        routes:
         - appId: "dashboard"
           title: "Red Hat Insights"
           href: "/insights/dashboard"
         - appId: "edge"
           title: "Edge Management"
           href: "/edge"
-      - appId: "ansibleDashboard" # LeafNavItem
+      - appId: "ansibleDashboard"
         title: "Ansible Automation Platform"
         href: "/ansible/ansible-dashboard"

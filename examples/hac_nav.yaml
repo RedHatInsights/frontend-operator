@@ -7,5 +7,4 @@ spec:
   envName: env-boot
   title: HAC
   appList:
-  - inventory
   - hac-core
