@@ -1,0 +1,25 @@
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: hac-core
+spec:
+  envName: env-boot
+  title: HAC
+  deploymentRepo: http://github.com/RedHatInsights/hac-core-frontend
+  API:
+    versions:
+      - v1
+  frontend:
+    paths:
+      - /apps/hac-core
+  image: quay.io/cloudservices/hac-core-frontend:ba805b6
+  navItems:
+  - dynamicNav: hacCore
+    title: Plugin navigation
+  module:
+    manifestLocation: "/apps/hac-core/fed-mods.json"
+    modules:
+      - id: "hacCore"
+        module: "./RootApp"
+        routes:
+          - pathname: /hac

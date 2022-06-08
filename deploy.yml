@@ -65,6 +65,8 @@ objects:
                         type: string
                       href:
                         type: string
+                      icon:
+                        type: string
                       isExternal:
                         type: boolean
                       navItems:
@@ -72,6 +74,8 @@ objects:
                           properties:
                             appId:
                               type: string
+                            expandable:
+                              type: boolean
                             filterable:
                               type: boolean
                             groupId:
@@ -99,6 +103,21 @@ objects:
                               type: array
                             product:
                               type: string
+                            routes:
+                              items:
+                                description: EmbeddedRoutes allow deeply nested navs
+                                  to have support for routes
+                                properties:
+                                  appId:
+                                    type: string
+                                  href:
+                                    type: string
+                                  product:
+                                    type: string
+                                  title:
+                                    type: string
+                                type: object
+                              type: array
                             title:
                               type: string
                           required:
@@ -124,40 +143,17 @@ objects:
                         type: string
                       routes:
                         items:
+                          description: EmbeddedRoutes allow deeply nested navs to
+                            have support for routes
                           properties:
                             appId:
                               type: string
-                            filterable:
-                              type: boolean
-                            groupId:
-                              type: string
                             href:
                               type: string
-                            isExternal:
-                              type: boolean
-                            notifier:
-                              type: string
-                            permissions:
-                              items:
-                                properties:
-                                  args:
-                                    items:
-                                      items:
-                                        type: string
-                                      type: array
-                                    type: array
-                                  method:
-                                    type: string
-                                required:
-                                - method
-                                type: object
-                              type: array
                             product:
                               type: string
                             title:
                               type: string
-                          required:
-                          - title
                           type: object
                         type: array
                       title:
@@ -187,6 +183,8 @@ objects:
                             type: string
                           href:
                             type: string
+                          icon:
+                            type: string
                           isExternal:
                             type: boolean
                           navItems:
@@ -194,6 +192,8 @@ objects:
                               properties:
                                 appId:
                                   type: string
+                                expandable:
+                                  type: boolean
                                 filterable:
                                   type: boolean
                                 groupId:
@@ -221,6 +221,21 @@ objects:
                                   type: array
                                 product:
                                   type: string
+                                routes:
+                                  items:
+                                    description: EmbeddedRoutes allow deeply nested
+                                      navs to have support for routes
+                                    properties:
+                                      appId:
+                                        type: string
+                                      href:
+                                        type: string
+                                      product:
+                                        type: string
+                                      title:
+                                        type: string
+                                    type: object
+                                  type: array
                                 title:
                                   type: string
                               required:
@@ -246,40 +261,17 @@ objects:
                             type: string
                           routes:
                             items:
+                              description: EmbeddedRoutes allow deeply nested navs
+                                to have support for routes
                               properties:
                                 appId:
                                   type: string
-                                filterable:
-                                  type: boolean
-                                groupId:
-                                  type: string
                                 href:
                                   type: string
-                                isExternal:
-                                  type: boolean
-                                notifier:
-                                  type: string
-                                permissions:
-                                  items:
-                                    properties:
-                                      args:
-                                        items:
-                                          items:
-                                            type: string
-                                          type: array
-                                        type: array
-                                      method:
-                                        type: string
-                                    required:
-                                    - method
-                                    type: object
-                                  type: array
                                 product:
                                   type: string
                                 title:
                                   type: string
-                              required:
-                              - title
                               type: object
                             type: array
                           title:
@@ -523,6 +515,8 @@ objects:
                         type: string
                       href:
                         type: string
+                      icon:
+                        type: string
                       isExternal:
                         type: boolean
                       navItems:
@@ -530,6 +524,8 @@ objects:
                           properties:
                             appId:
                               type: string
+                            expandable:
+                              type: boolean
                             filterable:
                               type: boolean
                             groupId:
@@ -557,6 +553,21 @@ objects:
                               type: array
                             product:
                               type: string
+                            routes:
+                              items:
+                                description: EmbeddedRoutes allow deeply nested navs
+                                  to have support for routes
+                                properties:
+                                  appId:
+                                    type: string
+                                  href:
+                                    type: string
+                                  product:
+                                    type: string
+                                  title:
+                                    type: string
+                                type: object
+                              type: array
                             title:
                               type: string
                           required:
@@ -582,40 +593,17 @@ objects:
                         type: string
                       routes:
                         items:
+                          description: EmbeddedRoutes allow deeply nested navs to
+                            have support for routes
                           properties:
                             appId:
                               type: string
-                            filterable:
-                              type: boolean
-                            groupId:
-                              type: string
                             href:
                               type: string
-                            isExternal:
-                              type: boolean
-                            notifier:
-                              type: string
-                            permissions:
-                              items:
-                                properties:
-                                  args:
-                                    items:
-                                      items:
-                                        type: string
-                                      type: array
-                                    type: array
-                                  method:
-                                    type: string
-                                required:
-                                - method
-                                type: object
-                              type: array
                             product:
                               type: string
                             title:
                               type: string
-                          required:
-                          - title
                           type: object
                         type: array
                       title:
