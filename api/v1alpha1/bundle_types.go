@@ -27,9 +27,18 @@ type BundlePermission struct {
 	Args   []BundlePermissionArgs `json:"args,omitempty" yaml:"args,omitempty"`
 }
 
+// EmbeddedRoutes allow deeply nested navs to have support for routes
+type EmbeddedRoute struct {
+	Title   string `json:"title,omitempty" yaml:"title,omitempty"`
+	AppId   string `json:"appId,omitempty" yaml:"appId,omitempty"`
+	Href    string `json:"href,omitempty" yaml:"href,omitempty"`
+	Product string `json:"product,omitempty" yaml:"product,omitempty"`
+}
+
 type BundleNavItem struct {
 	Title       string              `json:"title" yaml:"title"`
 	GroupID     string              `json:"groupId,omitempty" yaml:"groupId,omitempty"`
+	Icon        string              `json:"icon,omitempty" yaml:"icon,omitempty"`
 	NavItems    []LeafBundleNavItem `json:"navItems,omitempty" yaml:"navItems,omitempty"`
 	AppId       string              `json:"appId,omitempty" yaml:"appId,omitempty"`
 	Href        string              `json:"href,omitempty" yaml:"href,omitempty"`
@@ -37,7 +46,7 @@ type BundleNavItem struct {
 	IsExternal  bool                `json:"isExternal,omitempty" yaml:"isExternal,omitempty"`
 	Filterable  bool                `json:"filterable,omitempty" yaml:"filterable,omitempty"`
 	Permissions []BundlePermission  `json:"permissions,omitempty" yaml:"permissions,omitempty"`
-	Routes      []LeafBundleNavItem `json:"routes,omitempty" yaml:"routes,omitempty"`
+	Routes      []EmbeddedRoute     `json:"routes,omitempty" yaml:"routes,omitempty"`
 	Expandable  bool                `json:"expandable,omitempty" yaml:"expandable,omitempty"`
 	DynamicNav  string              `json:"dynamicNav,omitempty" yaml:"dynamicNav,omitempty"`
 }
@@ -50,7 +59,9 @@ type LeafBundleNavItem struct {
 	Product     string             `json:"product,omitempty" yaml:"product,omitempty"`
 	IsExternal  bool               `json:"isExternal,omitempty" yaml:"isExternal,omitempty"`
 	Filterable  bool               `json:"filterable,omitempty" yaml:"filterable,omitempty"`
+	Expandable  bool               `json:"expandable,omitempty" yaml:"expandable,omitempty"`
 	Notifier    string             `json:"notifier,omitempty" yaml:"notifier,omitempty"`
+	Routes      []EmbeddedRoute    `json:"routes,omitempty" yaml:"routes,omitempty"`
 	Permissions []BundlePermission `json:"permissions,omitempty" yaml:"permissions,omitempty"`
 }
 

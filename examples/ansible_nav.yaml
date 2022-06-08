@@ -1,0 +1,35 @@
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Bundle 
+metadata:
+    name: ansible-navigation
+spec:
+  id: ansible-navigation
+  title: ansible
+  envName: env-boot
+  appList:
+  - ansibleDashboard
+  - automationHub
+  - automationAnalytics
+  - documentation
+  - registration
+  - remediations
+  - tasks
+  customNav:
+  - groupId: operations
+    title: "Red Hat Insights"
+    navItems:
+    - title: "Advisor"
+      expandable: true
+      routes:
+      - appId: "advisor"
+        title: "Recommendations"
+        href: "/ansible/advisor/recommendations"
+        product: "Red Hat Insights"
+      - appId: "advisor"
+        title: "Systems"
+        href: "/ansible/advisor/systems"
+        product: "Red Hat Insights"
+      - appId: "advisor"
+        title: "Topics"
+        href: "/ansible/advisor/topics"
+        product: "Red Hat Insights"
