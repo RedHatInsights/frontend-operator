@@ -337,6 +337,12 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>icon</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
 <p><strong><code>navItems</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem">LeafBundleNavItem</a> array</em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
@@ -379,7 +385,7 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>routes</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem">LeafBundleNavItem</a> array</em></p>
+<p><strong><code>routes</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute">EmbeddedRoute</a></em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
@@ -506,6 +512,65 @@
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
 <p><strong><code>customNav</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem">BundleNavItem</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute"></a>EmbeddedRoute</h4>
+<div class="paragraph">
+<p>EmbeddedRoutes allow deeply nested navs to have support for routes</p>
+</div>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Appears In:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem">BundleNavItem</a></p>
+</li>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem">LeafBundleNavItem</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>title</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>appId</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>href</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>product</code></strong> <em>string</em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
@@ -868,6 +933,14 @@
 <p>Hostname</p>
 </div></div></td>
 </tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>whitelist</code></strong> <em>string array</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>Whitelist CIDRs</p>
+</div></div></td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -1118,7 +1191,19 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>expandable</code></strong> <em>boolean</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
 <p><strong><code>notifier</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>routes</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute">EmbeddedRoute</a></em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
