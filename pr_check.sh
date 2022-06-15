@@ -18,7 +18,7 @@ set +e
 $RUNTIME run -i \
 --name $CONTAINER_NAME \
 -v $PWD:/workspace:ro \
-quay.io/bholifie/frontend-op-pr-check:v0.0.6 \
+quay.io/bholifie/frontend-op-pr-check:v0.0.8 \
 /workspace/build/pr_check_inner.sh
 
 TEST_RESULT=$?

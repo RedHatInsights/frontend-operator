@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
@@ -398,11 +399,23 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 
 	cfgMap.Data = map[string]string{}
 
+	keys := []string{}
+	nBundleMap := map[string]crd.Bundle{}
 	for _, bundle := range bundleList.Items {
+		keys = append(keys, bundle.Name)
+		nBundleMap[bundle.Name] = bundle
+	}
+
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		bundle := nBundleMap[key]
+		var jsonData []byte
+		var err error
 		if bundle.Spec.CustomNav != nil {
 			newBundleObject := bundle.Spec.CustomNav
 
-			jsonData, err := json.Marshal(newBundleObject)
+			jsonData, err = json.Marshal(newBundleObject)
 			if err != nil {
 				return "", err
 			}
@@ -433,17 +446,17 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 				}
 			}
 
-			jsonData, err := json.Marshal(newBundleObject)
+			jsonData, err = json.Marshal(newBundleObject)
 			if err != nil {
 				return "", err
 			}
 
 			cfgMap.Data[fmt.Sprintf("%s.json", bundle.Name)] = string(jsonData)
-
-			h := sha256.New()
-			h.Write([]byte(jsonData))
-			hashString += fmt.Sprintf("%x", h.Sum(nil))
 		}
+
+		h := sha256.New()
+		h.Write([]byte(jsonData))
+		hashString += fmt.Sprintf("%x", h.Sum(nil))
 	}
 
 	fedModules := make(map[string]crd.FedModule)
