@@ -395,8 +395,6 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	labler(cfgMap)
 	cfgMap.SetOwnerReferences([]metav1.OwnerReference{frontendEnvironment.MakeOwnerReference()})
 
-	hashString := ""
-
 	cfgMap.Data = map[string]string{}
 
 	keys := []string{}
@@ -453,10 +451,6 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 
 			cfgMap.Data[fmt.Sprintf("%s.json", bundle.Name)] = string(jsonData)
 		}
-
-		h := sha256.New()
-		h.Write([]byte(jsonData))
-		hashString += fmt.Sprintf("%x", h.Sum(nil))
 	}
 
 	fedModules := make(map[string]crd.FedModule)
@@ -485,12 +479,13 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 		return "", err
 	}
 
-	h := sha256.New()
-	h.Write([]byte(jsonData))
-	hashString += fmt.Sprintf("%x", h.Sum(nil))
+	hashData, err := json.Marshal(cfgMap.Data)
+	if err != nil {
+		return "", err
+	}
 
-	h = sha256.New()
-	h.Write([]byte(hashString))
+	h := sha256.New()
+	h.Write([]byte(hashData))
 	hash := fmt.Sprintf("%x", h.Sum(nil))
 
 	return hash, nil
