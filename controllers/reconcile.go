@@ -393,7 +393,7 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 	labels := frontendEnvironment.GetLabels()
 	labler := utils.GetCustomLabeler(labels, nn, frontend)
 	labler(cfgMap)
-	cfgMap.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
+	cfgMap.SetOwnerReferences([]metav1.OwnerReference{frontendEnvironment.MakeOwnerReference()})
 
 	hashString := ""
 

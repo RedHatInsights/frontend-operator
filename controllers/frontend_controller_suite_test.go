@@ -139,7 +139,13 @@ var _ = Describe("Frontend controller with image", func() {
 			createdConfigMap := &v1.ConfigMap{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, configMapLookupKey, createdConfigMap)
-				return err == nil
+				if err != nil {
+					return err == nil
+				}
+				if len(createdConfigMap.Data) != 2 {
+					return false
+				}
+				return true
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdConfigMap.Name).Should(Equal(FrontendEnvName))
 			Expect(createdConfigMap.Data).Should(Equal(map[string]string{

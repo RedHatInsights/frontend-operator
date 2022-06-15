@@ -109,3 +109,14 @@ func (i *FrontendEnvironment) GetFrontendsInEnv(ctx context.Context, pClient cli
 func (i *FrontendEnvironment) GenerateTargetNamespace() string {
 	return i.Name
 }
+
+// MakeOwnerReference defines the owner reference pointing to the Frontend resource.
+func (i *FrontendEnvironment) MakeOwnerReference() metav1.OwnerReference {
+	return metav1.OwnerReference{
+		APIVersion: i.APIVersion,
+		Kind:       i.Kind,
+		Name:       i.ObjectMeta.Name,
+		UID:        i.ObjectMeta.UID,
+		Controller: TruePtr(),
+	}
+}
