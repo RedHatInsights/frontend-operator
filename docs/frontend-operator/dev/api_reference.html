@@ -281,7 +281,7 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>items</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle">Bundle</a></em></p>
+<p><strong><code>items</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle">Bundle</a> array</em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
@@ -379,13 +379,13 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>permissions</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission">BundlePermission</a></em></p>
+<p><strong><code>permissions</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission">BundlePermission</a> array</em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>routes</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute">EmbeddedRoute</a></em></p>
+<p><strong><code>routes</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute">EmbeddedRoute</a> array</em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
@@ -441,12 +441,27 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>args</code></strong> <em>string array</em></p>
+<p><strong><code>args</code></strong> <em>string array array</em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
 </tbody>
 </table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermissionargs"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermissionargs"></a>BundlePermissionArgs</h4>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Appears In:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission">BundlePermission</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
 </div>
 <div class="sect3">
 <h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec"></a>BundleSpec</h4>
@@ -505,13 +520,13 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>extraNavItems</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem">ExtraNavItem</a></em></p>
+<p><strong><code>extraNavItems</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem">ExtraNavItem</a> array</em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>customNav</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem">BundleNavItem</a></em></p>
+<p><strong><code>customNav</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem">BundleNavItem</a> array</em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
@@ -873,7 +888,7 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>items</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment">FrontendEnvironment</a></em></p>
+<p><strong><code>items</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment">FrontendEnvironment</a> array</em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
@@ -1022,7 +1037,7 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>items</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend">Frontend</a></em></p>
+<p><strong><code>items</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend">Frontend</a> array</em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
@@ -1108,7 +1123,7 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>navItems</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem">BundleNavItem</a></em></p>
+<p><strong><code>navItems</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem">BundleNavItem</a> array</em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
@@ -1203,13 +1218,13 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>routes</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute">EmbeddedRoute</a></em></p>
+<p><strong><code>routes</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute">EmbeddedRoute</a> array</em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>permissions</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission">BundlePermission</a></em></p>
+<p><strong><code>permissions</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission">BundlePermission</a> array</em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
