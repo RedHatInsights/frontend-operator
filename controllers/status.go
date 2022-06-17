@@ -2,11 +2,10 @@ package controllers
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"github.com/RedHatInsights/clowder/controllers/cloud.redhat.com/errors"
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
+	"github.com/RedHatInsights/rhc-osdk-utils/resources"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -77,21 +76,13 @@ func SetFrontendConditions(ctx context.Context, client client.Client, o *crd.Fro
 
 func GetFrontendResources(ctx context.Context, client client.Client, o *crd.Frontend) (bool, error) {
 	stats, _, err := GetFrontendFigures(ctx, client, o)
-	if err != nil {
-		return false, err
+	if err == nil {
+		return stats.ManagedDeployments == stats.ReadyDeployments, err
 	}
-	if stats.ManagedDeployments == stats.ReadyDeployments {
-		return true, nil
-	}
-	return false, nil
+	return false, err
 }
 
 func GetFrontendFigures(ctx context.Context, client client.Client, o *crd.Frontend) (crd.FrontendDeployments, string, error) {
-
-	var totalManagedDeployments int32
-	var totalReadyDeployments int32
-	var msgs []string
-
 	deploymentStats := crd.FrontendDeployments{}
 
 	namespaces, err := o.GetNamespacesInEnv(ctx, client)
@@ -99,74 +90,19 @@ func GetFrontendFigures(ctx context.Context, client client.Client, o *crd.Fronte
 		return crd.FrontendDeployments{}, "", errors.Wrap("get namespaces: ", err)
 	}
 
-	managedDeployments, readyDeployments, msg, err := countDeployments(ctx, client, o, namespaces)
-	if err != nil {
-		return crd.FrontendDeployments{}, "", errors.Wrap("count deploys: ", err)
-	}
-	totalManagedDeployments += managedDeployments
-	totalReadyDeployments += readyDeployments
-	if msg != "" {
-		msgs = append(msgs, msg)
-	}
+	query, _ := resources.MakeQuery(&apps.Deployment{}, *scheme, namespaces, o.GetUID())
 
-	msg = fmt.Sprintf("dependency failure: [%s]", strings.Join(msgs, ","))
-	deploymentStats.ManagedDeployments = totalManagedDeployments
-	deploymentStats.ReadyDeployments = totalReadyDeployments
-	return deploymentStats, msg, nil
-}
-
-func deploymentStatusChecker(deployment apps.Deployment) bool {
-	if deployment.Generation > deployment.Status.ObservedGeneration {
-		// The status on this resource needs to update
-		return false
+	counter := resources.ResourceCounter{
+		Query: query,
+		ReadyRequirements: []resources.ResourceConditionReadyRequirements{{
+			Type:   "Available",
+			Status: "True",
+		}},
 	}
 
-	for _, condition := range deployment.Status.Conditions {
-		if condition.Type == "Available" && condition.Status == "True" {
-			return true
-		}
-	}
+	results := counter.Count(ctx, client)
 
-	return false
-}
-
-func countDeployments(ctx context.Context, pClient client.Client, o *crd.Frontend, namespaces []string) (int32, int32, string, error) {
-	var managedDeployments int32
-	var readyDeployments int32
-	var brokenDeployments []string
-	var msg = ""
-
-	deployments := []apps.Deployment{}
-	for _, namespace := range namespaces {
-		opts := []client.ListOption{
-			client.InNamespace(namespace),
-		}
-		tmpDeployments := apps.DeploymentList{}
-		err := pClient.List(ctx, &tmpDeployments, opts...)
-		if err != nil {
-			return 0, 0, "", err
-		}
-		deployments = append(deployments, tmpDeployments.Items...)
-	}
-
-	// filter for resources owned by the ClowdObject and check their status
-	for _, deployment := range deployments {
-		for _, owner := range deployment.GetOwnerReferences() {
-			if owner.UID == o.GetUID() {
-				managedDeployments++
-				if ok := deploymentStatusChecker(deployment); ok {
-					readyDeployments++
-				} else {
-					brokenDeployments = append(brokenDeployments, fmt.Sprintf("%s/%s", deployment.Name, deployment.Namespace))
-				}
-				break
-			}
-		}
-	}
-
-	if len(brokenDeployments) > 0 {
-		msg = fmt.Sprintf("broken deployments: [%s]", strings.Join(brokenDeployments, ", "))
-	}
-
-	return managedDeployments, readyDeployments, msg, nil
+	deploymentStats.ManagedDeployments = int32(results.Managed)
+	deploymentStats.ReadyDeployments = int32(results.Ready)
+	return deploymentStats, results.BrokenMessage, nil
 }
