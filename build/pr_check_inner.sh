@@ -8,7 +8,7 @@ cp -r /workspace/. /container_workspace
 cd /container_workspace
 
 mkdir -p /container_workspace/bin
-cp /root/go/bin/* /container_workspace/bin
+cp /root/go/* /container_workspace/bin
 
 mkdir -p artifacts
 

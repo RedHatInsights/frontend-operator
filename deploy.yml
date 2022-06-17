@@ -13,7 +13,7 @@ objects:
   kind: CustomResourceDefinition
   metadata:
     annotations:
-      controller-gen.kubebuilder.io/version: v0.4.1
+      controller-gen.kubebuilder.io/version: v0.8.0
     creationTimestamp: null
     name: bundles.cloud.redhat.com
   spec:
@@ -311,7 +311,7 @@ objects:
   kind: CustomResourceDefinition
   metadata:
     annotations:
-      controller-gen.kubebuilder.io/version: v0.4.1
+      controller-gen.kubebuilder.io/version: v0.8.0
     creationTimestamp: null
     name: frontendenvironments.cloud.redhat.com
   spec:
@@ -391,7 +391,7 @@ objects:
   kind: CustomResourceDefinition
   metadata:
     annotations:
-      controller-gen.kubebuilder.io/version: v0.4.1
+      controller-gen.kubebuilder.io/version: v0.8.0
     creationTimestamp: null
     name: frontends.cloud.redhat.com
   spec:
