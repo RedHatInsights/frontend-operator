@@ -131,6 +131,8 @@ github.com/RedHatInsights/go-difflib v1.0.0/go.mod h1:UMKOFdypYfrKT1B1nbGodM09nh
 github.com/RedHatInsights/rhc-osdk-utils v0.4.1/go.mod h1:kzhoWdsajLo0R2/S8f2EEtozJgkooUAmadB8giwuq+4=
 github.com/RedHatInsights/rhc-osdk-utils v0.5.0 h1:f+WGlaonoQcVo6vkuV6HJ7gHy5REjREmTP8K/EDQad8=
 github.com/RedHatInsights/rhc-osdk-utils v0.5.0/go.mod h1:n4qCLh67dIDdumbHHSknxQjn3jK8z/4S9f6pMnMxhCs=
+github.com/RedHatInsights/rhc-osdk-utils v0.5.1 h1:EWe90ps3LeZ79gkz00wH4qLgi09yeDyiAhpii+/O5/A=
+github.com/RedHatInsights/rhc-osdk-utils v0.5.1/go.mod h1:n4qCLh67dIDdumbHHSknxQjn3jK8z/4S9f6pMnMxhCs=
 github.com/RedHatInsights/strimzi-client-go v0.26.0/go.mod h1:Z488n7yGdCVT3AFYuamQ9F7b6c99OSMr4lPYzgEEpzY=
 github.com/Shopify/sarama v1.19.0/go.mod h1:FVkBWblsNy7DGZRfXLU0O9RCGt5g3g3yEuWXgklEdEo=
 github.com/Shopify/sarama v1.30.0/go.mod h1:zujlQQx1kzHsh4jfV1USnptCQrHAEZ2Hk8fTKCulPVs=
