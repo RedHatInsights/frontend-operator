@@ -90,14 +90,10 @@ func GetFrontendFigures(ctx context.Context, client client.Client, o *crd.Fronte
 		return crd.FrontendDeployments{}, "", errors.Wrap("get namespaces: ", err)
 	}
 
-	uid := string(o.GetUID())
+	query, _ := resources.MakeQuery(&apps.Deployment{}, *scheme, namespaces, o.GetUID())
 
 	counter := resources.ResourceCounter{
-		Query: resources.ResourceCounterQuery{
-			Namespaces: namespaces,
-			OfType:     &apps.Deployment{},
-			OwnerGUID:  uid,
-		},
+		Query: query,
 		ReadyRequirements: []resources.ResourceConditionReadyRequirements{{
 			Type:   "Available",
 			Status: "True",
