@@ -239,7 +239,7 @@ func createFrontendIngress(frontend *crd.Frontend, frontendEnvironment *crd.Fron
 }
 
 func populateConesoleDotIngress(nn types.NamespacedName, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, netobj *networking.Ingress, ingressClass string) {
-	frontendPath := frontend.Spec.Frontend.Paths
+	frontendPaths := frontend.Spec.Frontend.Paths
 	defaultPath := fmt.Sprintf("/apps/%s", frontend.Name)
 	defaultBetaPath := fmt.Sprintf("/beta/apps/%s", frontend.Name)
 	if frontend.Spec.AssetsPrefix != "" {
@@ -247,31 +247,29 @@ func populateConesoleDotIngress(nn types.NamespacedName, frontend *crd.Frontend,
 		defaultBetaPath = fmt.Sprintf("/beta/%s/%s", frontend.Spec.AssetsPrefix, frontend.Name)
 	}
 
+	// External requests into the ingress should go to chrome. Asset containers
+	// will not know how to route from a top level request. For example,
+	// /insights/advisor cannot be resolved by the advisor pod and must go to chrome
+	// Chrome can then request /apps/advisor/blah and that will resolve
+	var ingressPaths []networking.HTTPIngressPath
+	for _, a := range frontendPaths {
+		ingressPaths = append(ingressPaths, createIngressPathToService("chrome", a))
+	}
+
+	// internalPaths are for assets that the container actually owns (dist dir)
+	// /apps/appName and /beta/apps/appName are the usual suspects
+	var internalPaths []string
+
 	if !frontend.Spec.Frontend.HasPath(defaultPath) {
-		frontendPath = append(frontendPath, defaultPath)
+		internalPaths = append(internalPaths, defaultPath)
 	}
 
 	if !frontend.Spec.Frontend.HasPath(defaultBetaPath) {
-		frontendPath = append(frontendPath, defaultBetaPath)
+		internalPaths = append(internalPaths, defaultBetaPath)
 	}
 
-	prefixType := "Prefix"
-
-	var ingressPaths []networking.HTTPIngressPath
-	for _, a := range frontendPath {
-		newPath := networking.HTTPIngressPath{
-			Path:     a,
-			PathType: (*networking.PathType)(&prefixType),
-			Backend: networking.IngressBackend{
-				Service: &networking.IngressServiceBackend{
-					Name: nn.Name,
-					Port: networking.ServiceBackendPort{
-						Number: 8000,
-					},
-				},
-			},
-		}
-		ingressPaths = append(ingressPaths, newPath)
+	for _, a := range internalPaths {
+		ingressPaths = append(ingressPaths, createIngressPathToService(nn.Name, a))
 	}
 
 	host := frontendEnvironment.Spec.Hostname
@@ -296,6 +294,23 @@ func populateConesoleDotIngress(nn types.NamespacedName, frontend *crd.Frontend,
 			},
 		},
 	}
+}
+
+func createIngressPathToService(serviceName string, path string) networking.HTTPIngressPath {
+	prefixType := "Prefix"
+	newPath := networking.HTTPIngressPath{
+		Path:     path,
+		PathType: (*networking.PathType)(&prefixType),
+		Backend: networking.IngressBackend{
+			Service: &networking.IngressServiceBackend{
+				Name: serviceName,
+				Port: networking.ServiceBackendPort{
+					Number: 8000,
+				},
+			},
+		},
+	}
+	return newPath
 }
 
 func populateHACIngress(nn types.NamespacedName, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, netobj *networking.Ingress, ingressClass string) {
