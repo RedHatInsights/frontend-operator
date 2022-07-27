@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM registry.access.redhat.com/ubi8/go-toolset:1.17.7 as builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.17.10-4 as builder
 
 WORKDIR /workspace
 # Copy the Go Modules manifests
@@ -19,9 +19,9 @@ USER 0
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o manager main.go
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.5
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.6-854
 WORKDIR /
 COPY --from=builder /workspace/manager .
-USER 65532:65532
+USER 65534:65534
 
 ENTRYPOINT ["/manager"]
