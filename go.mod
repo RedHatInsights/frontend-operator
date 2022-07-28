@@ -3,8 +3,8 @@ module github.com/RedHatInsights/frontend-operator
 go 1.17
 
 require (
-	github.com/RedHatInsights/clowder v0.32.0
-	github.com/RedHatInsights/rhc-osdk-utils v0.5.1
+	github.com/RedHatInsights/clowder v0.44.0
+	github.com/RedHatInsights/rhc-osdk-utils v0.5.7
 	github.com/go-logr/logr v1.2.0
 	github.com/go-logr/zapr v1.2.0
 	github.com/onsi/ginkgo v1.16.5
