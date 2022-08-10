@@ -134,7 +134,7 @@ var _ = Describe("Frontend controller with image", func() {
 				err := k8sClient.Get(ctx, serviceLookupKey, createdService)
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
-			Expect(createdIngress.Name).Should(Equal(FrontendName))
+			Expect(createdService.Name).Should(Equal(FrontendName))
 
 			createdConfigMap := &v1.ConfigMap{}
 			Eventually(func() bool {

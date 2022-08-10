@@ -139,12 +139,6 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{Requeue: false}, err
 	}
 
-	// fe.Status.TargetNamespace = fe.Spec.TargetNamespace
-
-	// if err := r.Client.Status().Update(ctx, fe); err != nil {
-	// 	return ctrl.Result{Requeue: false}, err
-	// }
-
 	ctx = context.WithValue(ctx, FEKey("obj"), &frontend)
 
 	cacheConfig := resCache.NewCacheConfig(scheme, FEKey("log"), map[schema.GroupVersionKind]bool{}, resCache.DebugOptions{})
