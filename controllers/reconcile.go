@@ -78,11 +78,18 @@ func createFrontendDeployment(context context.Context, pClient client.Client, fr
 	d.Spec.Template.Spec.Containers = []v1.Container{{
 		Name:  "fe-image",
 		Image: frontend.Spec.Image,
-		Ports: []v1.ContainerPort{{
-			Name:          "web",
-			ContainerPort: 80,
-			Protocol:      "TCP",
-		}},
+		Ports: []v1.ContainerPort{
+			{
+				Name:          "web",
+				ContainerPort: 80,
+				Protocol:      "TCP",
+			},
+			{
+				Name:          "metrics",
+				ContainerPort: 9000,
+				Protocol:      "TCP",
+			},
+		},
 		VolumeMounts: []v1.VolumeMount{
 			{
 				Name:      "config",
@@ -161,8 +168,6 @@ func createFrontendService(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 		return err
 	}
 
-	servicePorts := []v1.ServicePort{}
-
 	appProtocol := "http"
 
 	labels := make(map[string]string)
@@ -172,18 +177,25 @@ func createFrontendService(frontend *crd.Frontend, cache *resCache.ObjectCache) 
 	// We should also set owner reference to the pod
 	s.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 
-	port := v1.ServicePort{
-		Name:        "public",
-		Port:        8000,
-		TargetPort:  intstr.FromInt(8000),
-		Protocol:    "TCP",
-		AppProtocol: &appProtocol,
+	ports := []v1.ServicePort{
+		{
+			Name:        "public",
+			Port:        8000,
+			TargetPort:  intstr.FromInt(8000),
+			Protocol:    "TCP",
+			AppProtocol: &appProtocol,
+		},
+		{
+			Name:        "metrics",
+			Port:        9000,
+			TargetPort:  intstr.FromInt(9000),
+			Protocol:    "TCP",
+			AppProtocol: &appProtocol,
+		},
 	}
 
-	servicePorts = append(servicePorts, port)
 	s.Spec.Selector = labels
-
-	utils.MakeService(s, nn, labels, servicePorts, frontend, false)
+	utils.MakeService(s, nn, labels, ports, frontend, false)
 
 	// Inform the cache that our updates are complete
 	if err := cache.Update(CoreService, s); err != nil {

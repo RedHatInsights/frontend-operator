@@ -75,7 +75,7 @@ BundleList contains a list of Bundle
 | *`kind`* __string__ | `BundleList`
 | *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta[$$ListMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
 
-| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle[$$Bundle$$] array__ | 
+| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle[$$Bundle$$]__ | 
 |===
 
 
@@ -104,8 +104,8 @@ BundleList contains a list of Bundle
 | *`product`* __string__ | 
 | *`isExternal`* __boolean__ | 
 | *`filterable`* __boolean__ | 
-| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$] array__ | 
-| *`routes`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute[$$EmbeddedRoute$$] array__ | 
+| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$]__ | 
+| *`routes`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute[$$EmbeddedRoute$$]__ | 
 | *`expandable`* __boolean__ | 
 | *`dynamicNav`* __string__ | 
 |===
@@ -126,19 +126,9 @@ BundleList contains a list of Bundle
 |===
 | Field | Description
 | *`method`* __string__ | 
-| *`args`* __string array array__ | 
+| *`args`* __string array__ | 
 |===
 
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermissionargs"]
-==== BundlePermissionArgs 
-
-
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$]
-****
 
 
 
@@ -159,8 +149,8 @@ BundleSpec defines the desired state of Bundle
 | *`title`* __string__ | 
 | *`appList`* __string array__ | 
 | *`envName`* __string__ | 
-| *`extraNavItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem[$$ExtraNavItem$$] array__ | 
-| *`customNav`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$] array__ | 
+| *`extraNavItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem[$$ExtraNavItem$$]__ | 
+| *`customNav`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$]__ | 
 |===
 
 
@@ -300,7 +290,7 @@ FrontendEnvironmentList contains a list of FrontendEnvironment
 | *`kind`* __string__ | `FrontendEnvironmentList`
 | *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta[$$ListMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
 
-| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment[$$FrontendEnvironment$$] array__ | 
+| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment[$$FrontendEnvironment$$]__ | 
 |===
 
 
@@ -357,7 +347,7 @@ FrontendList contains a list of Frontend
 | *`kind`* __string__ | `FrontendList`
 | *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta[$$ListMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
 
-| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend[$$Frontend$$] array__ | 
+| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend[$$Frontend$$]__ | 
 |===
 
 
@@ -382,7 +372,7 @@ FrontendSpec defines the desired state of Frontend
 | *`image`* __string__ | 
 | *`service`* __string__ | 
 | *`module`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule[$$FedModule$$]__ | 
-| *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$] array__ | 
+| *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$]__ | 
 | *`assetsPrefix`* __string__ | 
 |===
 
@@ -411,8 +401,8 @@ FrontendSpec defines the desired state of Frontend
 | *`filterable`* __boolean__ | 
 | *`expandable`* __boolean__ | 
 | *`notifier`* __string__ | 
-| *`routes`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute[$$EmbeddedRoute$$] array__ | 
-| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$] array__ | 
+| *`routes`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute[$$EmbeddedRoute$$]__ | 
+| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$]__ | 
 |===
 
 
