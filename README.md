@@ -1,13 +1,41 @@
 # Insights Frontend Operator
 
-### Local development
+A Kubernetes operator designed to deploy and managed containerized frontends.
 
-You need to run kubernetess locally, we rocommend using [minikube](https://minikube.sigs.k8s.io/docs/).
+## Usage
 
-0. start minikube [Prerequisite]
+The operator is generally availble in the Consoledot Ephemeral and Dev Clusters. In order to use the Frontend Operator, 
+you only need to apply a Frontend CRD to a namespace that you manage using Bonfire. 
+
+## Deploying a Frontend with Bonfire in ephemeral
+
+[Bonfire](https://github.com/RedHatInsights/bonfire#bonfire-) is the consoledot tool used to interact with Kuberentes clusters.
+
+Simply login to the ephemeral cluster and run `bonfire deploy $MYAPP --frontends true -d 8h` to get access to your own ephemeral environment. 
+
+If your app does not have an entry into app-interface yet, `bonfire namespace reserve` will supply you with a bootstrapped
+namespace to deploy your application with `oc apply -f $My-Frontend-CRD.yaml -n $NS`
+
+## Local development for contributions
+
+**Note**: We only recommend this method for local development on the **operator** **itself**.
+
+Please use the above section to develop an app that depends on this operator.  
+
+### Environment Setup
+
+You need to run kubernetes locally, we recommend [minikube](https://minikube.sigs.k8s.io/docs/).
+
+The frontend operator is dependent on [Clowder](https://github.com/RedHatInsights/clowder#getting-clowder). 
+Follow those directions to get Clowder running and continue along.  
+
+Once Clowder is up and running (`oc get pod -n clowder-system` has a running `controller-manager`), there are two
+options we can use to proceed. 
+
+0. create boot namespace
 
 ```
-minikube start --addons=ingress
+kubectl create namespace boot
 ```
 
 1. apply frontend CRD
@@ -22,34 +50,34 @@ kubectl apply -f config/crd/bases/cloud.redhat.com_frontends.yaml
 kubectl apply -f config/crd/bases/cloud.redhat.com_bundles.yaml
 ```
 
-3. create boot namespace
+3. Create the ClowdEnvironment (Clowder CRD)
 
 ```
-kubectl create namespace boot
+kubectl apply -f examples/clowdenvironment.yaml
 ```
 
 4. create frontend env
 
 ```
-kubectl apply -f environment.yaml -n boot
+kubectl apply -f examples/feenvironment.yaml -n boot
 ```
 
 5. create custom object inventory
 
 ```
-kubectl apply -f inventory.yml -n boot
+kubectl apply -f examples/inventory.yaml -n boot
 ```
 
 6. create bundle
 
 ```
-kubectl apply -f bundle.yaml -n boot
+kubectl apply -f examples/bundle.yaml -n boot
 ```
 
-7. create bundle
+7. create chrome deployment
 
 ```
-kubectl apply -f chrome.yml -n boot
+kubectl apply -f chrome.yaml -n boot
 ```
 
 8. run the reconciler

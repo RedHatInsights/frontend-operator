@@ -1,0 +1,105 @@
+apiVersion: cloud.redhat.com/v1alpha1
+kind: ClowdEnvironment
+metadata:
+  name: env-boot
+spec:
+  providers:
+    autoScaler: {}
+    db:
+      mode: local
+    deployment:
+      omitPullPolicy: true
+    featureFlags:
+      credentialRef:
+        name: ""
+        namespace: ""
+      mode: local
+    inMemoryDb:
+      mode: redis
+    kafka:
+      cluster:
+        jvmOptions: {}
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 250m
+            memory: 600Mi
+        version: 3.0.0
+      connect:
+        image: quay.io/cloudservices/xjoin-kafka-connect-strimzi:latest
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 250m
+            memory: 512Mi
+        version: 3.0.0
+      enableLegacyStrimzi: true
+      ephemManagedSecretRef:
+        name: ""
+        namespace: ""
+      managedSecretRef:
+        name: ""
+        namespace: ""
+      mode: operator
+    logging:
+      mode: none
+    metrics:
+      mode: operator
+      path: /metrics
+      port: 9000
+      prometheus: {}
+    objectStore:
+      mode: minio
+    pullSecrets:
+    - name: quay-cloudservices-pull
+      namespace: boot
+    serviceMesh: {}
+    sidecars:
+      tokenRefresher:
+        enabled: false
+    testing:
+      configAccess: environment
+      iqe:
+        imageBase: quay.io/cloudservices/iqe-tests
+        resources:
+          limits:
+            cpu: "1"
+            memory: 2Gi
+          requests:
+            cpu: 200m
+            memory: 1Gi
+        ui:
+          selenium:
+            defaultImageTag: ff_91.5.1esr_gecko_v0.30.0_chrome_98.0.4758.80
+            imageBase: quay.io/redhatqe/selenium-standalone
+            resources:
+              limits:
+                cpu: "1"
+                memory: 3Gi
+              requests:
+                cpu: 500m
+                memory: 2Gi
+        vaultSecretRef:
+          name: iqe-vault
+          namespace: ephemeral-base
+      k8sAccessLevel: edit
+    web:
+      images: {}
+      ingressClass: openshift-default
+      mode: local
+      port: 8000
+      privatePort: 10000
+  resourceDefaults:
+    limits:
+      cpu: 300m
+      memory: 256Mi
+    requests:
+      cpu: 30m
+      memory: 128Mi
+  serviceConfig:
+    type: ""
+  targetNamespace: boot
