@@ -120,8 +120,8 @@ github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMo
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/PuerkitoBio/purell v1.1.1/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
 github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578/go.mod h1:uGdkoq3SwY9Y+13GIhn11/XLaGBb4BfwItxLd5jeuXE=
-github.com/RedHatInsights/clowder v0.44.0 h1:dkES5KyUc13JKPoqEFwEslkZSd26FT6/I+uXWfU5QM8=
-github.com/RedHatInsights/clowder v0.44.0/go.mod h1:ALabkc/7opwIemehsleZQ53BSxmaTjXcqgseRHC52u8=
+github.com/RedHatInsights/clowder v0.45.0 h1:KGUBF5WvFk/GXS+/nXH3Nirw0COfnsZJ0uxDH1VsJeE=
+github.com/RedHatInsights/clowder v0.45.0/go.mod h1:ALabkc/7opwIemehsleZQ53BSxmaTjXcqgseRHC52u8=
 github.com/RedHatInsights/cyndi-operator v0.1.9/go.mod h1:aqq1uTYlZhB93bE9N9AohrMQ55y22v6dMK3gx1b7dbA=
 github.com/RedHatInsights/go-difflib v1.0.0 h1:BoruyjZfxO81sEynhkG6c4SMAQOjuBWezcJxtGK8dyw=
 github.com/RedHatInsights/go-difflib v1.0.0/go.mod h1:UMKOFdypYfrKT1B1nbGodM09nhOiAmcjes8qWP7Myrs=
