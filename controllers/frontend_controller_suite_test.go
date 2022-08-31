@@ -152,6 +152,7 @@ var _ = Describe("Frontend controller with image", func() {
 				"fed-modules.json": "{\"testFrontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]}}",
 				"test-env.json":    "{\"id\":\"test-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"}]}",
 			}))
+			Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(Equal(FrontendEnvName))
 			createdSSOConfigMap := &v1.ConfigMap{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, configSSOMapLookupKey, createdSSOConfigMap)
