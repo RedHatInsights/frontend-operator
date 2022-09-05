@@ -50,28 +50,7 @@ func runReconciliation(context context.Context, pClient client.Client, frontend 
 	return nil
 }
 
-func createFrontendDeployment(context context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, hash string, ssoHash string, cache *resCache.ObjectCache) error {
-	sso := frontendEnvironment.Spec.SSO
-
-	// Create new empty struct
-	d := &apps.Deployment{}
-
-	// Define name of resource
-	nn := types.NamespacedName{
-		Name:      frontend.Name,
-		Namespace: frontend.Namespace,
-	}
-
-	// Create object in cache (will populate cache if exists)
-	if err := cache.Create(CoreDeployment, nn, d); err != nil {
-		return err
-	}
-
-	// Label with the right labels
-	labels := frontend.GetLabels()
-
-	labeler := utils.GetCustomLabeler(labels, nn, frontend)
-	labeler(d)
+func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
 	d.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 
 	// Modify the obejct to set the things we care about
@@ -103,10 +82,13 @@ func createFrontendDeployment(context context.Context, pClient client.Client, fr
 		},
 		Env: []v1.EnvVar{{
 			Name:  "SSO_URL",
-			Value: sso,
+			Value: frontendEnvironment.Spec.SSO,
 		}},
 	}}
 
+}
+
+func populateVolumes(d *apps.Deployment, frontend *crd.Frontend) {
 	d.Spec.Template.Spec.Volumes = []v1.Volume{
 		{
 			Name: "config",
@@ -129,6 +111,32 @@ func createFrontendDeployment(context context.Context, pClient client.Client, fr
 			},
 		},
 	}
+}
+
+func createFrontendDeployment(context context.Context, pClient client.Client, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, hash string, ssoHash string, cache *resCache.ObjectCache) error {
+
+	// Create new empty struct
+	d := &apps.Deployment{}
+
+	// Define name of resource
+	nn := types.NamespacedName{
+		Name:      frontend.Name,
+		Namespace: frontend.Namespace,
+	}
+
+	// Create object in cache (will populate cache if exists)
+	if err := cache.Create(CoreDeployment, nn, d); err != nil {
+		return err
+	}
+
+	// Label with the right labels
+	labels := frontend.GetLabels()
+
+	labeler := utils.GetCustomLabeler(labels, nn, frontend)
+	labeler(d)
+
+	populateContainer(d, frontend, frontendEnvironment)
+	populateVolumes(d, frontend)
 
 	d.Spec.Template.ObjectMeta.Labels = labels
 
@@ -477,6 +485,14 @@ func createConfigConfigMap(ctx context.Context, pClient client.Client, frontend 
 				modName = frontend.Spec.Module.ModuleID
 			}
 			fedModules[modName] = *frontend.Spec.Module
+			if frontend.Spec.CustomConfig != nil {
+				module := fedModules[modName]
+				fmt.Printf("--%v\n", frontend.Spec.CustomConfig)
+				fmt.Printf("--%v\n", fedModules[modName].Config)
+				fmt.Printf("--%v\n", fedModules[modName])
+				module.Config = frontend.Spec.CustomConfig
+				fedModules[modName] = module
+			}
 		}
 	}
 

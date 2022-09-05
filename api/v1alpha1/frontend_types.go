@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	errors "github.com/RedHatInsights/clowder/controllers/cloud.redhat.com/errors"
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -37,16 +38,17 @@ type FrontendInfo struct {
 
 // FrontendSpec defines the desired state of Frontend
 type FrontendSpec struct {
-	EnvName        string           `json:"envName" yaml:"envName"`
-	Title          string           `json:"title" yaml:"title"`
-	DeploymentRepo string           `json:"deploymentRepo" yaml:"deploymentRepo"`
-	API            ApiInfo          `json:"API" yaml:"API"`
-	Frontend       FrontendInfo     `json:"frontend" yaml:"frontend"`
-	Image          string           `json:"image,omitempty" yaml:"image,omitempty"`
-	Service        string           `json:"service,omitempty" yaml:"service,omitempty"`
-	Module         *FedModule       `json:"module,omitempty" yaml:"module,omitempty"`
-	NavItems       []*BundleNavItem `json:"navItems,omitempty" yaml:"navItems,omitempty"`
-	AssetsPrefix   string           `json:"assetsPrefix,omitempty" yaml:"assetsPrefix,omitempty"`
+	EnvName        string              `json:"envName" yaml:"envName"`
+	Title          string              `json:"title" yaml:"title"`
+	DeploymentRepo string              `json:"deploymentRepo" yaml:"deploymentRepo"`
+	API            ApiInfo             `json:"API" yaml:"API"`
+	Frontend       FrontendInfo        `json:"frontend" yaml:"frontend"`
+	Image          string              `json:"image,omitempty" yaml:"image,omitempty"`
+	Service        string              `json:"service,omitempty" yaml:"service,omitempty"`
+	Module         *FedModule          `json:"module,omitempty" yaml:"module,omitempty"`
+	NavItems       []*BundleNavItem    `json:"navItems,omitempty" yaml:"navItems,omitempty"`
+	AssetsPrefix   string              `json:"assetsPrefix,omitempty" yaml:"assetsPrefix,omitempty"`
+	CustomConfig   *apiextensions.JSON `json:"customConfig,omitempty" yaml:"customConfig,omitempty"`
 }
 
 var ReconciliationSuccessful clusterv1.ConditionType = "ReconciliationSuccessful"
@@ -66,9 +68,10 @@ type FrontendDeployments struct {
 }
 
 type FedModule struct {
-	ManifestLocation string   `json:"manifestLocation" yaml:"manifestLocation"`
-	Modules          []Module `json:"modules,omitempty" yaml:"modules,omitempty"`
-	ModuleID         string   `json:"moduleID,omitempty" yaml:"moduleID,omitempty"`
+	ManifestLocation string              `json:"manifestLocation" yaml:"manifestLocation"`
+	Modules          []Module            `json:"modules,omitempty" yaml:"modules,omitempty"`
+	ModuleID         string              `json:"moduleID,omitempty" yaml:"moduleID,omitempty"`
+	Config           *apiextensions.JSON `json:"config,omitempty" yaml:"config,omitempty"`
 }
 
 type Module struct {

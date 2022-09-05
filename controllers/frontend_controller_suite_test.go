@@ -11,16 +11,20 @@ import (
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 var _ = Describe("Frontend controller with image", func() {
 	const (
-		FrontendName      = "test-frontend"
-		FrontendNamespace = "default"
-		FrontendEnvName   = "test-env"
-		BundleName        = "test-bundle"
+		FrontendName       = "test-frontend"
+		FrontendNamespace  = "default"
+		FrontendEnvName    = "test-env"
+		FrontendName2      = "test-frontend2"
+		FrontendNamespace2 = "default"
+		FrontendEnvName2   = "test-env"
+		BundleName         = "test-bundle"
 
 		timeout  = time.Second * 10
 		duration = time.Second * 10
@@ -31,6 +35,9 @@ var _ = Describe("Frontend controller with image", func() {
 		It("Should create a deployment with the correct items", func() {
 			By("By creating a new Frontend")
 			ctx := context.Background()
+
+			var customConfig apiextensions.JSON
+			customConfig.UnmarshalJSON([]byte(`{"apple":       "pie"}`))
 
 			frontend := &crd.Frontend{
 				TypeMeta: metav1.TypeMeta{
@@ -67,9 +74,50 @@ var _ = Describe("Frontend controller with image", func() {
 							}},
 						}},
 					},
+					CustomConfig: &customConfig,
 				},
 			}
 			Expect(k8sClient.Create(ctx, frontend)).Should(Succeed())
+
+			frontend2 := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendName2,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName:        FrontendEnvName,
+					Title:          "",
+					DeploymentRepo: "",
+					API: crd.ApiInfo{
+						Versions: []string{"v1"},
+					},
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/things/test"},
+					},
+					Image: "my-image:version",
+					NavItems: []*crd.BundleNavItem{{
+						Title:   "Test",
+						GroupID: "",
+						Href:    "/test/href",
+					}},
+					Module: &crd.FedModule{
+						ManifestLocation: "/apps/inventory/fed-mods.json",
+						Modules: []crd.Module{{
+							Id:     "test",
+							Module: "./RootApp",
+							Routes: []crd.Route{{
+								Pathname: "/test/href",
+							}},
+						}},
+					},
+					CustomConfig: &customConfig,
+				},
+			}
+			Expect(k8sClient.Create(ctx, frontend2)).Should(Succeed())
 
 			frontendEnvironment := &crd.FrontendEnvironment{
 				TypeMeta: metav1.TypeMeta{
@@ -99,7 +147,7 @@ var _ = Describe("Frontend controller with image", func() {
 				Spec: crd.BundleSpec{
 					ID:      BundleName,
 					Title:   "",
-					AppList: []string{FrontendName},
+					AppList: []string{FrontendName, FrontendName2},
 					EnvName: FrontendEnvName,
 				},
 			}
@@ -149,8 +197,8 @@ var _ = Describe("Frontend controller with image", func() {
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdConfigMap.Name).Should(Equal(FrontendEnvName))
 			Expect(createdConfigMap.Data).Should(Equal(map[string]string{
-				"fed-modules.json": "{\"testFrontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]}}",
-				"test-env.json":    "{\"id\":\"test-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"}]}",
+				"fed-modules.json": "{\"testFrontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"}},\"testFrontend2\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"}}}",
+				"test-env.json":    "{\"id\":\"test-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test\",\"href\":\"/test/href\"}]}",
 			}))
 			Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(Equal(FrontendEnvName))
 			createdSSOConfigMap := &v1.ConfigMap{}
