@@ -450,6 +450,8 @@ objects:
                   type: object
                 assetsPrefix:
                   type: string
+                customConfig:
+                  x-kubernetes-preserve-unknown-fields: true
                 deploymentRepo:
                   type: string
                 envName:
@@ -467,6 +469,8 @@ objects:
                   type: string
                 module:
                   properties:
+                    config:
+                      x-kubernetes-preserve-unknown-fields: true
                     manifestLocation:
                       type: string
                     moduleID:
