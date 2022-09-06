@@ -37,7 +37,10 @@ var _ = Describe("Frontend controller with image", func() {
 			ctx := context.Background()
 
 			var customConfig apiextensions.JSON
-			customConfig.UnmarshalJSON([]byte(`{"apple":       "pie"}`))
+			customConfig.UnmarshalJSON([]byte(`{"apple":"pie"}`))
+
+			var customConfig2 apiextensions.JSON
+			customConfig2.UnmarshalJSON([]byte(`{"cheese":"pasty"}`))
 
 			frontend := &crd.Frontend{
 				TypeMeta: metav1.TypeMeta{
@@ -114,7 +117,7 @@ var _ = Describe("Frontend controller with image", func() {
 							}},
 						}},
 					},
-					CustomConfig: &customConfig,
+					CustomConfig: &customConfig2,
 				},
 			}
 			Expect(k8sClient.Create(ctx, frontend2)).Should(Succeed())
@@ -197,7 +200,7 @@ var _ = Describe("Frontend controller with image", func() {
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdConfigMap.Name).Should(Equal(FrontendEnvName))
 			Expect(createdConfigMap.Data).Should(Equal(map[string]string{
-				"fed-modules.json": "{\"testFrontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"}},\"testFrontend2\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"}}}",
+				"fed-modules.json": "{\"testFrontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"}},\"testFrontend2\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"cheese\":\"pasty\"}}}",
 				"test-env.json":    "{\"id\":\"test-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test\",\"href\":\"/test/href\"}]}",
 			}))
 			Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(Equal(FrontendEnvName))

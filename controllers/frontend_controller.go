@@ -145,7 +145,17 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	cache := resCache.NewObjectCache(ctx, r.Client, cacheConfig)
 
-	err = runReconciliation(ctx, r.Client, &frontend, fe, &cache)
+	reconciliation := FrontendReconciliation{
+		Log:                 log,
+		Recorder:            r.Recorder,
+		Cache:               cache,
+		FRE:                 r,
+		FrontendEnvironment: fe,
+		Ctx:                 ctx,
+		Frontend:            &frontend,
+	}
+
+	err = reconciliation.run()
 
 	if err != nil {
 		SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, err)
