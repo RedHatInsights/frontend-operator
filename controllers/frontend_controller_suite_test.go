@@ -76,8 +76,8 @@ var _ = Describe("Frontend controller with image", func() {
 								Pathname: "/test/href",
 							}},
 						}},
+						Config: &customConfig,
 					},
-					CustomConfig: &customConfig,
 				},
 			}
 			Expect(k8sClient.Create(ctx, frontend)).Should(Succeed())
@@ -116,8 +116,8 @@ var _ = Describe("Frontend controller with image", func() {
 								Pathname: "/test/href",
 							}},
 						}},
+						Config: &customConfig2,
 					},
-					CustomConfig: &customConfig2,
 				},
 			}
 			Expect(k8sClient.Create(ctx, frontend2)).Should(Succeed())
@@ -360,6 +360,198 @@ var _ = Describe("Frontend controller with service", func() {
 				Expect(nfe.Status.Conditions[2].Status).Should(Equal(v1.ConditionTrue))
 				Expect(nfe.Status.Ready).Should(Equal(true))
 				return true
+			}, timeout, interval).Should(BeTrue())
+		})
+	})
+})
+
+var _ = Describe("Frontend controller with chrome", func() {
+	const (
+		FrontendName      = "chrome"
+		FrontendNamespace = "default"
+		FrontendEnvName   = "test-chrome-env"
+		FrontendName2     = "non-chrome"
+		BundleName        = "test-chrome-bundle"
+
+		timeout  = time.Second * 10
+		duration = time.Second * 10
+		interval = time.Millisecond * 250
+	)
+
+	Context("When creating a chrome Frontend Resource", func() {
+		It("Should create a deployment with the correct items", func() {
+			By("By creating a new Frontend")
+			ctx := context.Background()
+
+			var customConfig apiextensions.JSON
+			customConfig.UnmarshalJSON([]byte(`{"apple":"pie"}`))
+
+			frontend := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName:        FrontendEnvName,
+					Title:          "",
+					DeploymentRepo: "",
+					API: crd.ApiInfo{
+						Versions: []string{"v1"},
+					},
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/things/test"},
+					},
+					Image: "my-image:version",
+					NavItems: []*crd.BundleNavItem{{
+						Title:   "Test",
+						GroupID: "",
+						Href:    "/test/href",
+					}},
+					Module: &crd.FedModule{
+						ManifestLocation: "/apps/inventory/fed-mods.json",
+						Modules: []crd.Module{{
+							Id:     "test",
+							Module: "./RootApp",
+							Routes: []crd.Route{{
+								Pathname: "/test/href",
+							}},
+						}},
+						Config: &customConfig,
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, frontend)).Should(Succeed())
+
+			frontend2 := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendName2,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName:        FrontendEnvName,
+					Title:          "",
+					DeploymentRepo: "",
+					API: crd.ApiInfo{
+						Versions: []string{"v1"},
+					},
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/things/test"},
+					},
+					Image: "my-image:version",
+					NavItems: []*crd.BundleNavItem{{
+						Title:   "Test",
+						GroupID: "",
+						Href:    "/test/href",
+					}},
+					Module: &crd.FedModule{
+						ManifestLocation: "/apps/inventory/fed-mods.json",
+						Modules: []crd.Module{{
+							Id:     "test",
+							Module: "./RootApp",
+							Routes: []crd.Route{{
+								Pathname: "/test/href",
+							}},
+						}},
+						Config: &customConfig,
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, frontend2)).Should(Succeed())
+
+			frontendEnvironment := &crd.FrontendEnvironment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "FrontendEnvironment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendEnvName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendEnvironmentSpec{
+					SSO:      "https://something-auth",
+					Hostname: "something",
+				},
+			}
+			Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(Succeed())
+
+			bundle := &crd.Bundle{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Bundle",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendEnvName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.BundleSpec{
+					ID:      BundleName,
+					Title:   "",
+					AppList: []string{FrontendName, FrontendName2},
+					EnvName: FrontendEnvName,
+				},
+			}
+			Expect(k8sClient.Create(ctx, bundle)).Should(Succeed())
+
+			deploymentLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
+			ingressLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
+			configMapLookupKey := types.NamespacedName{Name: frontendEnvironment.Name, Namespace: FrontendNamespace}
+			configSSOMapLookupKey := types.NamespacedName{Name: fmt.Sprintf("%s-sso", frontendEnvironment.Name), Namespace: FrontendNamespace}
+			serviceLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
+
+			createdDeployment := &apps.Deployment{}
+
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, deploymentLookupKey, createdDeployment)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdDeployment.Name).Should(Equal(FrontendName))
+			fmt.Printf("\n%v\n", createdDeployment.GetAnnotations())
+			Expect(createdDeployment.Spec.Template.GetAnnotations()["ssoHash"]).ShouldNot(Equal(""))
+			Expect(createdDeployment.Spec.Template.GetAnnotations()["configHash"]).ShouldNot(Equal(""))
+
+			createdIngress := &networking.Ingress{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, ingressLookupKey, createdIngress)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdIngress.Name).Should(Equal(FrontendName))
+
+			createdService := &v1.Service{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, serviceLookupKey, createdService)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdService.Name).Should(Equal(FrontendName))
+
+			createdConfigMap := &v1.ConfigMap{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, configMapLookupKey, createdConfigMap)
+				if err != nil {
+					return err == nil
+				}
+				if len(createdConfigMap.Data) != 2 {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdConfigMap.Name).Should(Equal(FrontendEnvName))
+			Expect(createdConfigMap.Data).Should(Equal(map[string]string{
+				"fed-modules.json":     "{\"chrome\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\",\"ssoUrl\":\"https://something-auth\"}},\"nonChrome\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"}}}",
+				"test-chrome-env.json": "{\"id\":\"test-chrome-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test\",\"href\":\"/test/href\"}]}",
+			}))
+			Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(Equal(FrontendEnvName))
+			createdSSOConfigMap := &v1.ConfigMap{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, configSSOMapLookupKey, createdSSOConfigMap)
+				return err == nil
 			}, timeout, interval).Should(BeTrue())
 		})
 	})
