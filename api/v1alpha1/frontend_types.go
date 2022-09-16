@@ -38,17 +38,16 @@ type FrontendInfo struct {
 
 // FrontendSpec defines the desired state of Frontend
 type FrontendSpec struct {
-	EnvName        string              `json:"envName" yaml:"envName"`
-	Title          string              `json:"title" yaml:"title"`
-	DeploymentRepo string              `json:"deploymentRepo" yaml:"deploymentRepo"`
-	API            ApiInfo             `json:"API" yaml:"API"`
-	Frontend       FrontendInfo        `json:"frontend" yaml:"frontend"`
-	Image          string              `json:"image,omitempty" yaml:"image,omitempty"`
-	Service        string              `json:"service,omitempty" yaml:"service,omitempty"`
-	Module         *FedModule          `json:"module,omitempty" yaml:"module,omitempty"`
-	NavItems       []*BundleNavItem    `json:"navItems,omitempty" yaml:"navItems,omitempty"`
-	AssetsPrefix   string              `json:"assetsPrefix,omitempty" yaml:"assetsPrefix,omitempty"`
-	CustomConfig   *apiextensions.JSON `json:"customConfig,omitempty" yaml:"customConfig,omitempty"`
+	EnvName        string           `json:"envName" yaml:"envName"`
+	Title          string           `json:"title" yaml:"title"`
+	DeploymentRepo string           `json:"deploymentRepo" yaml:"deploymentRepo"`
+	API            ApiInfo          `json:"API" yaml:"API"`
+	Frontend       FrontendInfo     `json:"frontend" yaml:"frontend"`
+	Image          string           `json:"image,omitempty" yaml:"image,omitempty"`
+	Service        string           `json:"service,omitempty" yaml:"service,omitempty"`
+	Module         *FedModule       `json:"module,omitempty" yaml:"module,omitempty"`
+	NavItems       []*BundleNavItem `json:"navItems,omitempty" yaml:"navItems,omitempty"`
+	AssetsPrefix   string           `json:"assetsPrefix,omitempty" yaml:"assetsPrefix,omitempty"`
 }
 
 var ReconciliationSuccessful clusterv1.ConditionType = "ReconciliationSuccessful"

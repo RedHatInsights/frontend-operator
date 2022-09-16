@@ -394,7 +394,7 @@ func setupNormalNav(bundle *crd.Bundle, cacheMap map[string]crd.Frontend, cfgMap
 	return nil
 }
 
-func setupFedModules(frontendList *crd.FrontendList, fedModules map[string]crd.FedModule) {
+func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendList, fedModules map[string]crd.FedModule) {
 	for _, frontend := range frontendList.Items {
 		if frontend.Spec.Module != nil {
 			// module names in fed-modules.json must be camelCase
@@ -405,9 +405,22 @@ func setupFedModules(frontendList *crd.FrontendList, fedModules map[string]crd.F
 				modName = frontend.Spec.Module.ModuleID
 			}
 			fedModules[modName] = *frontend.Spec.Module
-			if frontend.Spec.CustomConfig != nil {
+			if frontend.Name == "chrome" {
 				module := fedModules[modName]
-				module.Config = frontend.Spec.CustomConfig
+
+				innerConfig := make(map[string]interface{})
+				if err := json.Unmarshal(module.Config.Raw, &innerConfig); err != nil {
+					fmt.Printf("error unpacking custom config")
+				}
+				innerConfig["ssoUrl"] = feEnv.Spec.SSO
+
+				bytes, err := json.Marshal(innerConfig)
+				if err != nil {
+					fmt.Print(err)
+				}
+
+				module.Config.UnmarshalJSON(bytes)
+
 				fedModules[modName] = module
 			}
 		}
@@ -514,7 +527,7 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 	}
 
 	fedModules := make(map[string]crd.FedModule)
-	setupFedModules(feList, fedModules)
+	setupFedModules(r.FrontendEnvironment, feList, fedModules)
 
 	jsonData, err := json.Marshal(fedModules)
 	if err != nil {
