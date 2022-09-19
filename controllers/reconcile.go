@@ -405,7 +405,7 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 				modName = frontend.Spec.Module.ModuleID
 			}
 			fedModules[modName] = *frontend.Spec.Module
-			if frontend.Name == "chrome" {
+			if frontend.Name == "chrome" && fedModules[modName].Config.Raw != nil {
 				module := fedModules[modName]
 
 				innerConfig := make(map[string]interface{})
