@@ -17,6 +17,7 @@ import (
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -405,11 +406,20 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 				modName = frontend.Spec.Module.ModuleID
 			}
 			fedModules[modName] = *frontend.Spec.Module
-			if frontend.Name == "chrome" && fedModules[modName].Config != nil {
+			if frontend.Name == "chrome" {
 				module := fedModules[modName]
 
+				var configSource apiextensions.JSON
+				configSource.UnmarshalJSON([]byte(`{}`))
+
+				if module.Config == nil {
+					module.Config = &configSource
+				} else {
+					configSource = *module.Config
+				}
+
 				innerConfig := make(map[string]interface{})
-				if err := json.Unmarshal(module.Config.Raw, &innerConfig); err != nil {
+				if err := json.Unmarshal(configSource.Raw, &innerConfig); err != nil {
 					fmt.Printf("error unpacking custom config")
 				}
 				innerConfig["ssoUrl"] = feEnv.Spec.SSO
