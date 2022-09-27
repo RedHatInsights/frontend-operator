@@ -474,6 +474,7 @@ func createHash(cfgMap *v1.ConfigMap) (string, error) {
 		return "", err
 	}
 
+	// A comment
 	h := sha256.New()
 	h.Write([]byte(hashData))
 	hash := fmt.Sprintf("%x", h.Sum(nil))
