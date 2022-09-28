@@ -61,6 +61,8 @@ spec:
                 type: object
               assetsPrefix:
                 type: string
+              customConfig:
+                x-kubernetes-preserve-unknown-fields: true
               deploymentRepo:
                 type: string
               envName:
@@ -227,6 +229,11 @@ spec:
                 type: array
               service:
                 type: string
+              serviceMonitor:
+                properties:
+                  disabled:
+                    type: boolean
+                type: object
               title:
                 type: string
             required:

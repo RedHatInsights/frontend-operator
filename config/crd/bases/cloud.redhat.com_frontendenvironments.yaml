@@ -51,6 +51,22 @@ spec:
               ingressClass:
                 description: Ingress class
                 type: string
+              monitoring:
+                description: MonitorMode determines where a ServiceMonitor object
+                  will be placed local will add it to the frontend's namespace app-interface
+                  will add it to "openshift-customer-monitoring"
+                properties:
+                  disabled:
+                    type: boolean
+                  mode:
+                    enum:
+                    - local
+                    - app-interface
+                    type: string
+                required:
+                - disabled
+                - mode
+                type: object
               sso:
                 description: Foo is an example field of FrontendEnvironment. Edit
                   FrontendEnvironment_types.go to remove/update
@@ -61,6 +77,7 @@ spec:
                   type: string
                 type: array
             required:
+            - monitoring
             - sso
             type: object
           status:

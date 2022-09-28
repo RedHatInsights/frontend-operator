@@ -14,10 +14,12 @@ import (
 	"github.com/RedHatInsights/rhc-osdk-utils/utils"
 	"github.com/go-logr/logr"
 
+	prom "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -34,6 +36,7 @@ type FrontendReconciliation struct {
 	FrontendEnvironment *crd.FrontendEnvironment
 	Frontend            *crd.Frontend
 	Ctx                 context.Context
+	Client              client.Client
 }
 
 func (r *FrontendReconciliation) run() error {
@@ -58,6 +61,16 @@ func (r *FrontendReconciliation) run() error {
 
 	if err := r.createFrontendIngress(); err != nil {
 		return err
+	}
+
+	if !r.Frontend.Spec.ServiceMonitor.Disabled && !r.FrontendEnvironment.Spec.Monitoring.Disabled {
+		if err := r.createServiceMonitor(); err != nil {
+			return err
+		}
+	} else {
+		if err := r.removeExistingServiceMonitor(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -589,4 +602,73 @@ func (r *FrontendReconciliation) createSSOConfigMap() (string, error) {
 	}
 
 	return hash, nil
+}
+
+func (r *FrontendReconciliation) createServiceMonitor() error {
+
+	// the monitor mode will default to "app-interface"
+	ns := "openshift-customer-monitoring"
+
+	if r.FrontendEnvironment.Spec.Monitoring.Mode == "local" {
+		ns = r.Frontend.Namespace
+	}
+
+	nn := types.NamespacedName{
+		Name:      r.Frontend.Name,
+		Namespace: ns,
+	}
+
+	svcMonitor := &prom.ServiceMonitor{}
+	if err := r.Cache.Create(MetricsServiceMonitor, nn, svcMonitor); err != nil {
+		return err
+	}
+
+	labler := utils.GetCustomLabeler(map[string]string{"prometheus": r.FrontendEnvironment.Name}, nn, r.Frontend)
+	labler(svcMonitor)
+	svcMonitor.SetOwnerReferences([]metav1.OwnerReference{r.Frontend.MakeOwnerReference()})
+
+	svcMonitor.Spec.Endpoints = []prom.Endpoint{{
+		Path:     "/metrics",
+		Port:     "metrics",
+		Interval: prom.Duration("15s"),
+	}}
+	svcMonitor.Spec.NamespaceSelector = prom.NamespaceSelector{
+		MatchNames: []string{r.Frontend.Namespace},
+	}
+	svcMonitor.Spec.Selector = metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"frontend": r.Frontend.Name,
+		},
+	}
+
+	if err := r.Cache.Update(MetricsServiceMonitor, svcMonitor); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *FrontendReconciliation) removeExistingServiceMonitor() error {
+	ns := "openshift-customer-monitoring"
+
+	if r.FrontendEnvironment.Spec.Monitoring.Mode == "local" {
+		ns = r.Frontend.Namespace
+	}
+
+	nn := types.NamespacedName{
+		Name:      r.Frontend.Name,
+		Namespace: ns,
+	}
+
+	svcMonitor := &prom.ServiceMonitor{}
+	if cacheErr := r.Client.Get(r.Ctx, nn, svcMonitor); cacheErr != nil {
+		if k8serr.IsNotFound(cacheErr) {
+			// Must have been deleted
+			return nil
+		}
+		return cacheErr
+	}
+	if err := r.Client.Delete(r.Ctx, svcMonitor); err != nil {
+		return err
+	}
+	return nil
 }

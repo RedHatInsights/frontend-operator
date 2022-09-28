@@ -4,3 +4,6 @@ metadata:
   name: env-boot
 spec:
   sso: https://env-boot-auth/auth/
+  monitoring:
+    mode: "local"
+    disabled: false

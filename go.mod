@@ -9,6 +9,7 @@ require (
 	github.com/go-logr/zapr v1.2.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.56.0
 	github.com/prometheus/client_golang v1.11.0
 	k8s.io/api v0.23.6
 	k8s.io/apimachinery v0.23.6
