@@ -25,7 +25,6 @@ import (
 	networking "k8s.io/api/networking/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -147,9 +146,17 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	ctx = context.WithValue(ctx, FEKey("obj"), &frontend)
 
-	cacheConfig := resCache.NewCacheConfig(scheme, FEKey("log"), map[schema.GroupVersionKind]bool{}, resCache.DebugOptions{})
+	cacheConfig := resCache.NewCacheConfig(scheme, nil, nil, resCache.Options{})
 
-	cache := resCache.NewObjectCache(ctx, r.Client, cacheConfig)
+	cache := resCache.NewObjectCache(ctx, r.Client, &log, cacheConfig)
+	cache.AddPossibleGVKFromIdent(
+		CoreDeployment,
+		CoreService,
+		CoreConfig,
+		SSOConfig,
+		WebIngress,
+		MetricsServiceMonitor,
+	)
 
 	reconciliation := FrontendReconciliation{
 		Log:                 log,
