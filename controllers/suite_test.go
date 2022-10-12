@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	prom "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -34,6 +35,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
@@ -46,6 +48,7 @@ import (
 var k8sClient client.Client
 var testEnv *envtest.Environment
 var stopController context.CancelFunc
+var MonitoringNamespace = "openshift-customer-monitoring"
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -101,6 +104,13 @@ var _ = BeforeSuite(func() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	stopController = cancel
+
+	monitorNs := v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: MonitoringNamespace,
+		},
+	}
+	Expect(k8sClient.Create(ctx, &monitorNs)).Should(Succeed())
 
 	go func() {
 		err = k8sManager.Start(ctx)

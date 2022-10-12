@@ -606,11 +606,10 @@ var _ = Describe("Frontend controller with chrome", func() {
 
 var _ = Describe("ServiceMonitor Creation", func() {
 	const (
-		FrontendName        = "test-service-monitor"
-		FrontendNamespace   = "default"
-		FrontendEnvName     = "test-service-env"
-		BundleName          = "test-bundle"
-		MonitoringNamespace = "openshift-customer-monitoring"
+		FrontendName      = "test-service-monitor"
+		FrontendNamespace = "default"
+		FrontendEnvName   = "test-service-env"
+		BundleName        = "test-bundle"
 
 		timeout  = time.Second * 10
 		duration = time.Second * 10
@@ -660,13 +659,6 @@ var _ = Describe("ServiceMonitor Creation", func() {
 				},
 			}
 			Expect(k8sClient.Create(ctx, frontend)).Should(Succeed())
-
-			monitorNs := v1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: MonitoringNamespace,
-				},
-			}
-			Expect(k8sClient.Create(ctx, &monitorNs)).Should(Succeed())
 
 			frontendEnvironment := &crd.FrontendEnvironment{
 				TypeMeta: metav1.TypeMeta{
