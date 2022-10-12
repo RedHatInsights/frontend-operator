@@ -16,7 +16,7 @@ Simply login to the ephemeral cluster and run `bonfire deploy $MYAPP --frontends
 If your app does not have an entry into app-interface yet, `bonfire namespace reserve` will supply you with a bootstrapped
 namespace to deploy your application with `oc apply -f $My-Frontend-CRD.yaml -n $NS`
 
-## Local development for contributions
+## Local development for contributors
 
 **Note**: We only recommend this method for local development on the **operator** **itself**.
 
