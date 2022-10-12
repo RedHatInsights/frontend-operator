@@ -19,7 +19,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -67,12 +66,7 @@ func (r *FrontendReconciliation) run() error {
 		if err := r.createServiceMonitor(); err != nil {
 			return err
 		}
-	} else {
-		if err := r.removeExistingServiceMonitor(); err != nil {
-			return err
-		}
 	}
-
 	return nil
 }
 
@@ -642,32 +636,6 @@ func (r *FrontendReconciliation) createServiceMonitor() error {
 	}
 
 	if err := r.Cache.Update(MetricsServiceMonitor, svcMonitor); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *FrontendReconciliation) removeExistingServiceMonitor() error {
-	ns := "openshift-customer-monitoring"
-
-	if r.FrontendEnvironment.Spec.Monitoring.Mode == "local" {
-		ns = r.Frontend.Namespace
-	}
-
-	nn := types.NamespacedName{
-		Name:      r.Frontend.Name,
-		Namespace: ns,
-	}
-
-	svcMonitor := &prom.ServiceMonitor{}
-	if cacheErr := r.Client.Get(r.Ctx, nn, svcMonitor); cacheErr != nil {
-		if k8serr.IsNotFound(cacheErr) {
-			// Must have been deleted
-			return nil
-		}
-		return cacheErr
-	}
-	if err := r.Client.Delete(r.Ctx, svcMonitor); err != nil {
 		return err
 	}
 	return nil
