@@ -73,8 +73,8 @@ github.com/NYTimes/gziphandler v1.1.1/go.mod h1:n/CVRwUEOgIxrgPvAQhUUr9oeUtvrhMo
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/PuerkitoBio/purell v1.1.1/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
 github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578/go.mod h1:uGdkoq3SwY9Y+13GIhn11/XLaGBb4BfwItxLd5jeuXE=
-github.com/RedHatInsights/clowder v0.44.0 h1:dkES5KyUc13JKPoqEFwEslkZSd26FT6/I+uXWfU5QM8=
-github.com/RedHatInsights/clowder v0.44.0/go.mod h1:ALabkc/7opwIemehsleZQ53BSxmaTjXcqgseRHC52u8=
+github.com/RedHatInsights/clowder v0.50.0 h1:Jrzpo5uY9ghsrR4DeMsDnyR7EGZYAVjXBt4Cdfm+C6g=
+github.com/RedHatInsights/clowder v0.50.0/go.mod h1:sY0IIuVDz/PN7l+R/8MfH51V0t72IKVEwxU+DwluG14=
 github.com/RedHatInsights/go-difflib v1.0.0 h1:BoruyjZfxO81sEynhkG6c4SMAQOjuBWezcJxtGK8dyw=
 github.com/RedHatInsights/go-difflib v1.0.0/go.mod h1:UMKOFdypYfrKT1B1nbGodM09nhOiAmcjes8qWP7Myrs=
 github.com/RedHatInsights/rhc-osdk-utils v0.6.2 h1:VXTqk6VHrsaEPSw3N95rCq+g0y2LR7t9Za0wBS2/RyA=
