@@ -5,8 +5,8 @@ go 1.17
 require (
 	github.com/RedHatInsights/clowder v0.50.0
 	github.com/RedHatInsights/rhc-osdk-utils v0.6.2
-	github.com/go-logr/logr v1.2.0
-	github.com/go-logr/zapr v1.2.0
+	github.com/go-logr/logr v1.2.2
+	github.com/go-logr/zapr v1.2.3
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.17.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.56.0
