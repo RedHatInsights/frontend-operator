@@ -360,6 +360,22 @@ objects:
                 ingressClass:
                   description: Ingress class
                   type: string
+                monitoring:
+                  description: MonitorMode determines where a ServiceMonitor object
+                    will be placed local will add it to the frontend's namespace app-interface
+                    will add it to "openshift-customer-monitoring"
+                  properties:
+                    disabled:
+                      type: boolean
+                    mode:
+                      enum:
+                      - local
+                      - app-interface
+                      type: string
+                  required:
+                  - disabled
+                  - mode
+                  type: object
                 sso:
                   description: Foo is an example field of FrontendEnvironment. Edit
                     FrontendEnvironment_types.go to remove/update
@@ -370,6 +386,7 @@ objects:
                     type: string
                   type: array
               required:
+              - monitoring
               - sso
               type: object
             status:
@@ -616,6 +633,11 @@ objects:
                   type: array
                 service:
                   type: string
+                serviceMonitor:
+                  properties:
+                    disabled:
+                      type: boolean
+                  type: object
                 title:
                   type: string
               required:
@@ -910,6 +932,15 @@ objects:
   - apiGroups:
     - ''
     resources:
+    - endpoints
+    - pods
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - ''
+    resources:
     - services
     verbs:
     - create
@@ -1009,6 +1040,19 @@ objects:
     - get
     - patch
     - update
+  - apiGroups:
+    - monitoring.coreos.com
+    resources:
+    - prometheuses
+    - servicemonitors
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
   - apiGroups:
     - networking.k8s.io
     resources:

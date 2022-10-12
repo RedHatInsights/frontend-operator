@@ -8,6 +8,7 @@ import (
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	prom "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
@@ -134,6 +135,9 @@ var _ = Describe("Frontend controller with image", func() {
 				Spec: crd.FrontendEnvironmentSpec{
 					SSO:      "https://something-auth",
 					Hostname: "something",
+					Monitoring: crd.MonitoringConfig{
+						Mode: "app-interface",
+					},
 				},
 			}
 			Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(Succeed())
@@ -161,7 +165,6 @@ var _ = Describe("Frontend controller with image", func() {
 			configMapLookupKey := types.NamespacedName{Name: frontendEnvironment.Name, Namespace: FrontendNamespace}
 			configSSOMapLookupKey := types.NamespacedName{Name: fmt.Sprintf("%s-sso", frontendEnvironment.Name), Namespace: FrontendNamespace}
 			serviceLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
-
 			createdDeployment := &apps.Deployment{}
 
 			Eventually(func() bool {
@@ -246,6 +249,9 @@ var _ = Describe("Frontend controller with service", func() {
 					Whitelist: []string{
 						"192.168.0.0/24",
 						"10.10.0.0/24",
+					},
+					Monitoring: crd.MonitoringConfig{
+						Mode: "local",
 					},
 				},
 			}
@@ -518,6 +524,9 @@ var _ = Describe("Frontend controller with chrome", func() {
 				Spec: crd.FrontendEnvironmentSpec{
 					SSO:      "https://something-auth",
 					Hostname: "something",
+					Monitoring: crd.MonitoringConfig{
+						Mode: "app-interface",
+					},
 				},
 			}
 			Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(Succeed())
@@ -545,7 +554,6 @@ var _ = Describe("Frontend controller with chrome", func() {
 			configMapLookupKey := types.NamespacedName{Name: frontendEnvironment.Name, Namespace: FrontendNamespace}
 			configSSOMapLookupKey := types.NamespacedName{Name: fmt.Sprintf("%s-sso", frontendEnvironment.Name), Namespace: FrontendNamespace}
 			serviceLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
-
 			createdDeployment := &apps.Deployment{}
 
 			Eventually(func() bool {
@@ -592,6 +600,125 @@ var _ = Describe("Frontend controller with chrome", func() {
 				err := k8sClient.Get(ctx, configSSOMapLookupKey, createdSSOConfigMap)
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
+		})
+	})
+})
+
+var _ = Describe("ServiceMonitor Creation", func() {
+	const (
+		FrontendName      = "test-service-monitor"
+		FrontendNamespace = "default"
+		FrontendEnvName   = "test-service-env"
+		BundleName        = "test-bundle"
+
+		timeout  = time.Second * 10
+		duration = time.Second * 10
+		interval = time.Millisecond * 250
+	)
+
+	Context("When creating a Frontend Resource", func() {
+		It("Should create a ServiceMonitor", func() {
+			By("Reading the FrontendEnvironment")
+			ctx := context.Background()
+
+			frontend := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName:        FrontendEnvName,
+					Title:          "",
+					DeploymentRepo: "",
+					API: crd.ApiInfo{
+						Versions: []string{"v1"},
+					},
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/things/test"},
+					},
+					Image: "my-image:version",
+					NavItems: []*crd.BundleNavItem{{
+						Title:   "Test",
+						GroupID: "",
+						Href:    "/test/href",
+					}},
+					Module: &crd.FedModule{
+						ManifestLocation: "/apps/inventory/fed-mods.json",
+						Modules: []crd.Module{{
+							Id:     "test",
+							Module: "./RootApp",
+							Routes: []crd.Route{{
+								Pathname: "/test/href",
+							}},
+						}},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, frontend)).Should(Succeed())
+
+			frontendEnvironment := &crd.FrontendEnvironment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "FrontendEnvironment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendEnvName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendEnvironmentSpec{
+					SSO:      "https://something-auth",
+					Hostname: "something",
+					Monitoring: crd.MonitoringConfig{
+						Mode: "app-interface",
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(Succeed())
+
+			bundle := &crd.Bundle{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Bundle",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendEnvName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.BundleSpec{
+					ID:      BundleName,
+					Title:   "",
+					AppList: []string{FrontendName},
+					EnvName: FrontendEnvName,
+				},
+			}
+			Expect(k8sClient.Create(ctx, bundle)).Should(Succeed())
+
+			serviceLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
+			monitorLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: MonitoringNamespace}
+
+			createdService := &v1.Service{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, serviceLookupKey, createdService)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdService.Name).Should(Equal(FrontendName))
+
+			createdServiceMonitor := &prom.ServiceMonitor{}
+			ls := metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"frontend": FrontendName,
+				},
+			}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, monitorLookupKey, createdServiceMonitor)
+				return err == nil
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdServiceMonitor.Name).Should(Equal(FrontendName))
+			Expect(createdServiceMonitor.Spec.Selector).Should(Equal(ls))
 		})
 	})
 })

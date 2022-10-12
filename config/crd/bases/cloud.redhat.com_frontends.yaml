@@ -227,6 +227,11 @@ spec:
                 type: array
               service:
                 type: string
+              serviceMonitor:
+                properties:
+                  disabled:
+                    type: boolean
+                type: object
               title:
                 type: string
             required:

@@ -40,6 +40,17 @@ type FrontendEnvironmentSpec struct {
 
 	//Whitelist CIDRs
 	Whitelist []string `json:"whitelist,omitempty"`
+
+	//MonitorMode determines where a ServiceMonitor object will be placed
+	// local will add it to the frontend's namespace
+	// app-interface will add it to "openshift-customer-monitoring"
+	Monitoring MonitoringConfig `json:"monitoring"`
+}
+
+type MonitoringConfig struct {
+	// +kubebuilder:validation:Enum={"local", "app-interface"}
+	Mode     string `json:"mode"`
+	Disabled bool   `json:"disabled"`
 }
 
 // FrontendEnvironmentStatus defines the observed state of FrontendEnvironment

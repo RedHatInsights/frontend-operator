@@ -25,7 +25,6 @@ import (
 	networking "k8s.io/api/networking/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -38,6 +37,7 @@ import (
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	resCache "github.com/RedHatInsights/rhc-osdk-utils/resource_cache"
+	prom "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	"github.com/RedHatInsights/rhc-osdk-utils/utils"
 	"github.com/go-logr/logr"
@@ -52,7 +52,9 @@ type FEKey string
 func createNewScheme() *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(prom.AddToScheme(scheme))
 	utilruntime.Must(crd.AddToScheme(scheme))
+
 	return scheme
 }
 
@@ -63,6 +65,7 @@ var CoreService = resCache.NewSingleResourceIdent("main", "service", &v1.Service
 var CoreConfig = resCache.NewSingleResourceIdent("main", "config", &v1.ConfigMap{})
 var SSOConfig = resCache.NewSingleResourceIdent("main", "sso_config", &v1.ConfigMap{})
 var WebIngress = resCache.NewMultiResourceIdent("ingress", "web_ingress", &networking.Ingress{})
+var MetricsServiceMonitor = resCache.NewMultiResourceIdent("main", "metrics-service-monitor", &prom.ServiceMonitor{})
 
 // FrontendReconciler reconciles a Frontend object
 type FrontendReconciler struct {
@@ -88,6 +91,8 @@ type FrontendReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheuses;servicemonitors,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=endpoints;pods,verbs=get;list;watch
 
 //
 // For more details, check Reconcile and its Result here:
@@ -141,9 +146,17 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	ctx = context.WithValue(ctx, FEKey("obj"), &frontend)
 
-	cacheConfig := resCache.NewCacheConfig(scheme, FEKey("log"), map[schema.GroupVersionKind]bool{}, resCache.DebugOptions{})
+	cacheConfig := resCache.NewCacheConfig(scheme, nil, nil, resCache.Options{})
 
-	cache := resCache.NewObjectCache(ctx, r.Client, cacheConfig)
+	cache := resCache.NewObjectCache(ctx, r.Client, &log, cacheConfig)
+	cache.AddPossibleGVKFromIdent(
+		CoreDeployment,
+		CoreService,
+		CoreConfig,
+		SSOConfig,
+		WebIngress,
+		MetricsServiceMonitor,
+	)
 
 	reconciliation := FrontendReconciliation{
 		Log:                 log,
@@ -153,6 +166,7 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		FrontendEnvironment: fe,
 		Ctx:                 ctx,
 		Frontend:            &frontend,
+		Client:              r.Client,
 	}
 
 	err = reconciliation.run()
@@ -221,6 +235,7 @@ func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		).
 		Owns(&apps.Deployment{}).
 		Owns(&networking.Ingress{}).
+		Owns(&prom.ServiceMonitor{}).
 		Complete(r)
 }
 
