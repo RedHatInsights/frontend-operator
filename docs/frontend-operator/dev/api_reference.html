@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Untitled :: Frontend Operator Documentation</title>
     <link rel="canonical" href="https://redhatinsights.github.io/frontend-operator/frontend-operator/dev/api_reference.html">
-    <meta name="generator" content="Antora 3.1.0">
+    <meta name="generator" content="Antora 3.1.1">
     <link rel="stylesheet" href="../../ui/css/site.css">
     <script>var uiRootPath = '../../ui'</script>
   </head>
@@ -281,7 +281,7 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>items</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle">Bundle</a> array</em></p>
+<p><strong><code>items</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle">Bundle</a></em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
@@ -379,13 +379,13 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>permissions</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission">BundlePermission</a> array</em></p>
+<p><strong><code>permissions</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission">BundlePermission</a></em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>routes</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute">EmbeddedRoute</a> array</em></p>
+<p><strong><code>routes</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute">EmbeddedRoute</a></em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
@@ -441,27 +441,12 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>args</code></strong> <em>string array array</em></p>
+<p><strong><code>args</code></strong> <em>string array</em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
 </tbody>
 </table>
-</div>
-<div class="sect3">
-<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermissionargs"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermissionargs"></a>BundlePermissionArgs</h4>
-<div class="sidebarblock">
-<div class="content">
-<div class="title">Appears In:</div>
-<div class="ulist">
-<ul>
-<li>
-<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission">BundlePermission</a></p>
-</li>
-</ul>
-</div>
-</div>
-</div>
 </div>
 <div class="sect3">
 <h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec"></a>BundleSpec</h4>
@@ -520,13 +505,13 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>extraNavItems</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem">ExtraNavItem</a> array</em></p>
+<p><strong><code>extraNavItems</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem">ExtraNavItem</a></em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>customNav</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem">BundleNavItem</a> array</em></p>
+<p><strong><code>customNav</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem">BundleNavItem</a></em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
@@ -894,7 +879,7 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>items</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment">FrontendEnvironment</a> array</em></p>
+<p><strong><code>items</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment">FrontendEnvironment</a></em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
@@ -960,6 +945,14 @@
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
 <p>Whitelist CIDRs</p>
+</div></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>monitoring</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-monitoringconfig">MonitoringConfig</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p>MonitorMode determines where a ServiceMonitor object will be placed local will add it to the frontend&#8217;s namespace app-interface will add it to "openshift-customer-monitoring"</p>
 </div></div></td>
 </tr>
 </tbody>
@@ -1043,7 +1036,7 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>items</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend">Frontend</a> array</em></p>
+<p><strong><code>items</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend">Frontend</a></em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
@@ -1123,19 +1116,31 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>serviceMonitor</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicemonitorconfig">ServiceMonitorConfig</a></em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
 <p><strong><code>module</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule">FedModule</a></em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>navItems</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem">BundleNavItem</a> array</em></p>
+<p><strong><code>navItems</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem">BundleNavItem</a></em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
 <p><strong><code>assetsPrefix</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>customConfig</code></strong> <em>JSON</em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
@@ -1224,13 +1229,13 @@
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>routes</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute">EmbeddedRoute</a> array</em></p>
+<p><strong><code>routes</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute">EmbeddedRoute</a></em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong><code>permissions</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission">BundlePermission</a> array</em></p>
+<p><strong><code>permissions</code></strong> <em><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission">BundlePermission</a></em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
@@ -1285,6 +1290,47 @@
 </table>
 </div>
 <div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-monitoringconfig"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-monitoringconfig"></a>MonitoringConfig</h4>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Appears In:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentspec">FrontendEnvironmentSpec</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>mode</code></strong> <em>string</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>disabled</code></strong> <em>boolean</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
 <h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-route"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-route"></a>Route</h4>
 <div class="sidebarblock">
 <div class="content">
@@ -1325,6 +1371,41 @@
 <tr>
 <td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
 <p><strong><code>exact</code></strong> <em>boolean</em></p>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div class="content"></div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect3">
+<h4 id="k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicemonitorconfig"><a class="anchor" href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicemonitorconfig"></a>ServiceMonitorConfig</h4>
+<div class="sidebarblock">
+<div class="content">
+<div class="title">Appears In:</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec">FrontendSpec</a></p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 75%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
+<p><strong><code>disabled</code></strong> <em>boolean</em></p>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div class="content"></div></td>
 </tr>
