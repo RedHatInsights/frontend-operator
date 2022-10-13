@@ -96,3 +96,5 @@ If you want to access the app from your computer, you have to update /etc/hosts 
 ```
 
 Once you update it you can access the app from `https://env-boot/insights/inventory`
+
+Test
