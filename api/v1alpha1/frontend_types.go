@@ -79,9 +79,11 @@ type FedModule struct {
 }
 
 type Module struct {
-	Id     string  `json:"id" yaml:"id"`
-	Module string  `json:"module" yaml:"module"`
-	Routes []Route `json:"routes" yaml:"routes"`
+	Id                   string   `json:"id" yaml:"id"`
+	Module               string   `json:"module" yaml:"module"`
+	Routes               []Route  `json:"routes" yaml:"routes"`
+	Dependencies         []string `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	OptionalDependencies []string `json:"optionalDependencies,omitempty" yaml:"optionalDependencies,omitempty"`
 }
 
 type Route struct {

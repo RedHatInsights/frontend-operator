@@ -722,3 +722,202 @@ var _ = Describe("ServiceMonitor Creation", func() {
 		})
 	})
 })
+
+var _ = Describe("Dependencies", func() {
+	const (
+		FrontendName      = "test-dependencies"
+		FrontendName2     = "test-optional-dependencies"
+		FrontendName3     = "test-no-dependencies"
+		FrontendNamespace = "default"
+		FrontendEnvName   = "test-dependencies-env"
+		BundleName        = "test-dependencies-bundle"
+
+		timeout  = time.Second * 10
+		duration = time.Second * 10
+		interval = time.Millisecond * 250
+	)
+
+	Context("When creating a Frontend Resource with dependencies", func() {
+		It("Should create the right config", func() {
+			By("Setting up dependencies and optionaldependencies")
+			ctx := context.Background()
+
+			configMapLookupKey := types.NamespacedName{Name: FrontendEnvName, Namespace: FrontendNamespace}
+
+			frontend := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName:        FrontendEnvName,
+					Title:          "",
+					DeploymentRepo: "",
+					API: crd.ApiInfo{
+						Versions: []string{"v1"},
+					},
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/things/test"},
+					},
+					Image: "my-image:version",
+					NavItems: []*crd.BundleNavItem{{
+						Title:   "Test",
+						GroupID: "",
+						Href:    "/test/href",
+					}},
+					Module: &crd.FedModule{
+						ManifestLocation: "/apps/inventory/fed-mods.json",
+						Modules: []crd.Module{{
+							Id:     "test",
+							Module: "./RootApp",
+							Routes: []crd.Route{{
+								Pathname: "/test/href",
+							}},
+							Dependencies: []string{"depstring"},
+						}},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, frontend)).Should(Succeed())
+
+			frontend2 := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendName2,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName:        FrontendEnvName,
+					Title:          "",
+					DeploymentRepo: "",
+					API: crd.ApiInfo{
+						Versions: []string{"v1"},
+					},
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/things/test"},
+					},
+					Image: "my-image:version",
+					NavItems: []*crd.BundleNavItem{{
+						Title:   "Test",
+						GroupID: "",
+						Href:    "/test/href",
+					}},
+					Module: &crd.FedModule{
+						ManifestLocation: "/apps/inventory/fed-mods.json",
+						Modules: []crd.Module{{
+							Id:     "test",
+							Module: "./RootApp",
+							Routes: []crd.Route{{
+								Pathname: "/test/href",
+							}},
+							OptionalDependencies: []string{"depstring-op"},
+						}},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, frontend2)).Should(Succeed())
+
+			frontend3 := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendName3,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName:        FrontendEnvName,
+					Title:          "",
+					DeploymentRepo: "",
+					API: crd.ApiInfo{
+						Versions: []string{"v1"},
+					},
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/things/test"},
+					},
+					Image: "my-image:version",
+					NavItems: []*crd.BundleNavItem{{
+						Title:   "Test",
+						GroupID: "",
+						Href:    "/test/href",
+					}},
+					Module: &crd.FedModule{
+						ManifestLocation: "/apps/inventory/fed-mods.json",
+						Modules: []crd.Module{{
+							Id:     "test",
+							Module: "./RootApp",
+							Routes: []crd.Route{{
+								Pathname: "/test/href",
+							}},
+						}},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, frontend3)).Should(Succeed())
+
+			frontendEnvironment := &crd.FrontendEnvironment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "FrontendEnvironment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendEnvName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendEnvironmentSpec{
+					SSO:      "https://something-auth",
+					Hostname: "something",
+					Monitoring: crd.MonitoringConfig{
+						Mode: "app-interface",
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(Succeed())
+
+			bundle := &crd.Bundle{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Bundle",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendEnvName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.BundleSpec{
+					ID:      BundleName,
+					Title:   "",
+					AppList: []string{FrontendName, FrontendName2, FrontendName3},
+					EnvName: FrontendEnvName,
+				},
+			}
+			Expect(k8sClient.Create(ctx, bundle)).Should(Succeed())
+
+			createdConfigMap := &v1.ConfigMap{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, configMapLookupKey, createdConfigMap)
+				if err != nil {
+					return err == nil
+				}
+				if len(createdConfigMap.Data) != 2 {
+					return false
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+			Expect(createdConfigMap.Name).Should(Equal(FrontendEnvName))
+			Expect(createdConfigMap.Data).Should(Equal(map[string]string{
+				"test-dependencies-env.json": "{\"id\":\"test-dependencies-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test\",\"href\":\"/test/href\"}]}",
+				"fed-modules.json":           "{\"testDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}],\"dependencies\":[\"depstring\"]}]},\"testNoDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]},\"testOptionalDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}],\"optionalDependencies\":[\"depstring-op\"]}]}}",
+			}))
+			Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(Equal(FrontendEnvName))
+
+		})
+	})
+})

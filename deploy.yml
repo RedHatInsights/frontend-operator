@@ -493,10 +493,18 @@ objects:
                     modules:
                       items:
                         properties:
+                          dependencies:
+                            items:
+                              type: string
+                            type: array
                           id:
                             type: string
                           module:
                             type: string
+                          optionalDependencies:
+                            items:
+                              type: string
+                            type: array
                           routes:
                             items:
                               properties:
