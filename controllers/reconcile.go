@@ -62,7 +62,7 @@ func (r *FrontendReconciliation) run() error {
 		return err
 	}
 
-	if !r.Frontend.Spec.ServiceMonitor.Disabled && !r.FrontendEnvironment.Spec.Monitoring.Disabled {
+	if r.FrontendEnvironment.Spec.Monitoring != nil && !r.Frontend.Spec.ServiceMonitor.Disabled && !r.FrontendEnvironment.Spec.Monitoring.Disabled {
 		if err := r.createServiceMonitor(); err != nil {
 			return err
 		}

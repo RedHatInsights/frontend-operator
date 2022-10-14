@@ -77,7 +77,6 @@ spec:
                   type: string
                 type: array
             required:
-            - monitoring
             - sso
             type: object
           status:

@@ -135,7 +135,7 @@ var _ = Describe("Frontend controller with image", func() {
 				Spec: crd.FrontendEnvironmentSpec{
 					SSO:      "https://something-auth",
 					Hostname: "something",
-					Monitoring: crd.MonitoringConfig{
+					Monitoring: &crd.MonitoringConfig{
 						Mode: "app-interface",
 					},
 				},
@@ -250,7 +250,7 @@ var _ = Describe("Frontend controller with service", func() {
 						"192.168.0.0/24",
 						"10.10.0.0/24",
 					},
-					Monitoring: crd.MonitoringConfig{
+					Monitoring: &crd.MonitoringConfig{
 						Mode: "local",
 					},
 				},
@@ -524,7 +524,7 @@ var _ = Describe("Frontend controller with chrome", func() {
 				Spec: crd.FrontendEnvironmentSpec{
 					SSO:      "https://something-auth",
 					Hostname: "something",
-					Monitoring: crd.MonitoringConfig{
+					Monitoring: &crd.MonitoringConfig{
 						Mode: "app-interface",
 					},
 				},
@@ -672,7 +672,7 @@ var _ = Describe("ServiceMonitor Creation", func() {
 				Spec: crd.FrontendEnvironmentSpec{
 					SSO:      "https://something-auth",
 					Hostname: "something",
-					Monitoring: crd.MonitoringConfig{
+					Monitoring: &crd.MonitoringConfig{
 						Mode: "app-interface",
 					},
 				},
@@ -875,7 +875,7 @@ var _ = Describe("Dependencies", func() {
 				Spec: crd.FrontendEnvironmentSpec{
 					SSO:      "https://something-auth",
 					Hostname: "something",
-					Monitoring: crd.MonitoringConfig{
+					Monitoring: &crd.MonitoringConfig{
 						Mode: "app-interface",
 					},
 				},
