@@ -44,6 +44,12 @@ kubectl create namespace boot
 kubectl apply -f config/crd/bases/cloud.redhat.com_frontends.yaml
 ```
 
+1. apply frontend environment CRD
+
+```
+kubectl apply -f config/crd/bases/cloud.redhat.com_frontendenvironments.yaml
+```
+
 2. apply bundle CRD
 
 ```
@@ -77,7 +83,7 @@ kubectl apply -f examples/bundle.yaml -n boot
 7. create chrome deployment
 
 ```
-kubectl apply -f chrome.yaml -n boot
+kubectl apply -f examples/chrome.yaml -n boot
 ```
 
 8. run the reconciler
