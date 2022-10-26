@@ -80,9 +80,7 @@ spec:
                               properties:
                                 args:
                                   items:
-                                    items:
-                                      type: string
-                                    type: array
+                                    type: string
                                   type: array
                                 method:
                                   type: string
@@ -118,9 +116,7 @@ spec:
                         properties:
                           args:
                             items:
-                              items:
-                                type: string
-                              type: array
+                              type: string
                             type: array
                           method:
                             type: string
@@ -198,9 +194,7 @@ spec:
                                   properties:
                                     args:
                                       items:
-                                        items:
-                                          type: string
-                                        type: array
+                                        type: string
                                       type: array
                                     method:
                                       type: string
@@ -236,9 +230,7 @@ spec:
                             properties:
                               args:
                                 items:
-                                  items:
-                                    type: string
-                                  type: array
+                                  type: string
                                 type: array
                               method:
                                 type: string

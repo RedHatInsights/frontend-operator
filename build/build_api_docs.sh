@@ -9,14 +9,15 @@ if [ ! -d docs/build/crd-ref-docs ]; then
 	git clone https://github.com/elastic/crd-ref-docs.git docs/build/crd-ref-docs
 	cd docs/build/crd-ref-docs
 	go install
+	go build -o crd-ref-docs
 	cd -
 fi
 
 
-if ! command -v crd-ref-docs; then
-	echo "ERROR: could not find 'crd-ref-docs', check if 'go install' succeeded or 'rm -rf .crd-ref-docs' and try again"
-	exit 1
-fi
+#if ! command -v crd-ref-docs; then
+#	echo "ERROR: could not find 'crd-ref-docs', check if 'go install' succeeded or 'rm -rf .crd-ref-docs' and try again"
+#	exit 1
+#fi
 
 
 if ! command -v asciidoctor; then
@@ -27,6 +28,6 @@ if ! command -v asciidoctor; then
 	exit 1
 fi
 
-crd-ref-docs --source-path=./api --config=docs/build/crd-ref-docs/config.yaml \
+./docs/build/crd-ref-docs/crd-ref-docs --source-path=./api --config=docs/build/crd-ref-docs/config.yaml \
 	--renderer=asciidoctor --templates-dir=docs/build/crd-ref-docs/templates/asciidoctor \
 	--output-path=docs/antora/modules/ROOT/pages/api_reference.adoc

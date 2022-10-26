@@ -20,11 +20,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type BundlePermissionArgs []string
+type BundlePermissionArg string
 
 type BundlePermission struct {
-	Method string                 `json:"method" yaml:"method"`
-	Args   []BundlePermissionArgs `json:"args,omitempty" yaml:"args,omitempty"`
+	Method string                `json:"method" yaml:"method"`
+	Args   []BundlePermissionArg `json:"args,omitempty" yaml:"args,omitempty"`
 }
 
 // EmbeddedRoutes allow deeply nested navs to have support for routes

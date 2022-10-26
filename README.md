@@ -44,6 +44,12 @@ kubectl create namespace boot
 kubectl apply -f config/crd/bases/cloud.redhat.com_frontends.yaml
 ```
 
+1. apply frontend environment CRD
+
+```
+kubectl apply -f config/crd/bases/cloud.redhat.com_frontendenvironments.yaml
+```
+
 2. apply bundle CRD
 
 ```
@@ -77,10 +83,15 @@ kubectl apply -f examples/bundle.yaml -n boot
 7. create chrome deployment
 
 ```
-kubectl apply -f chrome.yaml -n boot
+kubectl apply -f examples/chrome.yaml -n boot
 ```
 
 8. run the reconciler
+
+```
+make manifests generate fmt vet ; go run ./main.go --metrics-bind-address :9090 --health-probe-bind-address :9091
+```
+Note: The flags shows above `metrics-bind-address` and `health-probe-bind-address` are required if you are running Clowder on the same machine you are trying to run the Frontend Operator on. Clowder will already be using the default ports. If you are running the Frontend Operator on a machine Clowder isn't running on you can just run:
 
 ```
 make run
