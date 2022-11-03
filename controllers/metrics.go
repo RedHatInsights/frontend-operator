@@ -14,9 +14,27 @@ var (
 			Help: "Frontend Managed Frontends",
 		},
 	)
+	reconciliationRequestMetric = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "frontend_reconcile_requests",
+			Help: "Frontend Operator reconciliation requests",
+		},
+		[]string{"type", "name"},
+	)
+	reconciliationMetrics = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name: "frontend_app_reconciliation_time",
+			Help: "Frontend Operator reconciliation time",
+		},
+		[]string{"app"},
+	)
 )
 
 func init() {
 	// Register custom metrics with the global prometheus registry
-	metrics.Registry.MustRegister(managedFrontendsMetric)
+	metrics.Registry.MustRegister(
+		managedFrontendsMetric,
+		reconciliationRequestMetric,
+		reconciliationMetrics,
+	)
 }
