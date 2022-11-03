@@ -19,7 +19,7 @@ var (
 			Name: "frontend_reconcile_requests",
 			Help: "Frontend Operator reconciliation requests",
 		},
-		[]string{"type", "name"},
+		[]string{"app"},
 	)
 	reconciliationMetrics = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{

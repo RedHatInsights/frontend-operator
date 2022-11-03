@@ -43,6 +43,10 @@ import (
 	"github.com/go-logr/logr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 const frontendFinalizer = "finalizer.frontend.cloud.redhat.com"
@@ -67,12 +71,31 @@ var SSOConfig = resCache.NewSingleResourceIdent("main", "sso_config", &v1.Config
 var WebIngress = resCache.NewMultiResourceIdent("ingress", "web_ingress", &networking.Ingress{})
 var MetricsServiceMonitor = resCache.NewMultiResourceIdent("main", "metrics-service-monitor", &prom.ServiceMonitor{})
 
+type ReconciliationMetrics struct {
+	appName            string
+	reconcileStartTime time.Time
+}
+
+func (rm *ReconciliationMetrics) init(appName string) {
+	rm.appName = appName
+}
+
+func (rm *ReconciliationMetrics) start() {
+	rm.reconcileStartTime = time.Now()
+}
+
+func (rm *ReconciliationMetrics) stop() {
+	elapsedTime := time.Since(rm.reconcileStartTime).Seconds()
+	reconciliationMetrics.With(prometheus.Labels{"app": rm.appName}).Observe(elapsedTime)
+}
+
 // FrontendReconciler reconciles a Frontend object
 type FrontendReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Recorder record.EventRecorder
+	Log                   logr.Logger
+	Scheme                *runtime.Scheme
+	Recorder              record.EventRecorder
+	reconciliationMetrics ReconciliationMetrics
 }
 
 //+kubebuilder:rbac:groups=cloud.redhat.com,resources=frontends,verbs=get;list;watch;create;update;patch;delete
@@ -93,7 +116,6 @@ type FrontendReconciler struct {
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheuses;servicemonitors,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=endpoints;pods,verbs=get;list;watch
-
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
@@ -113,6 +135,12 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 		return ctrl.Result{}, err
 	}
+
+	r.reconciliationMetrics = ReconciliationMetrics{}
+	r.reconciliationMetrics.init(req.Name)
+	r.reconciliationMetrics.start()
+
+	reconciliationRequestMetric.With(prometheus.Labels{"app": req.Name}).Inc()
 
 	isAppMarkedForDeletion := frontend.GetDeletionTimestamp() != nil
 	if isAppMarkedForDeletion {
@@ -205,6 +233,7 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		managedFrontendsMetric.Set(float64(len(managedFrontends)))
 	}
 	log.Info("Finished reconcile")
+	r.reconciliationMetrics.stop()
 	return ctrl.Result{}, nil
 }
 
