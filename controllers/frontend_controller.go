@@ -86,7 +86,7 @@ func (rm *ReconciliationMetrics) start() {
 
 func (rm *ReconciliationMetrics) stop() {
 	elapsedTime := time.Since(rm.reconcileStartTime).Seconds()
-	reconciliationMetrics.With(prometheus.Labels{"app": rm.appName}).Observe(elapsedTime)
+	reconciliationTimeMetrics.With(prometheus.Labels{"app": rm.appName}).Observe(elapsedTime)
 }
 
 // FrontendReconciler reconciles a Frontend object
