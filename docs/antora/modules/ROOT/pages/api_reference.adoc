@@ -364,6 +364,7 @@ FrontendSpec defines the desired state of Frontend
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
+| *`disabled`* __boolean__ | 
 | *`envName`* __string__ | 
 | *`title`* __string__ | 
 | *`deploymentRepo`* __string__ | 
