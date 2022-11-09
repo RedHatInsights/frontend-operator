@@ -460,6 +460,8 @@ objects:
                   type: string
                 deploymentRepo:
                   type: string
+                disabled:
+                  type: boolean
                 envName:
                   type: string
                 frontend:

@@ -42,6 +42,7 @@ type ServiceMonitorConfig struct {
 
 // FrontendSpec defines the desired state of Frontend
 type FrontendSpec struct {
+	Disabled       bool                 `json:"disabled,omitempty" yaml:"disabled,omitempty"`
 	EnvName        string               `json:"envName" yaml:"envName"`
 	Title          string               `json:"title" yaml:"title"`
 	DeploymentRepo string               `json:"deploymentRepo" yaml:"deploymentRepo"`

@@ -136,6 +136,10 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
+	if frontend.Spec.Disabled {
+		return ctrl.Result{}, fmt.Errorf("frontend is disabled")
+	}
+
 	r.reconciliationMetrics = ReconciliationMetrics{}
 	r.reconciliationMetrics.init(req.Name)
 	r.reconciliationMetrics.start()
