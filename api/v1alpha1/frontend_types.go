@@ -51,6 +51,7 @@ type FrontendSpec struct {
 	Image          string               `json:"image,omitempty" yaml:"image,omitempty"`
 	Service        string               `json:"service,omitempty" yaml:"service,omitempty"`
 	ServiceMonitor ServiceMonitorConfig `json:"serviceMonitor,omitempty" yaml:"serviceMontior,omitempty"`
+	RoutePrefix    string               `json:"routePrefix,omitempty" yaml:"routePrefix,omitempty"`
 	Module         *FedModule           `json:"module,omitempty" yaml:"module,omitempty"`
 	NavItems       []*BundleNavItem     `json:"navItems,omitempty" yaml:"navItems,omitempty"`
 	AssetsPrefix   string               `json:"assetsPrefix,omitempty" yaml:"assetsPrefix,omitempty"`

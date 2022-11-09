@@ -628,6 +628,8 @@ objects:
                     - title
                     type: object
                   type: array
+                routePrefix:
+                  type: string
                 service:
                   type: string
                 serviceMonitor:
