@@ -45,6 +45,10 @@ type FrontendEnvironmentSpec struct {
 	// local will add it to the frontend's namespace
 	// app-interface will add it to "openshift-customer-monitoring"
 	Monitoring *MonitoringConfig `json:"monitoring,omitempty"`
+
+	// SSL mode requests SSL from the services in openshift and k8s and then applies them to the
+	// pod, the route is also set to reencrypt in the case of OpenShift
+	SSL bool `json:"ssl,omitempty"`
 }
 
 type MonitoringConfig struct {

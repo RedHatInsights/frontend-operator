@@ -220,6 +220,15 @@ func (r *FrontendReconciliation) createFrontendService() error {
 		return err
 	}
 
+	if r.FrontendEnvironment.Spec.SSL {
+		annotations := s.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+		annotations["service.beta.openshift.io/serving-cert-secret-name"] = fmt.Sprintf("%s-%s", r.Frontend.Name, "cert")
+		s.SetAnnotations(annotations)
+	}
+
 	labels := make(map[string]string)
 	labels["frontend"] = r.Frontend.Name
 	labeler := utils.GetCustomLabeler(labels, nn, r.Frontend)
@@ -279,6 +288,16 @@ func (r *FrontendReconciliation) createAnnotationsAndPopulate(nn types.Namespace
 		}
 		annotations["haproxy.router.openshift.io/ip_whitelist"] = strings.Join(r.FrontendEnvironment.Spec.Whitelist, " ")
 		annotations["nginx.ingress.kubernetes.io/whitelist-source-range"] = strings.Join(r.FrontendEnvironment.Spec.Whitelist, ",")
+		netobj.SetAnnotations(annotations)
+	}
+
+	if r.FrontendEnvironment.Spec.SSL {
+		annotations := netobj.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+
+		annotations["route.openshift.io/termination"] = "reencrypt"
 		netobj.SetAnnotations(annotations)
 	}
 
