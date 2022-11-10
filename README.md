@@ -22,7 +22,7 @@ namespace to deploy your application with `oc apply -f $My-Frontend-CRD.yaml -n 
 
 Please use the above section to develop an app that depends on this operator.  
 
-### Environment Setup
+### Running Locally
 
 You need to run kubernetes locally, we recommend [minikube](https://minikube.sigs.k8s.io/docs/).
 
@@ -32,70 +32,46 @@ Follow those directions to get Clowder running and continue along.
 Once Clowder is up and running (`oc get pod -n clowder-system` has a running `controller-manager`), there are two
 options we can use to proceed. 
 
-0. create boot namespace
-
+1. Create the boot namespace
 ```
-kubectl create namespace boot
-```
-
-1. apply frontend CRD
-
-```
-kubectl apply -f config/crd/bases/cloud.redhat.com_frontends.yaml
+$ make create-boot-namespace
 ```
 
-1. apply frontend environment CRD
-
+2. Install the resources:
 ```
-kubectl apply -f config/crd/bases/cloud.redhat.com_frontendenvironments.yaml
-```
-
-2. apply bundle CRD
-
-```
-kubectl apply -f config/crd/bases/cloud.redhat.com_bundles.yaml
+$ make install-resources
 ```
 
-3. Create the ClowdEnvironment (Clowder CRD)
-
+3. Run:
 ```
-kubectl apply -f examples/clowdenvironment.yaml
-```
-
-4. create frontend env
-
-```
-kubectl apply -f examples/feenvironment.yaml -n boot
+$ make run-local
 ```
 
-5. create custom object inventory
+If you make changes to the CRDs make sure to install the resources and run again.
 
-```
-kubectl apply -f examples/inventory.yaml -n boot
-```
 
-6. create bundle
+### Debug in VS Code
+Create `.vscode/launch.json` and put this in that file:
 
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Operator",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/",
+            "args": [
+                "--metrics-bind-address", ":9090",
+                "--health-probe-bind-address", ":9091",
+            ]
+        }
+    ]
+}
 ```
-kubectl apply -f examples/bundle.yaml -n boot
-```
-
-7. create chrome deployment
-
-```
-kubectl apply -f examples/chrome.yaml -n boot
-```
-
-8. run the reconciler
-
-```
-make manifests generate fmt vet ; go run ./main.go --metrics-bind-address :9090 --health-probe-bind-address :9091
-```
-Note: The flags shows above `metrics-bind-address` and `health-probe-bind-address` are required if you are running Clowder on the same machine you are trying to run the Frontend Operator on. Clowder will already be using the default ports. If you are running the Frontend Operator on a machine Clowder isn't running on you can just run:
-
-```
-make run
-```
+Once that is saved you'll see "Debug Operator" in the launch menu in VS Code. Also, before running in VS Code make sure you have created the boot namespace and install the resources as shown above.
 
 ### Access it from your computer
 
