@@ -27,8 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const ROUTE_PREFIX_DEAULT = "apps"
-
 type FrontendReconciliation struct {
 	Log                 logr.Logger
 	Recorder            record.EventRecorder
@@ -72,7 +70,7 @@ func (r *FrontendReconciliation) run() error {
 	return nil
 }
 
-func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, routePrefix string) {
+func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
 	d.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 
 	// Modify the obejct to set the things we care about
@@ -105,12 +103,8 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 		Env: []v1.EnvVar{{
 			Name:  "SSO_URL",
 			Value: frontendEnvironment.Spec.SSO,
-		}, {
-			Name:  "ROUTE_PREFIX",
-			Value: routePrefix,
-		},
 		}},
-	}
+	}}
 }
 
 func populateVolumes(d *apps.Deployment, frontend *crd.Frontend) {
@@ -138,14 +132,6 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend) {
 	}
 }
 
-func (r *FrontendReconciliation) routePrefix() string {
-	routePrefix := ROUTE_PREFIX_DEAULT
-	if r.Frontend.Spec.RoutePrefix != "" {
-		routePrefix = r.Frontend.Spec.RoutePrefix
-	}
-	return routePrefix
-}
-
 func (r *FrontendReconciliation) createFrontendDeployment(hash, ssoHash string) error {
 
 	// Create new empty struct
@@ -168,7 +154,7 @@ func (r *FrontendReconciliation) createFrontendDeployment(hash, ssoHash string) 
 	labeler := utils.GetCustomLabeler(labels, nn, r.Frontend)
 	labeler(d)
 
-	populateContainer(d, r.Frontend, r.FrontendEnvironment, r.routePrefix())
+	populateContainer(d, r.Frontend, r.FrontendEnvironment)
 	populateVolumes(d, r.Frontend)
 
 	d.Spec.Template.ObjectMeta.Labels = labels
