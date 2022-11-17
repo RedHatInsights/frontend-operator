@@ -105,6 +105,9 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 		Env: []v1.EnvVar{{
 			Name:  "SSO_URL",
 			Value: frontendEnvironment.Spec.SSO,
+		}, {
+			Name:  "ROUTE_PREFIX",
+			Value: "apps",
 		}}},
 	}
 }
