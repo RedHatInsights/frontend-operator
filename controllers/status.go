@@ -70,7 +70,7 @@ func SetFrontendConditions(ctx context.Context, client client.Client, o *crd.Fro
 	o.Status.Deployments.ManagedDeployments = stats.ManagedDeployments
 	o.Status.Deployments.ReadyDeployments = stats.ReadyDeployments
 
-	if !equality.Semantic.DeepEqual(oldStatus, o.Status) {
+	if !equality.Semantic.DeepEqual(*oldStatus, o.Status) {
 		if err := client.Status().Update(ctx, o); err != nil {
 			return err
 		}
