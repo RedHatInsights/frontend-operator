@@ -295,7 +295,7 @@ func defaultPredicate(logr logr.Logger, ctrlName string) predicate.Funcs {
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			gvk, _ := utils.GetKindFromObj(scheme, e.ObjectNew)
-			logMessage(logr, ctrlName, "Reconciliation trigger", "ctrl", ctrlName, "type", "create", "resType", gvk.Kind, "name", e.ObjectNew.GetName(), "namespace", e.ObjectNew.GetNamespace())
+			logMessage(logr, ctrlName, "Reconciliation trigger", "ctrl", ctrlName, "type", "update", "resType", gvk.Kind, "name", e.ObjectNew.GetName(), "namespace", e.ObjectNew.GetNamespace(), "old", e.ObjectOld, "new", e.ObjectNew)
 			return true
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
