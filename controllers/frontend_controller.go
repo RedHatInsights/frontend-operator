@@ -28,10 +28,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -259,7 +262,7 @@ func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		})
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&crd.Frontend{}).
+		For(&crd.Frontend{}, builder.WithPredicates(defaultPredicate(r.Log, "frontend"))).
 		Watches(
 			&source.Kind{Type: &crd.Bundle{}},
 			handler.EnqueueRequestsFromMapFunc(r.appsToEnqueueUponBundleUpdate),
@@ -272,6 +275,35 @@ func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&networking.Ingress{}).
 		Owns(&prom.ServiceMonitor{}).
 		Complete(r)
+}
+
+func logMessage(logr logr.Logger, ctrlName string, msg string, keysAndValues ...interface{}) {
+	logr.Info(msg, keysAndValues...)
+}
+
+func defaultPredicate(logr logr.Logger, ctrlName string) predicate.Funcs {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			gvk, _ := utils.GetKindFromObj(scheme, e.Object)
+			logMessage(logr, ctrlName, "Reconciliation trigger", "ctrl", ctrlName, "type", "create", "resType", gvk.Kind, "name", e.Object.GetName(), "namespace", e.Object.GetNamespace())
+			return true
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			gvk, _ := utils.GetKindFromObj(scheme, e.Object)
+			logMessage(logr, ctrlName, "Reconciliation trigger", "ctrl", ctrlName, "type", "delete", "resType", gvk.Kind, "name", e.Object.GetName(), "namespace", e.Object.GetNamespace())
+			return true
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			gvk, _ := utils.GetKindFromObj(scheme, e.ObjectNew)
+			logMessage(logr, ctrlName, "Reconciliation trigger", "ctrl", ctrlName, "type", "create", "resType", gvk.Kind, "name", e.ObjectNew.GetName(), "namespace", e.ObjectNew.GetNamespace())
+			return true
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			gvk, _ := utils.GetKindFromObj(scheme, e.Object)
+			logMessage(logr, ctrlName, "Reconciliation trigger", "ctrl", ctrlName, "type", "generic", "resType", gvk.Kind, "name", e.Object.GetName(), "namespace", e.Object.GetNamespace())
+			return true
+		},
+	}
 }
 
 func (r *FrontendReconciler) appsToEnqueueUponBundleUpdate(a client.Object) []reconcile.Request {
