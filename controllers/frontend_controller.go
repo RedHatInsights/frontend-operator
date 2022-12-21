@@ -223,7 +223,7 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if err != nil {
 		log.Info("Reconcile error", "error", err)
 		SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, err)
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{Requeue: true}, err
 	}
 
 	if err == nil {
@@ -234,7 +234,9 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	log.Info("Reconciliation successful", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
-	SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil)
+	if err = SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil); err != nil {
+		return ctrl.Result{Requeue: true}, nil
+	}
 
 	log.Info("Finished reconcile")
 	r.reconciliationMetrics.stop()
