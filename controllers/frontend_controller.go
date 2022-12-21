@@ -215,9 +215,6 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{Requeue: true}, cacheErr
 	}
 
-	log.Info("Reconciliation successful", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
-	SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil)
-
 	opts := []client.ListOption{
 		client.MatchingLabels{"frontend": frontend.Name},
 	}
@@ -228,7 +225,6 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, err)
 		return ctrl.Result{Requeue: true}, nil
 	}
-	SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil)
 
 	if err == nil {
 		if _, ok := managedFrontends[frontend.GetIdent()]; !ok {
@@ -236,6 +232,10 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 		managedFrontendsMetric.Set(float64(len(managedFrontends)))
 	}
+
+	log.Info("Reconciliation successful", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
+	SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil)
+
 	log.Info("Finished reconcile")
 	r.reconciliationMetrics.stop()
 	return ctrl.Result{}, nil
