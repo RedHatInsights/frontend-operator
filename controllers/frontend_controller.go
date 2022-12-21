@@ -23,7 +23,6 @@ import (
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -295,18 +294,9 @@ func defaultPredicate(logr logr.Logger, ctrlName string) predicate.Funcs {
 			return true
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			gvk, _ := utils.GetKindFromObj(scheme, e.ObjectNew)
-			old := e.ObjectOld.DeepCopyObject()
-			ofe := old.(*crd.Frontend)
-			ofe.Status = crd.FrontendStatus{}
-			new := e.ObjectNew.DeepCopyObject()
-			nfe := new.(*crd.Frontend)
-			nfe.Status = crd.FrontendStatus{}
-			if !equality.Semantic.DeepEqual(ofe, new) {
-				logMessage(logr, ctrlName, "Reconciliation trigger", "ctrl", ctrlName, "type", "update", "resType", gvk.Kind, "name", e.ObjectNew.GetName(), "namespace", e.ObjectNew.GetNamespace(), "old", e.ObjectOld, "new", e.ObjectNew)
-				return true
-			}
-			return false
+			gvk, _ := utils.GetKindFromObj(scheme, e.ObjectOld)
+			logMessage(logr, ctrlName, "Reconciliation trigger", "ctrl", ctrlName, "type", "update", "resType", gvk.Kind, "name", e.ObjectNew.GetName(), "namespace", e.ObjectNew.GetNamespace(), "old", e.ObjectOld, "new", e.ObjectNew)
+			return true
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
 			gvk, _ := utils.GetKindFromObj(scheme, e.Object)
