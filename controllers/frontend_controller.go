@@ -23,6 +23,7 @@ import (
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -237,9 +238,9 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	log.Info("Reconciliation successful", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
-	// if err = SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil); err != nil {
-	// 	return ctrl.Result{Requeue: true}, nil
-	// }
+	if err = SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil); err != nil {
+		return ctrl.Result{Requeue: true}, nil
+	}
 
 	log.Info("Finished reconcile")
 	r.reconciliationMetrics.stop()
@@ -295,8 +296,17 @@ func defaultPredicate(logr logr.Logger, ctrlName string) predicate.Funcs {
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			gvk, _ := utils.GetKindFromObj(scheme, e.ObjectNew)
-			logMessage(logr, ctrlName, "Reconciliation trigger", "ctrl", ctrlName, "type", "update", "resType", gvk.Kind, "name", e.ObjectNew.GetName(), "namespace", e.ObjectNew.GetNamespace(), "old", e.ObjectOld, "new", e.ObjectNew)
-			return true
+			old := e.ObjectOld.DeepCopyObject()
+			ofe := old.(*crd.Frontend)
+			ofe.Status = crd.FrontendStatus{}
+			new := e.ObjectNew.DeepCopyObject()
+			nfe := new.(*crd.Frontend)
+			nfe.Status = crd.FrontendStatus{}
+			if !equality.Semantic.DeepEqual(ofe, new) {
+				logMessage(logr, ctrlName, "Reconciliation trigger", "ctrl", ctrlName, "type", "update", "resType", gvk.Kind, "name", e.ObjectNew.GetName(), "namespace", e.ObjectNew.GetNamespace(), "old", e.ObjectOld, "new", e.ObjectNew)
+				return true
+			}
+			return false
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
 			gvk, _ := utils.GetKindFromObj(scheme, e.Object)
