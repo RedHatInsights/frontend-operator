@@ -237,9 +237,9 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	log.Info("Reconciliation successful", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
-	if err = SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil); err != nil {
-		return ctrl.Result{Requeue: true}, nil
-	}
+	// if err = SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil); err != nil {
+	// 	return ctrl.Result{Requeue: true}, nil
+	// }
 
 	log.Info("Finished reconcile")
 	r.reconciliationMetrics.stop()
