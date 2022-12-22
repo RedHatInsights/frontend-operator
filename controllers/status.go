@@ -58,7 +58,8 @@ func SetFrontendConditions(ctx context.Context, client client.Client, o *crd.Fro
 
 	conditions = append(conditions, *condition)
 	for _, condition := range conditions {
-		cond.Set(o, &condition)
+		innerCondition := condition
+		cond.Set(o, &innerCondition)
 	}
 
 	o.Status.Ready = frontendStatus

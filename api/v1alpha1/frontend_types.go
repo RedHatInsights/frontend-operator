@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type ApiInfo struct {
+type APIInfo struct {
 	Versions []string `json:"versions" yaml:"versions"`
 }
 
@@ -46,7 +46,7 @@ type FrontendSpec struct {
 	EnvName        string               `json:"envName" yaml:"envName"`
 	Title          string               `json:"title" yaml:"title"`
 	DeploymentRepo string               `json:"deploymentRepo" yaml:"deploymentRepo"`
-	API            ApiInfo              `json:"API" yaml:"API"`
+	API            APIInfo              `json:"API" yaml:"API"`
 	Frontend       FrontendInfo         `json:"frontend" yaml:"frontend"`
 	Image          string               `json:"image,omitempty" yaml:"image,omitempty"`
 	Service        string               `json:"service,omitempty" yaml:"service,omitempty"`
@@ -80,7 +80,7 @@ type FedModule struct {
 }
 
 type Module struct {
-	Id                   string   `json:"id" yaml:"id"`
+	ID                   string   `json:"id" yaml:"id"`
 	Module               string   `json:"module" yaml:"module"`
 	Routes               []Route  `json:"routes" yaml:"routes"`
 	Dependencies         []string `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
@@ -153,8 +153,8 @@ func (i *Frontend) GetIdent() string {
 	return fmt.Sprintf("%v.%v", i.Spec.EnvName, i.Name)
 }
 
-func (FEInfo *FrontendInfo) HasPath(lookup string) bool {
-	for _, a := range FEInfo.Paths {
+func (feinfo *FrontendInfo) HasPath(lookup string) bool {
+	for _, a := range feinfo.Paths {
 		if a == lookup {
 			return true
 		}

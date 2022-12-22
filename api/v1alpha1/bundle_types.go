@@ -30,7 +30,7 @@ type BundlePermission struct {
 // EmbeddedRoutes allow deeply nested navs to have support for routes
 type EmbeddedRoute struct {
 	Title   string `json:"title,omitempty" yaml:"title,omitempty"`
-	AppId   string `json:"appId,omitempty" yaml:"appId,omitempty"`
+	AppID   string `json:"appId,omitempty" yaml:"appId,omitempty"`
 	Href    string `json:"href,omitempty" yaml:"href,omitempty"`
 	Product string `json:"product,omitempty" yaml:"product,omitempty"`
 }
@@ -40,7 +40,7 @@ type BundleNavItem struct {
 	GroupID     string              `json:"groupId,omitempty" yaml:"groupId,omitempty"`
 	Icon        string              `json:"icon,omitempty" yaml:"icon,omitempty"`
 	NavItems    []LeafBundleNavItem `json:"navItems,omitempty" yaml:"navItems,omitempty"`
-	AppId       string              `json:"appId,omitempty" yaml:"appId,omitempty"`
+	AppID       string              `json:"appId,omitempty" yaml:"appId,omitempty"`
 	Href        string              `json:"href,omitempty" yaml:"href,omitempty"`
 	Product     string              `json:"product,omitempty" yaml:"product,omitempty"`
 	IsExternal  bool                `json:"isExternal,omitempty" yaml:"isExternal,omitempty"`
@@ -54,7 +54,7 @@ type BundleNavItem struct {
 type LeafBundleNavItem struct {
 	Title       string             `json:"title" yaml:"title"`
 	GroupID     string             `json:"groupId,omitempty" yaml:"groupId,omitempty"`
-	AppId       string             `json:"appId,omitempty" yaml:"appId,omitempty"`
+	AppID       string             `json:"appId,omitempty" yaml:"appId,omitempty"`
 	Href        string             `json:"href,omitempty" yaml:"href,omitempty"`
 	Product     string             `json:"product,omitempty" yaml:"product,omitempty"`
 	IsExternal  bool               `json:"isExternal,omitempty" yaml:"isExternal,omitempty"`

@@ -29,6 +29,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
@@ -61,9 +62,9 @@ func TestAPIs(t *testing.T) {
 var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 	k8sscheme := runtime.NewScheme()
-	clientgoscheme.AddToScheme(k8sscheme)
-	prom.AddToScheme(k8sscheme)
-	networking.AddToScheme(k8sscheme)
+	utilruntime.Must(clientgoscheme.AddToScheme(k8sscheme))
+	utilruntime.Must(prom.AddToScheme(k8sscheme))
+	utilruntime.Must(networking.AddToScheme(k8sscheme))
 
 	By("bootstrapping test environment")
 	// Here be dragons: env-test does not play nice with third party CRDs

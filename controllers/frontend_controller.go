@@ -205,16 +205,19 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	err = reconciliation.run()
-
 	if err != nil {
-		SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, err)
+		if sErr := SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, err); sErr != nil {
+			return ctrl.Result{Requeue: true}, fmt.Errorf("error setting status after recon error: %w", sErr)
+		}
 		return ctrl.Result{Requeue: true}, err
 	}
 
 	cacheErr := cache.ApplyAll()
 
 	if cacheErr != nil {
-		SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, cacheErr)
+		if sErr := SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, cacheErr); sErr != nil {
+			return ctrl.Result{Requeue: true}, fmt.Errorf("error setting status after cacheapply error: %w", sErr)
+		}
 		return ctrl.Result{Requeue: true}, cacheErr
 	}
 
@@ -225,7 +228,9 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	err = cache.Reconcile(frontend.GetUID(), opts...)
 	if err != nil {
 		log.Info("Reconcile error", "error", err)
-		SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, err)
+		if sErr := SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, err); sErr != nil {
+			return ctrl.Result{Requeue: true}, fmt.Errorf("error setting status after reconcile delete error: %w", sErr)
+		}
 		return ctrl.Result{Requeue: true}, err
 	}
 
@@ -251,15 +256,19 @@ func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	cache := mgr.GetCache()
 
-	cache.IndexField(
+	if err := cache.IndexField(
 		context.TODO(), &crd.Frontend{}, "spec.envName", func(o client.Object) []string {
 			return []string{o.(*crd.Frontend).Spec.EnvName}
-		})
+		}); err != nil {
+		return err
+	}
 
-	cache.IndexField(
+	if err := cache.IndexField(
 		context.TODO(), &crd.Bundle{}, "spec.envName", func(o client.Object) []string {
 			return []string{o.(*crd.Bundle).Spec.EnvName}
-		})
+		}); err != nil {
+		return err
+	}
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&crd.Frontend{}, builder.WithPredicates(defaultPredicate(r.Log, "frontend"))).
@@ -331,7 +340,11 @@ func (r *FrontendReconciler) appsToEnqueueUponBundleUpdate(a client.Object) []re
 	// Get all the ClowdApp resources
 
 	frontendList := crd.FrontendList{}
-	r.Client.List(ctx, &frontendList, client.MatchingFields{"spec.envName": bundle.Spec.EnvName})
+	err = r.Client.List(ctx, &frontendList, client.MatchingFields{"spec.envName": bundle.Spec.EnvName})
+	if err != nil {
+		r.Log.Error(err, "Failed to List Frontends")
+		return nil
+	}
 
 	// Filter based on base attribute
 
@@ -372,7 +385,10 @@ func (r *FrontendReconciler) appsToEnqueueUponFrontendEnvironmentUpdate(a client
 	// Get all the ClowdApp resources
 
 	frontendList := crd.FrontendList{}
-	r.Client.List(ctx, &frontendList, client.MatchingFields{"spec.envName": fe.Name})
+	if err := r.Client.List(ctx, &frontendList, client.MatchingFields{"spec.envName": fe.Name}); err != nil {
+		r.Log.Error(err, "Failed to List Frontends")
+		return nil
+	}
 
 	// Filter based on base attribute
 

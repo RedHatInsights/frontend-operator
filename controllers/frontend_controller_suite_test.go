@@ -38,10 +38,12 @@ var _ = Describe("Frontend controller with image", func() {
 			ctx := context.Background()
 
 			var customConfig apiextensions.JSON
-			customConfig.UnmarshalJSON([]byte(`{"apple":"pie"}`))
+			err := customConfig.UnmarshalJSON([]byte(`{"apple":"pie"}`))
+			Expect(err).Should(BeNil())
 
 			var customConfig2 apiextensions.JSON
-			customConfig2.UnmarshalJSON([]byte(`{"cheese":"pasty"}`))
+			err = customConfig2.UnmarshalJSON([]byte(`{"cheese":"pasty"}`))
+			Expect(err).Should(BeNil())
 
 			frontend := &crd.Frontend{
 				TypeMeta: metav1.TypeMeta{
@@ -56,7 +58,7 @@ var _ = Describe("Frontend controller with image", func() {
 					EnvName:        FrontendEnvName,
 					Title:          "",
 					DeploymentRepo: "",
-					API: crd.ApiInfo{
+					API: crd.APIInfo{
 						Versions: []string{"v1"},
 					},
 					Frontend: crd.FrontendInfo{
@@ -71,7 +73,7 @@ var _ = Describe("Frontend controller with image", func() {
 					Module: &crd.FedModule{
 						ManifestLocation: "/apps/inventory/fed-mods.json",
 						Modules: []crd.Module{{
-							Id:     "test",
+							ID:     "test",
 							Module: "./RootApp",
 							Routes: []crd.Route{{
 								Pathname: "/test/href",
@@ -96,7 +98,7 @@ var _ = Describe("Frontend controller with image", func() {
 					EnvName:        FrontendEnvName,
 					Title:          "",
 					DeploymentRepo: "",
-					API: crd.ApiInfo{
+					API: crd.APIInfo{
 						Versions: []string{"v1"},
 					},
 					Frontend: crd.FrontendInfo{
@@ -111,7 +113,7 @@ var _ = Describe("Frontend controller with image", func() {
 					Module: &crd.FedModule{
 						ManifestLocation: "/apps/inventory/fed-mods.json",
 						Modules: []crd.Module{{
-							Id:     "test",
+							ID:     "test",
 							Module: "./RootApp",
 							Routes: []crd.Route{{
 								Pathname: "/test/href",
@@ -270,7 +272,7 @@ var _ = Describe("Frontend controller with service", func() {
 					EnvName:        FrontendEnvName,
 					Title:          "",
 					DeploymentRepo: "",
-					API: crd.ApiInfo{
+					API: crd.APIInfo{
 						Versions: []string{"v1"},
 					},
 					Frontend: crd.FrontendInfo{
@@ -292,7 +294,7 @@ var _ = Describe("Frontend controller with service", func() {
 					Module: &crd.FedModule{
 						ManifestLocation: "/apps/inventory/fed-mods.json",
 						Modules: []crd.Module{{
-							Id:     "test",
+							ID:     "test",
 							Module: "./RootApp",
 							Routes: []crd.Route{{
 								Pathname: "/test/href",
@@ -391,7 +393,8 @@ var _ = Describe("Frontend controller with chrome", func() {
 			ctx := context.Background()
 
 			var customConfig apiextensions.JSON
-			customConfig.UnmarshalJSON([]byte(`{"apple":"pie"}`))
+			err := customConfig.UnmarshalJSON([]byte(`{"apple":"pie"}`))
+			Expect(err).Should(BeNil())
 
 			frontend := &crd.Frontend{
 				TypeMeta: metav1.TypeMeta{
@@ -406,7 +409,7 @@ var _ = Describe("Frontend controller with chrome", func() {
 					EnvName:        FrontendEnvName,
 					Title:          "",
 					DeploymentRepo: "",
-					API: crd.ApiInfo{
+					API: crd.APIInfo{
 						Versions: []string{"v1"},
 					},
 					Frontend: crd.FrontendInfo{
@@ -421,7 +424,7 @@ var _ = Describe("Frontend controller with chrome", func() {
 					Module: &crd.FedModule{
 						ManifestLocation: "/apps/inventory/fed-mods.json",
 						Modules: []crd.Module{{
-							Id:     "test",
+							ID:     "test",
 							Module: "./RootApp",
 							Routes: []crd.Route{{
 								Pathname: "/test/href",
@@ -446,7 +449,7 @@ var _ = Describe("Frontend controller with chrome", func() {
 					EnvName:        FrontendEnvName,
 					Title:          "",
 					DeploymentRepo: "",
-					API: crd.ApiInfo{
+					API: crd.APIInfo{
 						Versions: []string{"v1"},
 					},
 					Frontend: crd.FrontendInfo{
@@ -461,7 +464,7 @@ var _ = Describe("Frontend controller with chrome", func() {
 					Module: &crd.FedModule{
 						ManifestLocation: "/apps/inventory/fed-mods.json",
 						Modules: []crd.Module{{
-							Id:     "test",
+							ID:     "test",
 							Module: "./RootApp",
 							Routes: []crd.Route{{
 								Pathname: "/test/href",
@@ -486,7 +489,7 @@ var _ = Describe("Frontend controller with chrome", func() {
 					EnvName:        FrontendEnvName,
 					Title:          "",
 					DeploymentRepo: "",
-					API: crd.ApiInfo{
+					API: crd.APIInfo{
 						Versions: []string{"v1"},
 					},
 					Frontend: crd.FrontendInfo{
@@ -501,7 +504,7 @@ var _ = Describe("Frontend controller with chrome", func() {
 					Module: &crd.FedModule{
 						ManifestLocation: "/apps/inventory/fed-mods.json",
 						Modules: []crd.Module{{
-							Id:     "test",
+							ID:     "test",
 							Module: "./RootApp",
 							Routes: []crd.Route{{
 								Pathname: "/test/href",
@@ -634,7 +637,7 @@ var _ = Describe("ServiceMonitor Creation", func() {
 					EnvName:        FrontendEnvName,
 					Title:          "",
 					DeploymentRepo: "",
-					API: crd.ApiInfo{
+					API: crd.APIInfo{
 						Versions: []string{"v1"},
 					},
 					Frontend: crd.FrontendInfo{
@@ -649,7 +652,7 @@ var _ = Describe("ServiceMonitor Creation", func() {
 					Module: &crd.FedModule{
 						ManifestLocation: "/apps/inventory/fed-mods.json",
 						Modules: []crd.Module{{
-							Id:     "test",
+							ID:     "test",
 							Module: "./RootApp",
 							Routes: []crd.Route{{
 								Pathname: "/test/href",
@@ -757,7 +760,7 @@ var _ = Describe("Dependencies", func() {
 					EnvName:        FrontendEnvName,
 					Title:          "",
 					DeploymentRepo: "",
-					API: crd.ApiInfo{
+					API: crd.APIInfo{
 						Versions: []string{"v1"},
 					},
 					Frontend: crd.FrontendInfo{
@@ -772,7 +775,7 @@ var _ = Describe("Dependencies", func() {
 					Module: &crd.FedModule{
 						ManifestLocation: "/apps/inventory/fed-mods.json",
 						Modules: []crd.Module{{
-							Id:     "test",
+							ID:     "test",
 							Module: "./RootApp",
 							Routes: []crd.Route{{
 								Pathname: "/test/href",
@@ -797,7 +800,7 @@ var _ = Describe("Dependencies", func() {
 					EnvName:        FrontendEnvName,
 					Title:          "",
 					DeploymentRepo: "",
-					API: crd.ApiInfo{
+					API: crd.APIInfo{
 						Versions: []string{"v1"},
 					},
 					Frontend: crd.FrontendInfo{
@@ -812,7 +815,7 @@ var _ = Describe("Dependencies", func() {
 					Module: &crd.FedModule{
 						ManifestLocation: "/apps/inventory/fed-mods.json",
 						Modules: []crd.Module{{
-							Id:     "test",
+							ID:     "test",
 							Module: "./RootApp",
 							Routes: []crd.Route{{
 								Pathname: "/test/href",
@@ -837,7 +840,7 @@ var _ = Describe("Dependencies", func() {
 					EnvName:        FrontendEnvName,
 					Title:          "",
 					DeploymentRepo: "",
-					API: crd.ApiInfo{
+					API: crd.APIInfo{
 						Versions: []string{"v1"},
 					},
 					Frontend: crd.FrontendInfo{
@@ -852,7 +855,7 @@ var _ = Describe("Dependencies", func() {
 					Module: &crd.FedModule{
 						ManifestLocation: "/apps/inventory/fed-mods.json",
 						Modules: []crd.Module{{
-							Id:     "test",
+							ID:     "test",
 							Module: "./RootApp",
 							Routes: []crd.Route{{
 								Pathname: "/test/href",
