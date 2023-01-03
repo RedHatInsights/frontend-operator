@@ -38,10 +38,10 @@ type FrontendEnvironmentSpec struct {
 	// Hostname
 	Hostname string `json:"hostname,omitempty"`
 
-	//Whitelist CIDRs
+	// Whitelist CIDRs
 	Whitelist []string `json:"whitelist,omitempty"`
 
-	//MonitorMode determines where a ServiceMonitor object will be placed
+	// MonitorMode determines where a ServiceMonitor object will be placed
 	// local will add it to the frontend's namespace
 	// app-interface will add it to "openshift-customer-monitoring"
 	Monitoring *MonitoringConfig `json:"monitoring,omitempty"`

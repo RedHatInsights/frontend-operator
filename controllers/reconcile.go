@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const ROUTE_PREFIX_DEAULT = "apps"
+const RoutePrefixDefault = "apps"
 
 type FrontendReconciliation struct {
 	Log                 logr.Logger
@@ -204,7 +204,7 @@ func createPorts() []v1.ServicePort {
 	}
 }
 
-//Will need to create a service resource ident in provider like CoreDeployment
+// Will need to create a service resource ident in provider like CoreDeployment
 func (r *FrontendReconciliation) createFrontendService() error {
 	// Create empty service
 	s := &v1.Service{}
@@ -407,7 +407,7 @@ func setupNormalNav(bundle *crd.Bundle, cacheMap map[string]crd.Frontend, cfgMap
 	return nil
 }
 
-func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendList, fedModules map[string]crd.FedModule) {
+func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendList, fedModules map[string]crd.FedModule) error {
 	for _, frontend := range frontendList.Items {
 		if frontend.Spec.Module != nil {
 			// module names in fed-modules.json must be camelCase
@@ -422,7 +422,10 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 				module := fedModules[modName]
 
 				var configSource apiextensions.JSON
-				configSource.UnmarshalJSON([]byte(`{}`))
+				err := configSource.UnmarshalJSON([]byte(`{}`))
+				if err != nil {
+					return fmt.Errorf("error unmarshaling base config: %w", err)
+				}
 
 				if module.Config == nil {
 					module.Config = &configSource
@@ -441,12 +444,16 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 					fmt.Print(err)
 				}
 
-				module.Config.UnmarshalJSON(bytes)
+				err = module.Config.UnmarshalJSON(bytes)
+				if err != nil {
+					return fmt.Errorf("error unmarshaling config: %w", err)
+				}
 
 				fedModules[modName] = module
 			}
 		}
 	}
+	return nil
 }
 
 func (r *FrontendReconciliation) setupBundleData(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend) error {
@@ -549,7 +556,9 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 	}
 
 	fedModules := make(map[string]crd.FedModule)
-	setupFedModules(r.FrontendEnvironment, feList, fedModules)
+	if err := setupFedModules(r.FrontendEnvironment, feList, fedModules); err != nil {
+		return fmt.Errorf("error setting up fedModules: %w", err)
+	}
 
 	jsonData, err := json.Marshal(fedModules)
 	if err != nil {

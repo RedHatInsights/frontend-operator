@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -70,8 +71,14 @@ func main() {
 
 	ctrl.SetLogger(zapr.NewLogger(logger))
 
-	defer logger.Sync()
+	err = Run(metricsAddr, probeAddr, enableLeaderElection)
+	if err != nil {
+		_ = logger.Sync()
+		os.Exit(1)
+	}
+}
 
+func Run(metricsAddr, probeAddr string, enableLeaderElection bool) error {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
@@ -82,7 +89,7 @@ func main() {
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
+		return fmt.Errorf("unable to start manager: %w", err)
 	}
 
 	if err = (&controllers.FrontendReconciler{
@@ -91,22 +98,23 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Frontend")
-		os.Exit(1)
+		return fmt.Errorf("unable to create manager: %w", err)
 	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
-		os.Exit(1)
+		return fmt.Errorf("unable to setup health check: %w", err)
 	}
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
-		os.Exit(1)
+		return fmt.Errorf("unable to setup ready check: %w", err)
 	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
+		return fmt.Errorf("problem running manager: %w", err)
 	}
+	return nil
 }
