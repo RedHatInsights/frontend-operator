@@ -2,864 +2,864 @@ apiVersion: v1
 data:
   frontend-operator.json: |+
     {
-    "annotations": {
-      "list": [
-        {
-          "builtIn": 1,
-          "datasource": {
-            "type": "datasource",
-            "uid": "grafana"
-          },
-          "enable": true,
-          "hide": true,
-          "iconColor": "rgba(0, 211, 255, 1)",
-          "name": "Annotations & Alerts",
-          "target": {
-            "limit": 100,
-            "matchAny": false,
-            "tags": [],
-            "type": "dashboard"
-          },
-          "type": "dashboard"
-        }
-      ]
-    },
-    "editable": true,
-    "fiscalYearStartMonth": 0,
-    "graphTooltip": 0,
-    "iteration": 1667827806241,
-    "links": [],
-    "liveNow": false,
-    "panels": [
-      {
-        "datasource": {
-          "type": "prometheus",
-          "uid": "mOIyqZB7k"
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "thresholds"
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": {
+              "type": "datasource",
+              "uid": "grafana"
             },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "target": {
+              "limit": 100,
+              "matchAny": false,
+              "tags": [],
+              "type": "dashboard"
+            },
+            "type": "dashboard"
+          }
+        ]
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "iteration": 1672860659104,
+      "links": [],
+      "liveNow": false,
+      "panels": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "em_lmGfnz"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 4,
+            "x": 0,
+            "y": 0
+          },
+          "id": 2,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "text": {},
+            "textMode": "auto"
+          },
+          "pluginVersion": "9.0.3",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "em_lmGfnz"
+              },
+              "exemplar": true,
+              "expr": "frontend_managed_frontends",
+              "interval": "",
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "title": "Managed Frontends",
+          "transparent": true,
+          "type": "stat"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
                 },
-                {
-                  "color": "red",
-                  "value": 80
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
                 }
-              ]
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 8,
+            "x": 4,
+            "y": 0
+          },
+          "id": 18,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
             }
           },
-          "overrides": []
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "1 - sum(avg_over_time(workqueue_depth{service=\"frontend-operator-controller-manager-metrics-service-non-auth\"}[28d])) by (name)",
+              "refId": "A"
+            }
+          ],
+          "title": "frontend operator workqueue depth",
+          "type": "timeseries"
         },
-        "gridPos": {
-          "h": 5,
-          "w": 4,
-          "x": 0,
-          "y": 0
+        {
+          "datasource": {
+            "uid": "${datasource}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 12,
+            "y": 0
+          },
+          "id": 6,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "uid": "${datasource}"
+              },
+              "exemplar": true,
+              "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"frontend-operator-system\", container=\"manager\"}[5m]))",
+              "interval": "",
+              "legendFormat": "Restarts",
+              "refId": "A"
+            }
+          ],
+          "title": "Pod Container Restarts",
+          "transparent": true,
+          "type": "timeseries"
         },
-        "id": 2,
-        "options": {
-          "colorMode": "value",
-          "graphMode": "none",
-          "justifyMode": "auto",
-          "orientation": "auto",
-          "reduceOptions": {
-            "calcs": [
-              "lastNotNull"
-            ],
-            "fields": "",
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": {
+            "uid": "${datasource}"
+          },
+          "description": "",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 12,
+            "y": 6
+          },
+          "hiddenSeries": false,
+          "id": 10,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
             "values": false
           },
-          "text": {},
-          "textMode": "auto"
-        },
-        "pluginVersion": "9.0.3",
-        "targets": [
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "mOIyqZB7k"
-            },
-            "exemplar": true,
-            "expr": "frontend_managed_frontends",
-            "interval": "",
-            "legendFormat": "",
-            "refId": "A"
-          }
-        ],
-        "title": "Managed Frontends",
-        "transparent": true,
-        "type": "stat"
-      },
-      {
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "description": "Average reconciliation time by app",
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 0,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "9.0.3",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "datasource": {
+                "uid": "${datasource}"
               },
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "auto",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
+              "exemplar": true,
+              "expr": "avg(container_memory_working_set_bytes{namespace=\"frontend-operator-system\", container=\"manager\"})",
+              "interval": "",
+              "legendFormat": "K8s Usage",
+              "refId": "A"
             },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
+            {
+              "datasource": {
+                "uid": "${datasource}"
+              },
+              "exemplar": true,
+              "expr": "avg(go_memstats_alloc_bytes{container=\"manager\", namespace=\"frontend-operator-system\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "Alloc Bytes",
+              "refId": "B"
             }
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 11,
-          "w": 19,
-          "x": 4,
-          "y": 0
-        },
-        "id": 14,
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "bottom"
-          },
+          ],
+          "thresholds": [],
+          "timeRegions": [],
+          "title": "Memory Usage",
           "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          }
-        },
-        "targets": [
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "${datasource}"
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "transparent": true,
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "$$hashKey": "object:165",
+              "format": "short",
+              "logBase": 1,
+              "show": true
             },
-            "editorMode": "code",
-            "expr": "avg(frontend_app_reconciliation_time_sum/frontend_app_reconciliation_time_count) by (app)",
-            "legendFormat": "__auto",
-            "range": true,
-            "refId": "A"
-          }
-        ],
-        "title": "AVG Reconciliation Time",
-        "type": "timeseries"
-      },
-      {
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 0,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "auto",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
+            {
+              "$$hashKey": "object:166",
+              "format": "short",
+              "logBase": 1,
+              "show": true
             }
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 9,
-          "x": 4,
-          "y": 11
-        },
-        "id": 16,
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "bottom"
-          },
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
+          ],
+          "yaxis": {
+            "align": false
           }
         },
-        "targets": [
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "${datasource}"
-            },
-            "expr": "sum(workqueue_depth{name=\"frontend\"})",
-            "refId": "A"
-          }
-        ],
-        "title": "Frontend Workqueue Depth",
-        "type": "timeseries"
-      },
-      {
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${datasource}"
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 0,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "auto",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            }
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 8,
-          "w": 10,
-          "x": 13,
-          "y": 11
-        },
-        "id": 18,
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "bottom"
-          },
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          }
-        },
-        "targets": [
-          {
-            "datasource": {
-              "type": "prometheus",
-              "uid": "${datasource}"
-            },
-            "expr": "sum(rate(controller_runtime_reconcile_total{controller=\"frontend\",result=\"error\"}[5m])) by (controller)",
-            "refId": "A"
-          }
-        ],
-        "title": "Reconciliation Errors",
-        "type": "timeseries"
-      },
-      {
-        "datasource": {
-          "uid": "${datasource}"
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 0,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "auto",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            }
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 7,
-          "w": 9,
-          "x": 4,
-          "y": 19
-        },
-        "id": 4,
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "bottom"
-          },
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          }
-        },
-        "targets": [
-          {
-            "datasource": {
-              "uid": "${datasource}"
-            },
-            "exemplar": true,
-            "expr": "sum(increase(controller_runtime_reconcile_total{controller=~\"frontend|frontendenvironment|bundle\"}[1m])) by (controller)",
-            "interval": "",
-            "legendFormat": "{{controller}}",
-            "refId": "A"
-          }
-        ],
-        "title": "Frontend Reconciliations",
-        "transparent": true,
-        "type": "timeseries"
-      },
-      {
-        "datasource": {
-          "uid": "${datasource}"
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 0,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "auto",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            }
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 6,
-          "w": 10,
-          "x": 13,
-          "y": 19
-        },
-        "id": 6,
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "bottom"
-          },
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          }
-        },
-        "targets": [
-          {
-            "datasource": {
-              "uid": "${datasource}"
-            },
-            "exemplar": true,
-            "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"frontend-operator-system\", container=\"manager\"}[5m]))",
-            "interval": "",
-            "legendFormat": "Restarts",
-            "refId": "A"
-          }
-        ],
-        "title": "Pod Container Restarts",
-        "transparent": true,
-        "type": "timeseries"
-      },
-      {
-        "aliasColors": {},
-        "bars": false,
-        "dashLength": 10,
-        "dashes": false,
-        "datasource": {
-          "uid": "${datasource}"
-        },
-        "description": "",
-        "fill": 1,
-        "fillGradient": 0,
-        "gridPos": {
-          "h": 7,
-          "w": 10,
-          "x": 13,
-          "y": 25
-        },
-        "hiddenSeries": false,
-        "id": 10,
-        "legend": {
-          "avg": false,
-          "current": false,
-          "max": false,
-          "min": false,
-          "show": true,
-          "total": false,
-          "values": false
-        },
-        "lines": true,
-        "linewidth": 1,
-        "nullPointMode": "null",
-        "options": {
-          "alertThreshold": true
-        },
-        "percentage": false,
-        "pluginVersion": "9.0.3",
-        "pointradius": 2,
-        "points": false,
-        "renderer": "flot",
-        "seriesOverrides": [],
-        "spaceLength": 10,
-        "stack": false,
-        "steppedLine": false,
-        "targets": [
-          {
-            "datasource": {
-              "uid": "${datasource}"
-            },
-            "exemplar": true,
-            "expr": "avg(container_memory_working_set_bytes{namespace=\"frontend-operator-system\", container=\"manager\"})",
-            "interval": "",
-            "legendFormat": "K8s Usage",
-            "refId": "A"
-          },
-          {
-            "datasource": {
-              "uid": "${datasource}"
-            },
-            "exemplar": true,
-            "expr": "avg(go_memstats_alloc_bytes{container=\"manager\", namespace=\"frontend-operator-system\"})",
-            "hide": false,
-            "interval": "",
-            "legendFormat": "Alloc Bytes",
-            "refId": "B"
-          }
-        ],
-        "thresholds": [],
-        "timeRegions": [],
-        "title": "Memory Usage",
-        "tooltip": {
-          "shared": true,
-          "sort": 0,
-          "value_type": "individual"
-        },
-        "transparent": true,
-        "type": "graph",
-        "xaxis": {
-          "mode": "time",
-          "show": true,
-          "values": []
-        },
-        "yaxes": [
-          {
-            "$$hashKey": "object:165",
-            "format": "short",
-            "logBase": 1,
-            "show": true
-          },
-          {
-            "$$hashKey": "object:166",
-            "format": "short",
-            "logBase": 1,
-            "show": true
-          }
-        ],
-        "yaxis": {
-          "align": false
-        }
-      },
-      {
-        "datasource": {
-          "uid": "${datasource}"
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 0,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "auto",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            }
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 6,
-          "w": 9,
-          "x": 4,
-          "y": 26
-        },
-        "id": 8,
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "hidden",
-            "placement": "bottom"
-          },
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          }
-        },
-        "targets": [
-          {
-            "datasource": {
-              "uid": "${datasource}"
-            },
-            "exemplar": true,
-            "expr": "kube_deployment_status_replicas_available{namespace=\"frontend-operator-system\"}",
-            "interval": "",
-            "legendFormat": "Count",
-            "refId": "A"
-          }
-        ],
-        "title": "Pod Count",
-        "transparent": true,
-        "type": "timeseries"
-      },
-      {
-        "datasource": {
-          "uid": "${datasource}"
-        },
-        "fieldConfig": {
-          "defaults": {
-            "color": {
-              "mode": "palette-classic"
-            },
-            "custom": {
-              "axisLabel": "",
-              "axisPlacement": "auto",
-              "barAlignment": 0,
-              "drawStyle": "line",
-              "fillOpacity": 0,
-              "gradientMode": "none",
-              "hideFrom": {
-                "legend": false,
-                "tooltip": false,
-                "viz": false
-              },
-              "lineInterpolation": "linear",
-              "lineWidth": 1,
-              "pointSize": 5,
-              "scaleDistribution": {
-                "type": "linear"
-              },
-              "showPoints": "auto",
-              "spanNulls": false,
-              "stacking": {
-                "group": "A",
-                "mode": "none"
-              },
-              "thresholdsStyle": {
-                "mode": "off"
-              }
-            },
-            "mappings": [],
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "color": "green",
-                  "value": null
-                },
-                {
-                  "color": "red",
-                  "value": 80
-                }
-              ]
-            }
-          },
-          "overrides": []
-        },
-        "gridPos": {
-          "h": 7,
-          "w": 9,
-          "x": 4,
-          "y": 32
-        },
-        "id": 12,
-        "options": {
-          "legend": {
-            "calcs": [],
-            "displayMode": "list",
-            "placement": "bottom"
-          },
-          "tooltip": {
-            "mode": "single",
-            "sort": "none"
-          }
-        },
-        "targets": [
-          {
-            "datasource": {
-              "uid": "${datasource}"
-            },
-            "exemplar": true,
-            "expr": "avg(rate(container_cpu_usage_seconds_total{container=\"manager\", namespace=\"clowder-system\"}[5m]))",
-            "interval": "",
-            "legendFormat": "Usage",
-            "refId": "A"
-          },
-          {
-            "datasource": {
-              "uid": "${datasource}"
-            },
-            "exemplar": true,
-            "expr": "avg(kube_pod_container_resource_requests_cpu_cores{container=\"manager\", namespace=\"clowder-system\"})",
-            "hide": false,
-            "interval": "",
-            "legendFormat": "",
-            "refId": "B"
-          }
-        ],
-        "title": "CPU Isage",
-        "transparent": true,
-        "type": "timeseries"
-      }
-    ],
-    "refresh": false,
-    "schemaVersion": 36,
-    "style": "dark",
-    "tags": [],
-    "templating": {
-      "list": [
         {
-          "current": {
-            "selected": false,
-            "text": "c-rh-c-eph-prometheus",
-            "value": "c-rh-c-eph-prometheus"
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
           },
-          "hide": 0,
-          "includeAll": false,
-          "multi": false,
-          "name": "datasource",
-          "options": [],
-          "query": "prometheus",
-          "queryValue": "",
-          "refresh": 1,
-          "regex": "/c.*/",
-          "skipUrlSync": false,
-          "type": "datasource"
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "decimals": 0,
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "percent"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 4,
+            "y": 8
+          },
+          "id": 16,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "100 * sum(avg_over_time(controller_runtime_reconcile_time_seconds_bucket{controller=~\"frontend\", le=\"4\"}[28d])) by (controller) / sum(avg_over_time(controller_runtime_reconcile_time_seconds_bucket{controller=~\"frontend\", le=\"+Inf\"}[28d])) by (controller)",
+              "refId": "A"
+            }
+          ],
+          "title": "frontend operator reconciliation time",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "uid": "${datasource}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 12,
+            "y": 12
+          },
+          "id": 4,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "uid": "${datasource}"
+              },
+              "exemplar": true,
+              "expr": "sum(increase(controller_runtime_reconcile_total{controller=~\"frontend|frontendenvironment|bundle\"}[1m])) by (controller)",
+              "interval": "",
+              "legendFormat": "{{controller}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Frontend Reconciliations",
+          "transparent": true,
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "max": 1,
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 8,
+            "x": 4,
+            "y": 15
+          },
+          "id": 14,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "expr": "(sum by (controller) (avg_over_time(controller_runtime_reconcile_total{controller=~\"frontend\", result=~\"success\"}[28d]))) / (sum by (controller) (avg_over_time(controller_runtime_reconcile_total{controller=~\"frontend\", result=~\"error|success\"}[28d])))",
+              "refId": "A"
+            }
+          ],
+          "title": "frontend operator reconciliation error rate",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "uid": "${datasource}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 12,
+            "y": 18
+          },
+          "id": 8,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "hidden",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "uid": "${datasource}"
+              },
+              "exemplar": true,
+              "expr": "kube_deployment_status_replicas_available{namespace=\"frontend-operator-system\"}",
+              "interval": "",
+              "legendFormat": "Count",
+              "refId": "A"
+            }
+          ],
+          "title": "Pod Count",
+          "transparent": true,
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "uid": "${datasource}"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 8,
+            "x": 4,
+            "y": 22
+          },
+          "id": 12,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "uid": "${datasource}"
+              },
+              "exemplar": true,
+              "expr": "avg(rate(container_cpu_usage_seconds_total{container=\"manager\", namespace=\"clowder-system\"}[5m]))",
+              "interval": "",
+              "legendFormat": "Usage",
+              "refId": "A"
+            },
+            {
+              "datasource": {
+                "uid": "${datasource}"
+              },
+              "exemplar": true,
+              "expr": "avg(kube_pod_container_resource_requests_cpu_cores{container=\"manager\", namespace=\"clowder-system\"})",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "",
+              "refId": "B"
+            }
+          ],
+          "title": "CPU Isage",
+          "transparent": true,
+          "type": "timeseries"
         }
-      ]
-    },
-    "time": {
-      "from": "2022-11-04T15:39:21.886Z",
-      "to": "2022-11-07T13:36:30.458Z"
-    },
-    "timepicker": {},
-    "timezone": "",
-    "title": "Frontend Operator Metrics",
-    "uid": "GSX6u0bnz",
-    "version": 2,
-    "weekStart": ""
-        }
+      ],
+      "refresh": false,
+      "schemaVersion": 36,
+      "style": "dark",
+      "tags": [],
+      "templating": {
+        "list": [
+          {
+            "current": {
+              "selected": false,
+              "text": "c-rh-c-eph-prometheus",
+              "value": "c-rh-c-eph-prometheus"
+            },
+            "hide": 0,
+            "includeAll": false,
+            "multi": false,
+            "name": "datasource",
+            "options": [],
+            "query": "prometheus",
+            "queryValue": "",
+            "refresh": 1,
+            "regex": "/c.*/",
+            "skipUrlSync": false,
+            "type": "datasource"
+          }
+        ]
+      },
+      "time": {
+        "from": "now-30d",
+        "to": "now"
+      },
+      "timepicker": {},
+      "timezone": "",
+      "title": "Frontend Operator Metrics",
+      "uid": "GSX6u0bnz",
+      "version": 2,
+      "weekStart": ""
+    }
 
 kind: ConfigMap
 metadata:
