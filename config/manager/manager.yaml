@@ -13,6 +13,8 @@ metadata:
   labels:
     control-plane: controller-manager
     operator-name: frontend-operator
+  annotations:
+    ignore-check.kube-linter.io/minimum-three-replicas: "operator doesn't need more than one"
 spec:
   selector:
     matchLabels:

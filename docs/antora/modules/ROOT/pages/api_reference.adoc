@@ -24,7 +24,7 @@ Package v1alpha1 contains API Schema definitions for the  v1alpha1 API group
 
 
 [id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-apiinfo"]
-==== ApiInfo 
+==== APIInfo 
 
 
 
@@ -368,7 +368,7 @@ FrontendSpec defines the desired state of Frontend
 | *`envName`* __string__ | 
 | *`title`* __string__ | 
 | *`deploymentRepo`* __string__ | 
-| *`API`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-apiinfo[$$ApiInfo$$]__ | 
+| *`API`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-apiinfo[$$APIInfo$$]__ | 
 | *`frontend`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendinfo[$$FrontendInfo$$]__ | 
 | *`image`* __string__ | 
 | *`service`* __string__ | 
