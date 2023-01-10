@@ -1167,6 +1167,9 @@ objects:
 - apiVersion: apps/v1
   kind: Deployment
   metadata:
+    annotations:
+      ignore-check.kube-linter.io/minimum-three-replicas: operator doesn't need more
+        than one
     labels:
       control-plane: controller-manager
       operator-name: frontend-operator

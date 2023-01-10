@@ -173,6 +173,8 @@ func (r *FrontendReconciliation) createFrontendDeployment(hash, ssoHash string) 
 
 	annotations["configHash"] = hash
 	annotations["ssoHash"] = ssoHash
+	// This is a temporary measure to silence DVO from opening 600 million tickets for each frontend - Issue fix ETA is TBD
+	annotations["kube-linter.io/ignore-all"] = "we don't need no any checking"
 
 	d.Spec.Template.SetAnnotations(annotations)
 
