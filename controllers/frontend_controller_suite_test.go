@@ -546,7 +546,7 @@ var _ = Describe("Frontend controller with chrome", func() {
 				Spec: crd.BundleSpec{
 					ID:      BundleName,
 					Title:   "",
-					AppList: []string{FrontendName + "-frontend", FrontendName2 + "-frontend", FrontendName3 + "-frontend"},
+					AppList: []string{FrontendName, FrontendName2, FrontendName3},
 					EnvName: FrontendEnvName,
 				},
 			}
