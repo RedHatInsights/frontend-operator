@@ -173,7 +173,7 @@ var _ = Describe("Frontend controller with image", func() {
 				err := k8sClient.Get(ctx, deploymentLookupKey, createdDeployment)
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
-			Expect(createdDeployment.Name).Should(Equal(FrontendName))
+			Expect(createdDeployment.Name).Should(Equal(FrontendName + "-frontend"))
 			fmt.Printf("\n%v\n", createdDeployment.GetAnnotations())
 			Expect(createdDeployment.Spec.Template.GetAnnotations()["ssoHash"]).ShouldNot(Equal(""))
 			Expect(createdDeployment.Spec.Template.GetAnnotations()["configHash"]).ShouldNot(Equal(""))
