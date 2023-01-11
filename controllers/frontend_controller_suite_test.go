@@ -563,7 +563,7 @@ var _ = Describe("Frontend controller with chrome", func() {
 				err := k8sClient.Get(ctx, deploymentLookupKey, createdDeployment)
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
-			Expect(createdDeployment.Name).Should(Equal(FrontendName))
+			Expect(createdDeployment.Name).Should(Equal(FrontendName + "-frontend"))
 			fmt.Printf("\n%v\n", createdDeployment.GetAnnotations())
 			Expect(createdDeployment.Spec.Template.GetAnnotations()["ssoHash"]).ShouldNot(Equal(""))
 			Expect(createdDeployment.Spec.Template.GetAnnotations()["configHash"]).ShouldNot(Equal(""))
@@ -573,14 +573,14 @@ var _ = Describe("Frontend controller with chrome", func() {
 				err := k8sClient.Get(ctx, ingressLookupKey, createdIngress)
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
-			Expect(createdIngress.Name).Should(Equal(FrontendName))
+			Expect(createdIngress.Name).Should(Equal(FrontendName + "-frontend"))
 
 			createdService := &v1.Service{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, serviceLookupKey, createdService)
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
-			Expect(createdService.Name).Should(Equal(FrontendName))
+			Expect(createdService.Name).Should(Equal(FrontendName + "-frontend"))
 
 			createdConfigMap := &v1.ConfigMap{}
 			Eventually(func() bool {
