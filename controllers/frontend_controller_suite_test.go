@@ -573,14 +573,14 @@ var _ = Describe("Frontend controller with chrome", func() {
 				err := k8sClient.Get(ctx, ingressLookupKey, createdIngress)
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
-			Expect(createdIngress.Name).Should(Equal(FrontendName + "-frontend"))
+			Expect(createdIngress.Name).Should(Equal(FrontendName))
 
 			createdService := &v1.Service{}
 			Eventually(func() bool {
 				err := k8sClient.Get(ctx, serviceLookupKey, createdService)
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
-			Expect(createdService.Name).Should(Equal(FrontendName + "-frontend"))
+			Expect(createdService.Name).Should(Equal(FrontendName))
 
 			createdConfigMap := &v1.ConfigMap{}
 			Eventually(func() bool {
