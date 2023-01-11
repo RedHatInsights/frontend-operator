@@ -142,9 +142,11 @@ func (r *FrontendReconciliation) createFrontendDeployment(hash, ssoHash string) 
 	// Create new empty struct
 	d := &apps.Deployment{}
 
+	deploymentName := r.Frontend.Name + "-frontend"
+
 	// Define name of resource
 	nn := types.NamespacedName{
-		Name:      r.Frontend.Name,
+		Name:      deploymentName,
 		Namespace: r.Frontend.Namespace,
 	}
 
