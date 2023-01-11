@@ -546,13 +546,13 @@ var _ = Describe("Frontend controller with chrome", func() {
 				Spec: crd.BundleSpec{
 					ID:      BundleName,
 					Title:   "",
-					AppList: []string{FrontendName, FrontendName2, FrontendName3},
+					AppList: []string{FrontendName + "-frontend", FrontendName2 + "-frontend", FrontendName3 + "-frontend"},
 					EnvName: FrontendEnvName,
 				},
 			}
 			Expect(k8sClient.Create(ctx, bundle)).Should(Succeed())
 
-			deploymentLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
+			deploymentLookupKey := types.NamespacedName{Name: frontend.Name + "-frontend", Namespace: FrontendNamespace}
 			ingressLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
 			configMapLookupKey := types.NamespacedName{Name: frontendEnvironment.Name, Namespace: FrontendNamespace}
 			configSSOMapLookupKey := types.NamespacedName{Name: fmt.Sprintf("%s-sso", frontendEnvironment.Name), Namespace: FrontendNamespace}
