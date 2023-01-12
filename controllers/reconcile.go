@@ -175,10 +175,16 @@ func (r *FrontendReconciliation) createFrontendDeployment(hash, ssoHash string) 
 
 	annotations["configHash"] = hash
 	annotations["ssoHash"] = ssoHash
-	// This is a temporary measure to silence DVO from opening 600 million tickets for each frontend - Issue fix ETA is TBD
-	annotations["kube-linter.io/ignore-all"] = "we don't need no any checking"
 
 	d.Spec.Template.SetAnnotations(annotations)
+
+	// This is a temporary measure to silence DVO from opening 600 million tickets for each frontend - Issue fix ETA is TBD
+	deploymentAnnotation := d.ObjectMeta.GetAnnotations()
+	if deploymentAnnotation == nil {
+		deploymentAnnotation = make(map[string]string)
+	}
+	deploymentAnnotation["kube-linter.io/ignore-all"] = "we don't need no any checking"
+	d.ObjectMeta.SetAnnotations(deploymentAnnotation)
 
 	// Inform the cache that our updates are complete
 	if err := r.Cache.Update(CoreDeployment, d); err != nil {
