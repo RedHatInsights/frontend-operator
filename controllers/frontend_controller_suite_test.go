@@ -256,6 +256,7 @@ var _ = Describe("Frontend controller with service", func() {
 					Monitoring: &crd.MonitoringConfig{
 						Mode: "local",
 					},
+					GenerateChromeConfig: true,
 				},
 			}
 			Expect(k8sClient.Create(ctx, &frontendEnvironment)).Should(Succeed())
