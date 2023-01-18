@@ -41,18 +41,24 @@ type FrontendReconciliation struct {
 }
 
 func (r *FrontendReconciliation) run() error {
-	hash, err := r.setupConfigMap()
-	if err != nil {
-		return err
+	var annotationHashes []map[string]string
+
+	if r.FrontendEnvironment.Spec.GenerateChromeConfig {
+		configHash, err := r.setupConfigMap()
+		if err != nil {
+			return err
+		}
+		annotationHashes = append(annotationHashes, map[string]string{"configHash": configHash})
 	}
 
 	ssoHash, err := r.createSSOConfigMap()
 	if err != nil {
 		return err
 	}
+	annotationHashes = append(annotationHashes, map[string]string{"ssoHash": ssoHash})
 
 	if r.Frontend.Spec.Image != "" {
-		if err := r.createFrontendDeployment(hash, ssoHash); err != nil {
+		if err := r.createFrontendDeployment(annotationHashes); err != nil {
 			return err
 		}
 		if err := r.createFrontendService(); err != nil {
@@ -140,7 +146,7 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 	}
 }
 
-func (r *FrontendReconciliation) createFrontendDeployment(hash, ssoHash string) error {
+func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map[string]string) error {
 
 	// Create new empty struct
 	d := &apps.Deployment{}
@@ -176,8 +182,11 @@ func (r *FrontendReconciliation) createFrontendDeployment(hash, ssoHash string) 
 		annotations = make(map[string]string)
 	}
 
-	annotations["configHash"] = hash
-	annotations["ssoHash"] = ssoHash
+	for _, hash := range annotationHashes {
+		for k, v := range hash {
+			annotations[k] = v
+		}
+	}
 
 	d.Spec.Template.SetAnnotations(annotations)
 
