@@ -112,7 +112,10 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 	}
 }
 
-func populateVolumes(d *apps.Deployment, frontend *crd.Frontend) {
+func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
+	if !frontendEnvironment.Spec.GenerateChromeConfig {
+		return
+	}
 	d.Spec.Template.Spec.Volumes = []v1.Volume{
 		{
 			Name: "config",
@@ -162,7 +165,7 @@ func (r *FrontendReconciliation) createFrontendDeployment(hash, ssoHash string) 
 	labeler(d)
 
 	populateContainer(d, r.Frontend, r.FrontendEnvironment)
-	populateVolumes(d, r.Frontend)
+	populateVolumes(d, r.Frontend, r.FrontendEnvironment)
 
 	d.Spec.Template.ObjectMeta.Labels = labels
 
