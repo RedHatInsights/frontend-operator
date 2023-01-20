@@ -24,7 +24,7 @@ Package v1alpha1 contains API Schema definitions for the  v1alpha1 API group
 
 
 [id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-apiinfo"]
-==== ApiInfo 
+==== APIInfo 
 
 
 
@@ -311,6 +311,7 @@ FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
 | *`hostname`* __string__ | Hostname
 | *`whitelist`* __string array__ | Whitelist CIDRs
 | *`monitoring`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-monitoringconfig[$$MonitoringConfig$$]__ | MonitorMode determines where a ServiceMonitor object will be placed local will add it to the frontend's namespace app-interface will add it to "openshift-customer-monitoring"
+| *`ssl`* __boolean__ | SSL mode requests SSL from the services in openshift and k8s and then applies them to the pod, the route is also set to reencrypt in the case of OpenShift
 |===
 
 
@@ -368,7 +369,7 @@ FrontendSpec defines the desired state of Frontend
 | *`envName`* __string__ | 
 | *`title`* __string__ | 
 | *`deploymentRepo`* __string__ | 
-| *`API`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-apiinfo[$$ApiInfo$$]__ | 
+| *`API`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-apiinfo[$$APIInfo$$]__ | 
 | *`frontend`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendinfo[$$FrontendInfo$$]__ | 
 | *`image`* __string__ | 
 | *`service`* __string__ | 

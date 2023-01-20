@@ -75,6 +75,43 @@ func (r *FrontendReconciliation) run() error {
 func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
 	d.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 
+	mounts := []v1.VolumeMount{
+		{
+			Name:      "config",
+			MountPath: "/opt/app-root/src/build/chrome",
+		},
+		{
+			Name:      "sso",
+			MountPath: "/opt/app-root/src/build/js/sso-url.js",
+			SubPath:   "sso-url.js",
+		},
+	}
+
+	envs := []v1.EnvVar{{
+		Name:  "SSO_URL",
+		Value: frontendEnvironment.Spec.SSO,
+	}, {
+		Name:  "ROUTE_PREFIX",
+		Value: "apps",
+	}}
+
+	if frontendEnvironment.Spec.SSL {
+		mounts = append(mounts, v1.VolumeMount{
+			Name:      "certs",
+			MountPath: "/opt/certs",
+		})
+		envs = append(envs,
+			v1.EnvVar{
+				Name:  "CADDY_TLS_MODE",
+				Value: "https_port 8000",
+			},
+			v1.EnvVar{
+				Name:  "CADDY_TLS_CERT",
+				Value: "tls /opt/certs/tls.crt /top/certs/tls.key",
+			},
+		)
+	}
+
 	// Modify the obejct to set the things we care about
 	d.Spec.Template.Spec.Containers = []v1.Container{{
 		Name:  "fe-image",
@@ -91,29 +128,13 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 				Protocol:      "TCP",
 			},
 		},
-		VolumeMounts: []v1.VolumeMount{
-			{
-				Name:      "config",
-				MountPath: "/opt/app-root/src/build/chrome",
-			},
-			{
-				Name:      "sso",
-				MountPath: "/opt/app-root/src/build/js/sso-url.js",
-				SubPath:   "sso-url.js",
-			},
-		},
-		Env: []v1.EnvVar{{
-			Name:  "SSO_URL",
-			Value: frontendEnvironment.Spec.SSO,
-		}, {
-			Name:  "ROUTE_PREFIX",
-			Value: "apps",
-		}}},
+		VolumeMounts: mounts,
+		Env:          envs},
 	}
 }
 
-func populateVolumes(d *apps.Deployment, frontend *crd.Frontend) {
-	d.Spec.Template.Spec.Volumes = []v1.Volume{
+func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
+	vols := []v1.Volume{
 		{
 			Name: "config",
 			VolumeSource: v1.VolumeSource{
@@ -135,6 +156,19 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend) {
 			},
 		},
 	}
+
+	if frontendEnvironment.Spec.SSL {
+		vols = append(vols, v1.Volume{
+			Name: "certs",
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName: fmt.Sprintf("%s-cert", frontend.Name),
+				},
+			},
+		})
+	}
+
+	d.Spec.Template.Spec.Volumes = vols
 }
 
 func (r *FrontendReconciliation) createFrontendDeployment(hash, ssoHash string) error {
@@ -160,7 +194,7 @@ func (r *FrontendReconciliation) createFrontendDeployment(hash, ssoHash string) 
 	labeler(d)
 
 	populateContainer(d, r.Frontend, r.FrontendEnvironment)
-	populateVolumes(d, r.Frontend)
+	populateVolumes(d, r.Frontend, r.FrontendEnvironment)
 
 	d.Spec.Template.ObjectMeta.Labels = labels
 
