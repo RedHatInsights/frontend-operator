@@ -78,6 +78,25 @@ func (r *FrontendReconciliation) run() error {
 	return nil
 }
 
+func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment) []v1.VolumeMount {
+	volumeMounts := []v1.VolumeMount{
+		{
+			Name:      "sso",
+			MountPath: "/opt/app-root/src/build/js/sso-url.js",
+			SubPath:   "sso-url.js",
+		},
+	}
+
+	if frontendEnvironment.Spec.GenerateChromeConfig {
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      "config",
+			MountPath: "/opt/app-root/src/build/chrome",
+		})
+	}
+
+	return volumeMounts
+}
+
 func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
 	d.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 
@@ -97,17 +116,7 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 				Protocol:      "TCP",
 			},
 		},
-		VolumeMounts: []v1.VolumeMount{
-			{
-				Name:      "config",
-				MountPath: "/opt/app-root/src/build/chrome",
-			},
-			{
-				Name:      "sso",
-				MountPath: "/opt/app-root/src/build/js/sso-url.js",
-				SubPath:   "sso-url.js",
-			},
-		},
+		VolumeMounts: populateContainerVolumeMounts(frontendEnvironment),
 		Env: []v1.EnvVar{{
 			Name:  "SSO_URL",
 			Value: frontendEnvironment.Spec.SSO,
@@ -150,7 +159,6 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 
 	// Set the volumes on the deployment
 	d.Spec.Template.Spec.Volumes = volumes
-
 }
 
 func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map[string]string) error {
