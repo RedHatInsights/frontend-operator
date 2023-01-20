@@ -119,20 +119,8 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 }
 
 func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
-	if !frontendEnvironment.Spec.GenerateChromeConfig {
-		return
-	}
-	d.Spec.Template.Spec.Volumes = []v1.Volume{
-		{
-			Name: "config",
-			VolumeSource: v1.VolumeSource{
-				ConfigMap: &v1.ConfigMapVolumeSource{
-					LocalObjectReference: v1.LocalObjectReference{
-						Name: frontend.Spec.EnvName,
-					},
-				},
-			},
-		},
+	// By default we just want the SSO volume
+	volumes := []v1.Volume{
 		{
 			Name: "sso",
 			VolumeSource: v1.VolumeSource{
@@ -144,6 +132,25 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 			},
 		},
 	}
+
+	// If we are generating the chrome config, add it to the volumes
+	if frontendEnvironment.Spec.GenerateChromeConfig {
+		config := v1.Volume{
+			Name: "config",
+			VolumeSource: v1.VolumeSource{
+				ConfigMap: &v1.ConfigMapVolumeSource{
+					LocalObjectReference: v1.LocalObjectReference{
+						Name: frontend.Spec.EnvName,
+					},
+				},
+			},
+		}
+		volumes = append(volumes, config)
+	}
+
+	// Set the volumes on the deployment
+	d.Spec.Template.Spec.Volumes = volumes
+
 }
 
 func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map[string]string) error {
