@@ -10,7 +10,7 @@ import (
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	localUtil "github.com/RedHatInsights/frontend-operator/controllers/utils"
-	resCache "github.com/RedHatInsights/rhc-osdk-utils/resource_cache"
+	resCache "github.com/RedHatInsights/rhc-osdk-utils/resourceCache"
 	"github.com/RedHatInsights/rhc-osdk-utils/utils"
 	"github.com/go-logr/logr"
 
