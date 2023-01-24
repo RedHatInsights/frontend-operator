@@ -311,6 +311,7 @@ FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
 | *`hostname`* __string__ | Hostname
 | *`whitelist`* __string array__ | Whitelist CIDRs
 | *`monitoring`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-monitoringconfig[$$MonitoringConfig$$]__ | MonitorMode determines where a ServiceMonitor object will be placed local will add it to the frontend's namespace app-interface will add it to "openshift-customer-monitoring"
+| *`generateChromeConfig`* __boolean__ | GenerateChromeConfig determines if a chrome configmap will be generated If empty or false the chrome nav config in the chrome container will be used If true a configmap will be generated and mounted into the chrome container
 |===
 
 

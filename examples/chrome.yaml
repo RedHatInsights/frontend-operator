@@ -14,4 +14,4 @@ spec:
     paths:
       - /
       - /config/chrome
-  image: quay.io/cloudservices/insights-chrome-frontend:1ddc0de
+  image: quay.io/cloudservices/insights-chrome-frontend:2712b0a

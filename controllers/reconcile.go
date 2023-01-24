@@ -41,18 +41,24 @@ type FrontendReconciliation struct {
 }
 
 func (r *FrontendReconciliation) run() error {
-	hash, err := r.setupConfigMap()
-	if err != nil {
-		return err
+	var annotationHashes []map[string]string
+
+	if r.FrontendEnvironment.Spec.GenerateChromeConfig {
+		configHash, err := r.setupConfigMap()
+		if err != nil {
+			return err
+		}
+		annotationHashes = append(annotationHashes, map[string]string{"configHash": configHash})
 	}
 
 	ssoHash, err := r.createSSOConfigMap()
 	if err != nil {
 		return err
 	}
+	annotationHashes = append(annotationHashes, map[string]string{"ssoHash": ssoHash})
 
 	if r.Frontend.Spec.Image != "" {
-		if err := r.createFrontendDeployment(hash, ssoHash); err != nil {
+		if err := r.createFrontendDeployment(annotationHashes); err != nil {
 			return err
 		}
 		if err := r.createFrontendService(); err != nil {
@@ -70,6 +76,25 @@ func (r *FrontendReconciliation) run() error {
 		}
 	}
 	return nil
+}
+
+func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment) []v1.VolumeMount {
+	volumeMounts := []v1.VolumeMount{
+		{
+			Name:      "sso",
+			MountPath: "/opt/app-root/src/build/js/sso-url.js",
+			SubPath:   "sso-url.js",
+		},
+	}
+
+	if frontendEnvironment.Spec.GenerateChromeConfig {
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      "config",
+			MountPath: "/opt/app-root/src/build/chrome",
+		})
+	}
+
+	return volumeMounts
 }
 
 func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
@@ -91,17 +116,7 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 				Protocol:      "TCP",
 			},
 		},
-		VolumeMounts: []v1.VolumeMount{
-			{
-				Name:      "config",
-				MountPath: "/opt/app-root/src/build/chrome",
-			},
-			{
-				Name:      "sso",
-				MountPath: "/opt/app-root/src/build/js/sso-url.js",
-				SubPath:   "sso-url.js",
-			},
-		},
+		VolumeMounts: populateContainerVolumeMounts(frontendEnvironment),
 		Env: []v1.EnvVar{{
 			Name:  "SSO_URL",
 			Value: frontendEnvironment.Spec.SSO,
@@ -112,18 +127,9 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 	}
 }
 
-func populateVolumes(d *apps.Deployment, frontend *crd.Frontend) {
-	d.Spec.Template.Spec.Volumes = []v1.Volume{
-		{
-			Name: "config",
-			VolumeSource: v1.VolumeSource{
-				ConfigMap: &v1.ConfigMapVolumeSource{
-					LocalObjectReference: v1.LocalObjectReference{
-						Name: frontend.Spec.EnvName,
-					},
-				},
-			},
-		},
+func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
+	// By default we just want the SSO volume
+	volumes := []v1.Volume{
 		{
 			Name: "sso",
 			VolumeSource: v1.VolumeSource{
@@ -135,9 +141,27 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend) {
 			},
 		},
 	}
+
+	// If we are generating the chrome config, add it to the volumes
+	if frontendEnvironment.Spec.GenerateChromeConfig {
+		config := v1.Volume{
+			Name: "config",
+			VolumeSource: v1.VolumeSource{
+				ConfigMap: &v1.ConfigMapVolumeSource{
+					LocalObjectReference: v1.LocalObjectReference{
+						Name: frontend.Spec.EnvName,
+					},
+				},
+			},
+		}
+		volumes = append(volumes, config)
+	}
+
+	// Set the volumes on the deployment
+	d.Spec.Template.Spec.Volumes = volumes
 }
 
-func (r *FrontendReconciliation) createFrontendDeployment(hash, ssoHash string) error {
+func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map[string]string) error {
 
 	// Create new empty struct
 	d := &apps.Deployment{}
@@ -162,27 +186,21 @@ func (r *FrontendReconciliation) createFrontendDeployment(hash, ssoHash string) 
 	labeler(d)
 
 	populateContainer(d, r.Frontend, r.FrontendEnvironment)
-	populateVolumes(d, r.Frontend)
+	populateVolumes(d, r.Frontend, r.FrontendEnvironment)
 
 	d.Spec.Template.ObjectMeta.Labels = labels
 
 	d.Spec.Selector = &metav1.LabelSelector{MatchLabels: labels}
 
-	annotations := d.Spec.Template.GetAnnotations()
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-
-	annotations["configHash"] = hash
-	annotations["ssoHash"] = ssoHash
-
-	d.Spec.Template.SetAnnotations(annotations)
+	utils.UpdateAnnotations(&d.Spec.Template, annotationHashes...)
 
 	// This is a temporary measure to silence DVO from opening 600 million tickets for each frontend - Issue fix ETA is TBD
 	deploymentAnnotation := d.ObjectMeta.GetAnnotations()
 	if deploymentAnnotation == nil {
 		deploymentAnnotation = make(map[string]string)
 	}
+
+	// Gabor wrote the string "we don't need no any checking" and we will never change it
 	deploymentAnnotation["kube-linter.io/ignore-all"] = "we don't need no any checking"
 	d.ObjectMeta.SetAnnotations(deploymentAnnotation)
 
