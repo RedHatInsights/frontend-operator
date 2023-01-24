@@ -39,7 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
-	resCache "github.com/RedHatInsights/rhc-osdk-utils/resource_cache"
+	resCache "github.com/RedHatInsights/rhc-osdk-utils/resourceCache"
 	prom "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	"github.com/RedHatInsights/rhc-osdk-utils/utils"
