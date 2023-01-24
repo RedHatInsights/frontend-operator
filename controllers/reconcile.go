@@ -192,24 +192,15 @@ func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map
 
 	d.Spec.Selector = &metav1.LabelSelector{MatchLabels: labels}
 
-	annotations := d.Spec.Template.GetAnnotations()
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-
-	for _, hash := range annotationHashes {
-		for k, v := range hash {
-			annotations[k] = v
-		}
-	}
-
-	d.Spec.Template.SetAnnotations(annotations)
+	utils.UpdateAnnotations(&d.Spec.Template, annotationHashes...)
 
 	// This is a temporary measure to silence DVO from opening 600 million tickets for each frontend - Issue fix ETA is TBD
 	deploymentAnnotation := d.ObjectMeta.GetAnnotations()
 	if deploymentAnnotation == nil {
 		deploymentAnnotation = make(map[string]string)
 	}
+
+	// Gabor wrote the string "we don't need no any checking" and we will never change it
 	deploymentAnnotation["kube-linter.io/ignore-all"] = "we don't need no any checking"
 	d.ObjectMeta.SetAnnotations(deploymentAnnotation)
 
