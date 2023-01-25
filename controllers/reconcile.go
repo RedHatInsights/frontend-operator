@@ -10,7 +10,7 @@ import (
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	localUtil "github.com/RedHatInsights/frontend-operator/controllers/utils"
-	resCache "github.com/RedHatInsights/rhc-osdk-utils/resource_cache"
+	resCache "github.com/RedHatInsights/rhc-osdk-utils/resourceCache"
 	"github.com/RedHatInsights/rhc-osdk-utils/utils"
 	"github.com/go-logr/logr"
 
@@ -41,18 +41,24 @@ type FrontendReconciliation struct {
 }
 
 func (r *FrontendReconciliation) run() error {
-	hash, err := r.setupConfigMap()
-	if err != nil {
-		return err
+	var annotationHashes []map[string]string
+
+	if r.FrontendEnvironment.Spec.GenerateChromeConfig {
+		configHash, err := r.setupConfigMap()
+		if err != nil {
+			return err
+		}
+		annotationHashes = append(annotationHashes, map[string]string{"configHash": configHash})
 	}
 
 	ssoHash, err := r.createSSOConfigMap()
 	if err != nil {
 		return err
 	}
+	annotationHashes = append(annotationHashes, map[string]string{"ssoHash": ssoHash})
 
 	if r.Frontend.Spec.Image != "" {
-		if err := r.createFrontendDeployment(hash, ssoHash); err != nil {
+		if err := r.createFrontendDeployment(annotationHashes); err != nil {
 			return err
 		}
 		if err := r.createFrontendService(); err != nil {
@@ -70,6 +76,25 @@ func (r *FrontendReconciliation) run() error {
 		}
 	}
 	return nil
+}
+
+func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment) []v1.VolumeMount {
+	volumeMounts := []v1.VolumeMount{
+		{
+			Name:      "sso",
+			MountPath: "/opt/app-root/src/build/js/sso-url.js",
+			SubPath:   "sso-url.js",
+		},
+	}
+
+	if frontendEnvironment.Spec.GenerateChromeConfig {
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      "config",
+			MountPath: "/opt/app-root/src/build/chrome",
+		})
+	}
+
+	return volumeMounts
 }
 
 func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
@@ -128,23 +153,20 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 				Protocol:      "TCP",
 			},
 		},
-		VolumeMounts: mounts,
-		Env:          envs},
+		VolumeMounts: populateContainerVolumeMounts(frontendEnvironment),
+		Env: []v1.EnvVar{{
+			Name:  "SSO_URL",
+			Value: frontendEnvironment.Spec.SSO,
+		}, {
+			Name:  "ROUTE_PREFIX",
+			Value: "apps",
+		}}},
 	}
 }
 
 func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
-	vols := []v1.Volume{
-		{
-			Name: "config",
-			VolumeSource: v1.VolumeSource{
-				ConfigMap: &v1.ConfigMapVolumeSource{
-					LocalObjectReference: v1.LocalObjectReference{
-						Name: frontend.Spec.EnvName,
-					},
-				},
-			},
-		},
+	// By default we just want the SSO volume
+	volumes := []v1.Volume{
 		{
 			Name: "sso",
 			VolumeSource: v1.VolumeSource{
@@ -157,8 +179,23 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 		},
 	}
 
+	// If we are generating the chrome config, add it to the volumes
+	if frontendEnvironment.Spec.GenerateChromeConfig {
+		config := v1.Volume{
+			Name: "config",
+			VolumeSource: v1.VolumeSource{
+				ConfigMap: &v1.ConfigMapVolumeSource{
+					LocalObjectReference: v1.LocalObjectReference{
+						Name: frontend.Spec.EnvName,
+					},
+				},
+			},
+		}
+		volumes = append(volumes, config)
+	}
+
 	if frontendEnvironment.Spec.SSL {
-		vols = append(vols, v1.Volume{
+		volumes = append(volumes, v1.Volume{
 			Name: "certs",
 			VolumeSource: v1.VolumeSource{
 				Secret: &v1.SecretVolumeSource{
@@ -168,17 +205,20 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 		})
 	}
 
-	d.Spec.Template.Spec.Volumes = vols
+	// Set the volumes on the deployment
+	d.Spec.Template.Spec.Volumes = volumes
 }
 
-func (r *FrontendReconciliation) createFrontendDeployment(hash, ssoHash string) error {
+func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map[string]string) error {
 
 	// Create new empty struct
 	d := &apps.Deployment{}
 
+	deploymentName := r.Frontend.Name + "-frontend"
+
 	// Define name of resource
 	nn := types.NamespacedName{
-		Name:      r.Frontend.Name,
+		Name:      deploymentName,
 		Namespace: r.Frontend.Namespace,
 	}
 
@@ -200,15 +240,17 @@ func (r *FrontendReconciliation) createFrontendDeployment(hash, ssoHash string) 
 
 	d.Spec.Selector = &metav1.LabelSelector{MatchLabels: labels}
 
-	annotations := d.Spec.Template.GetAnnotations()
-	if annotations == nil {
-		annotations = make(map[string]string)
+	utils.UpdateAnnotations(&d.Spec.Template, annotationHashes...)
+
+	// This is a temporary measure to silence DVO from opening 600 million tickets for each frontend - Issue fix ETA is TBD
+	deploymentAnnotation := d.ObjectMeta.GetAnnotations()
+	if deploymentAnnotation == nil {
+		deploymentAnnotation = make(map[string]string)
 	}
 
-	annotations["configHash"] = hash
-	annotations["ssoHash"] = ssoHash
-
-	d.Spec.Template.SetAnnotations(annotations)
+	// Gabor wrote the string "we don't need no any checking" and we will never change it
+	deploymentAnnotation["kube-linter.io/ignore-all"] = "we don't need no any checking"
+	d.ObjectMeta.SetAnnotations(deploymentAnnotation)
 
 	// Inform the cache that our updates are complete
 	if err := r.Cache.Update(CoreDeployment, d); err != nil {

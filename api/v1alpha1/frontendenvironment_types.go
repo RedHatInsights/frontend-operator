@@ -46,9 +46,15 @@ type FrontendEnvironmentSpec struct {
 	// app-interface will add it to "openshift-customer-monitoring"
 	Monitoring *MonitoringConfig `json:"monitoring,omitempty"`
 
+
 	// SSL mode requests SSL from the services in openshift and k8s and then applies them to the
 	// pod, the route is also set to reencrypt in the case of OpenShift
 	SSL bool `json:"ssl,omitempty"`
+
+  // GenerateChromeConfig determines if a chrome configmap will be generated
+	// If empty or false the chrome nav config in the chrome container will be used
+	// If true a configmap will be generated and mounted into the chrome container
+	GenerateChromeConfig bool `json:"generateChromeConfig,omitempty"`
 }
 
 type MonitoringConfig struct {

@@ -45,6 +45,12 @@ spec:
           spec:
             description: FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
             properties:
+              generateChromeConfig:
+                description: GenerateChromeConfig determines if a chrome configmap
+                  will be generated If empty or false the chrome nav config in the
+                  chrome container will be used If true a configmap will be generated
+                  and mounted into the chrome container
+                type: boolean
               hostname:
                 description: Hostname
                 type: string

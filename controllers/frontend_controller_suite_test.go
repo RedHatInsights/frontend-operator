@@ -140,6 +140,7 @@ var _ = Describe("Frontend controller with image", func() {
 					Monitoring: &crd.MonitoringConfig{
 						Mode: "app-interface",
 					},
+					GenerateChromeConfig: true,
 				},
 			}
 			Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(Succeed())
@@ -162,7 +163,7 @@ var _ = Describe("Frontend controller with image", func() {
 			}
 			Expect(k8sClient.Create(ctx, bundle)).Should(Succeed())
 
-			deploymentLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
+			deploymentLookupKey := types.NamespacedName{Name: frontend.Name + "-frontend", Namespace: FrontendNamespace}
 			ingressLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
 			configMapLookupKey := types.NamespacedName{Name: frontendEnvironment.Name, Namespace: FrontendNamespace}
 			configSSOMapLookupKey := types.NamespacedName{Name: fmt.Sprintf("%s-sso", frontendEnvironment.Name), Namespace: FrontendNamespace}
@@ -173,7 +174,7 @@ var _ = Describe("Frontend controller with image", func() {
 				err := k8sClient.Get(ctx, deploymentLookupKey, createdDeployment)
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
-			Expect(createdDeployment.Name).Should(Equal(FrontendName))
+			Expect(createdDeployment.Name).Should(Equal(FrontendName + "-frontend"))
 			fmt.Printf("\n%v\n", createdDeployment.GetAnnotations())
 			Expect(createdDeployment.Spec.Template.GetAnnotations()["ssoHash"]).ShouldNot(Equal(""))
 			Expect(createdDeployment.Spec.Template.GetAnnotations()["configHash"]).ShouldNot(Equal(""))
@@ -255,6 +256,7 @@ var _ = Describe("Frontend controller with service", func() {
 					Monitoring: &crd.MonitoringConfig{
 						Mode: "local",
 					},
+					GenerateChromeConfig: true,
 				},
 			}
 			Expect(k8sClient.Create(ctx, &frontendEnvironment)).Should(Succeed())
@@ -530,6 +532,7 @@ var _ = Describe("Frontend controller with chrome", func() {
 					Monitoring: &crd.MonitoringConfig{
 						Mode: "app-interface",
 					},
+					GenerateChromeConfig: true,
 				},
 			}
 			Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(Succeed())
@@ -552,7 +555,7 @@ var _ = Describe("Frontend controller with chrome", func() {
 			}
 			Expect(k8sClient.Create(ctx, bundle)).Should(Succeed())
 
-			deploymentLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
+			deploymentLookupKey := types.NamespacedName{Name: frontend.Name + "-frontend", Namespace: FrontendNamespace}
 			ingressLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
 			configMapLookupKey := types.NamespacedName{Name: frontendEnvironment.Name, Namespace: FrontendNamespace}
 			configSSOMapLookupKey := types.NamespacedName{Name: fmt.Sprintf("%s-sso", frontendEnvironment.Name), Namespace: FrontendNamespace}
@@ -563,7 +566,7 @@ var _ = Describe("Frontend controller with chrome", func() {
 				err := k8sClient.Get(ctx, deploymentLookupKey, createdDeployment)
 				return err == nil
 			}, timeout, interval).Should(BeTrue())
-			Expect(createdDeployment.Name).Should(Equal(FrontendName))
+			Expect(createdDeployment.Name).Should(Equal(FrontendName + "-frontend"))
 			fmt.Printf("\n%v\n", createdDeployment.GetAnnotations())
 			Expect(createdDeployment.Spec.Template.GetAnnotations()["ssoHash"]).ShouldNot(Equal(""))
 			Expect(createdDeployment.Spec.Template.GetAnnotations()["configHash"]).ShouldNot(Equal(""))
@@ -678,6 +681,7 @@ var _ = Describe("ServiceMonitor Creation", func() {
 					Monitoring: &crd.MonitoringConfig{
 						Mode: "app-interface",
 					},
+					GenerateChromeConfig: true,
 				},
 			}
 			Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(Succeed())
@@ -881,6 +885,7 @@ var _ = Describe("Dependencies", func() {
 					Monitoring: &crd.MonitoringConfig{
 						Mode: "app-interface",
 					},
+					GenerateChromeConfig: true,
 				},
 			}
 			Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(Succeed())
