@@ -94,48 +94,18 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment)
 		})
 	}
 
+	if frontendEnvironment.Spec.SSL {
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      "certs",
+			MountPath: "/opt/certs",
+		})
+	}
+
 	return volumeMounts
 }
 
 func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
 	d.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
-
-	mounts := []v1.VolumeMount{
-		{
-			Name:      "config",
-			MountPath: "/opt/app-root/src/build/chrome",
-		},
-		{
-			Name:      "sso",
-			MountPath: "/opt/app-root/src/build/js/sso-url.js",
-			SubPath:   "sso-url.js",
-		},
-	}
-
-	envs := []v1.EnvVar{{
-		Name:  "SSO_URL",
-		Value: frontendEnvironment.Spec.SSO,
-	}, {
-		Name:  "ROUTE_PREFIX",
-		Value: "apps",
-	}}
-
-	if frontendEnvironment.Spec.SSL {
-		mounts = append(mounts, v1.VolumeMount{
-			Name:      "certs",
-			MountPath: "/opt/certs",
-		})
-		envs = append(envs,
-			v1.EnvVar{
-				Name:  "CADDY_TLS_MODE",
-				Value: "https_port 8000",
-			},
-			v1.EnvVar{
-				Name:  "CADDY_TLS_CERT",
-				Value: "tls /opt/certs/tls.crt /top/certs/tls.key",
-			},
-		)
-	}
 
 	// Modify the obejct to set the things we care about
 	d.Spec.Template.Spec.Containers = []v1.Container{{
@@ -154,14 +124,35 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 			},
 		},
 		VolumeMounts: populateContainerVolumeMounts(frontendEnvironment),
-		Env: []v1.EnvVar{{
-			Name:  "SSO_URL",
-			Value: frontendEnvironment.Spec.SSO,
-		}, {
-			Name:  "ROUTE_PREFIX",
-			Value: "apps",
-		}}},
+		Env:          populateContainerEnvVars(frontendEnvironment),
+	},
 	}
+}
+
+func populateContainerEnvVars(frontendEnvironment *crd.FrontendEnvironment) []v1.EnvVar {
+
+	envVars := []v1.EnvVar{{
+		Name:  "SSO_URL",
+		Value: frontendEnvironment.Spec.SSO,
+	}, {
+		Name:  "ROUTE_PREFIX",
+		Value: "apps",
+	}}
+
+	if frontendEnvironment.Spec.SSL {
+		envVars = append(envVars,
+			v1.EnvVar{
+				Name:  "CADDY_TLS_MODE",
+				Value: "https_port 8000",
+			},
+			v1.EnvVar{
+				Name:  "CADDY_TLS_CERT",
+				Value: "tls /opt/certs/tls.crt /top/certs/tls.key",
+			},
+		)
+	}
+
+	return envVars
 }
 
 func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
