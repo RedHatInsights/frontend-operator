@@ -94,6 +94,13 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment)
 		})
 	}
 
+	if frontendEnvironment.Spec.SSL {
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      "certs",
+			MountPath: "/opt/certs",
+		})
+	}
+
 	return volumeMounts
 }
 
@@ -117,14 +124,35 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 			},
 		},
 		VolumeMounts: populateContainerVolumeMounts(frontendEnvironment),
-		Env: []v1.EnvVar{{
-			Name:  "SSO_URL",
-			Value: frontendEnvironment.Spec.SSO,
-		}, {
-			Name:  "ROUTE_PREFIX",
-			Value: "apps",
-		}}},
+		Env:          populateContainerEnvVars(frontendEnvironment),
+	},
 	}
+}
+
+func populateContainerEnvVars(frontendEnvironment *crd.FrontendEnvironment) []v1.EnvVar {
+
+	envVars := []v1.EnvVar{{
+		Name:  "SSO_URL",
+		Value: frontendEnvironment.Spec.SSO,
+	}, {
+		Name:  "ROUTE_PREFIX",
+		Value: "apps",
+	}}
+
+	if frontendEnvironment.Spec.SSL {
+		envVars = append(envVars,
+			v1.EnvVar{
+				Name:  "CADDY_TLS_MODE",
+				Value: "https_port 8000",
+			},
+			v1.EnvVar{
+				Name:  "CADDY_TLS_CERT",
+				Value: "tls /opt/certs/tls.crt /top/certs/tls.key",
+			},
+		)
+	}
+
+	return envVars
 }
 
 func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
@@ -155,6 +183,17 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 			},
 		}
 		volumes = append(volumes, config)
+	}
+
+	if frontendEnvironment.Spec.SSL {
+		volumes = append(volumes, v1.Volume{
+			Name: "certs",
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName: fmt.Sprintf("%s-cert", frontend.Name),
+				},
+			},
+		})
 	}
 
 	// Set the volumes on the deployment
@@ -248,6 +287,15 @@ func (r *FrontendReconciliation) createFrontendService() error {
 		return err
 	}
 
+	if r.FrontendEnvironment.Spec.SSL {
+		annotations := s.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+		annotations["service.beta.openshift.io/serving-cert-secret-name"] = fmt.Sprintf("%s-%s", r.Frontend.Name, "cert")
+		s.SetAnnotations(annotations)
+	}
+
 	labels := make(map[string]string)
 	labels["frontend"] = r.Frontend.Name
 	labeler := utils.GetCustomLabeler(labels, nn, r.Frontend)
@@ -307,6 +355,16 @@ func (r *FrontendReconciliation) createAnnotationsAndPopulate(nn types.Namespace
 		}
 		annotations["haproxy.router.openshift.io/ip_whitelist"] = strings.Join(r.FrontendEnvironment.Spec.Whitelist, " ")
 		annotations["nginx.ingress.kubernetes.io/whitelist-source-range"] = strings.Join(r.FrontendEnvironment.Spec.Whitelist, ",")
+		netobj.SetAnnotations(annotations)
+	}
+
+	if r.FrontendEnvironment.Spec.SSL {
+		annotations := netobj.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+
+		annotations["route.openshift.io/termination"] = "reencrypt"
 		netobj.SetAnnotations(annotations)
 	}
 

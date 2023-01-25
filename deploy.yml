@@ -374,6 +374,11 @@ objects:
                   - disabled
                   - mode
                   type: object
+                ssl:
+                  description: SSL mode requests SSL from the services in openshift
+                    and k8s and then applies them to the pod, the route is also set
+                    to reencrypt in the case of OpenShift
+                  type: boolean
                 sso:
                   description: Foo is an example field of FrontendEnvironment. Edit
                     FrontendEnvironment_types.go to remove/update
