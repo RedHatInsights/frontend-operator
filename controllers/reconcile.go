@@ -43,19 +43,11 @@ type FrontendReconciliation struct {
 func (r *FrontendReconciliation) run() error {
 	var annotationHashes []map[string]string
 
-	if r.FrontendEnvironment.Spec.GenerateChromeConfig {
-		configHash, err := r.setupConfigMap()
-		if err != nil {
-			return err
-		}
-		annotationHashes = append(annotationHashes, map[string]string{"configHash": configHash})
-	}
-
-	ssoHash, err := r.createSSOConfigMap()
+	configHash, err := r.setupConfigMap()
 	if err != nil {
 		return err
 	}
-	annotationHashes = append(annotationHashes, map[string]string{"ssoHash": ssoHash})
+	annotationHashes = append(annotationHashes, map[string]string{"configHash": configHash})
 
 	if r.Frontend.Spec.Image != "" {
 		if err := r.createFrontendDeployment(annotationHashes); err != nil {
@@ -79,21 +71,15 @@ func (r *FrontendReconciliation) run() error {
 }
 
 func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment) []v1.VolumeMount {
+	// By default we always generate fed-modules.json for chrome
 	volumeMounts := []v1.VolumeMount{
 		{
-			Name:      "sso",
-			MountPath: "/opt/app-root/src/build/js/sso-url.js",
-			SubPath:   "sso-url.js",
+			Name:      "config",
+			MountPath: "/opt/app-root/src/build/chrome",
 		},
 	}
 
-	if frontendEnvironment.Spec.GenerateChromeConfig {
-		volumeMounts = append(volumeMounts, v1.VolumeMount{
-			Name:      "config",
-			MountPath: "/opt/app-root/src/build/chrome",
-		})
-	}
-
+	// We generate SSL cert mounts conditionally
 	if frontendEnvironment.Spec.SSL {
 		volumeMounts = append(volumeMounts, v1.VolumeMount{
 			Name:      "certs",
@@ -124,55 +110,14 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 			},
 		},
 		VolumeMounts: populateContainerVolumeMounts(frontendEnvironment),
-		Env:          populateContainerEnvVars(frontendEnvironment),
 	},
 	}
 }
 
-func populateContainerEnvVars(frontendEnvironment *crd.FrontendEnvironment) []v1.EnvVar {
-
-	envVars := []v1.EnvVar{{
-		Name:  "SSO_URL",
-		Value: frontendEnvironment.Spec.SSO,
-	}, {
-		Name:  "ROUTE_PREFIX",
-		Value: "apps",
-	}}
-
-	if frontendEnvironment.Spec.SSL {
-		envVars = append(envVars,
-			v1.EnvVar{
-				Name:  "CADDY_TLS_MODE",
-				Value: "https_port 8000",
-			},
-			v1.EnvVar{
-				Name:  "CADDY_TLS_CERT",
-				Value: "tls /opt/certs/tls.crt /top/certs/tls.key",
-			},
-		)
-	}
-
-	return envVars
-}
-
 func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
-	// By default we just want the SSO volume
+	// By default we just want the config volume
 	volumes := []v1.Volume{
 		{
-			Name: "sso",
-			VolumeSource: v1.VolumeSource{
-				ConfigMap: &v1.ConfigMapVolumeSource{
-					LocalObjectReference: v1.LocalObjectReference{
-						Name: fmt.Sprintf("%s-sso", frontend.Spec.EnvName),
-					},
-				},
-			},
-		},
-	}
-
-	// If we are generating the chrome config, add it to the volumes
-	if frontendEnvironment.Spec.GenerateChromeConfig {
-		config := v1.Volume{
 			Name: "config",
 			VolumeSource: v1.VolumeSource{
 				ConfigMap: &v1.ConfigMapVolumeSource{
@@ -181,8 +126,7 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 					},
 				},
 			},
-		}
-		volumes = append(volumes, config)
+		},
 	}
 
 	if frontendEnvironment.Spec.SSL {
@@ -637,8 +581,10 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 	cfgMap.SetOwnerReferences([]metav1.OwnerReference{r.FrontendEnvironment.MakeOwnerReference()})
 	cfgMap.Data = map[string]string{}
 
-	if err := r.setupBundleData(cfgMap, cacheMap); err != nil {
-		return err
+	if r.FrontendEnvironment.Spec.GenerateNavJSON {
+		if err := r.setupBundleData(cfgMap, cacheMap); err != nil {
+			return err
+		}
 	}
 
 	fedModules := make(map[string]crd.FedModule)
@@ -653,49 +599,6 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 
 	cfgMap.Data["fed-modules.json"] = string(jsonData)
 	return nil
-}
-
-func (r *FrontendReconciliation) createSSOConfigMap() (string, error) {
-	// Will need to interact directly with the client here, and not the cache because
-	// we need to read ALL the Frontend CRDs in the Env that we care about
-
-	cfgMap := &v1.ConfigMap{}
-
-	nn := types.NamespacedName{
-		Name:      fmt.Sprintf("%s-sso", r.Frontend.Spec.EnvName),
-		Namespace: r.Frontend.Namespace,
-	}
-
-	if err := r.Cache.Create(SSOConfig, nn, cfgMap); err != nil {
-		return "", err
-	}
-
-	hashString := ""
-
-	labels := r.FrontendEnvironment.GetLabels()
-	labler := utils.GetCustomLabeler(labels, nn, r.Frontend)
-	labler(cfgMap)
-	cfgMap.SetOwnerReferences([]metav1.OwnerReference{r.Frontend.MakeOwnerReference()})
-
-	ssoData := fmt.Sprintf(`"use strict";(self.webpackChunkinsights_chrome=self.webpackChunkinsights_chrome||[]).push([[172],{30701:(s,e,h)=>{h.r(e),h.d(e,{default:()=>c});const c="%s"}}]);`, r.FrontendEnvironment.Spec.SSO)
-
-	cfgMap.Data = map[string]string{
-		"sso-url.js": ssoData,
-	}
-
-	h := sha256.New()
-	h.Write([]byte(ssoData))
-	hashString += fmt.Sprintf("%x", h.Sum(nil))
-
-	h = sha256.New()
-	h.Write([]byte(hashString))
-	hash := fmt.Sprintf("%x", h.Sum(nil))
-
-	if err := r.Cache.Update(SSOConfig, cfgMap); err != nil {
-		return "", err
-	}
-
-	return hash, nil
 }
 
 func (r *FrontendReconciliation) createServiceMonitor() error {
