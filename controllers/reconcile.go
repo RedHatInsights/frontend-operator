@@ -541,10 +541,10 @@ func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
 	// Will need to interact directly with the client here, and not the cache because
 	// we need to read ALL the Frontend CRDs in the Env that we care about
 
-	//Create a frontend list
+	// Create a frontend list
 	frontendList := &crd.FrontendList{}
 
-	//Populate the frontendlist by looking for all frontends in our env
+	// Populate the frontendlist by looking for all frontends in our env
 	if err := r.FRE.Client.List(r.Ctx, frontendList, client.MatchingFields{"spec.envName": r.Frontend.Spec.EnvName}); err != nil {
 		return &v1.ConfigMap{}, err
 	}
@@ -557,7 +557,7 @@ func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
 func (r *FrontendReconciliation) createConfigMap(frontendList *crd.FrontendList) (*v1.ConfigMap, error) {
 	cfgMap := &v1.ConfigMap{}
 
-	//Create a map of frontend names to frontends objects
+	// Create a map of frontend names to frontends objects
 	cacheMap := make(map[string]crd.Frontend)
 	for _, frontend := range frontendList.Items {
 		cacheMap[frontend.Name] = frontend
