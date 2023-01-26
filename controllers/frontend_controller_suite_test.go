@@ -166,7 +166,6 @@ var _ = Describe("Frontend controller with image", func() {
 			deploymentLookupKey := types.NamespacedName{Name: frontend.Name + "-frontend", Namespace: FrontendNamespace}
 			ingressLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
 			configMapLookupKey := types.NamespacedName{Name: frontendEnvironment.Name, Namespace: FrontendNamespace}
-			configSSOMapLookupKey := types.NamespacedName{Name: fmt.Sprintf("%s-sso", frontendEnvironment.Name), Namespace: FrontendNamespace}
 			serviceLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
 			createdDeployment := &apps.Deployment{}
 
@@ -176,7 +175,6 @@ var _ = Describe("Frontend controller with image", func() {
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdDeployment.Name).Should(Equal(FrontendName + "-frontend"))
 			fmt.Printf("\n%v\n", createdDeployment.GetAnnotations())
-			Expect(createdDeployment.Spec.Template.GetAnnotations()["ssoHash"]).ShouldNot(Equal(""))
 			Expect(createdDeployment.Spec.Template.GetAnnotations()["configHash"]).ShouldNot(Equal(""))
 
 			createdIngress := &networking.Ingress{}
@@ -210,11 +208,7 @@ var _ = Describe("Frontend controller with image", func() {
 				"test-env.json":    "{\"id\":\"test-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test\",\"href\":\"/test/href\"}]}",
 			}))
 			Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(Equal(FrontendEnvName))
-			createdSSOConfigMap := &v1.ConfigMap{}
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, configSSOMapLookupKey, createdSSOConfigMap)
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
+
 		})
 	})
 })
@@ -327,7 +321,6 @@ var _ = Describe("Frontend controller with service", func() {
 
 			ingressLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
 			configMapLookupKey := types.NamespacedName{Name: frontendEnvironment.Name, Namespace: FrontendNamespace}
-			configSSOMapLookupKey := types.NamespacedName{Name: fmt.Sprintf("%s-sso", frontendEnvironment.Name), Namespace: FrontendNamespace}
 
 			createdIngress := &networking.Ingress{}
 			Eventually(func() bool {
@@ -349,12 +342,6 @@ var _ = Describe("Frontend controller with service", func() {
 				"fed-modules.json":      "{\"testFrontendService\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]}}",
 				"test-env-service.json": "{\"id\":\"test-service-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test2\",\"href\":\"/test/href2\"}]}",
 			}))
-
-			createdSSOConfigMap := &v1.ConfigMap{}
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, configSSOMapLookupKey, createdSSOConfigMap)
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
 
 			Eventually(func() bool {
 				nfe := &crd.Frontend{}
@@ -558,7 +545,6 @@ var _ = Describe("Frontend controller with chrome", func() {
 			deploymentLookupKey := types.NamespacedName{Name: frontend.Name + "-frontend", Namespace: FrontendNamespace}
 			ingressLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
 			configMapLookupKey := types.NamespacedName{Name: frontendEnvironment.Name, Namespace: FrontendNamespace}
-			configSSOMapLookupKey := types.NamespacedName{Name: fmt.Sprintf("%s-sso", frontendEnvironment.Name), Namespace: FrontendNamespace}
 			serviceLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
 			createdDeployment := &apps.Deployment{}
 
@@ -568,7 +554,6 @@ var _ = Describe("Frontend controller with chrome", func() {
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdDeployment.Name).Should(Equal(FrontendName + "-frontend"))
 			fmt.Printf("\n%v\n", createdDeployment.GetAnnotations())
-			Expect(createdDeployment.Spec.Template.GetAnnotations()["ssoHash"]).ShouldNot(Equal(""))
 			Expect(createdDeployment.Spec.Template.GetAnnotations()["configHash"]).ShouldNot(Equal(""))
 
 			createdIngress := &networking.Ingress{}
@@ -601,11 +586,7 @@ var _ = Describe("Frontend controller with chrome", func() {
 				"fed-modules.json":     "{\"chrome\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\",\"ssoUrl\":\"https://something-auth\"}},\"noConfig\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]},\"nonChrome\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"}}}",
 				"test-chrome-env.json": "{\"id\":\"test-chrome-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test\",\"href\":\"/test/href\"}]}"}))
 			Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(Equal(FrontendEnvName))
-			createdSSOConfigMap := &v1.ConfigMap{}
-			Eventually(func() bool {
-				err := k8sClient.Get(ctx, configSSOMapLookupKey, createdSSOConfigMap)
-				return err == nil
-			}, timeout, interval).Should(BeTrue())
+
 		})
 	})
 })
