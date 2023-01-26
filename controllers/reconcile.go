@@ -43,7 +43,7 @@ type FrontendReconciliation struct {
 func (r *FrontendReconciliation) run() error {
 	var annotationHashes []map[string]string
 
-	configHash, err := r.setupConfigMap()
+	configHash, err := r.setupConfigMaps()
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment)
 	volumeMounts := []v1.VolumeMount{
 		{
 			Name:      "config",
-			MountPath: "/opt/app-root/src/build/chrome",
+			MountPath: "/opt/app-root/src/build/chrome/fed-modules.json",
 		},
 	}
 
@@ -517,7 +517,7 @@ func (r *FrontendReconciliation) setupBundleData(cfgMap *v1.ConfigMap, cacheMap 
 	return nil
 }
 
-func createHash(cfgMap *v1.ConfigMap) (string, error) {
+func createConfigmapHash(cfgMap *v1.ConfigMap) (string, error) {
 	hashData, err := json.Marshal(cfgMap.Data)
 	if err != nil {
 		return "", err
@@ -529,38 +529,45 @@ func createHash(cfgMap *v1.ConfigMap) (string, error) {
 	return hash, nil
 }
 
-func (r *FrontendReconciliation) setupConfigMap() (string, error) {
+// setupConfigMaps will create configmaps for the various config json
+// files, including fed-modules.json and the various bundle json files
+func (r *FrontendReconciliation) setupConfigMaps() (string, error) {
 	// Will need to interact directly with the client here, and not the cache because
 	// we need to read ALL the Frontend CRDs in the Env that we care about
 
+	//Create a frontend list
 	frontendList := &crd.FrontendList{}
 
+	//Populate the frontendlist by looking for all frontends in our env
 	if err := r.FRE.Client.List(r.Ctx, frontendList, client.MatchingFields{"spec.envName": r.Frontend.Spec.EnvName}); err != nil {
 		return "", err
 	}
 
+	//Create a map of frontend names to frontends objects
 	cacheMap := make(map[string]crd.Frontend)
 	for _, frontend := range frontendList.Items {
 		cacheMap[frontend.Name] = frontend
 	}
 
-	cfgMap := &v1.ConfigMap{}
+	cfgMap, err := r.createConfigMap(cacheMap, frontendList)
 
-	if err := r.createConfigMap(cfgMap, cacheMap, frontendList); err != nil {
+	if err != nil {
 		return "", err
 	}
 
-	return createHash(cfgMap)
+	return createConfigmapHash(cfgMap)
 }
 
-func (r *FrontendReconciliation) createConfigMap(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend, feList *crd.FrontendList) error {
+func (r *FrontendReconciliation) createConfigMap(cacheMap map[string]crd.Frontend, feList *crd.FrontendList) (*v1.ConfigMap, error) {
+	cfgMap := &v1.ConfigMap{}
+
 	nn := types.NamespacedName{
 		Name:      r.Frontend.Spec.EnvName,
 		Namespace: r.Frontend.Namespace,
 	}
 
 	if err := r.Cache.Create(CoreConfig, nn, cfgMap); err != nil {
-		return err
+		return cfgMap, err
 	}
 
 	labels := r.FrontendEnvironment.GetLabels()
@@ -568,13 +575,13 @@ func (r *FrontendReconciliation) createConfigMap(cfgMap *v1.ConfigMap, cacheMap 
 	labler(cfgMap)
 
 	if err := r.populateConfigMap(cfgMap, cacheMap, feList); err != nil {
-		return err
+		return cfgMap, err
 	}
 
 	if err := r.Cache.Update(CoreConfig, cfgMap); err != nil {
-		return err
+		return cfgMap, err
 	}
-	return nil
+	return cfgMap, nil
 }
 
 func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend, feList *crd.FrontendList) error {
