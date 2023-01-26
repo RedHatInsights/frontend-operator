@@ -41,12 +41,18 @@ type FrontendReconciliation struct {
 }
 
 func (r *FrontendReconciliation) run() error {
-	var annotationHashes []map[string]string
 
-	configHash, err := r.setupConfigMap()
+	configMap, err := r.setupConfigMaps()
 	if err != nil {
 		return err
 	}
+
+	configHash, err := createConfigmapHash(configMap)
+	if err != nil {
+		return err
+	}
+
+	var annotationHashes []map[string]string
 	annotationHashes = append(annotationHashes, map[string]string{"configHash": configHash})
 
 	if r.Frontend.Spec.Image != "" {
@@ -71,12 +77,24 @@ func (r *FrontendReconciliation) run() error {
 }
 
 func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment) []v1.VolumeMount {
-	// By default we always generate fed-modules.json for chrome
-	volumeMounts := []v1.VolumeMount{
-		{
+
+	volumeMounts := []v1.VolumeMount{}
+
+	if frontendEnvironment.Spec.GenerateNavJSON {
+		// If we are generating all of the JSON config (nav and fed-modules)
+		// then we just need to mount the while configmap over the whole chrome directory
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
 			Name:      "config",
 			MountPath: "/opt/app-root/src/build/chrome",
-		},
+		})
+	} else {
+		// If we are not generating the nav JSON then we need to mount the fed-modules.json
+		// and leave the rest of the directory intact
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      "config",
+			MountPath: "/opt/app-root/src/build/chrome/fed-modules.json",
+			SubPath:   "fed-modules.json",
+		})
 	}
 
 	// We generate SSL cert mounts conditionally
@@ -116,8 +134,9 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 
 func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
 	// By default we just want the config volume
-	volumes := []v1.Volume{
-		{
+	volumes := []v1.Volume{}
+	if frontendEnvironment.Spec.GenerateNavJSON {
+		volumes = append(volumes, v1.Volume{
 			Name: "config",
 			VolumeSource: v1.VolumeSource{
 				ConfigMap: &v1.ConfigMapVolumeSource{
@@ -126,7 +145,24 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 					},
 				},
 			},
-		},
+		})
+	} else {
+		volumes = append(volumes, v1.Volume{
+			Name: "config",
+			VolumeSource: v1.VolumeSource{
+				ConfigMap: &v1.ConfigMapVolumeSource{
+					LocalObjectReference: v1.LocalObjectReference{
+						Name: frontend.Spec.EnvName,
+					},
+					Items: []v1.KeyToPath{
+						{
+							Key:  "fed-modules.json",
+							Path: "fed-modules.json",
+						},
+					},
+				},
+			},
+		})
 	}
 
 	if frontendEnvironment.Spec.SSL {
@@ -517,7 +553,7 @@ func (r *FrontendReconciliation) setupBundleData(cfgMap *v1.ConfigMap, cacheMap 
 	return nil
 }
 
-func createHash(cfgMap *v1.ConfigMap) (string, error) {
+func createConfigmapHash(cfgMap *v1.ConfigMap) (string, error) {
 	hashData, err := json.Marshal(cfgMap.Data)
 	if err != nil {
 		return "", err
@@ -529,52 +565,55 @@ func createHash(cfgMap *v1.ConfigMap) (string, error) {
 	return hash, nil
 }
 
-func (r *FrontendReconciliation) setupConfigMap() (string, error) {
+// setupConfigMaps will create configmaps for the various config json
+// files, including fed-modules.json and the various bundle json files
+func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
 	// Will need to interact directly with the client here, and not the cache because
 	// we need to read ALL the Frontend CRDs in the Env that we care about
 
+	// Create a frontend list
 	frontendList := &crd.FrontendList{}
 
+	// Populate the frontendlist by looking for all frontends in our env
 	if err := r.FRE.Client.List(r.Ctx, frontendList, client.MatchingFields{"spec.envName": r.Frontend.Spec.EnvName}); err != nil {
-		return "", err
+		return &v1.ConfigMap{}, err
 	}
 
+	cfgMap, err := r.createConfigMap(frontendList)
+
+	return cfgMap, err
+}
+
+func (r *FrontendReconciliation) createConfigMap(frontendList *crd.FrontendList) (*v1.ConfigMap, error) {
+	cfgMap := &v1.ConfigMap{}
+
+	// Create a map of frontend names to frontends objects
 	cacheMap := make(map[string]crd.Frontend)
 	for _, frontend := range frontendList.Items {
 		cacheMap[frontend.Name] = frontend
 	}
 
-	cfgMap := &v1.ConfigMap{}
-
-	if err := r.createConfigMap(cfgMap, cacheMap, frontendList); err != nil {
-		return "", err
-	}
-
-	return createHash(cfgMap)
-}
-
-func (r *FrontendReconciliation) createConfigMap(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend, feList *crd.FrontendList) error {
 	nn := types.NamespacedName{
 		Name:      r.Frontend.Spec.EnvName,
 		Namespace: r.Frontend.Namespace,
 	}
 
 	if err := r.Cache.Create(CoreConfig, nn, cfgMap); err != nil {
-		return err
+		return cfgMap, err
 	}
 
 	labels := r.FrontendEnvironment.GetLabels()
 	labler := utils.GetCustomLabeler(labels, nn, r.FrontendEnvironment)
 	labler(cfgMap)
 
-	if err := r.populateConfigMap(cfgMap, cacheMap, feList); err != nil {
-		return err
+	if err := r.populateConfigMap(cfgMap, cacheMap, frontendList); err != nil {
+		return cfgMap, err
 	}
 
 	if err := r.Cache.Update(CoreConfig, cfgMap); err != nil {
-		return err
+		return cfgMap, err
 	}
-	return nil
+	return cfgMap, nil
 }
 
 func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend, feList *crd.FrontendList) error {
