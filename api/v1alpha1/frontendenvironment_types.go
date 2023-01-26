@@ -50,10 +50,10 @@ type FrontendEnvironmentSpec struct {
 	// pod, the route is also set to reencrypt in the case of OpenShift
 	SSL bool `json:"ssl,omitempty"`
 
-	// GenerateChromeConfig determines if a chrome configmap will be generated
-	// If empty or false the chrome nav config in the chrome container will be used
-	// If true a configmap will be generated and mounted into the chrome container
-	GenerateChromeConfig bool `json:"generateChromeConfig,omitempty"`
+	// GenerateNavJSON determines if the nav json configmap
+	// parts should be generated for the bundles. We want to do
+	// do this in epehemeral environments but not in production
+	GenerateNavJSON bool `json:"generateNavJSON,omitempty"`
 }
 
 type MonitoringConfig struct {
