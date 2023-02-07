@@ -193,7 +193,7 @@ func (r *FrontendReconciliation) populateEnvVars(d *apps.Deployment, frontendEnv
 		},
 		{
 			Name:  "CADDY_TLS_CERT",
-			Value: "tlc /opt/certs/tls.cert /opt/certs/tls.key",
+			Value: "tls /opt/certs/tls.cert /opt/certs/tls.key",
 		}}
 	d.Spec.Template.Spec.Containers[0].Env = envVars
 }
