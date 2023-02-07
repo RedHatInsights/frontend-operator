@@ -186,15 +186,15 @@ func (r *FrontendReconciliation) populateEnvVars(d *apps.Deployment, frontendEnv
 	if !frontendEnvironment.Spec.SSL {
 		return
 	}
-	envVars := []v1.EnvVar{}
-	envVars = append(envVars, v1.EnvVar{
-		Name:  "CADDY_TLS_MODE",
-		Value: "https_port 8000",
-	})
-	envVars = append(envVars, v1.EnvVar{
-		Name:  "CADDY_TLS_CERT",
-		Value: "tlc /opt/certs/tls.cert /opt/certs/tls.key",
-	})
+	envVars := []v1.EnvVar{
+		{
+			Name:  "CADDY_TLS_MODE",
+			Value: "https_port 8000",
+		},
+		{
+			Name:  "CADDY_TLS_CERT",
+			Value: "tlc /opt/certs/tls.cert /opt/certs/tls.key",
+		}}
 	d.Spec.Template.Spec.Containers[0].Env = envVars
 }
 
