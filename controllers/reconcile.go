@@ -192,7 +192,7 @@ func (r *FrontendReconciliation) populateEnvVars(d *apps.Deployment, frontendEnv
 		},
 		{
 			Name:  "CADDY_TLS_CERT",
-			Value: "tls /opt/certs/tls.cert /opt/certs/tls.key",
+			Value: "tls /opt/certs/tls.crt /opt/certs/tls.key",
 		}}
 	d.Spec.Template.Spec.Containers[0].Env = envVars
 }
@@ -222,8 +222,8 @@ func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map
 	labeler(d)
 
 	populateContainer(d, r.Frontend, r.FrontendEnvironment)
-	r.populateEnvVars(d, r.FrontendEnvironment)
 	populateVolumes(d, r.Frontend, r.FrontendEnvironment)
+	r.populateEnvVars(d, r.FrontendEnvironment)
 
 	d.Spec.Template.ObjectMeta.Labels = labels
 
