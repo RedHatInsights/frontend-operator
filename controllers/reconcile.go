@@ -180,6 +180,26 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 	d.Spec.Template.Spec.Volumes = volumes
 }
 
+func (r *FrontendReconciliation) populateEnvVars(d *apps.Deployment, frontendEnvironment *crd.FrontendEnvironment) {
+	// If we are generating SSL then we need to add the environment variables
+	// for the cert and key
+	if !frontendEnvironment.Spec.SSL {
+		return
+	}
+	envVars := []v1.EnvVar{}
+	if frontendEnvironment.Spec.SSL {
+		envVars = append(envVars, v1.EnvVar{
+			Name:  "CADDY_TLS_MODE",
+			Value: "https_port 8000",
+		})
+		envVars = append(envVars, v1.EnvVar{
+			Name:  "CADDY_TLS_CERT",
+			Value: "tlc /opt/certs/tls.cert /opt/certs/tls.key",
+		})
+	}
+	d.Spec.Template.Spec.Containers[0].Env = envVars
+}
+
 func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map[string]string) error {
 
 	// Create new empty struct
@@ -205,6 +225,7 @@ func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map
 	labeler(d)
 
 	populateContainer(d, r.Frontend, r.FrontendEnvironment)
+	r.populateEnvVars(d, r.FrontendEnvironment)
 	populateVolumes(d, r.Frontend, r.FrontendEnvironment)
 
 	d.Spec.Template.ObjectMeta.Labels = labels
