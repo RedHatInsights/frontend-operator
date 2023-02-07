@@ -180,9 +180,8 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 	d.Spec.Template.Spec.Volumes = volumes
 }
 
+// Add the SSL env vars if we SSL mode is set in the frontend environment
 func (r *FrontendReconciliation) populateEnvVars(d *apps.Deployment, frontendEnvironment *crd.FrontendEnvironment) {
-	// If we are generating SSL then we need to add the environment variables
-	// for the cert and key
 	if !frontendEnvironment.Spec.SSL {
 		return
 	}
