@@ -54,7 +54,6 @@ type FrontendSpec struct {
 	Module         *FedModule           `json:"module,omitempty" yaml:"module,omitempty"`
 	NavItems       []*BundleNavItem     `json:"navItems,omitempty" yaml:"navItems,omitempty"`
 	AssetsPrefix   string               `json:"assetsPrefix,omitempty" yaml:"assetsPrefix,omitempty"`
-	FullProfile    bool                 `json:"fullProfile,omitempty" yaml:"fullProfile,omitempty"`
 }
 
 var ReconciliationSuccessful clusterv1.ConditionType = "ReconciliationSuccessful"
@@ -78,6 +77,7 @@ type FedModule struct {
 	Modules          []Module            `json:"modules,omitempty" yaml:"modules,omitempty"`
 	ModuleID         string              `json:"moduleID,omitempty" yaml:"moduleID,omitempty"`
 	Config           *apiextensions.JSON `json:"config,omitempty" yaml:"config,omitempty"`
+	FullProfile      bool                `json:"fullProfile,omitempty" yaml:"fullProfile,omitempty"`
 }
 
 type Module struct {

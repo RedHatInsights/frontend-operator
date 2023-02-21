@@ -72,6 +72,7 @@ var _ = Describe("Frontend controller with image", func() {
 					}},
 					Module: &crd.FedModule{
 						ManifestLocation: "/apps/inventory/fed-mods.json",
+						FullProfile:      true,
 						Modules: []crd.Module{{
 							ID:     "test",
 							Module: "./RootApp",
@@ -112,6 +113,7 @@ var _ = Describe("Frontend controller with image", func() {
 					}},
 					Module: &crd.FedModule{
 						ManifestLocation: "/apps/inventory/fed-mods.json",
+						FullProfile:      true,
 						Modules: []crd.Module{{
 							ID:     "test",
 							Module: "./RootApp",
@@ -204,7 +206,7 @@ var _ = Describe("Frontend controller with image", func() {
 			}, timeout, interval).Should(BeTrue())
 			Expect(createdConfigMap.Name).Should(Equal(FrontendEnvName))
 			Expect(createdConfigMap.Data).Should(Equal(map[string]string{
-				"fed-modules.json": "{\"testFrontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"}},\"testFrontend2\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"cheese\":\"pasty\"}}}",
+				"fed-modules.json": "{\"testFrontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"fullProfile\":\"true\",\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"}},\"testFrontend2\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"cheese\":\"pasty\"}}}",
 				"test-env.json":    "{\"id\":\"test-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test\",\"href\":\"/test/href\"}]}",
 			}))
 			Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(Equal(FrontendEnvName))

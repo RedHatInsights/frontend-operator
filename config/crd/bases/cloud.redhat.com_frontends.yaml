@@ -82,6 +82,8 @@ spec:
                 properties:
                   config:
                     x-kubernetes-preserve-unknown-fields: true
+                  fullProfile:
+                    type: boolean
                   manifestLocation:
                     type: string
                   moduleID:

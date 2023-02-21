@@ -502,8 +502,15 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 				modName = frontend.Spec.Module.ModuleID
 			}
 			fedModules[modName] = *frontend.Spec.Module
+
 			if frontend.Name == "chrome" {
 				module := fedModules[modName]
+
+				module.FullProfile = frontend.Spec.Module.FullProfile
+				// I'm really not sure if I have to do this
+				if frontend.Spec.Module == nil {
+					module.FullProfile = false
+				}
 
 				var configSource apiextensions.JSON
 				err := configSource.UnmarshalJSON([]byte(`{}`))
