@@ -149,7 +149,7 @@ func TruePtr() *bool {
 	return &t
 }
 
-// TruePtr returns a pointer to True
+// FalsePtr returns a pointer to False
 func FalsePtr() *bool {
 	t := false
 	return &t
