@@ -77,6 +77,7 @@ type FedModule struct {
 	Modules          []Module            `json:"modules,omitempty" yaml:"modules,omitempty"`
 	ModuleID         string              `json:"moduleID,omitempty" yaml:"moduleID,omitempty"`
 	Config           *apiextensions.JSON `json:"config,omitempty" yaml:"config,omitempty"`
+	FullProfile      *bool               `json:"fullProfile,omitempty" yaml:"fullProfile,omitempty"`
 }
 
 type Module struct {
@@ -145,6 +146,12 @@ func (i *Frontend) MakeOwnerReference() metav1.OwnerReference {
 // TruePtr returns a pointer to True
 func TruePtr() *bool {
 	t := true
+	return &t
+}
+
+// FalsePtr returns a pointer to False
+func FalsePtr() *bool {
+	t := false
 	return &t
 }
 
