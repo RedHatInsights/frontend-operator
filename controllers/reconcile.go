@@ -242,11 +242,8 @@ func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map
 	d.ObjectMeta.SetAnnotations(deploymentAnnotation)
 
 	// Inform the cache that our updates are complete
-	if err := r.Cache.Update(CoreDeployment, d); err != nil {
-		return err
-	}
-
-	return nil
+	err := r.Cache.Update(CoreDeployment, d)
+	return err
 }
 
 func createPorts() []v1.ServicePort {
@@ -307,10 +304,9 @@ func (r *FrontendReconciliation) createFrontendService() error {
 	utils.MakeService(s, nn, labels, ports, r.Frontend, false)
 
 	// Inform the cache that our updates are complete
-	if err := r.Cache.Update(CoreService, s); err != nil {
-		return err
-	}
-	return nil
+	err := r.Cache.Update(CoreService, s)
+	return err
+
 }
 
 func (r *FrontendReconciliation) createFrontendIngress() error {
@@ -333,11 +329,8 @@ func (r *FrontendReconciliation) createFrontendIngress() error {
 
 	r.createAnnotationsAndPopulate(nn, netobj)
 
-	if err := r.Cache.Update(WebIngress, netobj); err != nil {
-		return err
-	}
-
-	return nil
+	err := r.Cache.Update(WebIngress, netobj)
+	return err
 }
 
 func (r *FrontendReconciliation) createAnnotationsAndPopulate(nn types.NamespacedName, netobj *networking.Ingress) {
@@ -367,9 +360,9 @@ func (r *FrontendReconciliation) createAnnotationsAndPopulate(nn types.Namespace
 	}
 
 	if r.Frontend.Spec.Image != "" {
-		r.populateConsoleDotIngress(nn, netobj, ingressClass, nn.Name)
+		r.populateConsoleDotIngress(netobj, ingressClass, nn.Name)
 	} else {
-		r.populateConsoleDotIngress(nn, netobj, ingressClass, r.Frontend.Spec.Service)
+		r.populateConsoleDotIngress(netobj, ingressClass, r.Frontend.Spec.Service)
 	}
 }
 
@@ -399,7 +392,7 @@ func (r *FrontendReconciliation) getFrontendPaths() []string {
 	return frontendPaths
 }
 
-func (r *FrontendReconciliation) populateConsoleDotIngress(nn types.NamespacedName, netobj *networking.Ingress, ingressClass, serviceName string) {
+func (r *FrontendReconciliation) populateConsoleDotIngress(netobj *networking.Ingress, ingressClass, serviceName string) {
 	frontendPaths := r.getFrontendPaths()
 
 	var ingressPaths []networking.HTTPIngressPath
