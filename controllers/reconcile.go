@@ -704,8 +704,6 @@ func (r *FrontendReconciliation) createServiceMonitor() error {
 		},
 	}
 
-	if err := r.Cache.Update(MetricsServiceMonitor, svcMonitor); err != nil {
-		return err
-	}
-	return nil
+	err := r.Cache.Update(MetricsServiceMonitor, svcMonitor)
+	return err
 }
