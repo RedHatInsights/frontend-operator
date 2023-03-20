@@ -510,14 +510,15 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 			}
 			fedModules[modName] = *frontend.Spec.Module
 
-			if frontend.Name == "chrome" {
-				module := fedModules[modName]
+			module := fedModules[modName]
 
-				if frontend.Spec.Module.FullProfile == nil {
-					module.FullProfile = crd.FalsePtr()
-				} else {
-					module.FullProfile = crd.TruePtr()
-				}
+			if frontend.Spec.Module.FullProfile == nil {
+				module.FullProfile = crd.FalsePtr()
+			} else {
+				module.FullProfile = crd.TruePtr()
+			}
+
+			if frontend.Name == "chrome" {
 
 				var configSource apiextensions.JSON
 				err := configSource.UnmarshalJSON([]byte(`{}`))
@@ -547,8 +548,9 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 					return fmt.Errorf("error unmarshaling config: %w", err)
 				}
 
-				fedModules[modName] = module
 			}
+
+			fedModules[modName] = module
 		}
 	}
 	return nil
