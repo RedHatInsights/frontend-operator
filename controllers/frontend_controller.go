@@ -286,7 +286,7 @@ func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func logMessage(logr logr.Logger, ctrlName string, msg string, keysAndValues ...interface{}) {
+func logMessage(logr logr.Logger, msg string, keysAndValues ...interface{}) {
 	logr.Info(msg, keysAndValues...)
 }
 
@@ -294,22 +294,22 @@ func defaultPredicate(logr logr.Logger, ctrlName string) predicate.Funcs {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			gvk, _ := utils.GetKindFromObj(scheme, e.Object)
-			logMessage(logr, ctrlName, "Reconciliation trigger", "ctrl", ctrlName, "type", "create", "resType", gvk.Kind, "name", e.Object.GetName(), "namespace", e.Object.GetNamespace())
+			logMessage(logr, "Reconciliation trigger", "ctrl", ctrlName, "type", "create", "resType", gvk.Kind, "name", e.Object.GetName(), "namespace", e.Object.GetNamespace())
 			return true
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			gvk, _ := utils.GetKindFromObj(scheme, e.Object)
-			logMessage(logr, ctrlName, "Reconciliation trigger", "ctrl", ctrlName, "type", "delete", "resType", gvk.Kind, "name", e.Object.GetName(), "namespace", e.Object.GetNamespace())
+			logMessage(logr, "Reconciliation trigger", "ctrl", ctrlName, "type", "delete", "resType", gvk.Kind, "name", e.Object.GetName(), "namespace", e.Object.GetNamespace())
 			return true
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			gvk, _ := utils.GetKindFromObj(scheme, e.ObjectOld)
-			logMessage(logr, ctrlName, "Reconciliation trigger", "ctrl", ctrlName, "type", "update", "resType", gvk.Kind, "name", e.ObjectNew.GetName(), "namespace", e.ObjectNew.GetNamespace(), "old", e.ObjectOld, "new", e.ObjectNew)
+			logMessage(logr, "Reconciliation trigger", "ctrl", ctrlName, "type", "update", "resType", gvk.Kind, "name", e.ObjectNew.GetName(), "namespace", e.ObjectNew.GetNamespace(), "old", e.ObjectOld, "new", e.ObjectNew)
 			return true
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
 			gvk, _ := utils.GetKindFromObj(scheme, e.Object)
-			logMessage(logr, ctrlName, "Reconciliation trigger", "ctrl", ctrlName, "type", "generic", "resType", gvk.Kind, "name", e.Object.GetName(), "namespace", e.Object.GetNamespace())
+			logMessage(logr, "Reconciliation trigger", "ctrl", ctrlName, "type", "generic", "resType", gvk.Kind, "name", e.Object.GetName(), "namespace", e.Object.GetNamespace())
 			return true
 		},
 	}
