@@ -505,7 +505,7 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 
 			module := fedModules[modName]
 
-			if frontend.Spec.Module.FullProfile == nil {
+			if frontend.Spec.Module.FullProfile == nil || !*frontend.Spec.Module.FullProfile {
 				module.FullProfile = crd.FalsePtr()
 			} else {
 				module.FullProfile = crd.TruePtr()
