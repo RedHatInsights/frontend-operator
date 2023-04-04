@@ -1,4 +1,4 @@
-package controllers
+package frontend_operator
 
 import (
 	"context"
