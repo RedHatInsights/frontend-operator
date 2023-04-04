@@ -44,15 +44,12 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
-// I know that gofmt says not to capitalize constants but I disagree
-// All caps is a universal way to say "this is a constant"
-// I value being idiomatic, but I feel the utility of strong
-// visual cues outweighs the cost of being non-idiomatic
+// Consts should be all caps. That's idiomatic accross langs. Go lint is wrong.
 const (
-	METRICS_ADDRESS    = ":8080"
-	PROBE_ADDRESS      = ":8081"
-	LEADER_ELECT       = false
-	LEADER_ELECTION_ID = "1dd43857.cloud.redhat.com"
+	MetricsAddress   = ":8080"
+	ProbeAddress     = ":8081"
+	LeaderElect      = false
+	LeaderElectionId = "1dd43857.cloud.redhat.com"
 )
 
 // I don't know what this method does
@@ -86,7 +83,7 @@ func newManager(metricsAddr, probeAddr string, enableLeaderElection bool) (manag
 		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       LEADER_ELECTION_ID,
+		LeaderElectionID:       LeaderElectionId,
 	})
 }
 
@@ -97,9 +94,9 @@ func parseArguments() (string, string, bool) {
 		enableLeaderElection bool
 		probeAddr            string
 	)
-	flag.StringVar(&metricsAddr, "metrics-bind-address", METRICS_ADDRESS, "The address the metric endpoint binds to.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", PROBE_ADDRESS, "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", LEADER_ELECT,
+	flag.StringVar(&metricsAddr, "metrics-bind-address", MetricsAddress, "The address the metric endpoint binds to.")
+	flag.StringVar(&probeAddr, "health-probe-bind-address", ProbeAddress, "The address the probe endpoint binds to.")
+	flag.BoolVar(&enableLeaderElection, "leader-elect", LeaderElect,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.Parse()
