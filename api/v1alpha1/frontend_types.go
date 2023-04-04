@@ -64,7 +64,7 @@ type FrontendSpec struct {
 	// you should both
 	CacheBustFiles []string `json:"cacheBustFiles,omitempty" yaml:"cacheBustFiles,omitempty"`
 	// If true we wont bust cache for this frontend even if the FrontendEnvironment has cache busting enabled
-	CacheBustOptOut bool `json:"cacheBustDisabled,omitempty" yaml:"cacheBustDisabled,omitempty"`
+	CacheBustOptOut bool `json:"cacheBustOptOut,omitempty" yaml:"cacheBustOptOut,omitempty"`
 }
 
 var ReconciliationSuccessful clusterv1.ConditionType = "ReconciliationSuccessful"
