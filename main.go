@@ -49,7 +49,7 @@ const (
 	MetricsAddress   = ":8080"
 	ProbeAddress     = ":8081"
 	LeaderElect      = false
-	LeaderElectionId = "1dd43857.cloud.redhat.com"
+	LeaderElectionID = "1dd43857.cloud.redhat.com"
 )
 
 // I don't know what this method does
