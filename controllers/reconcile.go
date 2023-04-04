@@ -33,7 +33,7 @@ type FrontendReconciliation struct {
 	Log                 logr.Logger
 	Recorder            record.EventRecorder
 	Cache               resCache.ObjectCache
-	FRE                 *FrontendController
+	FRE                 *Controller
 	FrontendEnvironment *crd.FrontendEnvironment
 	Frontend            *crd.Frontend
 	Ctx                 context.Context
