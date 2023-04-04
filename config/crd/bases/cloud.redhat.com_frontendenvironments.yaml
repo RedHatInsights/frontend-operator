@@ -49,19 +49,6 @@ spec:
                 description: AkamaiCacheBustEnabled determines akamai cache busting
                   is enabled
                 type: boolean
-              akamaiConfig:
-                description: AkamaiConfig contains the akamai configuration for the
-                  cache bust job
-                properties:
-                  accessToken:
-                    type: string
-                  clientSecret:
-                    type: string
-                  clientToken:
-                    type: string
-                  host:
-                    type: string
-                type: object
               generateNavJSON:
                 description: GenerateNavJSON determines if the nav json configmap
                   parts should be generated for the bundles. We want to do do this
