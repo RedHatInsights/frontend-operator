@@ -83,7 +83,7 @@ func newManager(metricsAddr, probeAddr string, enableLeaderElection bool) (manag
 		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       LeaderElectionId,
+		LeaderElectionID:       LeaderElectionID,
 	})
 }
 
