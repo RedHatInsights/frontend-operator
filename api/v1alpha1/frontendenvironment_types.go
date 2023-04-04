@@ -57,18 +57,6 @@ type FrontendEnvironmentSpec struct {
 
 	// AkamaiCacheBustEnabled determines akamai cache busting is enabled
 	AkamaiCacheBust bool `json:"akamaiCacheBustEnabled,omitempty"`
-
-	// AkamaiConfig contains the akamai configuration
-	// for the cache bust job
-	AkamaiConfig *AkamaiConfig `json:"akamaiConfig,omitempty"`
-}
-
-// AkamaiConfig contains the akamai at
-type AkamaiConfig struct {
-	AccessToken  string `json:"accessToken,omitempty"`
-	ClientSecret string `json:"clientSecret,omitempty"`
-	ClientToken  string `json:"clientToken,omitempty"`
-	Host         string `json:"host,omitempty"`
 }
 
 type MonitoringConfig struct {
