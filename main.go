@@ -31,6 +31,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	cloudredhatcomv1alpha1 "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	"github.com/RedHatInsights/frontend-operator/controllers"
@@ -78,6 +79,16 @@ func main() {
 	}
 }
 
+func register(mgr manager.Manager) error {
+	controller := &controllers.Controller{
+		Log:    ctrl.Log.WithName("controllers").WithName("Frontend"),
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}
+
+	return controller.RegisterWithManager(mgr)
+}
+
 func Run(metricsAddr, probeAddr string, enableLeaderElection bool) error {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
@@ -92,11 +103,8 @@ func Run(metricsAddr, probeAddr string, enableLeaderElection bool) error {
 		return fmt.Errorf("unable to start manager: %w", err)
 	}
 
-	if err = (&controllers.Controller{
-		Log:    ctrl.Log.WithName("controllers").WithName("Frontend"),
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).RegisterWithControllerManager(mgr); err != nil {
+	err = register(mgr)
+	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Frontend")
 		return fmt.Errorf("unable to create manager: %w", err)
 	}

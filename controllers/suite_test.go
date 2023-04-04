@@ -100,7 +100,7 @@ var _ = BeforeSuite(func() {
 		Client: k8sManager.GetClient(),
 		Scheme: k8sManager.GetScheme(),
 		Log:    ctrl.Log.WithName("controllers").WithName("CronJob"),
-	}).RegisterWithControllerManager(k8sManager)
+	}).RegisterWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	ctx, cancel := context.WithCancel(context.Background())

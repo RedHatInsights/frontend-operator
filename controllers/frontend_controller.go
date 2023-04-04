@@ -251,8 +251,8 @@ func (r *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return ctrl.Result{}, nil
 }
 
-// RegisterWithControllerManager sets up the controller with the Manager.
-func (r *Controller) RegisterWithControllerManager(mgr ctrl.Manager) error {
+// RegisterWithManager sets up the controller with the Manager.
+func (r *Controller) RegisterWithManager(mgr ctrl.Manager) error {
 
 	cache := mgr.GetCache()
 
