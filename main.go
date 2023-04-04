@@ -118,6 +118,18 @@ func registerWithManager(mgr manager.Manager) error {
 	return controller.RegisterWithManager(mgr)
 }
 
+// setupLogger sets up the logger for the operator
+func setupLogger() *zap.Logger {
+	logger, err := logging.SetupLogging(true)
+	if err != nil {
+		panic(err)
+	}
+
+	ctrl.SetLogger(zapr.NewLogger(logger))
+
+	return logger
+}
+
 // start hooks the controller code up to the kubernetes API
 func start(metricsAddr, probeAddr string, enableLeaderElection bool) error {
 	mgr, err := newManager(metricsAddr, probeAddr, enableLeaderElection)
@@ -153,16 +165,4 @@ func start(metricsAddr, probeAddr string, enableLeaderElection bool) error {
 	}
 
 	return nil
-}
-
-// setupLogger sets up the logger for the operator
-func setupLogger() *zap.Logger {
-	logger, err := logging.SetupLogging(true)
-	if err != nil {
-		panic(err)
-	}
-
-	ctrl.SetLogger(zapr.NewLogger(logger))
-
-	return logger
 }
