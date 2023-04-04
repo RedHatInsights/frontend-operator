@@ -34,7 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	cloudredhatcomv1alpha1 "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
-	"github.com/RedHatInsights/frontend-operator/frontend_operator"
+	"github.com/RedHatInsights/frontend-operator/operator"
 	"github.com/RedHatInsights/rhc-osdk-utils/logging"
 	//+kubebuilder:scaffold:imports
 )
@@ -109,7 +109,7 @@ func parseArguments() (string, string, bool) {
 
 // register registers the frontend controller with the ControllerManager
 func registerWithManager(mgr manager.Manager) error {
-	controller := &frontend_operator.Controller{
+	controller := &operator.Controller{
 		Log:    ctrl.Log.WithName("controllers").WithName("Frontend"),
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
