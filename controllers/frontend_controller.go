@@ -193,7 +193,7 @@ func (r *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		MetricsServiceMonitor,
 	)
 
-	reconciliation := FrontendReconciliation{
+	reconciliation := Reconciler{
 		Log:                 log,
 		Recorder:            r.Recorder,
 		Cache:               cache,
