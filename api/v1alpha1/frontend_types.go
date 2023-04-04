@@ -54,6 +54,17 @@ type FrontendSpec struct {
 	Module         *FedModule           `json:"module,omitempty" yaml:"module,omitempty"`
 	NavItems       []*BundleNavItem     `json:"navItems,omitempty" yaml:"navItems,omitempty"`
 	AssetsPrefix   string               `json:"assetsPrefix,omitempty" yaml:"assetsPrefix,omitempty"`
+	// If cache busting is enabled for the FrontendEnvironment these files will be cache busted
+	// it should be a list of files starting from the root of the served out directory
+	// so, for example, if you want to bust /apps/chrome/index.html or /beta/apps/chrome/index.html
+	// you would just add index.html to the list. If you wanted to bust /apps/chrome/chrome/fed-modules.js
+	// you would add chrome/fed-modules.js to the list
+	// By default we will bust fed-mods.json so if that's all you want busted you don't need to specify anything
+	// at all. Specifying is an override, so if you want something busted in addition to fed-mods.json
+	// you should both
+	CacheBustFiles []string `json:"cacheBustFiles,omitempty" yaml:"cacheBustFiles,omitempty"`
+	// If true we wont bust cache for this frontend even if the FrontendEnvironment has cache busting enabled
+	CacheBustOptOut bool `json:"cacheBustDisabled,omitempty" yaml:"cacheBustDisabled,omitempty"`
 }
 
 var ReconciliationSuccessful clusterv1.ConditionType = "ReconciliationSuccessful"
