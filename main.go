@@ -92,7 +92,7 @@ func Run(metricsAddr, probeAddr string, enableLeaderElection bool) error {
 		return fmt.Errorf("unable to start manager: %w", err)
 	}
 
-	if err = (&controllers.FrontendReconciler{
+	if err = (&controllers.FrontendController{
 		Log:    ctrl.Log.WithName("controllers").WithName("Frontend"),
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
