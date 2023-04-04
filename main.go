@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"os"
 
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	// to ensure that exec-entrypoint and run can make use of them.
+	"go.uber.org/zap"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"github.com/go-logr/zapr"
 	prom "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -34,9 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	cloudredhatcomv1alpha1 "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
-	"github.com/RedHatInsights/frontend-operator/controllers"
+	"github.com/RedHatInsights/frontend-operator/frontend_operator"
 	"github.com/RedHatInsights/rhc-osdk-utils/logging"
-	"github.com/go-logr/zapr"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -45,42 +44,72 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
+// I know that gofmt says not to capitalize constants but I disagree
+// All caps is a universal way to say "this is a constant"
+// I value being idiomatic, but I feel the utility of strong
+// visual cues outweighs the cost of being non-idiomatic
+const (
+	METRICS_ADDRESS    = ":8080"
+	PROBE_ADDRESS      = ":8081"
+	LEADER_ELECT       = false
+	LEADER_ELECTION_ID = "1dd43857.cloud.redhat.com"
+)
+
+// I don't know what this method does
+// I assume something in the k8s land calls this considering the linter
+// isn't mad about it
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(prom.AddToScheme(scheme))
-
 	utilruntime.Must(cloudredhatcomv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
+// main is the entrypoint into the operator
 func main() {
-	var metricsAddr string
-	var enableLeaderElection bool
-	var probeAddr string
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
-	flag.Parse()
+	metricsAddr, probeAddr, enableLeaderElection := parseArguments()
 
-	logger, err := logging.SetupLogging(true)
+	logger := setupLogger()
 
-	if err != nil {
-		panic(err)
-	}
-
-	ctrl.SetLogger(zapr.NewLogger(logger))
-
-	err = Run(metricsAddr, probeAddr, enableLeaderElection)
+	err := start(metricsAddr, probeAddr, enableLeaderElection)
 	if err != nil {
 		_ = logger.Sync()
 		os.Exit(1)
 	}
 }
 
-func register(mgr manager.Manager) error {
-	controller := &controllers.Controller{
+// newManager sets up a new controller manager
+func newManager(metricsAddr, probeAddr string, enableLeaderElection bool) (manager.Manager, error) {
+	return ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+		Scheme:                 scheme,
+		MetricsBindAddress:     metricsAddr,
+		Port:                   9443,
+		HealthProbeBindAddress: probeAddr,
+		LeaderElection:         enableLeaderElection,
+		LeaderElectionID:       LEADER_ELECTION_ID,
+	})
+}
+
+// parseArguments parses the command line arguments
+func parseArguments() (string, string, bool) {
+	var (
+		metricsAddr          string
+		enableLeaderElection bool
+		probeAddr            string
+	)
+	flag.StringVar(&metricsAddr, "metrics-bind-address", METRICS_ADDRESS, "The address the metric endpoint binds to.")
+	flag.StringVar(&probeAddr, "health-probe-bind-address", PROBE_ADDRESS, "The address the probe endpoint binds to.")
+	flag.BoolVar(&enableLeaderElection, "leader-elect", LEADER_ELECT,
+		"Enable leader election for controller manager. "+
+			"Enabling this will ensure there is only one active controller manager.")
+	flag.Parse()
+
+	return metricsAddr, probeAddr, enableLeaderElection
+}
+
+// register registers the frontend controller with the ControllerManager
+func registerWithManager(mgr manager.Manager) error {
+	controller := &frontend_operator.Controller{
 		Log:    ctrl.Log.WithName("controllers").WithName("Frontend"),
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -89,40 +118,51 @@ func register(mgr manager.Manager) error {
 	return controller.RegisterWithManager(mgr)
 }
 
-func Run(metricsAddr, probeAddr string, enableLeaderElection bool) error {
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
-		HealthProbeBindAddress: probeAddr,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "1dd43857.cloud.redhat.com",
-	})
+// start hooks the controller code up to the kubernetes API
+func start(metricsAddr, probeAddr string, enableLeaderElection bool) error {
+	mgr, err := newManager(metricsAddr, probeAddr, enableLeaderElection)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		return fmt.Errorf("unable to start manager: %w", err)
 	}
 
-	err = register(mgr)
+	err = registerWithManager(mgr)
 	if err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Frontend")
-		return fmt.Errorf("unable to create manager: %w", err)
+		return fmt.Errorf("unable to create controller: %w", err)
 	}
 	//+kubebuilder:scaffold:builder
 
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+	err = mgr.AddHealthzCheck("healthz", healthz.Ping)
+	if err != nil {
 		setupLog.Error(err, "unable to set up health check")
 		return fmt.Errorf("unable to setup health check: %w", err)
 	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+
+	err = mgr.AddReadyzCheck("readyz", healthz.Ping)
+	if err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		return fmt.Errorf("unable to setup ready check: %w", err)
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	err = mgr.Start(ctrl.SetupSignalHandler())
+	if err != nil {
 		setupLog.Error(err, "problem running manager")
 		return fmt.Errorf("problem running manager: %w", err)
 	}
+
 	return nil
+}
+
+// setupLogger sets up the logger for the operator
+func setupLogger() *zap.Logger {
+	logger, err := logging.SetupLogging(true)
+	if err != nil {
+		panic(err)
+	}
+
+	ctrl.SetLogger(zapr.NewLogger(logger))
+
+	return logger
 }
