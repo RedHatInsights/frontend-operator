@@ -96,7 +96,7 @@ func Run(metricsAddr, probeAddr string, enableLeaderElection bool) error {
 		Log:    ctrl.Log.WithName("controllers").WithName("Frontend"),
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	}).RegisterWithControllerManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Frontend")
 		return fmt.Errorf("unable to create manager: %w", err)
 	}
