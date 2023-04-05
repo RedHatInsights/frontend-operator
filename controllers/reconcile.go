@@ -87,14 +87,6 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment)
 			Name:      "config",
 			MountPath: "/opt/app-root/src/build/chrome",
 		})
-	} else {
-		// If we are not generating the nav JSON then we need to mount the fed-modules.json
-		// and leave the rest of the directory intact
-		volumeMounts = append(volumeMounts, v1.VolumeMount{
-			Name:      "config",
-			MountPath: "/opt/app-root/src/build/chrome/fed-modules.json",
-			SubPath:   "fed-modules.json",
-		})
 	}
 
 	// We generate SSL cert mounts conditionally
