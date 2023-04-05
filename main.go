@@ -104,7 +104,7 @@ func parseArguments() (string, string, bool) {
 	return metricsAddr, probeAddr, enableLeaderElection
 }
 
-// register registers the frontend controller with the ControllerManager
+// registerWithManager registers the frontend controller with the ControllerManager
 func registerWithManager(mgr manager.Manager) error {
 	controller := &operator.Controller{
 		Log:    ctrl.Log.WithName("controllers").WithName("Frontend"),
