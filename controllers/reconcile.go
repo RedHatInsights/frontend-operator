@@ -89,6 +89,14 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment)
 		})
 	}
 
+	//We always want to mount the config map under the generated-config directory
+	//This will allow chrome to incorperate the generated nav and fed-modules.json
+	//at run time. This means chrome can merge the config in mixed environments
+	volumeMounts = append(volumeMounts, v1.VolumeMount{
+		Name:      "config",
+		MountPath: "/opt/app-root/src/build/generated-config",
+	})
+
 	// We generate SSL cert mounts conditionally
 	if frontendEnvironment.Spec.SSL {
 		volumeMounts = append(volumeMounts, v1.VolumeMount{
@@ -134,23 +142,6 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 				ConfigMap: &v1.ConfigMapVolumeSource{
 					LocalObjectReference: v1.LocalObjectReference{
 						Name: frontend.Spec.EnvName,
-					},
-				},
-			},
-		})
-	} else {
-		volumes = append(volumes, v1.Volume{
-			Name: "config",
-			VolumeSource: v1.VolumeSource{
-				ConfigMap: &v1.ConfigMapVolumeSource{
-					LocalObjectReference: v1.LocalObjectReference{
-						Name: frontend.Spec.EnvName,
-					},
-					Items: []v1.KeyToPath{
-						{
-							Key:  "fed-modules.json",
-							Path: "fed-modules.json",
-						},
 					},
 				},
 			},
