@@ -10,8 +10,7 @@ mkdir -p "$DOCKER_CONF"
 export IMAGE_TAG=`git rev-parse --short HEAD`
 export IMAGE_NAME=quay.io/cloudservices/frontend-operator
 
-EPOCH=$(date +%s)
-CONTAINER_NAME="frontend-operator-pr-check-$ghprbPullId-$EPOCH"
+CONTAINER_NAME="frontend-operator-pr-check-$ghprbPullId"
 # NOTE: Make sure this volume is mounted 'ro', otherwise Jenkins cannot clean up the workspace due to file permission errors
 set +e
 # Run the pr check container (stored in the build dir) and invoke the
