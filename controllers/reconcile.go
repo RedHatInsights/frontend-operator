@@ -1,4 +1,4 @@
-package operator
+package controllers
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
-	localUtil "github.com/RedHatInsights/frontend-operator/operator/utils"
+	localUtil "github.com/RedHatInsights/frontend-operator/controllers/utils"
 	resCache "github.com/RedHatInsights/rhc-osdk-utils/resourceCache"
 	"github.com/RedHatInsights/rhc-osdk-utils/utils"
 	"github.com/go-logr/logr"
@@ -29,18 +29,18 @@ import (
 
 const RoutePrefixDefault = "apps"
 
-type Reconciler struct {
+type FrontendReconciliation struct {
 	Log                 logr.Logger
 	Recorder            record.EventRecorder
 	Cache               resCache.ObjectCache
-	FRE                 *Controller
+	FRE                 *FrontendReconciler
 	FrontendEnvironment *crd.FrontendEnvironment
 	Frontend            *crd.Frontend
 	Ctx                 context.Context
 	Client              client.Client
 }
 
-func (r *Reconciler) run() error {
+func (r *FrontendReconciliation) run() error {
 
 	configMap, err := r.setupConfigMaps()
 	if err != nil {
@@ -181,7 +181,7 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 }
 
 // Add the SSL env vars if we SSL mode is set in the frontend environment
-func (r *Reconciler) populateEnvVars(d *apps.Deployment, frontendEnvironment *crd.FrontendEnvironment) {
+func (r *FrontendReconciliation) populateEnvVars(d *apps.Deployment, frontendEnvironment *crd.FrontendEnvironment) {
 	if !frontendEnvironment.Spec.SSL {
 		return
 	}
@@ -197,7 +197,7 @@ func (r *Reconciler) populateEnvVars(d *apps.Deployment, frontendEnvironment *cr
 	d.Spec.Template.Spec.Containers[0].Env = envVars
 }
 
-func (r *Reconciler) createFrontendDeployment(annotationHashes []map[string]string) error {
+func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map[string]string) error {
 
 	// Create new empty struct
 	d := &apps.Deployment{}
@@ -267,7 +267,7 @@ func createPorts() []v1.ServicePort {
 }
 
 // Will need to create a service resource ident in provider like CoreDeployment
-func (r *Reconciler) createFrontendService() error {
+func (r *FrontendReconciliation) createFrontendService() error {
 	// Create empty service
 	s := &v1.Service{}
 
@@ -309,7 +309,7 @@ func (r *Reconciler) createFrontendService() error {
 
 }
 
-func (r *Reconciler) createFrontendIngress() error {
+func (r *FrontendReconciliation) createFrontendIngress() error {
 	netobj := &networking.Ingress{}
 
 	nn := types.NamespacedName{
@@ -333,7 +333,7 @@ func (r *Reconciler) createFrontendIngress() error {
 	return err
 }
 
-func (r *Reconciler) createAnnotationsAndPopulate(nn types.NamespacedName, netobj *networking.Ingress) {
+func (r *FrontendReconciliation) createAnnotationsAndPopulate(nn types.NamespacedName, netobj *networking.Ingress) {
 	ingressClass := r.FrontendEnvironment.Spec.IngressClass
 	if ingressClass == "" {
 		ingressClass = "nginx"
@@ -366,7 +366,7 @@ func (r *Reconciler) createAnnotationsAndPopulate(nn types.NamespacedName, netob
 	}
 }
 
-func (r *Reconciler) getFrontendPaths() []string {
+func (r *FrontendReconciliation) getFrontendPaths() []string {
 	frontendPaths := r.Frontend.Spec.Frontend.Paths
 	defaultPath := fmt.Sprintf("/apps/%s", r.Frontend.Name)
 	defaultBetaPath := fmt.Sprintf("/beta/apps/%s", r.Frontend.Name)
@@ -392,7 +392,7 @@ func (r *Reconciler) getFrontendPaths() []string {
 	return frontendPaths
 }
 
-func (r *Reconciler) populateConsoleDotIngress(netobj *networking.Ingress, ingressClass, serviceName string) {
+func (r *FrontendReconciliation) populateConsoleDotIngress(netobj *networking.Ingress, ingressClass, serviceName string) {
 	frontendPaths := r.getFrontendPaths()
 
 	var ingressPaths []networking.HTTPIngressPath
@@ -549,7 +549,7 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 	return nil
 }
 
-func (r *Reconciler) setupBundleData(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend) error {
+func (r *FrontendReconciliation) setupBundleData(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend) error {
 	bundleList := &crd.BundleList{}
 
 	if err := r.FRE.Client.List(r.Ctx, bundleList, client.MatchingFields{"spec.envName": r.Frontend.Spec.EnvName}); err != nil {
@@ -594,7 +594,7 @@ func createConfigmapHash(cfgMap *v1.ConfigMap) (string, error) {
 
 // setupConfigMaps will create configmaps for the various config json
 // files, including fed-modules.json and the various bundle json files
-func (r *Reconciler) setupConfigMaps() (*v1.ConfigMap, error) {
+func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
 	// Will need to interact directly with the client here, and not the cache because
 	// we need to read ALL the Frontend CRDs in the Env that we care about
 
@@ -611,7 +611,7 @@ func (r *Reconciler) setupConfigMaps() (*v1.ConfigMap, error) {
 	return cfgMap, err
 }
 
-func (r *Reconciler) createConfigMap(frontendList *crd.FrontendList) (*v1.ConfigMap, error) {
+func (r *FrontendReconciliation) createConfigMap(frontendList *crd.FrontendList) (*v1.ConfigMap, error) {
 	cfgMap := &v1.ConfigMap{}
 
 	// Create a map of frontend names to frontends objects
@@ -643,7 +643,7 @@ func (r *Reconciler) createConfigMap(frontendList *crd.FrontendList) (*v1.Config
 	return cfgMap, nil
 }
 
-func (r *Reconciler) populateConfigMap(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend, feList *crd.FrontendList) error {
+func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend, feList *crd.FrontendList) error {
 	cfgMap.SetOwnerReferences([]metav1.OwnerReference{r.FrontendEnvironment.MakeOwnerReference()})
 	cfgMap.Data = map[string]string{}
 
@@ -667,7 +667,7 @@ func (r *Reconciler) populateConfigMap(cfgMap *v1.ConfigMap, cacheMap map[string
 	return nil
 }
 
-func (r *Reconciler) createServiceMonitor() error {
+func (r *FrontendReconciliation) createServiceMonitor() error {
 
 	// the monitor mode will default to "app-interface"
 	ns := "openshift-customer-monitoring"
