@@ -346,6 +346,12 @@ objects:
             spec:
               description: FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
               properties:
+                akamaiCacheBustImage:
+                  description: Set Akamai Cache Bust Image
+                  type: string
+                enableAkamaiCacheBust:
+                  description: Enable Akamai Cache Bust
+                  type: boolean
                 generateNavJSON:
                   description: GenerateNavJSON determines if the nav json configmap
                     parts should be generated for the bundles. We want to do do this
@@ -466,6 +472,14 @@ objects:
                   required:
                   - versions
                   type: object
+                akamaiCacheBustFiles:
+                  description: Files to cache bust
+                  items:
+                    type: string
+                  type: array
+                akamaiCacheBustOptOut:
+                  description: Akamai cache bust opt-out
+                  type: boolean
                 assetsPrefix:
                   type: string
                 deploymentRepo:
