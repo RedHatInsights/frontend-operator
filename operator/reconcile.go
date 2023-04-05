@@ -183,38 +183,38 @@ func getFilesToCacheBustForFrontend(frontend *crd.Frontend) []string {
 
 // populateInitContainer adds the akamai cache bust init container to the deployment
 func (r *Reconciler) populateInitContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) error {
-	//Guard on frontend opting out of cache busting
+	// Guard on frontend opting out of cache busting
 	if frontend.Spec.AkamaiCacheBustOptOut {
 		return nil
 	}
 	d.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
-	//Get the akamai secret
+	// Get the akamai secret
 	secret, err := getAkamaiSecret(context.Background(), r.Client, frontendEnvironment)
 	if err != nil {
 		return err
 	}
-	//Make the akamai file from the secret
+	// Make the akamai file from the secret
 	edgercFile := makeAkamaiEdgercFileFromSecret(secret)
 
-	//Make the configmap from the akamai file
+	// Make the configmap from the akamai file
 	configMap := makeConfigMapFromAkamaiEdgercFile(edgercFile)
-	//Create the configmap
+	// Create the configmap
 	err = r.Client.Create(context.Background(), configMap)
 	if err != nil {
 		return err
 	}
 
-	//Get the files to cache bust
+	// Get the files to cache bust
 	filesToCacheBust := getFilesToCacheBustForFrontend(frontend)
 
-	//Construct the akamai cache bust command
+	// Construct the akamai cache bust command
 	command := fmt.Sprintf("/cli/.akamai-cli/src/cli-purge/bin/akamai-purge cache  --edgerc  invalidate %s", strings.Join(filesToCacheBust, " "))
 
 	// Modify the obejct to set the things we care about
 	d.Spec.Template.Spec.InitContainers = []v1.Container{{
 		Name:  "akamai-cache-bust",
 		Image: frontendEnvironment.Spec.AkamaiCacheBustImage,
-		//Mount the akamai edgerc file from the configmap
+		// Mount the akamai edgerc file from the configmap
 		VolumeMounts: []v1.VolumeMount{
 			{
 				Name:      "akamai-edgerc",
@@ -222,11 +222,11 @@ func (r *Reconciler) populateInitContainer(d *apps.Deployment, frontend *crd.Fro
 				SubPath:   "edgerc",
 			},
 		},
-		//Run the akamai cache bust script
+		// Run the akamai cache bust script
 		Command: []string{"/bin/bash", "-c", command},
 	},
 	}
-	//Add the akamai edgerc configmap to the deployment
+	// Add the akamai edgerc configmap to the deployment
 	d.Spec.Template.Spec.Volumes = []v1.Volume{{
 		Name: "akamai-edgerc",
 		VolumeSource: v1.VolumeSource{
