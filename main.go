@@ -44,7 +44,7 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
-// Consts should be all caps. That's idiomatic accross langs. Go lint is wrong.
+// Consts should be all caps. Go lint is wrong.
 const (
 	MetricsAddress   = ":8080"
 	ProbeAddress     = ":8081"
