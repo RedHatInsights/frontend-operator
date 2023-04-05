@@ -132,6 +132,41 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 	}
 }
 
+// getAkamaiSecret gets the akamai secret from the cluster
+func getAkamaiSecret(ctx context.Context, client client.Client, frontendEnvironment *crd.FrontendEnvironment) (*v1.Secret, error) {
+	secret := &v1.Secret{}
+	err := client.Get(ctx, types.NamespacedName{Name: "akamai", Namespace: frontendEnvironment.Namespace}, secret)
+	if err != nil {
+		return nil, err
+	}
+	return secret, nil
+}
+
+// constructAkamaiEdgercFileFromSecret constructs the akamai edgerc file from the secret
+func constructAkamaiEdgercFileFromSecret(secret *v1.Secret) string {
+	edgercFile := "[default]\n"
+	edgercFile += fmt.Sprintf("host = %s\n", string(secret.Data["host"]))
+	edgercFile += fmt.Sprintf("access_token = %s\n", string(secret.Data["access_token"]))
+	edgercFile += fmt.Sprintf("client_token = %s\n", string(secret.Data["client_token"]))
+	edgercFile += fmt.Sprintf("client_secret = %s\n", string(secret.Data["client_secret"]))
+	edgercFile += "[ccu]\n"
+	edgercFile += fmt.Sprintf("host = %s\n", string(secret.Data["host"]))
+	edgercFile += fmt.Sprintf("access_token = %s\n", string(secret.Data["access_token"]))
+	edgercFile += fmt.Sprintf("client_token = %s\n", string(secret.Data["client_token"]))
+	edgercFile += fmt.Sprintf("client_secret = %s\n", string(secret.Data["client_secret"]))
+	return edgercFile
+}
+
+/*
+// populateInitContainer adds the akamai cache bust init container to the deployment
+func populateInitContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
+	d.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
+	// Modify the obejct to set the things we care about
+	d.Spec.Template.Spec.InitContainers = []v1.Container{{
+		Name:  "akamai-cache-bust",
+		Image: frontendEnvironment.Spec.AkamaiCacheBust.Image,
+*/
+
 func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
 	// By default we just want the config volume
 	volumes := []v1.Volume{}
