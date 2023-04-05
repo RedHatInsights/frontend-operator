@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	apps "k8s.io/api/apps/v1"
-	batch "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
@@ -74,7 +73,6 @@ var CoreConfig = resCache.NewSingleResourceIdent("main", "config", &v1.ConfigMap
 var SSOConfig = resCache.NewSingleResourceIdent("main", "sso_config", &v1.ConfigMap{})
 var WebIngress = resCache.NewMultiResourceIdent("ingress", "web_ingress", &networking.Ingress{})
 var MetricsServiceMonitor = resCache.NewMultiResourceIdent("main", "metrics-service-monitor", &prom.ServiceMonitor{})
-var AkamaiCacheBustJob = resCache.NewMultiResourceIdent("main", "akamai-cache-bust-job", &batch.Job{})
 
 type ReconciliationMetrics struct {
 	appName            string
