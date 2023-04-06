@@ -132,6 +132,115 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 	}
 }
 
+// getAkamaiSecret gets the akamai secret from the cluster
+func getAkamaiSecret(ctx context.Context, client client.Client, frontendEnvironment *crd.FrontendEnvironment) (*v1.Secret, error) {
+	secret := &v1.Secret{}
+	err := client.Get(ctx, types.NamespacedName{Name: "akamai", Namespace: frontendEnvironment.Namespace}, secret)
+	if err != nil {
+		return nil, err
+	}
+	return secret, nil
+}
+
+// constructAkamaiEdgercFileFromSecret constructs the akamai edgerc file from the secret
+func makeAkamaiEdgercFileFromSecret(secret *v1.Secret) string {
+	edgercFile := "[default]\n"
+	edgercFile += fmt.Sprintf("host = %s\n", string(secret.Data["host"]))
+	edgercFile += fmt.Sprintf("access_token = %s\n", string(secret.Data["access_token"]))
+	edgercFile += fmt.Sprintf("client_token = %s\n", string(secret.Data["client_token"]))
+	edgercFile += fmt.Sprintf("client_secret = %s\n", string(secret.Data["client_secret"]))
+	edgercFile += "[ccu]\n"
+	edgercFile += fmt.Sprintf("host = %s\n", string(secret.Data["host"]))
+	edgercFile += fmt.Sprintf("access_token = %s\n", string(secret.Data["access_token"]))
+	edgercFile += fmt.Sprintf("client_token = %s\n", string(secret.Data["client_token"]))
+	edgercFile += fmt.Sprintf("client_secret = %s\n", string(secret.Data["client_secret"]))
+	return edgercFile
+}
+
+// makeConfigMapFromAkamaiEdgercFile makes a configmap from the akamai edgerc file
+func makeConfigMapFromAkamaiEdgercFile(edgercFile string) *v1.ConfigMap {
+	return &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "akamai-edgerc",
+		},
+		Data: map[string]string{
+			"edgerc": edgercFile,
+		},
+	}
+}
+
+// getFilesToCacheBustForFrontend gets the files to cache bust for a frontend
+func getFilesToCacheBustForFrontend(frontend *crd.Frontend) []string {
+	// Verify that the frontend has the akamai cache bust files
+	if frontend.Spec.AkamaiCacheBustFiles == nil {
+		// None there so set the default
+		return []string{"/fed-mods.json"}
+	}
+	filesToCacheBust := []string{}
+	filesToCacheBust = append(filesToCacheBust, frontend.Spec.AkamaiCacheBustFiles...)
+	return filesToCacheBust
+}
+
+// populateInitContainer adds the akamai cache bust init container to the deployment
+func (r *FrontendReconciliation) populateInitContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) error {
+	// Guard on frontend opting out of cache busting
+	if frontend.Spec.AkamaiCacheBustOptOut {
+		return nil
+	}
+	d.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
+	// Get the akamai secret
+	secret, err := getAkamaiSecret(context.Background(), r.Client, frontendEnvironment)
+	if err != nil {
+		return err
+	}
+	// Make the akamai file from the secret
+	edgercFile := makeAkamaiEdgercFileFromSecret(secret)
+
+	// Make the configmap from the akamai file
+	configMap := makeConfigMapFromAkamaiEdgercFile(edgercFile)
+	// Create the configmap
+	err = r.Client.Create(context.Background(), configMap)
+	if err != nil {
+		return err
+	}
+
+	// Get the files to cache bust
+	filesToCacheBust := getFilesToCacheBustForFrontend(frontend)
+
+	// Construct the akamai cache bust command
+	command := fmt.Sprintf("/cli/.akamai-cli/src/cli-purge/bin/akamai-purge cache  --edgerc  invalidate %s", strings.Join(filesToCacheBust, " "))
+
+	// Modify the obejct to set the things we care about
+	d.Spec.Template.Spec.InitContainers = []v1.Container{{
+		Name:  "akamai-cache-bust",
+		Image: frontendEnvironment.Spec.AkamaiCacheBustImage,
+		// Mount the akamai edgerc file from the configmap
+		VolumeMounts: []v1.VolumeMount{
+			{
+				Name:      "akamai-edgerc",
+				MountPath: "/root/.edgerc",
+				SubPath:   "edgerc",
+			},
+		},
+		// Run the akamai cache bust script
+		Command: []string{"/bin/bash", "-c", command},
+	},
+	}
+	// Add the akamai edgerc configmap to the deployment
+	d.Spec.Template.Spec.Volumes = []v1.Volume{{
+		Name: "akamai-edgerc",
+		VolumeSource: v1.VolumeSource{
+			ConfigMap: &v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: "akamai-edgerc",
+				},
+			},
+		},
+	},
+	}
+	return nil
+}
+
 func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
 	// By default we just want the config volume
 	volumes := []v1.Volume{}
@@ -207,6 +316,13 @@ func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map
 	populateContainer(d, r.Frontend, r.FrontendEnvironment)
 	populateVolumes(d, r.Frontend, r.FrontendEnvironment)
 	r.populateEnvVars(d, r.FrontendEnvironment)
+
+	// If cache busting is enabled for the environment, add the akamai cache bust init container
+	if r.FrontendEnvironment.Spec.EnableAkamaiCacheBust && r.FrontendEnvironment.Spec.AkamaiCacheBustImage != "" {
+		if err := r.populateInitContainer(d, r.Frontend, r.FrontendEnvironment); err != nil {
+			return err
+		}
+	}
 
 	d.Spec.Template.ObjectMeta.Labels = labels
 

@@ -45,6 +45,12 @@ spec:
           spec:
             description: FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
             properties:
+              akamaiCacheBustImage:
+                description: Set Akamai Cache Bust Image
+                type: string
+              enableAkamaiCacheBust:
+                description: Enable Akamai Cache Bust
+                type: boolean
               generateNavJSON:
                 description: GenerateNavJSON determines if the nav json configmap
                   parts should be generated for the bundles. We want to do do this
