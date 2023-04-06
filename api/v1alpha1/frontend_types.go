@@ -55,9 +55,9 @@ type FrontendSpec struct {
 	NavItems       []*BundleNavItem     `json:"navItems,omitempty" yaml:"navItems,omitempty"`
 	AssetsPrefix   string               `json:"assetsPrefix,omitempty" yaml:"assetsPrefix,omitempty"`
 	// Akamai cache bust opt-out
-	AkamaiCacheBustOptOut bool `json:"akamaiCacheBustOptOut,omitempty" yaml:"akamaiCacheBustOptOut,omitempty"`
+	AkamaiCacheBustDisable bool `json:"akamaiCacheBustDisable,omitempty" yaml:"akamaiCacheBustDisable,omitempty"`
 	// Files to cache bust
-	AkamaiCacheBustFiles []string `json:"akamaiCacheBustFiles,omitempty" yaml:"akamaiCacheBustFiles,omitempty"`
+	AkamaiCacheBustPaths []string `json:"akamaiCacheBustPaths,omitempty" yaml:"akamaiCacheBustPaths,omitempty"`
 }
 
 var ReconciliationSuccessful clusterv1.ConditionType = "ReconciliationSuccessful"

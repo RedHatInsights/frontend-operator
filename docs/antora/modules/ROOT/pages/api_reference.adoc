@@ -381,8 +381,8 @@ FrontendSpec defines the desired state of Frontend
 | *`module`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule[$$FedModule$$]__ | 
 | *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$] array__ | 
 | *`assetsPrefix`* __string__ | 
-| *`akamaiCacheBustOptOut`* __boolean__ | Akamai cache bust opt-out
-| *`akamaiCacheBustFiles`* __string array__ | Files to cache bust
+| *`akamaiCacheBustDisable`* __boolean__ | Akamai cache bust opt-out
+| *`akamaiCacheBustPaths`* __string array__ | Files to cache bust
 |===
 
 

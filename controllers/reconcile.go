@@ -173,25 +173,21 @@ func makeConfigMapFromAkamaiEdgercFile(edgercFile string) *v1.ConfigMap {
 func getFilesToCacheBustForFrontend(frontend *crd.Frontend) []string {
 	// Verify that the frontend has the akamai cache bust files
 	filesToCacheBust := []string{"/fed-mods.json"}
-	if frontend.Spec.AkamaiCacheBustFiles == nil {
+	if frontend.Spec.AkamaiCacheBustPaths == nil {
 		// None there so set the default
 		return filesToCacheBust
 	}
-	filesToCacheBust = append(filesToCacheBust, frontend.Spec.AkamaiCacheBustFiles...)
+	filesToCacheBust = append(filesToCacheBust, frontend.Spec.AkamaiCacheBustPaths...)
 	return filesToCacheBust
 }
 
 // populateInitContainer adds the akamai cache bust init container to the deployment
 func (r *FrontendReconciliation) populateInitContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) error {
 	// Guard on frontend opting out of cache busting
-	if frontend.Spec.AkamaiCacheBustOptOut {
+	if frontend.Spec.AkamaiCacheBustDisable {
 		return nil
 	}
-	// If the AkamaiCacheBustImage is not set then we should log and bail
-	if frontendEnvironment.Spec.AkamaiCacheBustImage == "" {
-		r.Log.Info("AkamaiCacheBustImage is not set. Skipping Akamai cache busting.")
-		return nil
-	}
+
 	d.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 	// Get the akamai secret
 	secret, err := getAkamaiSecret(context.Background(), r.Client, frontendEnvironment)

@@ -509,8 +509,8 @@ func (in *FrontendSpec) DeepCopyInto(out *FrontendSpec) {
 			}
 		}
 	}
-	if in.AkamaiCacheBustFiles != nil {
-		in, out := &in.AkamaiCacheBustFiles, &out.AkamaiCacheBustFiles
+	if in.AkamaiCacheBustPaths != nil {
+		in, out := &in.AkamaiCacheBustPaths, &out.AkamaiCacheBustPaths
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
