@@ -172,11 +172,11 @@ func makeConfigMapFromAkamaiEdgercFile(edgercFile string) *v1.ConfigMap {
 // getFilesToCacheBustForFrontend gets the files to cache bust for a frontend
 func getFilesToCacheBustForFrontend(frontend *crd.Frontend) []string {
 	// Verify that the frontend has the akamai cache bust files
+	filesToCacheBust := []string{"/fed-mods.json"}
 	if frontend.Spec.AkamaiCacheBustFiles == nil {
 		// None there so set the default
-		return []string{"/fed-mods.json"}
+		return filesToCacheBust
 	}
-	filesToCacheBust := []string{}
 	filesToCacheBust = append(filesToCacheBust, frontend.Spec.AkamaiCacheBustFiles...)
 	return filesToCacheBust
 }
