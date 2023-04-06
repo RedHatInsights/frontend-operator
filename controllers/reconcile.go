@@ -187,6 +187,11 @@ func (r *FrontendReconciliation) populateInitContainer(d *apps.Deployment, front
 	if frontend.Spec.AkamaiCacheBustOptOut {
 		return nil
 	}
+	// If the AkamaiCacheBustImage is not set then we should log and bail
+	if frontendEnvironment.Spec.AkamaiCacheBustImage == "" {
+		r.Log.Info("AkamaiCacheBustImage is not set. Skipping Akamai cache busting.")
+		return nil
+	}
 	d.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 	// Get the akamai secret
 	secret, err := getAkamaiSecret(context.Background(), r.Client, frontendEnvironment)
