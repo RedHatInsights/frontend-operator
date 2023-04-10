@@ -204,8 +204,8 @@ func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map
 	labeler := utils.GetCustomLabeler(labels, nn, r.Frontend)
 	labeler(d)
 
-	populateContainer(d, r.Frontend, r.FrontendEnvironment)
 	populateVolumes(d, r.Frontend, r.FrontendEnvironment)
+	populateContainer(d, r.Frontend, r.FrontendEnvironment)
 	r.populateEnvVars(d, r.FrontendEnvironment)
 
 	d.Spec.Template.ObjectMeta.Labels = labels
