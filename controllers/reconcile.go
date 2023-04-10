@@ -135,18 +135,16 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
 	// By default we just want the config volume
 	volumes := []v1.Volume{}
-	if frontendEnvironment.Spec.GenerateNavJSON {
-		volumes = append(volumes, v1.Volume{
-			Name: "config",
-			VolumeSource: v1.VolumeSource{
-				ConfigMap: &v1.ConfigMapVolumeSource{
-					LocalObjectReference: v1.LocalObjectReference{
-						Name: frontend.Spec.EnvName,
-					},
+	volumes = append(volumes, v1.Volume{
+		Name: "config",
+		VolumeSource: v1.VolumeSource{
+			ConfigMap: &v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: frontend.Spec.EnvName,
 				},
 			},
-		})
-	}
+		},
+	})
 
 	if frontendEnvironment.Spec.SSL {
 		volumes = append(volumes, v1.Volume{
