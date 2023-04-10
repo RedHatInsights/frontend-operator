@@ -3,8 +3,13 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: chrome-frontend
+  namespace: test-basic-frontend
   labels:
     frontend: chrome
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: chrome
 spec:
   selector:
     matchLabels:
@@ -15,9 +20,6 @@ spec:
         - name: config
           configMap:
             name: test-basic-frontend-environment
-            items:
-              - key: fed-modules.json
-                path: fed-modules.json
             defaultMode: 420
       containers:
         - name: fe-image
@@ -31,5 +33,4 @@ spec:
               protocol: TCP
           volumeMounts:
             - name: config
-              mountPath: /opt/app-root/src/build/chrome/fed-modules.json
-              subPath: fed-modules.json
+              mountPath: /opt/app-root/src/build/operator-generated

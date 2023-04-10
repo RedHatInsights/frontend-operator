@@ -1,0 +1,31 @@
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: test-generate-nav-json-environment
+spec:
+  generateNavJSON: true
+  hostname: foo.redhat.com
+  sso: https://sso.foo.redhat.com
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: chrome
+  namespace: test-generate-nav-json
+spec:
+  API:
+    versions:
+      - v1
+  frontend:
+    paths:
+      - /
+      - /config/chrome
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  envName: test-generate-nav-json-environment
+  image: quay.io/cloudservices/insights-chrome-frontend:720317c
+  module:
+    config:
+      ssoUrl: 'https://'
+    manifestLocation: /apps/chrome/js/fed-mods.json
+  title: Chrome
