@@ -352,6 +352,7 @@ func (r *FrontendReconciliation) getFrontendPaths() []string {
 	defaultPath := fmt.Sprintf("/apps/%s", r.Frontend.Name)
 	defaultBetaPath := fmt.Sprintf("/beta/apps/%s", r.Frontend.Name)
 	defaultPreviewPath := fmt.Sprintf("/preview/apps/%s", r.Frontend.Name)
+
 	if r.Frontend.Spec.AssetsPrefix != "" {
 		defaultPath = fmt.Sprintf("/%s/%s", r.Frontend.Spec.AssetsPrefix, r.Frontend.Name)
 		defaultBetaPath = fmt.Sprintf("/beta/%s/%s", r.Frontend.Spec.AssetsPrefix, r.Frontend.Name)

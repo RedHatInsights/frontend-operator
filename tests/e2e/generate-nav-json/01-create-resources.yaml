@@ -20,7 +20,6 @@ spec:
   frontend:
     paths:
       - /
-      - /config/chrome
   deploymentRepo: https://github.com/RedHatInsights/insights-chrome
   envName: test-generate-nav-json-environment
   image: quay.io/cloudservices/insights-chrome-frontend:720317c
