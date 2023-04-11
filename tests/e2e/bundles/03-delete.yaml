@@ -1,0 +1,13 @@
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+delete:
+- apiVersion: cloud.redhat.com/v1alpha1
+  kind: Frontend
+  name: chrome
+- apiVersion: cloud.redhat.com/v1alpha1
+  kind: FrontendEnvironment
+  name: test-bundles-environment
+- apiVersion: v1
+  kind: Namespace
+  name: test-bundles

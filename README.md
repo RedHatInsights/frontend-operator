@@ -97,3 +97,11 @@ $ make kuttl
 ```
 Friendly reminder: make sure you have the frontend operator runnning (`make run-local`) before you run the tests or they will never work and you'll go nuts trying to figure out why.
 
+If you want to run a single test you can do this:
+```bash
+$ kubectl kuttl test --config kuttl-config.yml  ./tests/e2e --test bundles
+```
+where `bundles` is the name of the directory that contains the test you want to run.
+
+
+
