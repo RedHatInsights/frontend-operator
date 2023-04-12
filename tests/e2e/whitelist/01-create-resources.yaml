@@ -1,0 +1,36 @@
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: test-whitelist-environment
+spec:
+  whitelist:
+    - test1
+    - test2
+    - test3
+    - test4
+  generateNavJSON: false
+  ssl: false
+  hostname: foo.redhat.com
+  sso: https://sso.foo.redhat.com
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: chrome
+  namespace: test-whitelist
+spec:
+  API:
+    versions:
+      - v1
+  frontend:
+    paths:
+      - /
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  envName: test-whitelist-environment
+  image: quay.io/cloudservices/insights-chrome-frontend:720317c
+  module:
+    config:
+      ssoUrl: 'https://'
+    manifestLocation: /apps/chrome/js/fed-mods.json
+  title: Chrome
