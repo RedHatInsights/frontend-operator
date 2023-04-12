@@ -1,0 +1,49 @@
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: chrome
+  namespace: test-basic-frontend
+  labels:
+    frontend: chrome
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: chrome
+      controller: true
+spec:
+  ingressClassName: nginx
+  tls:
+    - {}
+  rules:
+    - host: foo.redhat.com
+      http:
+        paths:
+          - path: /apps/chrome
+            pathType: Prefix
+            backend:
+              service:
+                name: chrome
+                port:
+                  number: 8000
+          - path: /config/chrome
+            pathType: Prefix
+            backend:
+              service:
+                name: chrome
+                port:
+                  number: 8000
+          - path: /beta/apps/chrome
+            pathType: Prefix
+            backend:
+              service:
+                name: chrome
+                port:
+                  number: 8000
+          - path: /preview/apps/chrome
+            pathType: Prefix
+            backend:
+              service:
+                name: chrome
+                port:
+                  number: 8000

@@ -1,0 +1,40 @@
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: test-ssl-environment
+spec:
+  generateNavJSON: false
+  hostname: foo.redhat.com
+  sso: https://sso.foo.redhat.com
+  ssl: true
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: chrome
+  namespace: test-ssl
+spec:
+  API:
+    versions:
+      - v1
+  frontend:
+    paths:
+      - /
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  envName: test-ssl-environment
+  image: quay.io/cloudservices/insights-chrome-frontend:720317c
+  module:
+    config:
+      ssoUrl: 'https://'
+    manifestLocation: /apps/chrome/js/fed-mods.json
+  title: Chrome
+---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: chrome-certs
+  namespace: test-ssl
+data:
+  test: test
+type: Opaque

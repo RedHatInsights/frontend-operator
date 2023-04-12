@@ -9,6 +9,8 @@ bin
 testbin/*
 __debug_bin
 
+kubeconfig
+
 # Test binary, build with `go test -c`
 *.test
 

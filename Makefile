@@ -114,6 +114,9 @@ test: manifests envtest generate fmt vet
 junit: gotestsum manifests envtest generate fmt vet
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(PROJECT_DIR)/testbin/bin/gotestsum --junitfile artifacts/junit-ginko.xml -- ./... -coverprofile cover.out
 
+kuttl: manifests envtest generate fmt vet
+	kubectl kuttl test --config kuttl-config.yml  ./tests/e2e
+	
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.
