@@ -245,18 +245,16 @@ func (r *FrontendReconciliation) populateInitContainer(d *apps.Deployment, front
 func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
 	// By default we just want the config volume
 	volumes := []v1.Volume{}
-	if frontendEnvironment.Spec.GenerateNavJSON {
-		volumes = append(volumes, v1.Volume{
-			Name: "config",
-			VolumeSource: v1.VolumeSource{
-				ConfigMap: &v1.ConfigMapVolumeSource{
-					LocalObjectReference: v1.LocalObjectReference{
-						Name: frontend.Spec.EnvName,
-					},
+	volumes = append(volumes, v1.Volume{
+		Name: "config",
+		VolumeSource: v1.VolumeSource{
+			ConfigMap: &v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: frontend.Spec.EnvName,
 				},
 			},
-		})
-	}
+		},
+	})
 
 	if frontendEnvironment.Spec.SSL {
 		volumes = append(volumes, v1.Volume{
@@ -314,8 +312,8 @@ func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map
 	labeler := utils.GetCustomLabeler(labels, nn, r.Frontend)
 	labeler(d)
 
-	populateContainer(d, r.Frontend, r.FrontendEnvironment)
 	populateVolumes(d, r.Frontend, r.FrontendEnvironment)
+	populateContainer(d, r.Frontend, r.FrontendEnvironment)
 	r.populateEnvVars(d, r.FrontendEnvironment)
 
 	// If cache busting is enabled for the environment, add the akamai cache bust init container
@@ -471,6 +469,7 @@ func (r *FrontendReconciliation) getFrontendPaths() []string {
 	defaultPath := fmt.Sprintf("/apps/%s", r.Frontend.Name)
 	defaultBetaPath := fmt.Sprintf("/beta/apps/%s", r.Frontend.Name)
 	defaultPreviewPath := fmt.Sprintf("/preview/apps/%s", r.Frontend.Name)
+
 	if r.Frontend.Spec.AssetsPrefix != "" {
 		defaultPath = fmt.Sprintf("/%s/%s", r.Frontend.Spec.AssetsPrefix, r.Frontend.Name)
 		defaultBetaPath = fmt.Sprintf("/beta/%s/%s", r.Frontend.Spec.AssetsPrefix, r.Frontend.Name)
