@@ -176,7 +176,6 @@ func (r *FrontendReconciliation) populateInitContainer(d *apps.Deployment, front
 		return nil
 	}
 
-	//d.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 	// Get the akamai secret
 	secret, err := getAkamaiSecret(r.Ctx, r.Client, frontend)
 	if err != nil {
@@ -245,8 +244,6 @@ func (r *FrontendReconciliation) populateInitContainer(d *apps.Deployment, front
 	},
 	}
 	// Add the akamai edgerc configmap to the deployment
-
-	//d.Spec.Template.Spec.Volumes
 
 	return nil
 }
