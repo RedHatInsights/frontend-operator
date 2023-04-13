@@ -1,0 +1,102 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: chrome-frontend
+  namespace: test-cachebust
+  labels:
+    frontend: chrome
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: chrome
+spec:
+  selector:
+    matchLabels:
+      frontend: chrome
+  template:
+    metadata:
+      labels:
+        frontend: chrome
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: test-cachebust-environment
+            defaultMode: 420
+        - name: akamai-edgerc
+          configMap:
+            name: akamai-edgerc
+            defaultMode: 420
+      initContainers:
+        - name: akamai-cache-bust
+          image: quay.io/rh_ee_addrew/hi_true_bye:add_alias
+          command:
+            - /bin/bash
+            - '-c'
+            - >-
+              /cli/.akamai-cli/src/cli-purge/bin/akamai-purge cache  --edgerc 
+              invalidate /fed-mods.json
+          resources: {}
+          volumeMounts:
+            - name: akamai-edgerc
+              mountPath: /root/.edgerc
+              subPath: edgerc
+      containers:
+        - name: fe-image
+          image: quay.io/cloudservices/insights-chrome-frontend:720317c
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9000
+              protocol: TCP
+          resources: {}
+          volumeMounts:
+            - name: config
+              mountPath: /opt/app-root/src/build/operator-generated
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: chrome-two-frontend
+  namespace: test-cachebust
+  labels:
+    frontend: chrome-two
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: chrome-two
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      frontend: chrome-two
+  template:
+    metadata:
+      labels:
+        frontend: chrome-two
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: test-cachebust-environment
+            defaultMode: 420
+      containers:
+        - name: fe-image
+          image: quay.io/cloudservices/insights-chrome-frontend:720317c
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9000
+              protocol: TCP
+          resources: {}
+          volumeMounts:
+            - name: config
+              mountPath: /opt/app-root/src/build/operator-generated
+

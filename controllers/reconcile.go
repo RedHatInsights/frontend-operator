@@ -133,9 +133,9 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 }
 
 // getAkamaiSecret gets the akamai secret from the cluster
-func getAkamaiSecret(ctx context.Context, client client.Client, frontendEnvironment *crd.FrontendEnvironment) (*v1.Secret, error) {
+func getAkamaiSecret(ctx context.Context, client client.Client, frontend *crd.Frontend) (*v1.Secret, error) {
 	secret := &v1.Secret{}
-	err := client.Get(ctx, types.NamespacedName{Name: "akamai", Namespace: frontendEnvironment.Namespace}, secret)
+	err := client.Get(ctx, types.NamespacedName{Name: "akamai", Namespace: frontend.Namespace}, secret)
 	if err != nil {
 		return nil, err
 	}
@@ -145,28 +145,16 @@ func getAkamaiSecret(ctx context.Context, client client.Client, frontendEnvironm
 // constructAkamaiEdgercFileFromSecret constructs the akamai edgerc file from the secret
 func makeAkamaiEdgercFileFromSecret(secret *v1.Secret) string {
 	edgercFile := "[default]\n"
-	edgercFile += fmt.Sprintf("host = %s\n", string(secret.Data["host"]))
-	edgercFile += fmt.Sprintf("access_token = %s\n", string(secret.Data["access_token"]))
-	edgercFile += fmt.Sprintf("client_token = %s\n", string(secret.Data["client_token"]))
-	edgercFile += fmt.Sprintf("client_secret = %s\n", string(secret.Data["client_secret"]))
+	edgercFile += fmt.Sprintf("host = %s\n", secret.Data["host"])
+	edgercFile += fmt.Sprintf("access_token = %s\n", secret.Data["access_token"])
+	edgercFile += fmt.Sprintf("client_token = %s\n", secret.Data["client_token"])
+	edgercFile += fmt.Sprintf("client_secret = %s\n", secret.Data["client_secret"])
 	edgercFile += "[ccu]\n"
-	edgercFile += fmt.Sprintf("host = %s\n", string(secret.Data["host"]))
-	edgercFile += fmt.Sprintf("access_token = %s\n", string(secret.Data["access_token"]))
-	edgercFile += fmt.Sprintf("client_token = %s\n", string(secret.Data["client_token"]))
-	edgercFile += fmt.Sprintf("client_secret = %s\n", string(secret.Data["client_secret"]))
+	edgercFile += fmt.Sprintf("host = %s\n", secret.Data["host"])
+	edgercFile += fmt.Sprintf("access_token = %s\n", secret.Data["access_token"])
+	edgercFile += fmt.Sprintf("client_token = %s\n", secret.Data["client_token"])
+	edgercFile += fmt.Sprintf("client_secret = %s\n", secret.Data["client_secret"])
 	return edgercFile
-}
-
-// makeConfigMapFromAkamaiEdgercFile makes a configmap from the akamai edgerc file
-func makeConfigMapFromAkamaiEdgercFile(edgercFile string) *v1.ConfigMap {
-	return &v1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "akamai-edgerc",
-		},
-		Data: map[string]string{
-			"edgerc": edgercFile,
-		},
-	}
 }
 
 // getFilesToCacheBustForFrontend gets the files to cache bust for a frontend
@@ -188,22 +176,51 @@ func (r *FrontendReconciliation) populateInitContainer(d *apps.Deployment, front
 		return nil
 	}
 
-	d.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
+	//d.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 	// Get the akamai secret
-	secret, err := getAkamaiSecret(context.Background(), r.Client, frontendEnvironment)
+	secret, err := getAkamaiSecret(r.Ctx, r.Client, frontend)
 	if err != nil {
 		return err
 	}
 	// Make the akamai file from the secret
 	edgercFile := makeAkamaiEdgercFileFromSecret(secret)
 
-	// Make the configmap from the akamai file
-	configMap := makeConfigMapFromAkamaiEdgercFile(edgercFile)
-	// Create the configmap
-	err = r.Client.Create(context.Background(), configMap)
-	if err != nil {
+	configMap := &v1.ConfigMap{}
+	nn := types.NamespacedName{
+		Name:      "akamai-edgerc",
+		Namespace: r.Frontend.Namespace,
+	}
+	if err := r.Cache.Create(CoreConfig, nn, configMap); err != nil {
 		return err
 	}
+
+	labels := r.FrontendEnvironment.GetLabels()
+	labler := utils.GetCustomLabeler(labels, nn, r.FrontendEnvironment)
+	labler(configMap)
+
+	configMap.SetOwnerReferences([]metav1.OwnerReference{r.FrontendEnvironment.MakeOwnerReference()})
+
+	// Add the akamai edgerc file to the configmap
+	configMap.Data = map[string]string{
+		"edgerc": edgercFile,
+	}
+
+	if err := r.Cache.Update(CoreConfig, configMap); err != nil {
+		return err
+	}
+
+	akamaiVolume := v1.Volume{
+		Name: "akamai-edgerc",
+		VolumeSource: v1.VolumeSource{
+			ConfigMap: &v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: "akamai-edgerc",
+				},
+			},
+		},
+	}
+
+	d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, akamaiVolume)
 
 	// Get the files to cache bust
 	filesToCacheBust := getFilesToCacheBustForFrontend(frontend)
@@ -228,17 +245,9 @@ func (r *FrontendReconciliation) populateInitContainer(d *apps.Deployment, front
 	},
 	}
 	// Add the akamai edgerc configmap to the deployment
-	d.Spec.Template.Spec.Volumes = []v1.Volume{{
-		Name: "akamai-edgerc",
-		VolumeSource: v1.VolumeSource{
-			ConfigMap: &v1.ConfigMapVolumeSource{
-				LocalObjectReference: v1.LocalObjectReference{
-					Name: "akamai-edgerc",
-				},
-			},
-		},
-	},
-	}
+
+	//d.Spec.Template.Spec.Volumes
+
 	return nil
 }
 
