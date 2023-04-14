@@ -316,6 +316,7 @@ FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
 | *`generateNavJSON`* __boolean__ | GenerateNavJSON determines if the nav json configmap parts should be generated for the bundles. We want to do do this in epehemeral environments but not in production
 | *`enableAkamaiCacheBust`* __boolean__ | Enable Akamai Cache Bust
 | *`akamaiCacheBustImage`* __string__ | Set Akamai Cache Bust Image
+| *`akamaiCacheBustURL`* __string__ | Set Akamai Cache Bust URL that the files will hang off of
 |===
 
 

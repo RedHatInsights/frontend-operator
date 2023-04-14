@@ -58,6 +58,8 @@ type FrontendEnvironmentSpec struct {
 	EnableAkamaiCacheBust bool `json:"enableAkamaiCacheBust,omitempty"`
 	// Set Akamai Cache Bust Image
 	AkamaiCacheBustImage string `json:"akamaiCacheBustImage,omitempty"`
+	// Set Akamai Cache Bust URL that the files will hang off of
+	AkamaiCacheBustURL string `json:"akamaiCacheBustURL,omitempty"`
 }
 
 type MonitoringConfig struct {

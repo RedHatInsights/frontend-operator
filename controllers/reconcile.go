@@ -157,16 +157,40 @@ func makeAkamaiEdgercFileFromSecret(secret *v1.Secret) string {
 	return edgercFile
 }
 
-// getFilesToCacheBustForFrontend gets the files to cache bust for a frontend
-func getFilesToCacheBustForFrontend(frontend *crd.Frontend) []string {
-	// Verify that the frontend has the akamai cache bust files
-	filesToCacheBust := []string{"/fed-mods.json"}
-	if frontend.Spec.AkamaiCacheBustPaths == nil {
-		// None there so set the default
-		return filesToCacheBust
+func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) []string {
+	var purgeHost string
+	// If the cache bust URL doesn't begin with https:// then add it
+	if strings.HasPrefix(frontendEnvironment.Spec.AkamaiCacheBustURL, "https://") {
+		purgeHost = frontendEnvironment.Spec.AkamaiCacheBustURL
+	} else {
+		purgeHost = fmt.Sprintf("https://%s", frontendEnvironment.Spec.AkamaiCacheBustURL)
 	}
-	filesToCacheBust = append(filesToCacheBust, frontend.Spec.AkamaiCacheBustPaths...)
-	return filesToCacheBust
+
+	// If purgeHost ends with a / then remove it
+	purgeHost = strings.TrimSuffix(purgeHost, "/")
+
+	frontendName := frontend.Name
+	purgePaths := []string{}
+
+	// If there is no purge list return the default
+	if frontend.Spec.AkamaiCacheBustPaths == nil {
+		defaultPurgePath := fmt.Sprintf("%s/apps/%s/fed-mods.json", purgeHost, frontendName)
+		purgePaths = append(purgePaths, defaultPurgePath)
+		return purgePaths
+	}
+
+	// Loop through the frontend purge paths and append them to the purge host
+	for _, path := range frontend.Spec.AkamaiCacheBustPaths {
+		var purgePath string
+		// If the path doesn't begin with a / then add it
+		if strings.HasPrefix(path, "/") {
+			purgePath = fmt.Sprintf("%s%s", purgeHost, path)
+		} else {
+			purgePath = fmt.Sprintf("%s/%s", purgeHost, path)
+		}
+		purgePaths = append(purgePaths, purgePath)
+	}
+	return purgePaths
 }
 
 // populateInitContainer adds the akamai cache bust init container to the deployment
@@ -221,11 +245,11 @@ func (r *FrontendReconciliation) populateInitContainer(d *apps.Deployment, front
 
 	d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, akamaiVolume)
 
-	// Get the files to cache bust
-	filesToCacheBust := getFilesToCacheBustForFrontend(frontend)
+	// Get the paths to cache bust
+	pathsToCacheBust := createCachePurgePathList(frontend, frontendEnvironment)
 
 	// Construct the akamai cache bust command
-	command := fmt.Sprintf("/cli/.akamai-cli/src/cli-purge/bin/akamai-purge cache  --edgerc  invalidate %s", strings.Join(filesToCacheBust, " "))
+	command := fmt.Sprintf("/cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc invalidate %s", strings.Join(pathsToCacheBust, " "))
 
 	// Modify the obejct to set the things we care about
 	d.Spec.Template.Spec.InitContainers = []v1.Container{{
@@ -235,7 +259,7 @@ func (r *FrontendReconciliation) populateInitContainer(d *apps.Deployment, front
 		VolumeMounts: []v1.VolumeMount{
 			{
 				Name:      "akamai-edgerc",
-				MountPath: "/root/.edgerc",
+				MountPath: "/opt/app-root/",
 				SubPath:   "edgerc",
 			},
 		},

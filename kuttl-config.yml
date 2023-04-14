@@ -3,5 +3,5 @@ kind: TestSuite
 startKIND: false
 testDirs:
 - tests/e2e/
-timeout: 600
+timeout: 60
 parallel: 1

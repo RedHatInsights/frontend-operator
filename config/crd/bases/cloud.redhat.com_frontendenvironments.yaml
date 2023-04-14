@@ -48,6 +48,10 @@ spec:
               akamaiCacheBustImage:
                 description: Set Akamai Cache Bust Image
                 type: string
+              akamaiCacheBustURL:
+                description: Set Akamai Cache Bust URL that the files will hang off
+                  of
+                type: string
               enableAkamaiCacheBust:
                 description: Enable Akamai Cache Bust
                 type: boolean
