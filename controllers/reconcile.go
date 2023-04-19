@@ -145,8 +145,7 @@ func getAkamaiSecretName(frontendEnvironment *crd.FrontendEnvironment) string {
 // getAkamaiSecret gets the akamai secret from the cluster
 func getAkamaiSecret(ctx context.Context, client client.Client, frontend *crd.Frontend, secretName string) (*v1.Secret, error) {
 	secret := &v1.Secret{}
-	err := client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: frontend.Namespace}, secret)
-	if err != nil {
+	if err := client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: frontend.Namespace}, secret); err != nil {
 		return nil, err
 	}
 	return secret, nil
