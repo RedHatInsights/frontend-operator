@@ -60,6 +60,8 @@ type FrontendEnvironmentSpec struct {
 	AkamaiCacheBustImage string `json:"akamaiCacheBustImage,omitempty"`
 	// Set Akamai Cache Bust URL that the files will hang off of
 	AkamaiCacheBustURL string `json:"akamaiCacheBustURL,omitempty"`
+	// The name of the secret we will use to get the akamai credentials
+	AkamaiSecretName string `json:"akamaiSecretName,omitempty"`
 }
 
 type MonitoringConfig struct {

@@ -317,6 +317,7 @@ FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
 | *`enableAkamaiCacheBust`* __boolean__ | Enable Akamai Cache Bust
 | *`akamaiCacheBustImage`* __string__ | Set Akamai Cache Bust Image
 | *`akamaiCacheBustURL`* __string__ | Set Akamai Cache Bust URL that the files will hang off of
+| *`akamaiSecretName`* __string__ | The name of the secret we will use to get the akamai credentials
 |===
 
 

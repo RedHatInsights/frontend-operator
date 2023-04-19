@@ -27,7 +27,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const RoutePrefixDefault = "apps"
+const (
+	RoutePrefixDefault      = "apps"
+	AkamaiSecretNameDefault = "akamai"
+)
 
 type FrontendReconciliation struct {
 	Log                 logr.Logger
@@ -132,10 +135,17 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 	}
 }
 
+func getAkamaiSecretName(frontendEnvironment *crd.FrontendEnvironment) string {
+	if frontendEnvironment.Spec.AkamaiSecretName == "" {
+		return AkamaiSecretNameDefault
+	}
+	return frontendEnvironment.Spec.AkamaiSecretName
+}
+
 // getAkamaiSecret gets the akamai secret from the cluster
-func getAkamaiSecret(ctx context.Context, client client.Client, frontend *crd.Frontend) (*v1.Secret, error) {
+func getAkamaiSecret(ctx context.Context, client client.Client, frontend *crd.Frontend, secretName string) (*v1.Secret, error) {
 	secret := &v1.Secret{}
-	err := client.Get(ctx, types.NamespacedName{Name: "akamai", Namespace: frontend.Namespace}, secret)
+	err := client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: frontend.Namespace}, secret)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +211,8 @@ func (r *FrontendReconciliation) populateInitContainer(d *apps.Deployment, front
 	}
 
 	// Get the akamai secret
-	secret, err := getAkamaiSecret(r.Ctx, r.Client, frontend)
+	akamaiSecretName := getAkamaiSecretName(frontendEnvironment)
+	secret, err := getAkamaiSecret(r.Ctx, r.Client, frontend, akamaiSecretName)
 	if err != nil {
 		return err
 	}
