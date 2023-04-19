@@ -47,3 +47,4 @@ spec:
                 name: chrome
                 port:
                   number: 8000
+

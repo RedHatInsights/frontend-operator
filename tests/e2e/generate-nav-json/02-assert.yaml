@@ -36,3 +36,4 @@ spec:
               mountPath: /opt/app-root/src/build/chrome
             - name: config
               mountPath: /opt/app-root/src/build/operator-generated
+

@@ -104,3 +104,4 @@ spec:
   appList:
   - edge
   envName: test-bundles-environment
+

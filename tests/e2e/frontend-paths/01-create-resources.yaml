@@ -30,3 +30,4 @@ spec:
       ssoUrl: 'https://'
     manifestLocation: /apps/chrome/js/fed-mods.json
   title: Chrome
+
