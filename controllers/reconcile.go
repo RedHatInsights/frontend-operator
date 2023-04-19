@@ -178,15 +178,12 @@ func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.F
 	// If purgeHost ends with a / then remove it
 	purgeHost = strings.TrimSuffix(purgeHost, "/")
 
-	purgePaths := []string{}
-
 	// If there is no purge list return the default
 	if frontend.Spec.AkamaiCacheBustPaths == nil {
-		defaultPurgePath := fmt.Sprintf("%s/apps/%s/fed-mods.json", purgeHost, frontend.Name)
-		purgePaths = append(purgePaths, defaultPurgePath)
-		return purgePaths
+		return []string{fmt.Sprintf("%s/apps/%s/fed-mods.json", purgeHost, frontend.Name)}
 	}
 
+	purgePaths := []string{}
 	// Loop through the frontend purge paths and append them to the purge host
 	for _, path := range frontend.Spec.AkamaiCacheBustPaths {
 		var purgePath string
