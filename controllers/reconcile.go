@@ -27,7 +27,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const RoutePrefixDefault = "apps"
+const (
+	RoutePrefixDefault      = "apps"
+	AkamaiSecretNameDefault = "akamai"
+)
 
 type FrontendReconciliation struct {
 	Log                 logr.Logger
@@ -132,6 +135,149 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 	}
 }
 
+func getAkamaiSecretName(frontendEnvironment *crd.FrontendEnvironment) string {
+	if frontendEnvironment.Spec.AkamaiSecretName == "" {
+		return AkamaiSecretNameDefault
+	}
+	return frontendEnvironment.Spec.AkamaiSecretName
+}
+
+// getAkamaiSecret gets the akamai secret from the cluster
+func getAkamaiSecret(ctx context.Context, client client.Client, frontend *crd.Frontend, secretName string) (*v1.Secret, error) {
+	secret := &v1.Secret{}
+	if err := client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: frontend.Namespace}, secret); err != nil {
+		return nil, err
+	}
+	return secret, nil
+}
+
+// constructAkamaiEdgercFileFromSecret constructs the akamai edgerc file from the secret
+func makeAkamaiEdgercFileFromSecret(secret *v1.Secret) string {
+	edgercFile := "[default]\n"
+	edgercFile += fmt.Sprintf("host = %s\n", secret.Data["host"])
+	edgercFile += fmt.Sprintf("access_token = %s\n", secret.Data["access_token"])
+	edgercFile += fmt.Sprintf("client_token = %s\n", secret.Data["client_token"])
+	edgercFile += fmt.Sprintf("client_secret = %s\n", secret.Data["client_secret"])
+	edgercFile += "[ccu]\n"
+	edgercFile += fmt.Sprintf("host = %s\n", secret.Data["host"])
+	edgercFile += fmt.Sprintf("access_token = %s\n", secret.Data["access_token"])
+	edgercFile += fmt.Sprintf("client_token = %s\n", secret.Data["client_token"])
+	edgercFile += fmt.Sprintf("client_secret = %s\n", secret.Data["client_secret"])
+	return edgercFile
+}
+
+func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) []string {
+	var purgeHost string
+	// If the cache bust URL doesn't begin with https:// then add it
+	if strings.HasPrefix(frontendEnvironment.Spec.AkamaiCacheBustURL, "https://") {
+		purgeHost = frontendEnvironment.Spec.AkamaiCacheBustURL
+	} else {
+		purgeHost = fmt.Sprintf("https://%s", frontendEnvironment.Spec.AkamaiCacheBustURL)
+	}
+
+	// If purgeHost ends with a / then remove it
+	purgeHost = strings.TrimSuffix(purgeHost, "/")
+
+	// If there is no purge list return the default
+	if frontend.Spec.AkamaiCacheBustPaths == nil {
+		return []string{fmt.Sprintf("%s/apps/%s/fed-mods.json", purgeHost, frontend.Name)}
+	}
+
+	purgePaths := []string{}
+	// Loop through the frontend purge paths and append them to the purge host
+	for _, path := range frontend.Spec.AkamaiCacheBustPaths {
+		var purgePath string
+		// If the path doesn't begin with a / then add it
+		if strings.HasPrefix(path, "/") {
+			purgePath = fmt.Sprintf("%s%s", purgeHost, path)
+		} else {
+			purgePath = fmt.Sprintf("%s/%s", purgeHost, path)
+		}
+		purgePaths = append(purgePaths, purgePath)
+	}
+	return purgePaths
+}
+
+// populateInitContainer adds the akamai cache bust init container to the deployment
+func (r *FrontendReconciliation) populateInitContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) error {
+	// Guard on frontend opting out of cache busting
+	if frontend.Spec.AkamaiCacheBustDisable {
+		return nil
+	}
+
+	// Get the akamai secret
+	akamaiSecretName := getAkamaiSecretName(frontendEnvironment)
+	secret, err := getAkamaiSecret(r.Ctx, r.Client, frontend, akamaiSecretName)
+	if err != nil {
+		return err
+	}
+	// Make the akamai file from the secret
+	edgercFile := makeAkamaiEdgercFileFromSecret(secret)
+
+	configMap := &v1.ConfigMap{}
+	nn := types.NamespacedName{
+		Name:      "akamai-edgerc",
+		Namespace: r.Frontend.Namespace,
+	}
+	if err := r.Cache.Create(CoreConfig, nn, configMap); err != nil {
+		return err
+	}
+
+	labels := r.FrontendEnvironment.GetLabels()
+	labler := utils.GetCustomLabeler(labels, nn, r.FrontendEnvironment)
+	labler(configMap)
+
+	configMap.SetOwnerReferences([]metav1.OwnerReference{r.FrontendEnvironment.MakeOwnerReference()})
+
+	// Add the akamai edgerc file to the configmap
+	configMap.Data = map[string]string{
+		"edgerc": edgercFile,
+	}
+
+	if err := r.Cache.Update(CoreConfig, configMap); err != nil {
+		return err
+	}
+
+	akamaiVolume := v1.Volume{
+		Name: "akamai-edgerc",
+		VolumeSource: v1.VolumeSource{
+			ConfigMap: &v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: "akamai-edgerc",
+				},
+			},
+		},
+	}
+
+	d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, akamaiVolume)
+
+	// Get the paths to cache bust
+	pathsToCacheBust := createCachePurgePathList(frontend, frontendEnvironment)
+
+	// Construct the akamai cache bust command
+	command := fmt.Sprintf("/cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc invalidate %s", strings.Join(pathsToCacheBust, " "))
+
+	// Modify the obejct to set the things we care about
+	d.Spec.Template.Spec.InitContainers = []v1.Container{{
+		Name:  "akamai-cache-bust",
+		Image: frontendEnvironment.Spec.AkamaiCacheBustImage,
+		// Mount the akamai edgerc file from the configmap
+		VolumeMounts: []v1.VolumeMount{
+			{
+				Name:      "akamai-edgerc",
+				MountPath: "/opt/app-root/",
+				SubPath:   "edgerc",
+			},
+		},
+		// Run the akamai cache bust script
+		Command: []string{"/bin/bash", "-c", command},
+	},
+	}
+	// Add the akamai edgerc configmap to the deployment
+
+	return nil
+}
+
 func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
 	// By default we just want the config volume
 	volumes := []v1.Volume{}
@@ -205,6 +351,13 @@ func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map
 	populateVolumes(d, r.Frontend, r.FrontendEnvironment)
 	populateContainer(d, r.Frontend, r.FrontendEnvironment)
 	r.populateEnvVars(d, r.FrontendEnvironment)
+
+	// If cache busting is enabled for the environment, add the akamai cache bust init container
+	if r.FrontendEnvironment.Spec.EnableAkamaiCacheBust && r.FrontendEnvironment.Spec.AkamaiCacheBustImage != "" {
+		if err := r.populateInitContainer(d, r.Frontend, r.FrontendEnvironment); err != nil {
+			return err
+		}
+	}
 
 	d.Spec.Template.ObjectMeta.Labels = labels
 

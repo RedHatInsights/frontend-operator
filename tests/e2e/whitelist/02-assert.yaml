@@ -49,3 +49,4 @@ metadata:
     - apiVersion: cloud.redhat.com/v1alpha1
       kind: Frontend
       name: chrome
+

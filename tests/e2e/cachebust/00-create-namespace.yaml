@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-cachebust
+spec:
+  finalizers:
+  - kubernetes
+---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: akamai
+  namespace: test-cachebust
+data:
+  access_token: "YWNjZXNzX3Rva2Vu"
+  client_secret: "Y2xpZW50X3NlY3JldA=="
+  client_token: "Y2xpZW50X3Rva2Vu"
+  host: "aG9zdA=="
+type: Opaque
+

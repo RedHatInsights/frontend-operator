@@ -59,6 +59,14 @@ spec:
                 required:
                 - versions
                 type: object
+              akamaiCacheBustDisable:
+                description: Akamai cache bust opt-out
+                type: boolean
+              akamaiCacheBustPaths:
+                description: Files to cache bust
+                items:
+                  type: string
+                type: array
               assetsPrefix:
                 type: string
               deploymentRepo:

@@ -6,8 +6,11 @@ delete:
   kind: Frontend
   name: chrome
 - apiVersion: cloud.redhat.com/v1alpha1
+  kind: Frontend
+  name: chrome-two
+- apiVersion: cloud.redhat.com/v1alpha1
   kind: FrontendEnvironment
-  name: test-basic-app-environment
+  name: test-cachebust-environment
 - apiVersion: v1
   kind: Namespace
-  name: test-basic-app
+  name: test-cachebust

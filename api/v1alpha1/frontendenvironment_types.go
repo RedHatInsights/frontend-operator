@@ -54,6 +54,14 @@ type FrontendEnvironmentSpec struct {
 	// parts should be generated for the bundles. We want to do
 	// do this in epehemeral environments but not in production
 	GenerateNavJSON bool `json:"generateNavJSON,omitempty"`
+	// Enable Akamai Cache Bust
+	EnableAkamaiCacheBust bool `json:"enableAkamaiCacheBust,omitempty"`
+	// Set Akamai Cache Bust Image
+	AkamaiCacheBustImage string `json:"akamaiCacheBustImage,omitempty"`
+	// Set Akamai Cache Bust URL that the files will hang off of
+	AkamaiCacheBustURL string `json:"akamaiCacheBustURL,omitempty"`
+	// The name of the secret we will use to get the akamai credentials
+	AkamaiSecretName string `json:"akamaiSecretName,omitempty"`
 }
 
 type MonitoringConfig struct {

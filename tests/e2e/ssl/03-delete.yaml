@@ -9,5 +9,8 @@ delete:
   kind: FrontendEnvironment
   name: test-ssl-environment
 - apiVersion: v1
+  kind: Secret
+  name: chrome-certs
+- apiVersion: v1
   kind: Namespace
   name: test-ssl
