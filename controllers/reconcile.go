@@ -265,7 +265,7 @@ func (r *FrontendReconciliation) populateInitContainer(d *apps.Deployment, front
 		VolumeMounts: []v1.VolumeMount{
 			{
 				Name:      "akamai-edgerc",
-				MountPath: "/opt/app-root/",
+				MountPath: "/opt/app-root/edgerc",
 				SubPath:   "edgerc",
 			},
 		},

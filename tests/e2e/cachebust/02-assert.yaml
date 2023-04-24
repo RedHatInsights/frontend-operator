@@ -40,7 +40,7 @@ spec:
           resources: {}
           volumeMounts:
             - name: akamai-edgerc
-              mountPath: /opt/app-root/
+              mountPath: /opt/app-root/edgerc
               subPath: edgerc
       containers:
         - name: fe-image
@@ -101,7 +101,7 @@ spec:
           resources: {}
           volumeMounts:
             - name: akamai-edgerc
-              mountPath: /opt/app-root/
+              mountPath: /opt/app-root/edgerc
               subPath: edgerc
       containers:
         - name: fe-image
