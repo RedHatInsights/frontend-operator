@@ -950,6 +950,7 @@ objects:
     - events
     - namespaces
     - persistentvolumeclaims
+    - secrets
     - serviceaccounts
     - services
     verbs:
