@@ -51,8 +51,9 @@ spec:
             - '-c'
             - >-
               sleep 60; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc
-              invalidate https://console.doesntexist.redhat.com/config/chrome/fed-modules.json
+              delete https://console.doesntexist.redhat.com/config/chrome/fed-modules.json
               https://console.doesntexist.redhat.com/apps/chrome/index.html
+              ; while :; do sleep 1d; done
           resources: {}
           volumeMounts:
             - name: akamai-edgerc
@@ -112,7 +113,8 @@ spec:
             - '-c'
             - >-
               sleep 60; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc
-              invalidate https://console.doesntexist.redhat.com/apps/chrome-test-defaults/fed-mods.json
+              delete https://console.doesntexist.redhat.com/apps/chrome-test-defaults/fed-mods.json
+              ; while :; do sleep 1d; done
           resources: {}
           volumeMounts:
             - name: akamai-edgerc
