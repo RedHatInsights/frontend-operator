@@ -255,7 +255,7 @@ func (r *FrontendReconciliation) populateCacheBustContainer(d *apps.Deployment, 
 	pathsToCacheBust := createCachePurgePathList(frontend, frontendEnvironment)
 
 	// Construct the akamai cache bust command
-	command := fmt.Sprintf("sleep 60; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc invalidate %s", strings.Join(pathsToCacheBust, " "))
+	command := fmt.Sprintf("sleep 60; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete %s", strings.Join(pathsToCacheBust, " "))
 
 	// Modify the obejct to set the things we care about
 	cacheBustContainer := v1.Container{
