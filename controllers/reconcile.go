@@ -198,8 +198,8 @@ func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.F
 	return purgePaths
 }
 
-// populateInitContainer adds the akamai cache bust init container to the deployment
-func (r *FrontendReconciliation) populateInitContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) error {
+// populateCacheBustContainer adds the akamai cache bust container to the deployment
+func (r *FrontendReconciliation) populateCacheBustContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) error {
 	// Guard on frontend opting out of cache busting
 	if frontend.Spec.AkamaiCacheBustDisable {
 		return nil
@@ -255,10 +255,10 @@ func (r *FrontendReconciliation) populateInitContainer(d *apps.Deployment, front
 	pathsToCacheBust := createCachePurgePathList(frontend, frontendEnvironment)
 
 	// Construct the akamai cache bust command
-	command := fmt.Sprintf("/cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc invalidate %s", strings.Join(pathsToCacheBust, " "))
+	command := fmt.Sprintf("sleep 60; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete %s", strings.Join(pathsToCacheBust, " "))
 
 	// Modify the obejct to set the things we care about
-	d.Spec.Template.Spec.InitContainers = []v1.Container{{
+	cacheBustContainer := v1.Container{
 		Name:  "akamai-cache-bust",
 		Image: frontendEnvironment.Spec.AkamaiCacheBustImage,
 		// Mount the akamai edgerc file from the configmap
@@ -271,8 +271,10 @@ func (r *FrontendReconciliation) populateInitContainer(d *apps.Deployment, front
 		},
 		// Run the akamai cache bust script
 		Command: []string{"/bin/bash", "-c", command},
-	},
 	}
+	// add the container to the spec containers
+	d.Spec.Template.Spec.Containers = append(d.Spec.Template.Spec.Containers, cacheBustContainer)
+
 	// Add the akamai edgerc configmap to the deployment
 
 	return nil
@@ -352,9 +354,9 @@ func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map
 	populateContainer(d, r.Frontend, r.FrontendEnvironment)
 	r.populateEnvVars(d, r.FrontendEnvironment)
 
-	// If cache busting is enabled for the environment, add the akamai cache bust init container
+	// If cache busting is enabled for the environment, add the akamai cache bust container
 	if r.FrontendEnvironment.Spec.EnableAkamaiCacheBust && r.FrontendEnvironment.Spec.AkamaiCacheBustImage != "" {
-		if err := r.populateInitContainer(d, r.Frontend, r.FrontendEnvironment); err != nil {
+		if err := r.populateCacheBustContainer(d, r.Frontend, r.FrontendEnvironment); err != nil {
 			return err
 		}
 	}

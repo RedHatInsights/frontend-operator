@@ -27,21 +27,6 @@ spec:
           configMap:
             name: akamai-edgerc
             defaultMode: 420
-      initContainers:
-        - name: akamai-cache-bust
-          image: quay.io/rh_ee_addrew/hi_true_bye:add_alias
-          command:
-            - /bin/bash
-            - '-c'
-            - >-
-              /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc
-              invalidate https://console.doesntexist.redhat.com/config/chrome/fed-modules.json
-              https://console.doesntexist.redhat.com/apps/chrome/index.html
-          resources: {}
-          volumeMounts:
-            - name: akamai-edgerc
-              mountPath: /opt/app-root/edgerc
-              subPath: edgerc
       containers:
         - name: fe-image
           image: quay.io/cloudservices/insights-chrome-frontend:720317c
@@ -59,6 +44,20 @@ spec:
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           imagePullPolicy: IfNotPresent
+        - name: akamai-cache-bust
+          image: quay.io/rh_ee_addrew/hi_true_bye:add_alias
+          command:
+            - /bin/bash
+            - '-c'
+            - >-
+              sleep 60; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc
+              invalidate https://console.doesntexist.redhat.com/config/chrome/fed-modules.json
+              https://console.doesntexist.redhat.com/apps/chrome/index.html
+          resources: {}
+          volumeMounts:
+            - name: akamai-edgerc
+              mountPath: /opt/app-root/edgerc
+              subPath: edgerc
 ---
 kind: Deployment
 apiVersion: apps/v1
@@ -89,20 +88,6 @@ spec:
           configMap:
             name: akamai-edgerc
             defaultMode: 420
-      initContainers:
-        - name: akamai-cache-bust
-          image: quay.io/rh_ee_addrew/hi_true_bye:add_alias
-          command:
-            - /bin/bash
-            - '-c'
-            - >-
-              /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc
-              invalidate https://console.doesntexist.redhat.com/apps/chrome-test-defaults/fed-mods.json
-          resources: {}
-          volumeMounts:
-            - name: akamai-edgerc
-              mountPath: /opt/app-root/edgerc
-              subPath: edgerc
       containers:
         - name: fe-image
           image: quay.io/cloudservices/insights-chrome-frontend:720317c
@@ -120,6 +105,19 @@ spec:
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           imagePullPolicy: IfNotPresent
+        - name: akamai-cache-bust
+          image: quay.io/rh_ee_addrew/hi_true_bye:add_alias
+          command:
+            - /bin/bash
+            - '-c'
+            - >-
+              sleep 60; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc
+              invalidate https://console.doesntexist.redhat.com/apps/chrome-test-defaults/fed-mods.json
+          resources: {}
+          volumeMounts:
+            - name: akamai-edgerc
+              mountPath: /opt/app-root/edgerc
+              subPath: edgerc
 ---
 kind: Deployment
 apiVersion: apps/v1
