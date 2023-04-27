@@ -430,11 +430,12 @@ func (r *FrontendReconciliation) createCacheBustJob() error {
 
 	j.Spec.Completions = utils.Int32Ptr(1)
 
-	r.populateCacheBustContainer(j)
+	err := r.populateCacheBustContainer(j)
+	if err != nil {
+		return err
+	}
 
-	// Inform the cache that our updates are complete
-	err := r.Cache.Update(CoreJob, j)
-	return err
+	return r.Cache.Update(CoreJob, j)
 }
 
 // Will need to create a service resource ident in provider like CoreDeployment
