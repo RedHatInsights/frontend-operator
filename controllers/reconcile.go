@@ -426,6 +426,8 @@ func (r *FrontendReconciliation) createCacheBustJob() error {
 	labeler := utils.GetCustomLabeler(labels, nn, r.Frontend)
 	labeler(j)
 
+	j.SetOwnerReferences([]metav1.OwnerReference{r.FrontendEnvironment.MakeOwnerReference()})
+
 	j.Spec.Template.Spec.RestartPolicy = v1.RestartPolicyNever
 
 	j.Spec.Completions = utils.Int32Ptr(1)
