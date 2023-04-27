@@ -116,6 +116,7 @@ type FrontendReconciler struct {
 //+kubebuilder:rbac:groups=cloud.redhat.com,resources=bundles/finalizers,verbs=update
 
 // +kubebuilder:rbac:groups="",resources=serviceaccounts;configmaps;services;secrets;persistentvolumeclaims;events;namespaces,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=batch,resources=cronjobs;jobs,verbs=get;list;create;update;watch;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
