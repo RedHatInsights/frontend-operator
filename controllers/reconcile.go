@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
 
+	batchv1 "k8s.io/api/batch/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -64,6 +65,12 @@ func (r *FrontendReconciliation) run() error {
 		}
 		if err := r.createFrontendService(); err != nil {
 			return err
+		}
+		// If cache busting is enabled for the environment, add the akamai cache bust container
+		if r.FrontendEnvironment.Spec.EnableAkamaiCacheBust && r.FrontendEnvironment.Spec.AkamaiCacheBustImage != "" {
+			if err := r.createCacheBustJob(); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -199,15 +206,11 @@ func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.F
 }
 
 // populateCacheBustContainer adds the akamai cache bust container to the deployment
-func (r *FrontendReconciliation) populateCacheBustContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) error {
-	// Guard on frontend opting out of cache busting
-	if frontend.Spec.AkamaiCacheBustDisable {
-		return nil
-	}
+func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) error {
 
 	// Get the akamai secret
-	akamaiSecretName := getAkamaiSecretName(frontendEnvironment)
-	secret, err := getAkamaiSecret(r.Ctx, r.Client, frontend, akamaiSecretName)
+	akamaiSecretName := getAkamaiSecretName(r.FrontendEnvironment)
+	secret, err := getAkamaiSecret(r.Ctx, r.Client, r.Frontend, akamaiSecretName)
 	if err != nil {
 		return err
 	}
@@ -249,18 +252,18 @@ func (r *FrontendReconciliation) populateCacheBustContainer(d *apps.Deployment, 
 		},
 	}
 
-	d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes, akamaiVolume)
+	j.Spec.Template.Spec.Volumes = append(j.Spec.Template.Spec.Volumes, akamaiVolume)
 
 	// Get the paths to cache bust
-	pathsToCacheBust := createCachePurgePathList(frontend, frontendEnvironment)
+	pathsToCacheBust := createCachePurgePathList(r.Frontend, r.FrontendEnvironment)
 
 	// Construct the akamai cache bust command
-	command := fmt.Sprintf("sleep 60; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete %s ; while :; do sleep 1d; done", strings.Join(pathsToCacheBust, " "))
+	command := fmt.Sprintf("sleep 60; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete %s ", strings.Join(pathsToCacheBust, " "))
 
 	// Modify the obejct to set the things we care about
 	cacheBustContainer := v1.Container{
 		Name:  "akamai-cache-bust",
-		Image: frontendEnvironment.Spec.AkamaiCacheBustImage,
+		Image: r.FrontendEnvironment.Spec.AkamaiCacheBustImage,
 		// Mount the akamai edgerc file from the configmap
 		VolumeMounts: []v1.VolumeMount{
 			{
@@ -273,7 +276,7 @@ func (r *FrontendReconciliation) populateCacheBustContainer(d *apps.Deployment, 
 		Command: []string{"/bin/bash", "-c", command},
 	}
 	// add the container to the spec containers
-	d.Spec.Template.Spec.Containers = append(d.Spec.Template.Spec.Containers, cacheBustContainer)
+	j.Spec.Template.Spec.Containers = append(j.Spec.Template.Spec.Containers, cacheBustContainer)
 
 	// Add the akamai edgerc configmap to the deployment
 
@@ -354,13 +357,6 @@ func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map
 	populateContainer(d, r.Frontend, r.FrontendEnvironment)
 	r.populateEnvVars(d, r.FrontendEnvironment)
 
-	// If cache busting is enabled for the environment, add the akamai cache bust container
-	if r.FrontendEnvironment.Spec.EnableAkamaiCacheBust && r.FrontendEnvironment.Spec.AkamaiCacheBustImage != "" {
-		if err := r.populateCacheBustContainer(d, r.Frontend, r.FrontendEnvironment); err != nil {
-			return err
-		}
-	}
-
 	d.Spec.Template.ObjectMeta.Labels = labels
 
 	d.Spec.Selector = &metav1.LabelSelector{MatchLabels: labels}
@@ -400,6 +396,46 @@ func createPorts() []v1.ServicePort {
 			AppProtocol: &appProtocol,
 		},
 	}
+}
+
+func (r *FrontendReconciliation) createCacheBustJob() error {
+	// Guard on frontend opting out of cache busting
+	if r.Frontend.Spec.AkamaiCacheBustDisable {
+		return nil
+	}
+
+	// Create job
+	j := &batchv1.Job{}
+
+	jobName := r.Frontend.Name + "-frontend-cachebust"
+
+	// Define name of resource
+	nn := types.NamespacedName{
+		Name:      jobName,
+		Namespace: r.Frontend.Namespace,
+	}
+
+	// Create object in cache (will populate cache if exists)
+	if err := r.Cache.Create(CoreJob, nn, j); err != nil {
+		return err
+	}
+
+	// Label with the right labels
+	labels := r.Frontend.GetLabels()
+
+	labeler := utils.GetCustomLabeler(labels, nn, r.Frontend)
+	labeler(j)
+
+	j.Spec.Template.Spec.RestartPolicy = v1.RestartPolicyNever
+
+	j.Spec.Completions = utils.Int32Ptr(1)
+
+	err := r.populateCacheBustContainer(j)
+	if err != nil {
+		return err
+	}
+
+	return r.Cache.Update(CoreJob, j)
 }
 
 // Will need to create a service resource ident in provider like CoreDeployment

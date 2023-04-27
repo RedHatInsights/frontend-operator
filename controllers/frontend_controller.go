@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	apps "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
@@ -68,6 +69,7 @@ func createNewScheme() *runtime.Scheme {
 var scheme = createNewScheme()
 
 var CoreDeployment = resCache.NewSingleResourceIdent("main", "deployment", &apps.Deployment{})
+var CoreJob = resCache.NewSingleResourceIdent("main", "job", &batchv1.Job{})
 var CoreService = resCache.NewSingleResourceIdent("main", "service", &v1.Service{})
 var CoreConfig = resCache.NewSingleResourceIdent("main", "config", &v1.ConfigMap{})
 var SSOConfig = resCache.NewSingleResourceIdent("main", "sso_config", &v1.ConfigMap{})
