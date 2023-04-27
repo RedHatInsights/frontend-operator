@@ -276,7 +276,7 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 		Command: []string{"/bin/bash", "-c", command},
 	}
 	// add the container to the spec containers
-	j.Spec.Template.Spec.Containers = append(j.Spec.Template.Spec.Containers, cacheBustContainer)
+	j.Spec.Template.Spec.Containers = []v1.Container{cacheBustContainer}
 
 	// Add the akamai edgerc configmap to the deployment
 
