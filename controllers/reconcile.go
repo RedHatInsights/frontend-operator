@@ -252,7 +252,7 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 		},
 	}
 
-	j.Spec.Template.Spec.Volumes = append(j.Spec.Template.Spec.Volumes, akamaiVolume)
+	j.Spec.Template.Spec.Volumes = []v1.Volume{akamaiVolume}
 
 	// Get the paths to cache bust
 	pathsToCacheBust := createCachePurgePathList(r.Frontend, r.FrontendEnvironment)
