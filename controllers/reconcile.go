@@ -19,6 +19,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -68,7 +69,7 @@ func (r *FrontendReconciliation) run() error {
 		}
 		// If cache busting is enabled for the environment, add the akamai cache bust container
 		if r.FrontendEnvironment.Spec.EnableAkamaiCacheBust && r.FrontendEnvironment.Spec.AkamaiCacheBustImage != "" {
-			if err := r.createCacheBustJob(); err != nil {
+			if err := r.createOrUpdateCacheBustJob(); err != nil {
 				return err
 			}
 		}
@@ -218,27 +219,29 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 	edgercFile := makeAkamaiEdgercFileFromSecret(secret)
 
 	configMap := &v1.ConfigMap{}
+	configMap.SetName("akamai-edgerc")
+	configMap.SetNamespace(r.Frontend.Namespace)
+
 	nn := types.NamespacedName{
 		Name:      "akamai-edgerc",
 		Namespace: r.Frontend.Namespace,
 	}
-	if err := r.Cache.Create(CoreConfig, nn, configMap); err != nil {
-		return err
-	}
-
 	labels := r.FrontendEnvironment.GetLabels()
 	labler := utils.GetCustomLabeler(labels, nn, r.FrontendEnvironment)
 	labler(configMap)
 
-	configMap.SetOwnerReferences([]metav1.OwnerReference{r.FrontendEnvironment.MakeOwnerReference()})
+	configMap.SetOwnerReferences([]metav1.OwnerReference{r.Frontend.MakeOwnerReference()})
 
 	// Add the akamai edgerc file to the configmap
 	configMap.Data = map[string]string{
 		"edgerc": edgercFile,
 	}
 
-	if err := r.Cache.Update(CoreConfig, configMap); err != nil {
-		return err
+	// Create the configmap with the Client if it doesn't already exist
+	if err := r.Client.Create(r.Ctx, configMap); err != nil {
+		if !k8serr.IsAlreadyExists(err) {
+			return err
+		}
 	}
 
 	akamaiVolume := v1.Volume{
@@ -258,7 +261,7 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 	pathsToCacheBust := createCachePurgePathList(r.Frontend, r.FrontendEnvironment)
 
 	// Construct the akamai cache bust command
-	command := fmt.Sprintf("sleep 60; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete %s ", strings.Join(pathsToCacheBust, " "))
+	command := fmt.Sprintf("sleep 60; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete %s", strings.Join(pathsToCacheBust, " "))
 
 	// Modify the obejct to set the things we care about
 	cacheBustContainer := v1.Container{
@@ -277,6 +280,9 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 	}
 	// add the container to the spec containers
 	j.Spec.Template.Spec.Containers = []v1.Container{cacheBustContainer}
+
+	// Add the restart policy
+	j.Spec.Template.Spec.RestartPolicy = v1.RestartPolicyNever
 
 	// Add the akamai edgerc configmap to the deployment
 
@@ -398,16 +404,17 @@ func createPorts() []v1.ServicePort {
 	}
 }
 
-func (r *FrontendReconciliation) createCacheBustJob() error {
-	// Guard on frontend opting out of cache busting
-	if r.Frontend.Spec.AkamaiCacheBustDisable {
-		return nil
-	}
+func (r *FrontendReconciliation) generateJobName() string {
+	return r.Frontend.Name + "-frontend-cachebust"
+}
 
-	// Create job
+// getExistingJob returns the existing job if it exists
+// and a bool indicating if it exists or not
+func (r *FrontendReconciliation) getExistingJob() (*batchv1.Job, bool, error) {
+	// Job we'll fill up
 	j := &batchv1.Job{}
 
-	jobName := r.Frontend.Name + "-frontend-cachebust"
+	jobName := r.generateJobName()
 
 	// Define name of resource
 	nn := types.NamespacedName{
@@ -415,29 +422,110 @@ func (r *FrontendReconciliation) createCacheBustJob() error {
 		Namespace: r.Frontend.Namespace,
 	}
 
-	// Create object in cache (will populate cache if exists)
-	if err := r.Cache.Create(CoreJob, nn, j); err != nil {
+	// Try and get the job
+	err := r.Client.Get(r.Ctx, nn, j)
+	if err != nil {
+		if k8serr.IsNotFound(err) {
+			// It doesn't exist so we can return false and no error
+			return j, false, nil
+		}
+		// Something is wrong so we return the error
+		return j, false, err
+	}
+
+	// It exists so we return true and no error
+	return j, true, nil
+
+}
+
+func (r *FrontendReconciliation) isJobFromCurrentFrontendImage(j *batchv1.Job) bool {
+	return j.Spec.Template.ObjectMeta.Annotations["frontend-image"] == r.Frontend.Spec.Image
+}
+
+// manageExistingJob will delete the existing job if it exists and is not from the current frontend image
+// It will return true if the job exists and is from the current frontend image
+func (r *FrontendReconciliation) manageExistingJob() (bool, error) {
+	j, exists, err := r.getExistingJob()
+	if err != nil {
+		return false, err
+	}
+
+	// If it doesn't exist we can return false and no error
+	if !exists {
+		return false, nil
+	}
+
+	// If it exists but is not from the current frontend image we delete it
+	if !r.isJobFromCurrentFrontendImage(j) {
+		return false, r.Client.Delete(r.Ctx, j)
+	}
+
+	// If it exists and is from the current frontend image we return true and no error
+	return true, nil
+}
+
+// createOrUpdateCacheBustJob will create a new job if it doesn't exist
+// If it does exist and is from the current frontend image it will return
+// If it does exist and is not from the current frontend image it will delete it and create a new one
+func (r *FrontendReconciliation) createOrUpdateCacheBustJob() error {
+	// Guard on frontend opting out of cache busting
+	if r.Frontend.Spec.AkamaiCacheBustDisable {
+		return nil
+	}
+
+	// If the job exists and is from the current frontend image we can return
+	// If the job exists and is not from the current frontend image we delete it
+	// If the job doesn't exist we create it
+	existsAndMatchesCurrentFrontendImage, err := r.manageExistingJob()
+	if err != nil {
 		return err
 	}
+	if existsAndMatchesCurrentFrontendImage {
+		return nil
+	}
+
+	// Create job
+	j := &batchv1.Job{}
+
+	jobName := r.generateJobName()
+
+	// Set name
+	j.SetName(jobName)
+	// Set namespace
+	j.SetNamespace(r.Frontend.Namespace)
 
 	// Label with the right labels
 	labels := r.Frontend.GetLabels()
 
+	// Define name of resource
+	nn := types.NamespacedName{
+		Name:      jobName,
+		Namespace: r.Frontend.Namespace,
+	}
+
 	labeler := utils.GetCustomLabeler(labels, nn, r.Frontend)
 	labeler(j)
 
-	j.SetOwnerReferences([]metav1.OwnerReference{r.FrontendEnvironment.MakeOwnerReference()})
+	j.SetOwnerReferences([]metav1.OwnerReference{r.Frontend.MakeOwnerReference()})
 
 	j.Spec.Template.Spec.RestartPolicy = v1.RestartPolicyNever
 
 	j.Spec.Completions = utils.Int32Ptr(1)
 
-	err := r.populateCacheBustContainer(j)
-	if err != nil {
-		return err
+	//Set the image frontend image annotation
+	annotations := j.Spec.Template.ObjectMeta.Annotations
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	annotations["frontend-image"] = r.Frontend.Spec.Image
+	j.Spec.Template.ObjectMeta.SetAnnotations(annotations)
+
+	errr := r.populateCacheBustContainer(j)
+	if errr != nil {
+		return errr
 	}
 
-	return r.Cache.Update(CoreJob, j)
+	return r.Client.Create(r.Ctx, j)
 }
 
 // Will need to create a service resource ident in provider like CoreDeployment
