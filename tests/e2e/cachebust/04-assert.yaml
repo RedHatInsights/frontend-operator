@@ -25,7 +25,7 @@ spec:
             defaultMode: 420
       containers:
         - name: fe-image
-          image: quay.io/cloudservices/insights-chrome-frontend:720317c
+          image: quay.io/cloudservices/insights-chrome-frontend:a4ed168
           ports:
             - name: web
               containerPort: 80
@@ -56,7 +56,7 @@ spec:
   template:
     metadata:
       annotations:
-        frontend-image: quay.io/cloudservices/insights-chrome-frontend:720317c
+        frontend-image: quay.io/cloudservices/insights-chrome-frontend:a4ed168
     spec:
       volumes:
         - name: akamai-edgerc
@@ -104,7 +104,7 @@ spec:
             defaultMode: 420
       containers:
         - name: fe-image
-          image: quay.io/cloudservices/insights-chrome-frontend:720317c
+          image: quay.io/cloudservices/insights-chrome-frontend:a4ed168
           ports:
             - name: web
               containerPort: 80
@@ -135,7 +135,7 @@ spec:
   template:
     metadata:
       annotations:
-        frontend-image: quay.io/cloudservices/insights-chrome-frontend:720317c
+        frontend-image: quay.io/cloudservices/insights-chrome-frontend:a4ed168
     spec:
       volumes:
         - name: akamai-edgerc
@@ -184,7 +184,7 @@ spec:
             defaultMode: 420
       containers:
         - name: fe-image
-          image: quay.io/cloudservices/insights-chrome-frontend:720317c
+          image: quay.io/cloudservices/insights-chrome-frontend:a4ed168
           ports:
             - name: web
               containerPort: 80
