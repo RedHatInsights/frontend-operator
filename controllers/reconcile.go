@@ -512,7 +512,7 @@ func (r *FrontendReconciliation) createOrUpdateCacheBustJob() error {
 
 	j.Spec.Completions = utils.Int32Ptr(1)
 
-	//Set the image frontend image annotation
+	// Set the image frontend image annotation
 	annotations := j.Spec.Template.ObjectMeta.Annotations
 	if annotations == nil {
 		annotations = make(map[string]string)
