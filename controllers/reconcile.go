@@ -21,6 +21,7 @@ import (
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
@@ -457,7 +458,10 @@ func (r *FrontendReconciliation) manageExistingJob() (bool, error) {
 
 	// If it exists but is not from the current frontend image we delete it
 	if !r.isJobFromCurrentFrontendImage(j) {
-		return false, r.Client.Delete(r.Ctx, j)
+		backgroundDeletion := metav1.DeletePropagationBackground
+		return false, r.Client.Delete(r.Ctx, j, &client.DeleteOptions{
+			PropagationPolicy: &backgroundDeletion,
+		})
 	}
 
 	// If it exists and is from the current frontend image we return true and no error
