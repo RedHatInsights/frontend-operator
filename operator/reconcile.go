@@ -1,4 +1,4 @@
-package controllers
+package operator
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
-	localUtil "github.com/RedHatInsights/frontend-operator/controllers/utils"
+	localUtil "github.com/RedHatInsights/frontend-operator/operator/utils"
 	resCache "github.com/RedHatInsights/rhc-osdk-utils/resourceCache"
 	"github.com/RedHatInsights/rhc-osdk-utils/utils"
 	"github.com/go-logr/logr"

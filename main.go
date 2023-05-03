@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
 	cloudredhatcomv1alpha1 "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
-	"github.com/RedHatInsights/frontend-operator/controllers"
+	"github.com/RedHatInsights/frontend-operator/operator"
 	"github.com/RedHatInsights/rhc-osdk-utils/logging"
 	"github.com/go-logr/zapr"
 	//+kubebuilder:scaffold:imports
@@ -92,7 +92,7 @@ func Run(metricsAddr, probeAddr string, enableLeaderElection bool) error {
 		return fmt.Errorf("unable to start manager: %w", err)
 	}
 
-	if err = (&controllers.Controller{
+	if err = (&operator.Controller{
 		Log:    ctrl.Log.WithName("controllers").WithName("Frontend"),
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
