@@ -94,8 +94,8 @@ func (rm *ReconciliationMetrics) stop() {
 	reconciliationTimeMetrics.With(prometheus.Labels{"app": rm.appName}).Observe(elapsedTime)
 }
 
-// FrontendReconciler reconciles a Frontend object
-type FrontendReconciler struct {
+// Controller reconciles a Frontend object
+type Controller struct {
 	client.Client
 	Log                   logr.Logger
 	Scheme                *runtime.Scheme
@@ -125,7 +125,7 @@ type FrontendReconciler struct {
 
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
-func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	r.Log = log.FromContext(ctx)
 	qualifiedName := fmt.Sprintf("%s:%s", req.Namespace, req.Name)
 	log := r.Log.WithValues("frontend", qualifiedName).WithValues("id", utils.RandString(5))
@@ -196,7 +196,7 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		MetricsServiceMonitor,
 	)
 
-	reconciliation := FrontendReconciliation{
+	reconciliation := Reconciler{
 		Log:                 log,
 		Recorder:            r.Recorder,
 		Cache:               cache,
@@ -255,7 +255,7 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Controller) SetupWithManager(mgr ctrl.Manager) error {
 
 	cache := mgr.GetCache()
 
@@ -318,7 +318,7 @@ func defaultPredicate(logr logr.Logger, ctrlName string) predicate.Funcs {
 	}
 }
 
-func (r *FrontendReconciler) appsToEnqueueUponBundleUpdate(a client.Object) []reconcile.Request {
+func (r *Controller) appsToEnqueueUponBundleUpdate(a client.Object) []reconcile.Request {
 	reqs := []reconcile.Request{}
 	ctx := context.Background()
 	obj := types.NamespacedName{
@@ -363,7 +363,7 @@ func (r *FrontendReconciler) appsToEnqueueUponBundleUpdate(a client.Object) []re
 	return reqs
 }
 
-func (r *FrontendReconciler) appsToEnqueueUponFrontendEnvironmentUpdate(a client.Object) []reconcile.Request {
+func (r *Controller) appsToEnqueueUponFrontendEnvironmentUpdate(a client.Object) []reconcile.Request {
 	reqs := []reconcile.Request{}
 	ctx := context.Background()
 	obj := types.NamespacedName{
@@ -407,7 +407,7 @@ func (r *FrontendReconciler) appsToEnqueueUponFrontendEnvironmentUpdate(a client
 	return reqs
 }
 
-func (r *FrontendReconciler) finalizeApp(reqLogger logr.Logger, a *crd.Frontend) error {
+func (r *Controller) finalizeApp(reqLogger logr.Logger, a *crd.Frontend) error {
 
 	delete(managedFrontends, a.GetIdent())
 
@@ -416,7 +416,7 @@ func (r *FrontendReconciler) finalizeApp(reqLogger logr.Logger, a *crd.Frontend)
 	return nil
 }
 
-func (r *FrontendReconciler) addFinalizer(reqLogger logr.Logger, a *crd.Frontend) error {
+func (r *Controller) addFinalizer(reqLogger logr.Logger, a *crd.Frontend) error {
 	reqLogger.Info("Adding Finalizer for the ClowdApp")
 	controllerutil.AddFinalizer(a, frontendFinalizer)
 

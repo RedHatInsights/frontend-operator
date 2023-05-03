@@ -35,18 +35,18 @@ const (
 	AkamaiSecretNameDefault = "akamai"
 )
 
-type FrontendReconciliation struct {
+type Reconciler struct {
 	Log                 logr.Logger
 	Recorder            record.EventRecorder
 	Cache               resCache.ObjectCache
-	FRE                 *FrontendReconciler
+	FRE                 *Controller
 	FrontendEnvironment *crd.FrontendEnvironment
 	Frontend            *crd.Frontend
 	Ctx                 context.Context
 	Client              client.Client
 }
 
-func (r *FrontendReconciliation) run() error {
+func (r *Reconciler) run() error {
 
 	configMap, err := r.setupConfigMaps()
 	if err != nil {
@@ -208,7 +208,7 @@ func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.F
 }
 
 // populateCacheBustContainer adds the akamai cache bust container to the deployment
-func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) error {
+func (r *Reconciler) populateCacheBustContainer(j *batchv1.Job) error {
 
 	// Get the akamai secret
 	akamaiSecretName := getAkamaiSecretName(r.FrontendEnvironment)
@@ -320,7 +320,7 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 }
 
 // Add the SSL env vars if we SSL mode is set in the frontend environment
-func (r *FrontendReconciliation) populateEnvVars(d *apps.Deployment, frontendEnvironment *crd.FrontendEnvironment) {
+func (r *Reconciler) populateEnvVars(d *apps.Deployment, frontendEnvironment *crd.FrontendEnvironment) {
 	if !frontendEnvironment.Spec.SSL {
 		return
 	}
@@ -336,7 +336,7 @@ func (r *FrontendReconciliation) populateEnvVars(d *apps.Deployment, frontendEnv
 	d.Spec.Template.Spec.Containers[0].Env = envVars
 }
 
-func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map[string]string) error {
+func (r *Reconciler) createFrontendDeployment(annotationHashes []map[string]string) error {
 
 	// Create new empty struct
 	d := &apps.Deployment{}
@@ -405,13 +405,13 @@ func createPorts() []v1.ServicePort {
 	}
 }
 
-func (r *FrontendReconciliation) generateJobName() string {
+func (r *Reconciler) generateJobName() string {
 	return r.Frontend.Name + "-frontend-cachebust"
 }
 
 // getExistingJob returns the existing job if it exists
 // and a bool indicating if it exists or not
-func (r *FrontendReconciliation) getExistingJob() (*batchv1.Job, bool, error) {
+func (r *Reconciler) getExistingJob() (*batchv1.Job, bool, error) {
 	// Job we'll fill up
 	j := &batchv1.Job{}
 
@@ -439,13 +439,13 @@ func (r *FrontendReconciliation) getExistingJob() (*batchv1.Job, bool, error) {
 
 }
 
-func (r *FrontendReconciliation) isJobFromCurrentFrontendImage(j *batchv1.Job) bool {
+func (r *Reconciler) isJobFromCurrentFrontendImage(j *batchv1.Job) bool {
 	return j.Spec.Template.ObjectMeta.Annotations["frontend-image"] == r.Frontend.Spec.Image
 }
 
 // manageExistingJob will delete the existing job if it exists and is not from the current frontend image
 // It will return true if the job exists and is from the current frontend image
-func (r *FrontendReconciliation) manageExistingJob() (bool, error) {
+func (r *Reconciler) manageExistingJob() (bool, error) {
 	j, exists, err := r.getExistingJob()
 	if err != nil {
 		return false, err
@@ -471,7 +471,7 @@ func (r *FrontendReconciliation) manageExistingJob() (bool, error) {
 // createOrUpdateCacheBustJob will create a new job if it doesn't exist
 // If it does exist and is from the current frontend image it will return
 // If it does exist and is not from the current frontend image it will delete it and create a new one
-func (r *FrontendReconciliation) createOrUpdateCacheBustJob() error {
+func (r *Reconciler) createOrUpdateCacheBustJob() error {
 	// Guard on frontend opting out of cache busting
 	if r.Frontend.Spec.AkamaiCacheBustDisable {
 		return nil
@@ -533,7 +533,7 @@ func (r *FrontendReconciliation) createOrUpdateCacheBustJob() error {
 }
 
 // Will need to create a service resource ident in provider like CoreDeployment
-func (r *FrontendReconciliation) createFrontendService() error {
+func (r *Reconciler) createFrontendService() error {
 	// Create empty service
 	s := &v1.Service{}
 
@@ -575,7 +575,7 @@ func (r *FrontendReconciliation) createFrontendService() error {
 
 }
 
-func (r *FrontendReconciliation) createFrontendIngress() error {
+func (r *Reconciler) createFrontendIngress() error {
 	netobj := &networking.Ingress{}
 
 	nn := types.NamespacedName{
@@ -599,7 +599,7 @@ func (r *FrontendReconciliation) createFrontendIngress() error {
 	return err
 }
 
-func (r *FrontendReconciliation) createAnnotationsAndPopulate(nn types.NamespacedName, netobj *networking.Ingress) {
+func (r *Reconciler) createAnnotationsAndPopulate(nn types.NamespacedName, netobj *networking.Ingress) {
 	ingressClass := r.FrontendEnvironment.Spec.IngressClass
 	if ingressClass == "" {
 		ingressClass = "nginx"
@@ -632,7 +632,7 @@ func (r *FrontendReconciliation) createAnnotationsAndPopulate(nn types.Namespace
 	}
 }
 
-func (r *FrontendReconciliation) getFrontendPaths() []string {
+func (r *Reconciler) getFrontendPaths() []string {
 	frontendPaths := r.Frontend.Spec.Frontend.Paths
 	defaultPath := fmt.Sprintf("/apps/%s", r.Frontend.Name)
 	defaultBetaPath := fmt.Sprintf("/beta/apps/%s", r.Frontend.Name)
@@ -659,7 +659,7 @@ func (r *FrontendReconciliation) getFrontendPaths() []string {
 	return frontendPaths
 }
 
-func (r *FrontendReconciliation) populateConsoleDotIngress(netobj *networking.Ingress, ingressClass, serviceName string) {
+func (r *Reconciler) populateConsoleDotIngress(netobj *networking.Ingress, ingressClass, serviceName string) {
 	frontendPaths := r.getFrontendPaths()
 
 	var ingressPaths []networking.HTTPIngressPath
@@ -816,7 +816,7 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 	return nil
 }
 
-func (r *FrontendReconciliation) setupBundleData(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend) error {
+func (r *Reconciler) setupBundleData(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend) error {
 	bundleList := &crd.BundleList{}
 
 	if err := r.FRE.Client.List(r.Ctx, bundleList, client.MatchingFields{"spec.envName": r.Frontend.Spec.EnvName}); err != nil {
@@ -861,7 +861,7 @@ func createConfigmapHash(cfgMap *v1.ConfigMap) (string, error) {
 
 // setupConfigMaps will create configmaps for the various config json
 // files, including fed-modules.json and the various bundle json files
-func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
+func (r *Reconciler) setupConfigMaps() (*v1.ConfigMap, error) {
 	// Will need to interact directly with the client here, and not the cache because
 	// we need to read ALL the Frontend CRDs in the Env that we care about
 
@@ -878,7 +878,7 @@ func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
 	return cfgMap, err
 }
 
-func (r *FrontendReconciliation) createConfigMap(frontendList *crd.FrontendList) (*v1.ConfigMap, error) {
+func (r *Reconciler) createConfigMap(frontendList *crd.FrontendList) (*v1.ConfigMap, error) {
 	cfgMap := &v1.ConfigMap{}
 
 	// Create a map of frontend names to frontends objects
@@ -910,7 +910,7 @@ func (r *FrontendReconciliation) createConfigMap(frontendList *crd.FrontendList)
 	return cfgMap, nil
 }
 
-func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend, feList *crd.FrontendList) error {
+func (r *Reconciler) populateConfigMap(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend, feList *crd.FrontendList) error {
 	cfgMap.SetOwnerReferences([]metav1.OwnerReference{r.FrontendEnvironment.MakeOwnerReference()})
 	cfgMap.Data = map[string]string{}
 
@@ -934,7 +934,7 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 	return nil
 }
 
-func (r *FrontendReconciliation) createServiceMonitor() error {
+func (r *Reconciler) createServiceMonitor() error {
 
 	// the monitor mode will default to "app-interface"
 	ns := "openshift-customer-monitoring"
