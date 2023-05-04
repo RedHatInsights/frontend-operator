@@ -132,6 +132,15 @@ func (r *Controller) getFrontend(ctx context.Context, req ctrl.Request) (crd.Fro
 	return frontend, err
 }
 
+func (r *Controller) getFrontendEnvironment(ctx context.Context, frontend crd.Frontend) (*crd.FrontendEnvironment, context.Context, error) {
+	fe := &crd.FrontendEnvironment{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: frontend.Spec.EnvName}, fe); err != nil {
+		return fe, ctx, err
+	}
+	ctx = context.WithValue(ctx, FEKey("obj"), &frontend)
+	return fe, ctx, nil
+}
+
 // Some initialization for the controller
 func (r *Controller) initLogAndContext(ctx context.Context, req ctrl.Request) (context.Context, logr.Logger) {
 	r.Log = log.FromContext(ctx)
@@ -169,6 +178,20 @@ func (r *Controller) handleMarkedForDeletion(frontend crd.Frontend, log logr.Log
 	return isFrontendMarkedForDeletion, nil
 }
 
+func (r *Controller) initCache(ctx context.Context, log logr.Logger) resCache.ObjectCache {
+	cacheConfig := resCache.NewCacheConfig(scheme, nil, nil, resCache.Options{})
+	cache := resCache.NewObjectCache(ctx, r.Client, &log, cacheConfig)
+	cache.AddPossibleGVKFromIdent(
+		CoreDeployment,
+		CoreService,
+		CoreConfig,
+		SSOConfig,
+		WebIngress,
+		MetricsServiceMonitor,
+	)
+	return cache
+}
+
 // Reconile is the main reconciliation loop for the controller
 func (r *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	ctx, log := r.initLogAndContext(ctx, req)
@@ -189,7 +212,7 @@ func (r *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	// Add finalizer for this CR
+	// Add finalizer for the frontend
 	if !utils.Contains(frontend.GetFinalizers(), frontendFinalizer) {
 		if err := r.addFinalizer(log, &frontend); err != nil {
 			return ctrl.Result{}, err
@@ -198,24 +221,12 @@ func (r *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	log.Info("Reconciliation started", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
 
-	fe := &crd.FrontendEnvironment{}
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: frontend.Spec.EnvName}, fe); err != nil {
+	fe, ctx, err := r.getFrontendEnvironment(ctx, frontend)
+	if err != nil {
 		return ctrl.Result{Requeue: false}, err
 	}
 
-	ctx = context.WithValue(ctx, FEKey("obj"), &frontend)
-
-	cacheConfig := resCache.NewCacheConfig(scheme, nil, nil, resCache.Options{})
-
-	cache := resCache.NewObjectCache(ctx, r.Client, &log, cacheConfig)
-	cache.AddPossibleGVKFromIdent(
-		CoreDeployment,
-		CoreService,
-		CoreConfig,
-		SSOConfig,
-		WebIngress,
-		MetricsServiceMonitor,
-	)
+	cache := r.initCache(ctx, log)
 
 	reconciliation := Reconciler{
 		Log:                 log,
