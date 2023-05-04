@@ -47,12 +47,12 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(prom.AddToScheme(scheme))
-
 	utilruntime.Must(cloudredhatcomv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
-func main() {
+// parseFlags parses the command line flags and returns the metrics address, probe address, and enable leader election
+func parseFlags() (string, string, bool) {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
@@ -61,7 +61,13 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+
 	flag.Parse()
+	return metricsAddr, probeAddr, enableLeaderElection
+}
+
+func main() {
+	metricsAddr, probeAddr, enableLeaderElection := parseFlags()
 
 	logger, err := logging.SetupLogging(true)
 

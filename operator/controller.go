@@ -123,16 +123,57 @@ type Controller struct {
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheuses;servicemonitors,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=endpoints;pods,verbs=get;list;watch
 
-// Reconile is the main reconciliation loop for the controller
-func (r *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Controller) getFrontend(ctx context.Context, req ctrl.Request) (crd.Frontend, error) {
+	frontend := crd.Frontend{}
+	err := r.Client.Get(ctx, req.NamespacedName, &frontend)
+	if frontend.Spec.Disabled {
+		return frontend, fmt.Errorf("frontend is disabled")
+	}
+	return frontend, err
+}
+
+// Some initialization for the controller
+func (r *Controller) initLogAndContext(ctx context.Context, req ctrl.Request) (context.Context, logr.Logger) {
 	r.Log = log.FromContext(ctx)
 	qualifiedName := fmt.Sprintf("%s:%s", req.Namespace, req.Name)
 	log := r.Log.WithValues("frontend", qualifiedName).WithValues("id", utils.RandString(5))
 	ctx = context.WithValue(ctx, FEKey("log"), &log)
 	ctx = context.WithValue(ctx, FEKey("recorder"), &r.Recorder)
-	frontend := crd.Frontend{}
-	err := r.Client.Get(ctx, req.NamespacedName, &frontend)
+	return ctx, log
+}
 
+// Initalize metrics
+func (r *Controller) initMetrics(req ctrl.Request) {
+	r.reconciliationMetrics = ReconciliationMetrics{}
+	r.reconciliationMetrics.init(req.Name)
+	r.reconciliationMetrics.start()
+	reconciliationRequestMetric.With(prometheus.Labels{"app": req.Name}).Inc()
+}
+
+// Handle frontend being marked for deletion
+func (r *Controller) handleMarkedForDeletion(frontend crd.Frontend, log logr.Logger, ctx context.Context) (bool, error) {
+	isFrontendMarkedForDeletion := frontend.GetDeletionTimestamp() != nil
+	if isFrontendMarkedForDeletion {
+		if utils.Contains(frontend.GetFinalizers(), frontendFinalizer) {
+			if err := r.finalizeApp(log, &frontend); err != nil {
+				return isFrontendMarkedForDeletion, err
+			}
+
+			controllerutil.RemoveFinalizer(&frontend, frontendFinalizer)
+			err := r.Update(ctx, &frontend)
+			if err != nil {
+				return isFrontendMarkedForDeletion, err
+			}
+		}
+	}
+	return isFrontendMarkedForDeletion, nil
+}
+
+// Reconile is the main reconciliation loop for the controller
+func (r *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	ctx, log := r.initLogAndContext(ctx, req)
+
+	frontend, err := r.getFrontend(ctx, req)
 	if err != nil {
 		if k8serr.IsNotFound(err) {
 			// Must have been deleted
@@ -141,30 +182,11 @@ func (r *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	if frontend.Spec.Disabled {
-		return ctrl.Result{}, fmt.Errorf("frontend is disabled")
-	}
+	r.initMetrics(req)
 
-	r.reconciliationMetrics = ReconciliationMetrics{}
-	r.reconciliationMetrics.init(req.Name)
-	r.reconciliationMetrics.start()
-
-	reconciliationRequestMetric.With(prometheus.Labels{"app": req.Name}).Inc()
-
-	isAppMarkedForDeletion := frontend.GetDeletionTimestamp() != nil
-	if isAppMarkedForDeletion {
-		if utils.Contains(frontend.GetFinalizers(), frontendFinalizer) {
-			if err := r.finalizeApp(log, &frontend); err != nil {
-				return ctrl.Result{}, err
-			}
-
-			controllerutil.RemoveFinalizer(&frontend, frontendFinalizer)
-			err := r.Update(ctx, &frontend)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-		return ctrl.Result{}, nil
+	isFrontendMarkedForDeletion, err := r.handleMarkedForDeletion(frontend, log, ctx)
+	if err != nil || isFrontendMarkedForDeletion {
+		return ctrl.Result{}, err
 	}
 
 	// Add finalizer for this CR
