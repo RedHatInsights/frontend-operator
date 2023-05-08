@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package operator
 
 import (
 	"context"
@@ -94,8 +94,8 @@ func (rm *ReconciliationMetrics) stop() {
 	reconciliationTimeMetrics.With(prometheus.Labels{"app": rm.appName}).Observe(elapsedTime)
 }
 
-// FrontendReconciler reconciles a Frontend object
-type FrontendReconciler struct {
+// Controller reconciles a Frontend object
+type Controller struct {
 	client.Client
 	Log                   logr.Logger
 	Scheme                *runtime.Scheme
@@ -123,69 +123,63 @@ type FrontendReconciler struct {
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheuses;servicemonitors,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=endpoints;pods,verbs=get;list;watch
 
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
-func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Controller) getFrontend(ctx context.Context, req ctrl.Request) (crd.Frontend, error) {
+	frontend := crd.Frontend{}
+	err := r.Client.Get(ctx, req.NamespacedName, &frontend)
+	if frontend.Spec.Disabled {
+		return frontend, fmt.Errorf("frontend is disabled")
+	}
+	return frontend, err
+}
+
+func (r *Controller) getFrontendEnvironment(ctx context.Context, frontend crd.Frontend) (*crd.FrontendEnvironment, context.Context, error) {
+	fe := &crd.FrontendEnvironment{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: frontend.Spec.EnvName}, fe); err != nil {
+		return fe, ctx, err
+	}
+	ctx = context.WithValue(ctx, FEKey("obj"), &frontend)
+	return fe, ctx, nil
+}
+
+// Some initialization for the controller
+func (r *Controller) initLogAndContext(ctx context.Context, req ctrl.Request) (context.Context, logr.Logger) {
 	r.Log = log.FromContext(ctx)
 	qualifiedName := fmt.Sprintf("%s:%s", req.Namespace, req.Name)
 	log := r.Log.WithValues("frontend", qualifiedName).WithValues("id", utils.RandString(5))
 	ctx = context.WithValue(ctx, FEKey("log"), &log)
 	ctx = context.WithValue(ctx, FEKey("recorder"), &r.Recorder)
-	frontend := crd.Frontend{}
-	err := r.Client.Get(ctx, req.NamespacedName, &frontend)
+	return ctx, log
+}
 
-	if err != nil {
-		if k8serr.IsNotFound(err) {
-			// Must have been deleted
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
-	}
-
-	if frontend.Spec.Disabled {
-		return ctrl.Result{}, fmt.Errorf("frontend is disabled")
-	}
-
+// Initalize metrics
+func (r *Controller) initMetrics(req ctrl.Request) {
 	r.reconciliationMetrics = ReconciliationMetrics{}
 	r.reconciliationMetrics.init(req.Name)
 	r.reconciliationMetrics.start()
-
 	reconciliationRequestMetric.With(prometheus.Labels{"app": req.Name}).Inc()
+}
 
-	isAppMarkedForDeletion := frontend.GetDeletionTimestamp() != nil
-	if isAppMarkedForDeletion {
+// Handle frontend being marked for deletion
+func (r *Controller) handleMarkedForDeletion(frontend crd.Frontend, log logr.Logger, ctx context.Context) (bool, error) {
+	isFrontendMarkedForDeletion := frontend.GetDeletionTimestamp() != nil
+	if isFrontendMarkedForDeletion {
 		if utils.Contains(frontend.GetFinalizers(), frontendFinalizer) {
 			if err := r.finalizeApp(log, &frontend); err != nil {
-				return ctrl.Result{}, err
+				return isFrontendMarkedForDeletion, err
 			}
 
 			controllerutil.RemoveFinalizer(&frontend, frontendFinalizer)
 			err := r.Update(ctx, &frontend)
 			if err != nil {
-				return ctrl.Result{}, err
+				return isFrontendMarkedForDeletion, err
 			}
 		}
-		return ctrl.Result{}, nil
 	}
+	return isFrontendMarkedForDeletion, nil
+}
 
-	// Add finalizer for this CR
-	if !utils.Contains(frontend.GetFinalizers(), frontendFinalizer) {
-		if err := r.addFinalizer(log, &frontend); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
-	log.Info("Reconciliation started", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
-
-	fe := &crd.FrontendEnvironment{}
-	if err := r.Client.Get(ctx, types.NamespacedName{Name: frontend.Spec.EnvName}, fe); err != nil {
-		return ctrl.Result{Requeue: false}, err
-	}
-
-	ctx = context.WithValue(ctx, FEKey("obj"), &frontend)
-
+func (r *Controller) initCache(ctx context.Context, log logr.Logger) resCache.ObjectCache {
 	cacheConfig := resCache.NewCacheConfig(scheme, nil, nil, resCache.Options{})
-
 	cache := resCache.NewObjectCache(ctx, r.Client, &log, cacheConfig)
 	cache.AddPossibleGVKFromIdent(
 		CoreDeployment,
@@ -195,8 +189,46 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		WebIngress,
 		MetricsServiceMonitor,
 	)
+	return cache
+}
 
-	reconciliation := FrontendReconciliation{
+// Reconile is the main reconciliation loop for the controller
+func (r *Controller) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	ctx, log := r.initLogAndContext(ctx, req)
+
+	frontend, err := r.getFrontend(ctx, req)
+	if err != nil {
+		if k8serr.IsNotFound(err) {
+			// Must have been deleted
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, err
+	}
+
+	r.initMetrics(req)
+
+	isFrontendMarkedForDeletion, err := r.handleMarkedForDeletion(frontend, log, ctx)
+	if err != nil || isFrontendMarkedForDeletion {
+		return ctrl.Result{}, err
+	}
+
+	// Add finalizer for the frontend
+	if !utils.Contains(frontend.GetFinalizers(), frontendFinalizer) {
+		if err := r.addFinalizer(log, &frontend); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	log.Info("Reconciliation started", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
+
+	fe, ctx, err := r.getFrontendEnvironment(ctx, frontend)
+	if err != nil {
+		return ctrl.Result{Requeue: false}, err
+	}
+
+	cache := r.initCache(ctx, log)
+
+	reconciliation := Reconciler{
 		Log:                 log,
 		Recorder:            r.Recorder,
 		Cache:               cache,
@@ -255,7 +287,7 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *Controller) SetupWithManager(mgr ctrl.Manager) error {
 
 	cache := mgr.GetCache()
 
@@ -318,7 +350,7 @@ func defaultPredicate(logr logr.Logger, ctrlName string) predicate.Funcs {
 	}
 }
 
-func (r *FrontendReconciler) appsToEnqueueUponBundleUpdate(a client.Object) []reconcile.Request {
+func (r *Controller) appsToEnqueueUponBundleUpdate(a client.Object) []reconcile.Request {
 	reqs := []reconcile.Request{}
 	ctx := context.Background()
 	obj := types.NamespacedName{
@@ -363,7 +395,7 @@ func (r *FrontendReconciler) appsToEnqueueUponBundleUpdate(a client.Object) []re
 	return reqs
 }
 
-func (r *FrontendReconciler) appsToEnqueueUponFrontendEnvironmentUpdate(a client.Object) []reconcile.Request {
+func (r *Controller) appsToEnqueueUponFrontendEnvironmentUpdate(a client.Object) []reconcile.Request {
 	reqs := []reconcile.Request{}
 	ctx := context.Background()
 	obj := types.NamespacedName{
@@ -407,7 +439,7 @@ func (r *FrontendReconciler) appsToEnqueueUponFrontendEnvironmentUpdate(a client
 	return reqs
 }
 
-func (r *FrontendReconciler) finalizeApp(reqLogger logr.Logger, a *crd.Frontend) error {
+func (r *Controller) finalizeApp(reqLogger logr.Logger, a *crd.Frontend) error {
 
 	delete(managedFrontends, a.GetIdent())
 
@@ -416,7 +448,7 @@ func (r *FrontendReconciler) finalizeApp(reqLogger logr.Logger, a *crd.Frontend)
 	return nil
 }
 
-func (r *FrontendReconciler) addFinalizer(reqLogger logr.Logger, a *crd.Frontend) error {
+func (r *Controller) addFinalizer(reqLogger logr.Logger, a *crd.Frontend) error {
 	reqLogger.Info("Adding Finalizer for the ClowdApp")
 	controllerutil.AddFinalizer(a, frontendFinalizer)
 
