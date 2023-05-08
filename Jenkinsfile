@@ -18,6 +18,10 @@ pipeline {
         timestamps()
     }
 
+    environment {
+        FEO_CONTAINER_NAME="frontend-operator-pr-check-pipeline-$ghprbPullId"
+    }
+
     stages {
         stage('PR Checks') {
             steps {
