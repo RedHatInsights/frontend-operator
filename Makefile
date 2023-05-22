@@ -33,7 +33,6 @@ ENVTEST_K8S_VERSION = 1.23
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
 # cloud.redhat.com/frontend-operator-bundle:$VERSION and cloud.redhat.com/frontend-operator-catalog:$VERSION.
 IMAGE_TAG_BASE ?= cloud.redhat.com/frontend-operator
-
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
@@ -83,6 +82,7 @@ release: manifests kustomize controller-gen
 	cd ../..
 	$(KUSTOMIZE) build config/default >> manifest.yaml
 
+
 ##@ Development
 
 pre-push: manifests generate fmt vet build-template api-docs
@@ -107,15 +107,30 @@ ENVTEST = $(shell pwd)/testbin/bin/setup-envtest
 envtest: ## Download envtest-setup locally if necessary.
 	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
 
-test: manifests envtest generate fmt vet
+test: manifests envtest generate fmt vet	
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
 
 # gotestsum is used to generate xml for the tests. Embedded in the Dockerfile.pr
 junit: gotestsum manifests envtest generate fmt vet
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(PROJECT_DIR)/testbin/bin/gotestsum --junitfile artifacts/junit-ginko.xml -- ./... -coverprofile cover.out
 
-kuttl: manifests envtest generate fmt vet
+FEO_BUILD_TAG ?= $(shell git rev-parse --short=8 HEAD)
+kuttl-release: manifests kustomize controller-gen
+	echo "---" > manifest.yaml
+	cd config/manager && $(KUSTOMIZE) edit set image controller=frontend-operator:${FEO_BUILD_TAG}
+	cd ../..
+	$(KUSTOMIZE) build config/default >> manifest.yaml
+
+kuttl-build:
+	docker build -t frontend-operator:${FEO_BUILD_TAG} .
+	sed -i "s/controller/frontend-operator:${FEO_BUILD_TAG}/" kuttl-config.yml
+
+kuttl-teardown:
+	sed -i "s/frontend-operator:${FEO_BUILD_TAG}/controller/" kuttl-config.yml
+
+kuttl: manifests envtest generate fmt vet kuttl-build
 	kubectl kuttl test --config kuttl-config.yml  ./tests/e2e
+	make kuttl-teardown
 	
 ##@ Build
 
