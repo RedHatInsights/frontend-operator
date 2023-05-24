@@ -37,7 +37,7 @@ pipeline {
             steps {
                 withVault([configuration: configuration, vaultSecrets: secrets]) {
                     sh '''
-                    kubectl krew install kuttl && make kuttl
+                    source ./kuttle_test.sh
                     '''
                 }
             }
