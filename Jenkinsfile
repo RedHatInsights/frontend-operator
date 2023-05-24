@@ -37,7 +37,7 @@ pipeline {
             steps {
                 withVault([configuration: configuration, vaultSecrets: secrets]) {
                     sh '''
-                    source ./kuttle_test.sh
+                    source ./kuttl_test.sh
                     '''
                 }
             }
