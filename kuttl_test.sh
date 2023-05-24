@@ -20,3 +20,6 @@ kubectl krew install kuttl
 
 # Run kuttl tests
 make kuttl
+KUTTL_RESULT=$?
+
+exit $KUTTL_RESULT
