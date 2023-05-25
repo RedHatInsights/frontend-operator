@@ -116,7 +116,7 @@ junit: gotestsum manifests envtest generate fmt vet
 
 # entry point for testing kuttl with kind
 kuttl: manifests envtest generate fmt vet
-	kubectl kuttl test --config kuttl-config.yml  ./tests/e2e --test bundles
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" kubectl kuttl test --config kuttl-config.yml  ./tests/e2e
 	
 ##@ Build
 
