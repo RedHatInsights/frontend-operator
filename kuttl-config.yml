@@ -7,9 +7,8 @@ testDirs:
 - tests/e2e/
 timeout: 320
 parallel: 1
-
 commands:
-- command: make release
-- command: kubectl apply -f manifest.yaml
-- command: make run
+- command: make install
+- command: make build
+- command: ./bin/manager
   background: true
