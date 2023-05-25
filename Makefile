@@ -114,28 +114,9 @@ test: manifests envtest generate fmt vet
 junit: gotestsum manifests envtest generate fmt vet
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(PROJECT_DIR)/testbin/bin/gotestsum --junitfile artifacts/junit-ginko.xml -- ./... -coverprofile cover.out
 
-# Set tag to current commit hash
-FEO_BUILD_TAG ?= $(shell git rev-parse --short=8 HEAD)
-# This gets called during kind cluster creation
-kuttl-release: manifests kustomize controller-gen
-	echo "---" > manifest.yaml
-	cd config/manager && $(KUSTOMIZE) edit set image controller=frontend-operator:${FEO_BUILD_TAG}
-	cd ../..
-	$(KUSTOMIZE) build config/default >> manifest.yaml
-
-# Responsible for building FEO image that will run in kind, and is the image we are testing
-kuttl-build:
-	docker build -t frontend-operator:${FEO_BUILD_TAG} .
-	sed -i "s/controller/frontend-operator:${FEO_BUILD_TAG}/" kuttl-config.yml
-
-# undo kuttl-config changes
-kuttl-teardown:
-	sed -i "s/frontend-operator:${FEO_BUILD_TAG}/controller/" kuttl-config.yml
-
 # entry point for testing kuttl with kind
-kuttl: manifests envtest generate fmt vet kuttl-build
-	kubectl kuttl test --config kuttl-config.yml  ./tests/e2e
-	make kuttl-teardown
+kuttl: manifests envtest generate fmt vet
+	kubectl kuttl test --config kuttl-config.yml  ./tests/e2e --test bundles
 	
 ##@ Build
 
@@ -146,7 +127,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+	docker build -t ${IMG} .	
 
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}

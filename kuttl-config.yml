@@ -1,13 +1,15 @@
 apiVersion: kuttl.dev/v1beta1
 kind: TestSuite
-startKIND: true
-kindContainers:
-- controller
+startKIND: false
+startControlPlane: true
 crdDir: config/crd/test-resources/
 testDirs:
 - tests/e2e/
 timeout: 320
 parallel: 1
+
 commands:
-- command: make kuttl-release
-- command: oc apply -f manifest.yaml
+- command: make release
+- command: kubectl apply -f manifest.yaml
+- command: make run
+  background: true

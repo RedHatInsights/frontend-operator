@@ -84,6 +84,7 @@ If you want to access the app from your computer, you have to update /etc/hosts 
 
 Once you update it you can access the app from `https://env-boot/insights/inventory`
 
+
 ## E2E testing with kuttl
 
 [Kuttl](https://kuttl.dev/) is an end to end testing framework for Kubernetes operators. We hope to provide full test coverage for the Frontend Operator with kuttl.
@@ -95,37 +96,12 @@ Once all that is in place you can run the kuttl tests:
 ```bash
 $ make kuttl
 ```
+Friendly reminder: make sure you have the frontend operator runnning (`make run-local`) before you run the tests or they will never work and you'll go nuts trying to figure out why.
+
 If you want to run a single test you can do this:
-
-First build the frontend operator and don't tag it with it's current commit hash:
-```bash
-$ git rev-parse --short=8 HEAD # get commit hash
-# Copy the output from above
-$ docker build -t frontend-operator:<commit sha256> . # commit hash used as tag
-```
-
-Update `kuttl-config.yml` so that `kindContainers` is referencing the built image (frontend-operator:(commit sha256)):
-```yaml
-apiVersion: kuttl.dev/v1beta1
-kind: TestSuite
-startKIND: true
-kindContainers:
-- frontend-operator:<commit sha256>
-crdDir: config/crd/test-resources/
-testDirs:
-- tests/e2e/
-timeout: 320
-parallel: 1
-commands:
-- command: make kuttl-release
-- command: oc apply -f manifest.yaml
-```
-Once those are in place we can run any specific test.
 ```bash
 $ kubectl kuttl test --config kuttl-config.yml  ./tests/e2e --test bundles
 ```
 where `bundles` is the name of the directory that contains the test you want to run.
-
-Note: you need to rebuild after committing more changes.
 
 
