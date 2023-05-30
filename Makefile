@@ -33,7 +33,6 @@ ENVTEST_K8S_VERSION = 1.23
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
 # cloud.redhat.com/frontend-operator-bundle:$VERSION and cloud.redhat.com/frontend-operator-catalog:$VERSION.
 IMAGE_TAG_BASE ?= cloud.redhat.com/frontend-operator
-
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
@@ -83,6 +82,7 @@ release: manifests kustomize controller-gen
 	cd ../..
 	$(KUSTOMIZE) build config/default >> manifest.yaml
 
+
 ##@ Development
 
 pre-push: manifests generate fmt vet build-template api-docs
@@ -107,15 +107,16 @@ ENVTEST = $(shell pwd)/testbin/bin/setup-envtest
 envtest: ## Download envtest-setup locally if necessary.
 	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
 
-test: manifests envtest generate fmt vet
+test: manifests envtest generate fmt vet	
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
 
 # gotestsum is used to generate xml for the tests. Embedded in the Dockerfile.pr
 junit: gotestsum manifests envtest generate fmt vet
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(PROJECT_DIR)/testbin/bin/gotestsum --junitfile artifacts/junit-ginko.xml -- ./... -coverprofile cover.out
 
+# entry point for testing kuttl with kind
 kuttl: manifests envtest generate fmt vet
-	kubectl kuttl test --config kuttl-config.yml  ./tests/e2e
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" kubectl kuttl test --config kuttl-config.yml  ./tests/e2e
 	
 ##@ Build
 
@@ -126,7 +127,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go
 
 docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+	docker build -t ${IMG} .	
 
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}

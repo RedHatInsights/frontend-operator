@@ -32,5 +32,15 @@ pipeline {
                 }
             }
         }
+
+        stage('KUTTL Tests'){
+            steps {
+                withVault([configuration: configuration, vaultSecrets: secrets]) {
+                    sh '''
+                    source ./kuttl_test.sh
+                    '''
+                }
+            }
+        }
     }
 }

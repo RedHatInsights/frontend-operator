@@ -1,25 +1,46 @@
 ---
-kind: Pod
-apiVersion: v1
+kind: Deployment
+apiVersion: apps/v1
 metadata:
-  namespace: test-storage
   labels:
     frontend: chrome
+  name: chrome-frontend
+  namespace: test-storage
+  ownerReferences:
+  - apiVersion: cloud.redhat.com/v1alpha1
+    controller: true
+    kind: Frontend
+    name: chrome
 spec:
-  volumes:
-    - name: config
-      configMap:
-        name: test-storage-environment
-        defaultMode: 420
-    - projected: 
-        defaultMode: 420
-  containers:
-    - name: fe-image
-      image: quay.io/cloudservices/insights-chrome-frontend:720317c
-      volumeMounts:
-        - name: config
-          mountPath: /opt/app-root/src/build/operator-generated
-        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+  template:
+    metadata:
+      labels:
+        frontend: chrome
+    spec:
+      containers:
+      - image: quay.io/cloudservices/insights-chrome-frontend:720317c
+        imagePullPolicy: IfNotPresent
+        name: fe-image
+        ports:
+        - containerPort: 80
+          name: web
+          protocol: TCP
+        - containerPort: 9000
+          name: metrics
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /opt/app-root/src/build/operator-generated
+          name: config
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: test-storage-environment
+        name: config
 ---
 kind: ConfigMap
 apiVersion: v1

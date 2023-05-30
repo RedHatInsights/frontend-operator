@@ -84,6 +84,7 @@ If you want to access the app from your computer, you have to update /etc/hosts 
 
 Once you update it you can access the app from `https://env-boot/insights/inventory`
 
+
 ## E2E testing with kuttl
 
 [Kuttl](https://kuttl.dev/) is an end to end testing framework for Kubernetes operators. We hope to provide full test coverage for the Frontend Operator with kuttl.
@@ -102,6 +103,5 @@ If you want to run a single test you can do this:
 $ kubectl kuttl test --config kuttl-config.yml  ./tests/e2e --test bundles
 ```
 where `bundles` is the name of the directory that contains the test you want to run.
-
 
 

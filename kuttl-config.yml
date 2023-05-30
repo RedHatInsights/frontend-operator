@@ -1,7 +1,14 @@
 apiVersion: kuttl.dev/v1beta1
 kind: TestSuite
 startKIND: false
+startControlPlane: true
+crdDir: config/crd/test-resources/
 testDirs:
 - tests/e2e/
 timeout: 320
 parallel: 1
+commands:
+- command: make install
+- command: make build
+- command: ./bin/manager
+  background: true
