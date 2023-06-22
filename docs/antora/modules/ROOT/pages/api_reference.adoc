@@ -472,6 +472,7 @@ FrontendSpec defines the desired state of Frontend
 | *`pathname`* __string__ | 
 | *`dynamic`* __boolean__ | 
 | *`exact`* __boolean__ | 
+| *`props`* __JSON__ |
 |===
 
 

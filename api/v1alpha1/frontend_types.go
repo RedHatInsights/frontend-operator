@@ -93,9 +93,10 @@ type Module struct {
 }
 
 type Route struct {
-	Pathname string `json:"pathname" yaml:"pathname"`
-	Dynamic  bool   `json:"dynamic,omitempty" yaml:"dynamic,omitempty"`
-	Exact    bool   `json:"exact,omitempty" yaml:"exact,omitempty"`
+	Pathname string              `json:"pathname" yaml:"pathname"`
+	Dynamic  bool                `json:"dynamic,omitempty" yaml:"dynamic,omitempty"`
+	Exact    bool                `json:"exact,omitempty" yaml:"exact,omitempty"`
+	Props    *apiextensions.JSON `json:"props,omitempty" yaml:"props,omitempty"`
 }
 
 // +kubebuilder:object:root=true
