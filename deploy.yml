@@ -541,6 +541,8 @@ objects:
                                   type: boolean
                                 pathname:
                                   type: string
+                                props:
+                                  x-kubernetes-preserve-unknown-fields: true
                               required:
                               - pathname
                               type: object
