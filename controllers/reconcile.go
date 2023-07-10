@@ -140,8 +140,21 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 			},
 		},
 		VolumeMounts: populateContainerVolumeMounts(frontendEnvironment),
-	},
-	}
+		LivenessProbe: &v1.Probe{
+			ProbeHandler: v1.ProbeHandler{
+				HTTPGet: &v1.HTTPGetAction{Path: "/", Port: intstr.FromInt(80)},
+			},
+			InitialDelaySeconds: 60,
+			PeriodSeconds:       500,
+			FailureThreshold:    3,
+		},
+		ReadinessProbe: &v1.Probe{
+			ProbeHandler: v1.ProbeHandler{
+				HTTPGet: &v1.HTTPGetAction{Path: "/", Port: intstr.FromInt(80)},
+			},
+			InitialDelaySeconds: 60,
+		},
+	}}
 }
 
 func getAkamaiSecretName(frontendEnvironment *crd.FrontendEnvironment) string {
