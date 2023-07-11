@@ -143,12 +143,12 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 		VolumeMounts: populateContainerVolumeMounts(frontendEnvironment),
 		Resources: v1.ResourceRequirements{
 			Requests: v1.ResourceList{
-				v1.ResourceCPU:    resource.MustParse("1m"),
-				v1.ResourceMemory: resource.MustParse("128Mi"),
+				v1.ResourceCPU:    resource.MustParse("100m"),
+				v1.ResourceMemory: resource.MustParse("256Mi"),
 			},
 			Limits: v1.ResourceList{
-				v1.ResourceCPU:    resource.MustParse("10m"),
-				v1.ResourceMemory: resource.MustParse("256Mi"),
+				v1.ResourceCPU:    resource.MustParse("1"),
+				v1.ResourceMemory: resource.MustParse("512Mi"),
 			},
 		},
 	},
