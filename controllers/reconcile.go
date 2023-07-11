@@ -144,15 +144,15 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 			ProbeHandler: v1.ProbeHandler{
 				HTTPGet: &v1.HTTPGetAction{Path: "/", Port: intstr.FromInt(80)},
 			},
-			InitialDelaySeconds: 60,
-			PeriodSeconds:       500,
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       60,
 			FailureThreshold:    3,
 		},
 		ReadinessProbe: &v1.Probe{
 			ProbeHandler: v1.ProbeHandler{
 				HTTPGet: &v1.HTTPGetAction{Path: "/", Port: intstr.FromInt(80)},
 			},
-			InitialDelaySeconds: 60,
+			InitialDelaySeconds: 10,
 		},
 	}}
 }
