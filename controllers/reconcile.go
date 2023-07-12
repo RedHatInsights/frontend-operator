@@ -122,6 +122,13 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment)
 }
 
 func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
+
+	// set the URI Scheme for the probe
+	probeScheme := v1.URISchemeHTTP
+	if frontendEnvironment.Spec.SSL {
+		probeScheme = v1.URISchemeHTTPS
+	}
+
 	d.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 
 	// Modify the obejct to set the things we care about
@@ -153,7 +160,11 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 		},
 		LivenessProbe: &v1.Probe{
 			ProbeHandler: v1.ProbeHandler{
-				HTTPGet: &v1.HTTPGetAction{Path: "/", Port: intstr.FromInt(8000)},
+				HTTPGet: &v1.HTTPGetAction{
+					Path:   "/",
+					Port:   intstr.FromInt(8000),
+					Scheme: probeScheme,
+				},
 			},
 			InitialDelaySeconds: 10,
 			PeriodSeconds:       60,
@@ -161,7 +172,11 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 		},
 		ReadinessProbe: &v1.Probe{
 			ProbeHandler: v1.ProbeHandler{
-				HTTPGet: &v1.HTTPGetAction{Path: "/", Port: intstr.FromInt(8000)},
+				HTTPGet: &v1.HTTPGetAction{
+					Path:   "/",
+					Port:   intstr.FromInt(8000),
+					Scheme: probeScheme,
+				},
 			},
 			InitialDelaySeconds: 10,
 		},
