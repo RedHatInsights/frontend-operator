@@ -125,7 +125,7 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 
 	// set the URI Scheme for the probe
 	probeScheme := v1.URISchemeHTTP
-	if !frontendEnvironment.Spec.SSL {
+	if frontendEnvironment.Spec.SSL {
 		probeScheme = v1.URISchemeHTTPS
 	}
 
