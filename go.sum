@@ -77,8 +77,6 @@ github.com/RedHatInsights/clowder v0.50.0 h1:Jrzpo5uY9ghsrR4DeMsDnyR7EGZYAVjXBt4
 github.com/RedHatInsights/clowder v0.50.0/go.mod h1:sY0IIuVDz/PN7l+R/8MfH51V0t72IKVEwxU+DwluG14=
 github.com/RedHatInsights/go-difflib v1.0.0 h1:BoruyjZfxO81sEynhkG6c4SMAQOjuBWezcJxtGK8dyw=
 github.com/RedHatInsights/go-difflib v1.0.0/go.mod h1:UMKOFdypYfrKT1B1nbGodM09nhOiAmcjes8qWP7Myrs=
-github.com/RedHatInsights/rhc-osdk-utils v0.6.2 h1:VXTqk6VHrsaEPSw3N95rCq+g0y2LR7t9Za0wBS2/RyA=
-github.com/RedHatInsights/rhc-osdk-utils v0.6.2/go.mod h1:MQoUQGaVjM25JsownEKKa2Tef0qnJOm1ljocaQ0nx40=
 github.com/RedHatInsights/rhc-osdk-utils v0.7.0 h1:KgOiw2nKS26RuiSRVWVHtXNPx23VMspuB0bLCLIAlTs=
 github.com/RedHatInsights/rhc-osdk-utils v0.7.0/go.mod h1:MQoUQGaVjM25JsownEKKa2Tef0qnJOm1ljocaQ0nx40=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
