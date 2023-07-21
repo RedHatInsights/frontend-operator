@@ -1,6 +1,6 @@
 module github.com/RedHatInsights/frontend-operator
 
-go 1.17
+go 1.19
 
 require (
 	github.com/RedHatInsights/clowder v0.50.0
