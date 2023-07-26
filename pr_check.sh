@@ -13,7 +13,7 @@ CONTAINER_NAME="${FEO_CONTAINER_NAME:-frontend-operator-pr-check-$ghprbPullId}"
 
 docker build -t $CONTAINER_NAME -f build/Dockerfile.pr .
 
-docker run -i --name $CONTAINER_NAME -v $PWD:/workspace:ro $CONTAINER_NAME /workspace/build/pr_check_inner.sh
+docker run -i --name $CONTAINER_NAME-run -v $PWD:/workspace:ro $CONTAINER_NAME /workspace/build/pr_check_inner.sh
 
 TEST_RESULT=$?
 
