@@ -10,9 +10,10 @@ CONTAINER_NAME="${FEO_CONTAINER_NAME:-frontend-operator-pr-check-$ghprbPullId}"
 # This means that the pr_check_inner.sh script will be run in the context of the jenkins workspace
 # This confused me for a while because pr_check_inner.sh is also copied into the pr check container at build time
 # but the template_check.sh isn't. I couldn't figure out how it was sourcing it
-#docker run -i --name $CONTAINER_NAME -v $PWD:/workspace:ro quay.io/bholifie/frontend-op-pr-check:v0.0.8 /workspace/build/pr_check_inner.sh
 
 docker build -t $CONTAINER_NAME -f build/Dockerfile.pr 
+
+docker run -i --name $CONTAINER_NAME -v $PWD:/workspace:ro $CONTAINER_NAME /workspace/build/pr_check_inner.sh
 
 TEST_RESULT=$?
 
