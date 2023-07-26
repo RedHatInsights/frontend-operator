@@ -22,5 +22,6 @@ mkdir -p artifacts
 docker cp $CONTAINER_NAME:/container_workspace/artifacts/ $PWD
 
 docker rm -f $CONTAINER_NAME
+docker rm -f $CONTAINER_NAME-run
 
 exit $TEST_RESULT
