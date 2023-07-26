@@ -22,7 +22,7 @@ TEST_RESULT=$?
 
 mkdir -p artifacts
 
-docker cp $CONTAINER_NAME-run:/workspace/artifacts/ $PWD/artifacts/
+docker cp $CONTAINER_NAME-run:/container_workspace/artifacts/ $PWD
 
 docker rm -f $CONTAINER_NAME
 docker rm -f $CONTAINER_NAME-run
