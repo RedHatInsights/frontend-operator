@@ -1,6 +1,6 @@
-FROM registry.access.redhat.com/ubi8/go-toolset:1.17.7
+FROM registry.access.redhat.com/ubi8/go-toolset:1.19.9-2.1687187497
 USER 0
-RUN dnf install -y openssh-clients git podman make which go jq
+RUN dnf install -y openssh-clients git podman make which go jq python3
 RUN mkdir /root/go -p
 RUN GOBIN=/root/go go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0 \
     && GOBIN=/root/go go install sigs.k8s.io/kustomize/kustomize/v4@v4.5.2 \
@@ -9,5 +9,4 @@ RUN GOBIN=/root/go go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0
     && rm -rf /root/go/pkg
 ENV GOBIN="/root/go"
 RUN ln -s /usr/bin/podman /usr/bin/docker
-COPY pr_check_inner.sh .
-RUN chmod 775 pr_check_inner.sh
+
