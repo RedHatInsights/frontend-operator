@@ -11,7 +11,7 @@ CONTAINER_NAME="${FEO_CONTAINER_NAME:-frontend-operator-pr-check-$ghprbPullId}"
 # This confused me for a while because pr_check_inner.sh is also copied into the pr check container at build time
 # but the template_check.sh isn't. I couldn't figure out how it was sourcing it
 
-docker build -t $CONTAINER_NAME -f build/Dockerfile.pr 
+docker build -t $CONTAINER_NAME -f build/Dockerfile.pr .
 
 docker run -i --name $CONTAINER_NAME -v $PWD:/workspace:ro $CONTAINER_NAME /workspace/build/pr_check_inner.sh
 
