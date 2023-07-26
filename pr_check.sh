@@ -5,6 +5,9 @@ set -exv
 mkdir -p "$PWD/.docker"
 
 CONTAINER_NAME="${FEO_CONTAINER_NAME:-frontend-operator-pr-check-$ghprbPullId}"
+docker rm -f $CONTAINER_NAME
+docker rm -f $CONTAINER_NAME-run
+
 
 # We're mounting the jenkins workspace over the root of the container
 # This means that the pr_check_inner.sh script will be run in the context of the jenkins workspace
