@@ -9,5 +9,4 @@ RUN GOBIN=/root/go go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0
     && rm -rf /root/go/pkg
 ENV GOBIN="/root/go"
 RUN ln -s /usr/bin/podman /usr/bin/docker
-COPY pr_check_inner.sh .
-RUN chmod 775 pr_check_inner.sh
+
