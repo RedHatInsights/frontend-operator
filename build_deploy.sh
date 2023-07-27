@@ -37,7 +37,6 @@ if [[ "$VALID_TAGS_LENGTH" -eq 0 ]]; then
     docker --config="$DOCKER_CONF" build -f Dockerfile.base . -t "$BASE_IMG"
 	docker --config="$DOCKER_CONF" push "$BASE_IMG"
 fi
-docker --config="$DOCKER_CONF" build  --build-arg BASE_IMAGE="$BASE_IMG" -t "${IMAGE}:${IMAGE_TAG}"
 #### End 
 
 docker --config="$DOCKER_CONF" build  --build-arg BASE_IMAGE="$BASE_IMG" -t "${IMAGE}:${IMAGE_TAG}" .
