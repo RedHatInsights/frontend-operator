@@ -18,7 +18,7 @@ COPY controllers/ controllers/
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o manager main.go
 
-FROM registry.access.redhat.com/ubi8/go-toolset:1.19.9-2.1687187497
+FROM registry.access.redhat.com/ubi8/go-toolset:1.19.10-10 
 WORKDIR /
 COPY --from=builder /workspace/manager .
 USER 65534:65534
