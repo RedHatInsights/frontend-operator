@@ -37,7 +37,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	resCache "github.com/RedHatInsights/rhc-osdk-utils/resourceCache"
@@ -276,12 +275,12 @@ func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&crd.Frontend{}, builder.WithPredicates(defaultPredicate(r.Log, "frontend"))).
 		Watches(
-			&source.Kind{Type: &crd.Bundle{}},
-			handler.EnqueueRequestsFromMapFunc(r.appsToEnqueueUponBundleUpdate),
+			&crd.Bundle{},
+			handler.EnqueueRequestsFromMapFunc(r.appsToEnqueueUponBundleUpdate()),
 		).
 		Watches(
-			&source.Kind{Type: &crd.FrontendEnvironment{}},
-			handler.EnqueueRequestsFromMapFunc(r.appsToEnqueueUponFrontendEnvironmentUpdate),
+			&crd.FrontendEnvironment{},
+			handler.EnqueueRequestsFromMapFunc(r.appsToEnqueueUponFrontendEnvironmentUpdate()),
 		).
 		Owns(&apps.Deployment{}).
 		Owns(&networking.Ingress{}).
@@ -318,93 +317,95 @@ func defaultPredicate(logr logr.Logger, ctrlName string) predicate.Funcs {
 	}
 }
 
-func (r *FrontendReconciler) appsToEnqueueUponBundleUpdate(a client.Object) []reconcile.Request {
-	reqs := []reconcile.Request{}
-	ctx := context.Background()
-	obj := types.NamespacedName{
-		Name:      a.GetName(),
-		Namespace: a.GetNamespace(),
-	}
-
-	// Get the Bundle resource
-
-	bundle := crd.Bundle{}
-	err := r.Client.Get(ctx, obj, &bundle)
-
-	if err != nil {
-		if k8serr.IsNotFound(err) {
-			// Must have been deleted
-			return reqs
+func (r *FrontendReconciler) appsToEnqueueUponBundleUpdate() handler.MapFunc {
+	return func(ctx context.Context, clientObject client.Object) []reconcile.Request {
+		reqs := []reconcile.Request{}
+		obj := types.NamespacedName{
+			Name:      clientObject.GetName(),
+			Namespace: clientObject.GetNamespace(),
 		}
-		r.Log.Error(err, "Failed to fetch Bundle")
-		return nil
+
+		// Get the Bundle resource
+
+		bundle := crd.Bundle{}
+		err := r.Client.Get(ctx, obj, &bundle)
+
+		if err != nil {
+			if k8serr.IsNotFound(err) {
+				// Must have been deleted
+				return reqs
+			}
+			r.Log.Error(err, "Failed to fetch Bundle")
+			return nil
+		}
+
+		// Get all the ClowdApp resources
+
+		frontendList := crd.FrontendList{}
+		err = r.Client.List(ctx, &frontendList, client.MatchingFields{"spec.envName": bundle.Spec.EnvName})
+		if err != nil {
+			r.Log.Error(err, "Failed to List Frontends")
+			return nil
+		}
+
+		// Filter based on base attribute
+
+		for _, frontend := range frontendList.Items {
+			reqs = append(reqs, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      frontend.Name,
+					Namespace: frontend.Namespace,
+				},
+			})
+		}
+
+		return reqs
 	}
-
-	// Get all the ClowdApp resources
-
-	frontendList := crd.FrontendList{}
-	err = r.Client.List(ctx, &frontendList, client.MatchingFields{"spec.envName": bundle.Spec.EnvName})
-	if err != nil {
-		r.Log.Error(err, "Failed to List Frontends")
-		return nil
-	}
-
-	// Filter based on base attribute
-
-	for _, frontend := range frontendList.Items {
-		reqs = append(reqs, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      frontend.Name,
-				Namespace: frontend.Namespace,
-			},
-		})
-	}
-
-	return reqs
 }
 
-func (r *FrontendReconciler) appsToEnqueueUponFrontendEnvironmentUpdate(a client.Object) []reconcile.Request {
-	reqs := []reconcile.Request{}
-	ctx := context.Background()
-	obj := types.NamespacedName{
-		Name:      a.GetName(),
-		Namespace: a.GetNamespace(),
-	}
-
-	// Get the Bundle resource
-
-	fe := crd.FrontendEnvironment{}
-	err := r.Client.Get(ctx, obj, &fe)
-
-	if err != nil {
-		if k8serr.IsNotFound(err) {
-			// Must have been deleted
-			return reqs
+func (r *FrontendReconciler) appsToEnqueueUponFrontendEnvironmentUpdate() handler.MapFunc {
+	return func(ctx context.Context, clientObject client.Object) []reconcile.Request {
+		reqs := []reconcile.Request{}
+		obj := types.NamespacedName{
+			Name:      clientObject.GetName(),
+			Namespace: clientObject.GetNamespace(),
 		}
-		r.Log.Error(err, "Failed to fetch Bundle")
-		return nil
+
+		// Get the Bundle resource
+
+		fe := crd.FrontendEnvironment{}
+		err := r.Client.Get(ctx, obj, &fe)
+
+		if err != nil {
+			if k8serr.IsNotFound(err) {
+				// Must have been deleted
+				return reqs
+			}
+			r.Log.Error(err, "Failed to fetch Bundle")
+			return nil
+		}
+
+		// Get all the ClowdApp resources
+
+		frontendList := crd.FrontendList{}
+		if err := r.Client.List(ctx, &frontendList, client.MatchingFields{"spec.envName": fe.Name}); err != nil {
+			r.Log.Error(err, "Failed to List Frontends")
+			return nil
+		}
+
+		// Filter based on base attribute
+
+		for _, frontend := range frontendList.Items {
+			reqs = append(reqs, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      frontend.Name,
+					Namespace: frontend.Namespace,
+				},
+			})
+		}
+
+		return reqs
 	}
-
-	// Get all the ClowdApp resources
-
-	frontendList := crd.FrontendList{}
-	if err := r.Client.List(ctx, &frontendList, client.MatchingFields{"spec.envName": fe.Name}); err != nil {
-		r.Log.Error(err, "Failed to List Frontends")
-		return nil
-	}
-
-	// Filter based on base attribute
-
-	for _, frontend := range frontendList.Items {
-		reqs = append(reqs, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      frontend.Name,
-				Namespace: frontend.Namespace,
-			},
-		})
-	}
-
-	return reqs
 }
 
 func (r *FrontendReconciler) finalizeApp(reqLogger logr.Logger, a *crd.Frontend) error {
