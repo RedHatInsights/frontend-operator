@@ -38,7 +38,8 @@ spec:
             - name: config
               mountPath: /opt/app-root/src/build/stable/operator-generated
             - name: config
-              mountPath: /opt/app-root/src/build/preview/operator-generated          terminationMessagePath: /dev/termination-log
+              mountPath: /opt/app-root/src/build/preview/operator-generated
+          terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           imagePullPolicy: IfNotPresent
 ---
@@ -118,7 +119,8 @@ spec:
             - name: config
               mountPath: /opt/app-root/src/build/stable/operator-generated
             - name: config
-              mountPath: /opt/app-root/src/build/preview/operator-generated          terminationMessagePath: /dev/termination-log
+              mountPath: /opt/app-root/src/build/preview/operator-generated          
+          terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           imagePullPolicy: IfNotPresent
 ---
