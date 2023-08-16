@@ -35,7 +35,9 @@ spec:
             - name: config
               mountPath: /opt/app-root/src/build/chrome
             - name: config
-              mountPath: /opt/app-root/src/build/operator-generated
+              mountPath: /opt/app-root/src/build/stable/operator-generated
+            - name: config
+              mountPath: /opt/app-root/src/build/preview/operator-generated
 ---
 apiVersion: cloud.redhat.com/v1alpha1
 kind: Bundle
