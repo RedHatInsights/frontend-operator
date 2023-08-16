@@ -105,9 +105,16 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment)
 	// We always want to mount the config map under the operator-generated directory
 	// This will allow chrome to incorperate the generated nav and fed-modules.json
 	// at run time. This means chrome can merge the config in mixed environments
+
+	// We need to have the config mounted in 2 places because of the preview/stable
+	// split. We need to have the config mounted in the preview and stable directories
 	volumeMounts = append(volumeMounts, v1.VolumeMount{
 		Name:      "config",
-		MountPath: "/opt/app-root/src/build/operator-generated",
+		MountPath: "/opt/app-root/src/build/stable/operator-generated",
+	})
+	volumeMounts = append(volumeMounts, v1.VolumeMount{
+		Name:      "config",
+		MountPath: "/opt/app-root/src/build/preview/operator-generated",
 	})
 
 	// We generate SSL cert mounts conditionally
