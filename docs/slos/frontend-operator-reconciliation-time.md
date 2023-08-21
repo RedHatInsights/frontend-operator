@@ -2,7 +2,8 @@
 
 ## Description
 
-This metric tracks the reconciliation time for the Frontend Operator's `frontend` controller.
+This metric tracks the reconciliation time for the Frontend Operator's `frontend` controller. Reconcilations should stay  
+below 4 seconds for at least 95% of the time.
 
 ## SLI Rationale
 
