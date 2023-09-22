@@ -31,11 +31,15 @@ docker rm -f $CONTAINER_NAME-run
 # This confused me for a while because pr_check_inner.sh is also copied into the pr check container at build time
 # but the template_check.sh isn't. I couldn't figure out how it was sourcing it
 
-docker --config="$DOCKER_CONF" buildx create --name multiarch --platform linux/amd64,linux/arm64 --driver-opt image=quay.io/domino/buildkit:v0.12.0 
-docker --config="$DOCKER_CONF" buildx inspect multiarch --bootstrap
+#docker --config="$DOCKER_CONF" buildx create --name multiarch --platform linux/amd64,linux/arm64 --driver-opt image=quay.io/domino/buildkit:v0.12.0 
+#docker --config="$DOCKER_CONF" buildx inspect multiarch --bootstrap
 
-docker --config="$DOCKER_CONF" buildx build --builder multiarch --platform linux/amd64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}-amd64" . --load
-docker --config="$DOCKER_CONF" buildx build --builder multiarch --platform linux/arm64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="arm64" -t "${IMAGE}:${IMAGE_TAG}-arm64" . --load
+#docker --config="$DOCKER_CONF" buildx build --builder multiarch --platform linux/amd64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}-amd64" . --load
+#docker --config="$DOCKER_CONF" buildx build --builder multiarch --platform linux/arm64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="arm64" -t "${IMAGE}:${IMAGE_TAG}-arm64" . --load
+
+
+docker --config="$DOCKER_CONF" build --platform linux/amd64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}-amd64" .
+docker --config="$DOCKER_CONF" build --platform linux/arm64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="arm64" -t "${IMAGE}:${IMAGE_TAG}-arm64" .
 
 docker --config="$DOCKER_CONF" manifest create "${IMAGE}:${IMAGE_TAG}" \
     "${IMAGE}:${IMAGE_TAG}-amd64" \
