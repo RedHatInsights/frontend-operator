@@ -31,42 +31,17 @@ docker rm -f $CONTAINER_NAME-run
 # This confused me for a while because pr_check_inner.sh is also copied into the pr check container at build time
 # but the template_check.sh isn't. I couldn't figure out how it was sourcing it
 
-function start_builder() {
-    # Check if the "multiarch" builder instance exists
-    BUILDER_EXISTS=$(docker --config="$DOCKER_CONF" buildx ls | grep "multiarch" || true)
+docker --config="$DOCKER_CONF" buildx create --name multiarch --platform linux/amd64,linux/arm64 --driver-opt image=quay.io/domino/buildkit:v0.12.0 
+docker --config="$DOCKER_CONF" buildx inspect multiarch --bootstrap
 
-    # If the "multiarch" builder does not exist, create it
-    if [ -z "$BUILDER_EXISTS" ]; then
-        echo "Creating 'multiarch' builder instance..."
-        docker --config="$DOCKER_CONF" buildx create --name multiarch --platform linux/amd64,linux/arm64 --use --driver-opt image=quay.io/domino/buildkit:v0.12.0 
-    fi
+docker --config="$DOCKER_CONF" buildx build --builder multiarch --platform linux/amd64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}-amd64" . --load
+docker --config="$DOCKER_CONF" buildx build --builder multiarch --platform linux/arm64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="arm64" -t "${IMAGE}:${IMAGE_TAG}-arm64" . --load
 
-    # Check if the "multiarch" builder is running
-    BUILDER_RUNNING=$(docker --config="$DOCKER_CONF" buildx inspect multiarch | grep "running" || true)
-
-    # If the "multiarch" builder is not running, bootstrap it
-    if [ -z "$BUILDER_RUNNING" ]; then
-        echo "Bootstraping 'multiarch' builder instance..."
-        docker --config="$DOCKER_CONF" buildx inspect multiarch --bootstrap
-    fi
-
-    echo "All set!"
-}
-
-start_builder
-
-docker --config="$DOCKER_CONF" buildx build --builder multiarch --platform linux/amd64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}-amd64" .
-docker --config="$DOCKER_CONF" buildx build --builder multiarch --platform linux/arm64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="arm64" -t "${IMAGE}:${IMAGE_TAG}-arm64" .
-
-# Create and push multi-arch manifest
 docker --config="$DOCKER_CONF" manifest create "${IMAGE}:${IMAGE_TAG}" \
     "${IMAGE}:${IMAGE_TAG}-amd64" \
     "${IMAGE}:${IMAGE_TAG}-arm64"
 
 docker --config="$DOCKER_CONF" manifest push "${IMAGE}:${IMAGE_TAG}-multiarch"
-
-
-
 
 docker build -t $CONTAINER_NAME -f build/Dockerfile.pr .
 
