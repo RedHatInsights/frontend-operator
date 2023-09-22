@@ -38,7 +38,7 @@ function start_builder() {
     # If the "multiarch" builder does not exist, create it
     if [ -z "$BUILDER_EXISTS" ]; then
         echo "Creating 'multiarch' builder instance..."
-        docker buildx create --name multiarch --platform linux/amd64,linux/arm64 --use
+        docker buildx create --name multiarch --platform linux/amd64,linux/arm64 --use --driver-opt network=host --buildkitd-flags '--allow-insecure-entitlement network .host'
     fi
 
     # Check if the "multiarch" builder is running
