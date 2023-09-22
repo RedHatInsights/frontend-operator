@@ -46,7 +46,7 @@ docker --config="$DOCKER_CONF" manifest create "${IMAGE}:${IMAGE_TAG}" \
     "${IMAGE}:${IMAGE_TAG}-amd64" \
     "${IMAGE}:${IMAGE_TAG}-arm64"
 
-docker --config="$DOCKER_CONF" manifest push "${IMAGE}:${IMAGE_TAG}-multiarch"
+docker --config="$DOCKER_CONF" manifest push "${IMAGE}:${IMAGE_TAG}"
 
 docker build -t $CONTAINER_NAME -f build/Dockerfile.pr .
 
