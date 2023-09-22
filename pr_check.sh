@@ -55,8 +55,8 @@ function start_builder() {
 
 start_builder
 
-docker --config="$DOCKER_CONF" buildx build --builder multiarch0 --platform linux/amd64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}-amd64" .
-docker --config="$DOCKER_CONF" buildx build --builder multiarch0 --platform linux/arm64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="arm64" -t "${IMAGE}:${IMAGE_TAG}-arm64" .
+docker --config="$DOCKER_CONF" buildx build --builder multiarch --platform linux/amd64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}-amd64" .
+docker --config="$DOCKER_CONF" buildx build --builder multiarch --platform linux/arm64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="arm64" -t "${IMAGE}:${IMAGE_TAG}-arm64" .
 
 # Create and push multi-arch manifest
 docker --config="$DOCKER_CONF" manifest create "${IMAGE}:${IMAGE_TAG}" \
