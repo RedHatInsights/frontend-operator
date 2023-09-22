@@ -39,8 +39,8 @@ docker rm -f $CONTAINER_NAME-run
 
 #BASE_IMAGE="quay.io/cloudservices/frontend-operator-build-base:54d9d22e"
 
-docker --config="$DOCKER_CONF" build --platform linux/amd64  --build-arg BASE_IMAGE="quay.io/cloudservices/frontend-operator-build-base:54d9d22e" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}-amd64" .
-docker --config="$DOCKER_CONF" build --platform linux/arm64  --build-arg BASE_IMAGE="quay.io/cloudservices/frontend-operator-build-base:54d9d22e" --build-arg GOARCH="arm64" -t "${IMAGE}:${IMAGE_TAG}-arm64" .
+docker --config="$DOCKER_CONF" build --platform linux/amd64  --build-arg BASE_IMAGE="quay.io/cloudservices/frontend-operator-build-base:54d9d22e" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}-amd64" --push .
+docker --config="$DOCKER_CONF" build --platform linux/arm64  --build-arg BASE_IMAGE="quay.io/cloudservices/frontend-operator-build-base:54d9d22e" --build-arg GOARCH="arm64" -t "${IMAGE}:${IMAGE_TAG}-arm64" --push .
 
 docker --config="$DOCKER_CONF" manifest create "${IMAGE}:${IMAGE_TAG}" \
     "${IMAGE}:${IMAGE_TAG}-amd64" \
