@@ -33,21 +33,21 @@ docker rm -f $CONTAINER_NAME-run
 
 function start_builder() {
     # Check if the "multiarch" builder instance exists
-    BUILDER_EXISTS=$(docker buildx ls | grep "multiarch" || true)
+    BUILDER_EXISTS=$(docker --config="$DOCKER_CONF" buildx ls | grep "multiarch" || true)
 
     # If the "multiarch" builder does not exist, create it
     if [ -z "$BUILDER_EXISTS" ]; then
         echo "Creating 'multiarch' builder instance..."
-        docker buildx create --name multiarch --platform linux/amd64,linux/arm64 --use --driver-opt network=host --buildkitd-flags '--allow-insecure-entitlement network .host'
+        docker --config="$DOCKER_CONF" buildx create --name multiarch --platform linux/amd64,linux/arm64 --use --driver-opt network=host --buildkitd-flags '--allow-insecure-entitlement network .host'
     fi
 
     # Check if the "multiarch" builder is running
-    BUILDER_RUNNING=$(docker buildx inspect multiarch | grep "running" || true)
+    BUILDER_RUNNING=$(docker --config="$DOCKER_CONF" buildx inspect multiarch | grep "running" || true)
 
     # If the "multiarch" builder is not running, bootstrap it
     if [ -z "$BUILDER_RUNNING" ]; then
         echo "Bootstraping 'multiarch' builder instance..."
-        docker buildx inspect multiarch --bootstrap
+        docker --config="$DOCKER_CONF" buildx inspect multiarch --bootstrap
     fi
 
     echo "All set!"
