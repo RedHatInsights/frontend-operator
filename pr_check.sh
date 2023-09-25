@@ -56,4 +56,4 @@ groups
 echo
 echo "### Build Test (ARM Hello World) ###"
 echo "Trying to build ARM64 'hello-world' image..."
-docker build --platform=linux/arm64 -t arm-build-test . || echo "Failed to build ARM64 hello-world image."
+docker build --platform=linux/arm64 -t arm-build-test -f build/Dockerfile.pr . || echo "Failed to build ARM64 hello-world image."
