@@ -4,6 +4,9 @@ set -exv
 
 mkdir -p "$PWD/.docker"
 
+which qemu-aarch64-static
+
+
 CONTAINER_NAME="${FEO_CONTAINER_NAME:-frontend-operator-pr-check-$ghprbPullId}"
 docker rm -f $CONTAINER_NAME
 docker rm -f $CONTAINER_NAME-run
@@ -21,10 +24,6 @@ docker run -i --name $CONTAINER_NAME-run -v $PWD:/workspace:ro $CONTAINER_NAME /
 TEST_RESULT=$?
 
 mkdir -p artifacts
-
-docker version
-docker buildx version
-cat /proc/sys/fs/binfmt_misc/qemu-*
 
 docker cp $CONTAINER_NAME-run:/container_workspace/artifacts/ $PWD
 
