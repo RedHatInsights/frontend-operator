@@ -9,12 +9,11 @@ else
     exit 1
 fi
 
-# Check for various interpreters
-interpreters=("qemu-aarch64" "qemu-arm" "qemu-ppc64le" "qemu-s390x" "box86")
-for interp in "${interpreters[@]}"; do
-    if grep -q "$interp" /proc/sys/fs/binfmt_misc/status; then
-        echo "$interp is enabled."
-    else
-        echo "$interp is not found or not enabled."
+# List out all the registered interpreters in binfmt_misc
+echo "Registered interpreters:"
+for f in /proc/sys/fs/binfmt_misc/*; do
+    if [[ $(basename $f) != "register" && $(basename $f) != "status" ]]; then
+        echo "------"
+        cat $f
     fi
 done
