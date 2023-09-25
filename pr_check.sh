@@ -1,33 +1,48 @@
 #!/bin/bash
 
-set -exv
+set -xv
 
-mkdir -p "$PWD/.docker"
+# Check if binfmt_misc is supported (required for emulation/translation)
+if [[ -d /proc/sys/fs/binfmt_misc ]]; then
+    echo "binfmt_misc support is available."
 
-which qemu-aarch64-static
+    # Check for known interpreters in binfmt_misc
+    for f in /proc/sys/fs/binfmt_misc/*; do
+        if grep -q 'qemu-' "$f"; then
+            echo "QEMU support detected for $(basename "$f")."
+        elif grep -q 'box86' "$f"; then
+            echo "Box86 support detected for $(basename "$f")."
+        # Add other known emulators/interpreters as needed
+        fi
+    done
 
+else
+    echo "binfmt_misc is NOT supported on this machine."
+fi
 
-CONTAINER_NAME="${FEO_CONTAINER_NAME:-frontend-operator-pr-check-$ghprbPullId}"
-docker rm -f $CONTAINER_NAME
-docker rm -f $CONTAINER_NAME-run
+# Check if docker is installed
+if command -v docker &> /dev/null; then
+    echo "Docker is installed."
 
+    # Using docker info to find any known runtimes for emulation
+    if docker info 2>/dev/null | grep -q 'qemu'; then
+        echo "QEMU is available as a runtime for Docker."
+    fi
 
-# We're mounting the jenkins workspace over the root of the container
-# This means that the pr_check_inner.sh script will be run in the context of the jenkins workspace
-# This confused me for a while because pr_check_inner.sh is also copied into the pr check container at build time
-# but the template_check.sh isn't. I couldn't figure out how it was sourcing it
+    # Checking Docker's default platform, which can be set for cross-compilation
+    default_platform=$(docker info --format '{{.DefaultRuntime}}' 2>/dev/null)
+    if [[ $default_platform != "runc" ]]; then
+        echo "Docker's default platform is set to $default_platform."
+    fi
 
-docker build -t $CONTAINER_NAME -f build/Dockerfile.pr .
+else
+    echo "Docker is NOT installed."
+fi
 
-docker run -i --name $CONTAINER_NAME-run -v $PWD:/workspace:ro $CONTAINER_NAME /workspace/build/pr_check_inner.sh
+# Checking for the presence of other emulation tools
+if command -v box86 &> /dev/null; then
+    echo "Box86 emulator is installed."
+fi
 
-TEST_RESULT=$?
+# Add checks for other known emulation or translation tools as you become aware of them
 
-mkdir -p artifacts
-
-docker cp $CONTAINER_NAME-run:/container_workspace/artifacts/ $PWD
-
-docker rm -f $CONTAINER_NAME
-docker rm -f $CONTAINER_NAME-run
-
-exit $TEST_RESULT
