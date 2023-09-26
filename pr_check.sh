@@ -49,7 +49,7 @@ fi
 
 docker buildx create --name mybuilder --use --driver docker-container --driver-opt image=quay.io/domino/buildkit:v0.12.0
 docker buildx inspect mybuilder --bootstrap
-docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+docker run --rm --privileged quay.io/bgirriam/qemu-user-static --reset -p yes
 
 docker --config="$DOCKER_CONF" buildx build --platform linux/amd64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}-amd64" .
 docker --config="$DOCKER_CONF" buildx build --platform linux/arm64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="arm64" -t "${IMAGE}:${IMAGE_TAG}-arm64" .
