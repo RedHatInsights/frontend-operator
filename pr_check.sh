@@ -39,7 +39,7 @@ if [[ "$VALID_TAGS_LENGTH" -eq 0 ]]; then
 fi
 #### End 
 
-docker buildx create --name mybuilder --use
+docker buildx create --name mybuilder --use --driver docker-container --driver-opt image=quay.io/domino/buildkit:v0.12.0
 docker buildx inspect mybuilder --bootstrap
 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
