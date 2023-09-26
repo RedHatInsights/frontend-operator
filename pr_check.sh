@@ -21,6 +21,8 @@ mkdir -p "$DOCKER_CONF"
 docker --config="$DOCKER_CONF" login -u="$QUAY_USER" -p="$QUAY_TOKEN" quay.io
 docker --config="$DOCKER_CONF" login -u="$RH_REGISTRY_USER" -p="$RH_REGISTRY_TOKEN" registry.redhat.io
 
+mount | grep binfmt_misc
+ls /proc/sys/fs/binfmt_misc/
 
 ### Start base image build and push
 BASE_TAG=`cat go.mod go.sum Dockerfile.base | sha256sum  | head -c 8`
