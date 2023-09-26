@@ -39,6 +39,14 @@ if [[ "$VALID_TAGS_LENGTH" -eq 0 ]]; then
 fi
 #### End 
 
+# Check if "mybuilder" exists
+if docker buildx ls | grep -q "mybuilder"; then
+    echo "Instance 'mybuilder' exists. Removing..."
+    docker buildx rm mybuilder
+else
+    echo "Instance 'mybuilder' does not exist."
+fi
+
 docker buildx create --name mybuilder --use --driver docker-container --driver-opt image=quay.io/domino/buildkit:v0.12.0
 docker buildx inspect mybuilder --bootstrap
 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
