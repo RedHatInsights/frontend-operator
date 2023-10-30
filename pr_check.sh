@@ -14,7 +14,7 @@ docker rm -f $CONTAINER_NAME-run
 # This confused me for a while because pr_check_inner.sh is also copied into the pr check container at build time
 # but the template_check.sh isn't. I couldn't figure out how it was sourcing it
 
-docker buildx create --name feo-builder --use --bootstrap
+docker buildx create --name feo-builder --use --bootstrap --driver docker-container --driver-opt image=quay.io/domino/buildkit:v0.12.0
 docker buildx build --platform linux/amd64,linux/arm64 -t $CONTAINER_NAME -f build/Dockerfile.pr .
 docker buildx rm feo-builder
 
