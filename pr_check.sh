@@ -13,7 +13,7 @@ docker rm -f $CONTAINER_NAME-run
 # This means that the pr_check_inner.sh script will be run in the context of the jenkins workspace
 # This confused me for a while because pr_check_inner.sh is also copied into the pr check container at build time
 # but the template_check.sh isn't. I couldn't figure out how it was sourcing it
-
+echo true
 docker buildx inspect --bootstrap
 docker buildx ls
 #docker buildx rm feo-builder || true
