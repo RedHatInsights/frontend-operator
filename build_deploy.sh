@@ -39,4 +39,5 @@ if [[ "$VALID_TAGS_LENGTH" -eq 0 ]]; then
 fi
 #### End 
 
+docker buildx use multiarchbuilder
 docker --config="$DOCKER_CONF" buildx build --platform linux/amd64,linux/arm64 --build-arg BASE_IMAGE="$BASE_IMG" -t "${IMAGE}:${IMAGE_TAG}" --push .

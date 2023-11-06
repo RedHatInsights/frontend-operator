@@ -351,15 +351,21 @@ var _ = ginkgo.Describe("Frontend controller with service", func() {
 				if err != nil {
 					return false
 				}
-				gomega.Expect(nfe.Status.Conditions[0].Type).Should(gomega.Equal(crd.FrontendsReady))
-				gomega.Expect(nfe.Status.Conditions[0].Status).Should(gomega.Equal(v1.ConditionTrue))
-				gomega.Expect(nfe.Status.Conditions[1].Type).Should(gomega.Equal(crd.ReconciliationFailed))
-				gomega.Expect(nfe.Status.Conditions[1].Status).Should(gomega.Equal(v1.ConditionFalse))
-				gomega.Expect(nfe.Status.Conditions[2].Type).Should(gomega.Equal(crd.ReconciliationSuccessful))
-				gomega.Expect(nfe.Status.Conditions[2].Status).Should(gomega.Equal(v1.ConditionTrue))
-				gomega.Expect(nfe.Status.Ready).Should(gomega.Equal(true))
-				return true
+
+				// Check the length of Conditions slice before accessing by index
+				if len(nfe.Status.Conditions) > 2 {
+					gomega.Expect(nfe.Status.Conditions[0].Type).Should(gomega.Equal(crd.FrontendsReady))
+					gomega.Expect(nfe.Status.Conditions[0].Status).Should(gomega.Equal(v1.ConditionTrue))
+					gomega.Expect(nfe.Status.Conditions[1].Type).Should(gomega.Equal(crd.ReconciliationFailed))
+					gomega.Expect(nfe.Status.Conditions[1].Status).Should(gomega.Equal(v1.ConditionFalse))
+					gomega.Expect(nfe.Status.Conditions[2].Type).Should(gomega.Equal(crd.ReconciliationSuccessful))
+					gomega.Expect(nfe.Status.Conditions[2].Status).Should(gomega.Equal(v1.ConditionTrue))
+					gomega.Expect(nfe.Status.Ready).Should(gomega.Equal(true))
+					return true
+				}
+				return false
 			}, timeout, interval).Should(gomega.BeTrue())
+
 		})
 	})
 })
