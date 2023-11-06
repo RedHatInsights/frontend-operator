@@ -6,8 +6,8 @@ import (
 	"time"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
 	prom "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -17,7 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-var _ = Describe("Frontend controller with image", func() {
+var _ = ginkgo.Describe("Frontend controller with image", func() {
 	const (
 		FrontendName       = "test-frontend"
 		FrontendNamespace  = "default"
@@ -32,18 +32,18 @@ var _ = Describe("Frontend controller with image", func() {
 		interval = time.Millisecond * 250
 	)
 
-	Context("When creating a Frontend Resource", func() {
-		It("Should create a deployment with the correct items", func() {
-			By("By creating a new Frontend")
+	ginkgo.Context("When creating a Frontend Resource", func() {
+		ginkgo.It("Should create a deployment with the correct items", func() {
+			ginkgo.By("ginkgo.By creating a new Frontend")
 			ctx := context.Background()
 
 			var customConfig apiextensions.JSON
 			err := customConfig.UnmarshalJSON([]byte(`{"apple":"pie"}`))
-			Expect(err).Should(BeNil())
+			gomega.Expect(err).Should(gomega.BeNil())
 
 			var customConfig2 apiextensions.JSON
 			err = customConfig2.UnmarshalJSON([]byte(`{"cheese":"pasty"}`))
-			Expect(err).Should(BeNil())
+			gomega.Expect(err).Should(gomega.BeNil())
 
 			frontend := &crd.Frontend{
 				TypeMeta: metav1.TypeMeta{
@@ -84,7 +84,7 @@ var _ = Describe("Frontend controller with image", func() {
 					},
 				},
 			}
-			Expect(k8sClient.Create(ctx, frontend)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
 
 			frontend2 := &crd.Frontend{
 				TypeMeta: metav1.TypeMeta{
@@ -126,7 +126,7 @@ var _ = Describe("Frontend controller with image", func() {
 					},
 				},
 			}
-			Expect(k8sClient.Create(ctx, frontend2)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, frontend2)).Should(gomega.Succeed())
 
 			frontendEnvironment := &crd.FrontendEnvironment{
 				TypeMeta: metav1.TypeMeta{
@@ -146,7 +146,7 @@ var _ = Describe("Frontend controller with image", func() {
 					GenerateNavJSON: true,
 				},
 			}
-			Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
 
 			bundle := &crd.Bundle{
 				TypeMeta: metav1.TypeMeta{
@@ -164,7 +164,7 @@ var _ = Describe("Frontend controller with image", func() {
 					EnvName: FrontendEnvName,
 				},
 			}
-			Expect(k8sClient.Create(ctx, bundle)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, bundle)).Should(gomega.Succeed())
 
 			deploymentLookupKey := types.NamespacedName{Name: frontend.Name + "-frontend", Namespace: FrontendNamespace}
 			ingressLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
@@ -172,30 +172,30 @@ var _ = Describe("Frontend controller with image", func() {
 			serviceLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
 			createdDeployment := &apps.Deployment{}
 
-			Eventually(func() bool {
+			gomega.Eventually(func() bool {
 				err := k8sClient.Get(ctx, deploymentLookupKey, createdDeployment)
 				return err == nil
-			}, timeout, interval).Should(BeTrue())
-			Expect(createdDeployment.Name).Should(Equal(FrontendName + "-frontend"))
+			}, timeout, interval).Should(gomega.BeTrue())
+			gomega.Expect(createdDeployment.Name).Should(gomega.Equal(FrontendName + "-frontend"))
 			fmt.Printf("\n%v\n", createdDeployment.GetAnnotations())
-			Expect(createdDeployment.Spec.Template.GetAnnotations()["configHash"]).ShouldNot(Equal(""))
+			gomega.Expect(createdDeployment.Spec.Template.GetAnnotations()["configHash"]).ShouldNot(gomega.Equal(""))
 
 			createdIngress := &networking.Ingress{}
-			Eventually(func() bool {
+			gomega.Eventually(func() bool {
 				err := k8sClient.Get(ctx, ingressLookupKey, createdIngress)
 				return err == nil
-			}, timeout, interval).Should(BeTrue())
-			Expect(createdIngress.Name).Should(Equal(FrontendName))
+			}, timeout, interval).Should(gomega.BeTrue())
+			gomega.Expect(createdIngress.Name).Should(gomega.Equal(FrontendName))
 
 			createdService := &v1.Service{}
-			Eventually(func() bool {
+			gomega.Eventually(func() bool {
 				err := k8sClient.Get(ctx, serviceLookupKey, createdService)
 				return err == nil
-			}, timeout, interval).Should(BeTrue())
-			Expect(createdService.Name).Should(Equal(FrontendName))
+			}, timeout, interval).Should(gomega.BeTrue())
+			gomega.Expect(createdService.Name).Should(gomega.Equal(FrontendName))
 
 			createdConfigMap := &v1.ConfigMap{}
-			Eventually(func() bool {
+			gomega.Eventually(func() bool {
 				err := k8sClient.Get(ctx, configMapLookupKey, createdConfigMap)
 				if err != nil {
 					return err == nil
@@ -204,19 +204,19 @@ var _ = Describe("Frontend controller with image", func() {
 					return false
 				}
 				return true
-			}, timeout, interval).Should(BeTrue())
-			Expect(createdConfigMap.Name).Should(Equal(FrontendEnvName))
-			Expect(createdConfigMap.Data).Should(Equal(map[string]string{
+			}, timeout, interval).Should(gomega.BeTrue())
+			gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName))
+			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
 				"fed-modules.json": "{\"testFrontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"},\"fullProfile\":true},\"testFrontend2\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"cheese\":\"pasty\"},\"fullProfile\":false}}",
 				"test-env.json":    "{\"id\":\"test-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test\",\"href\":\"/test/href\"}]}",
 			}))
-			Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(Equal(FrontendEnvName))
+			gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(FrontendEnvName))
 
 		})
 	})
 })
 
-var _ = Describe("Frontend controller with service", func() {
+var _ = ginkgo.Describe("Frontend controller with service", func() {
 	const (
 		FrontendName      = "test-frontend-service"
 		FrontendNamespace = "default"
@@ -229,9 +229,9 @@ var _ = Describe("Frontend controller with service", func() {
 		interval = time.Millisecond * 250
 	)
 
-	Context("When creating a Frontend Resource", func() {
-		It("Should create a deployment with the correct items", func() {
-			By("By creating a new Frontend")
+	ginkgo.Context("When creating a Frontend Resource", func() {
+		ginkgo.It("Should create a deployment with the correct items", func() {
+			ginkgo.By("ginkgo.By creating a new Frontend")
 			ctx := context.Background()
 
 			frontendEnvironment := crd.FrontendEnvironment{
@@ -256,7 +256,7 @@ var _ = Describe("Frontend controller with service", func() {
 					GenerateNavJSON: false,
 				},
 			}
-			Expect(k8sClient.Create(ctx, &frontendEnvironment)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, &frontendEnvironment)).Should(gomega.Succeed())
 
 			frontend := &crd.Frontend{
 				TypeMeta: metav1.TypeMeta{
@@ -302,7 +302,7 @@ var _ = Describe("Frontend controller with service", func() {
 					},
 				},
 			}
-			Expect(k8sClient.Create(ctx, frontend)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
 
 			bundle := crd.Bundle{
 				TypeMeta: metav1.TypeMeta{
@@ -320,51 +320,51 @@ var _ = Describe("Frontend controller with service", func() {
 					EnvName: FrontendEnvName,
 				},
 			}
-			Expect(k8sClient.Create(ctx, &bundle)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, &bundle)).Should(gomega.Succeed())
 
 			ingressLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
 			configMapLookupKey := types.NamespacedName{Name: frontendEnvironment.Name, Namespace: FrontendNamespace}
 
 			createdIngress := &networking.Ingress{}
-			Eventually(func() bool {
+			gomega.Eventually(func() bool {
 				err := k8sClient.Get(ctx, ingressLookupKey, createdIngress)
 				return err == nil
-			}, timeout, interval).Should(BeTrue())
-			Expect(createdIngress.Name).Should(Equal(FrontendName))
-			Expect(createdIngress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).Should(Equal(ServiceName))
-			Expect(createdIngress.Annotations["nginx.ingress.kubernetes.io/whitelist-source-range"]).Should(Equal("192.168.0.0/24,10.10.0.0/24"))
-			Expect(createdIngress.Annotations["haproxy.router.openshift.io/ip_whitelist"]).Should(Equal("192.168.0.0/24 10.10.0.0/24"))
+			}, timeout, interval).Should(gomega.BeTrue())
+			gomega.Expect(createdIngress.Name).Should(gomega.Equal(FrontendName))
+			gomega.Expect(createdIngress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).Should(gomega.Equal(ServiceName))
+			gomega.Expect(createdIngress.Annotations["nginx.ingress.kubernetes.io/whitelist-source-range"]).Should(gomega.Equal("192.168.0.0/24,10.10.0.0/24"))
+			gomega.Expect(createdIngress.Annotations["haproxy.router.openshift.io/ip_whitelist"]).Should(gomega.Equal("192.168.0.0/24 10.10.0.0/24"))
 
 			createdConfigMap := &v1.ConfigMap{}
-			Eventually(func() bool {
+			gomega.Eventually(func() bool {
 				err := k8sClient.Get(ctx, configMapLookupKey, createdConfigMap)
 				return err == nil
-			}, timeout, interval).Should(BeTrue())
-			Expect(createdConfigMap.Name).Should(Equal(FrontendEnvName))
-			Expect(createdConfigMap.Data).Should(Equal(map[string]string{
+			}, timeout, interval).Should(gomega.BeTrue())
+			gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName))
+			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
 				"fed-modules.json": "{\"testFrontendService\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"fullProfile\":false}}",
 			}))
 
-			Eventually(func() bool {
+			gomega.Eventually(func() bool {
 				nfe := &crd.Frontend{}
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: frontend.Name, Namespace: frontend.Namespace}, nfe)
 				if err != nil {
 					return false
 				}
-				Expect(nfe.Status.Conditions[0].Type).Should(Equal(crd.FrontendsReady))
-				Expect(nfe.Status.Conditions[0].Status).Should(Equal(v1.ConditionTrue))
-				Expect(nfe.Status.Conditions[1].Type).Should(Equal(crd.ReconciliationFailed))
-				Expect(nfe.Status.Conditions[1].Status).Should(Equal(v1.ConditionFalse))
-				Expect(nfe.Status.Conditions[2].Type).Should(Equal(crd.ReconciliationSuccessful))
-				Expect(nfe.Status.Conditions[2].Status).Should(Equal(v1.ConditionTrue))
-				Expect(nfe.Status.Ready).Should(Equal(true))
+				gomega.Expect(nfe.Status.Conditions[0].Type).Should(gomega.Equal(crd.FrontendsReady))
+				gomega.Expect(nfe.Status.Conditions[0].Status).Should(gomega.Equal(v1.ConditionTrue))
+				gomega.Expect(nfe.Status.Conditions[1].Type).Should(gomega.Equal(crd.ReconciliationFailed))
+				gomega.Expect(nfe.Status.Conditions[1].Status).Should(gomega.Equal(v1.ConditionFalse))
+				gomega.Expect(nfe.Status.Conditions[2].Type).Should(gomega.Equal(crd.ReconciliationSuccessful))
+				gomega.Expect(nfe.Status.Conditions[2].Status).Should(gomega.Equal(v1.ConditionTrue))
+				gomega.Expect(nfe.Status.Ready).Should(gomega.Equal(true))
 				return true
-			}, timeout, interval).Should(BeTrue())
+			}, timeout, interval).Should(gomega.BeTrue())
 		})
 	})
 })
 
-var _ = Describe("Frontend controller with chrome", func() {
+var _ = ginkgo.Describe("Frontend controller with chrome", func() {
 	const (
 		FrontendName      = "chrome"
 		FrontendNamespace = "default"
@@ -378,14 +378,14 @@ var _ = Describe("Frontend controller with chrome", func() {
 		interval = time.Millisecond * 250
 	)
 
-	Context("When creating a chrome Frontend Resource", func() {
-		It("Should create a deployment with the correct items", func() {
-			By("By creating a new Frontend")
+	ginkgo.Context("When creating a chrome Frontend Resource", func() {
+		ginkgo.It("Should create a deployment with the correct items", func() {
+			ginkgo.By("ginkgo.By creating a new Frontend")
 			ctx := context.Background()
 
 			var customConfig apiextensions.JSON
 			err := customConfig.UnmarshalJSON([]byte(`{"apple":"pie"}`))
-			Expect(err).Should(BeNil())
+			gomega.Expect(err).Should(gomega.BeNil())
 
 			frontend := &crd.Frontend{
 				TypeMeta: metav1.TypeMeta{
@@ -425,7 +425,7 @@ var _ = Describe("Frontend controller with chrome", func() {
 					},
 				},
 			}
-			Expect(k8sClient.Create(ctx, frontend)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
 
 			frontend2 := &crd.Frontend{
 				TypeMeta: metav1.TypeMeta{
@@ -465,7 +465,7 @@ var _ = Describe("Frontend controller with chrome", func() {
 					},
 				},
 			}
-			Expect(k8sClient.Create(ctx, frontend2)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, frontend2)).Should(gomega.Succeed())
 
 			frontend3 := &crd.Frontend{
 				TypeMeta: metav1.TypeMeta{
@@ -504,7 +504,7 @@ var _ = Describe("Frontend controller with chrome", func() {
 					},
 				},
 			}
-			Expect(k8sClient.Create(ctx, frontend3)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, frontend3)).Should(gomega.Succeed())
 
 			frontendEnvironment := &crd.FrontendEnvironment{
 				TypeMeta: metav1.TypeMeta{
@@ -524,7 +524,7 @@ var _ = Describe("Frontend controller with chrome", func() {
 					GenerateNavJSON: true,
 				},
 			}
-			Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
 
 			bundle := &crd.Bundle{
 				TypeMeta: metav1.TypeMeta{
@@ -542,7 +542,7 @@ var _ = Describe("Frontend controller with chrome", func() {
 					EnvName: FrontendEnvName,
 				},
 			}
-			Expect(k8sClient.Create(ctx, bundle)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, bundle)).Should(gomega.Succeed())
 
 			deploymentLookupKey := types.NamespacedName{Name: frontend.Name + "-frontend", Namespace: FrontendNamespace}
 			ingressLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
@@ -550,30 +550,30 @@ var _ = Describe("Frontend controller with chrome", func() {
 			serviceLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
 			createdDeployment := &apps.Deployment{}
 
-			Eventually(func() bool {
+			gomega.Eventually(func() bool {
 				err := k8sClient.Get(ctx, deploymentLookupKey, createdDeployment)
 				return err == nil
-			}, timeout, interval).Should(BeTrue())
-			Expect(createdDeployment.Name).Should(Equal(FrontendName + "-frontend"))
+			}, timeout, interval).Should(gomega.BeTrue())
+			gomega.Expect(createdDeployment.Name).Should(gomega.Equal(FrontendName + "-frontend"))
 			fmt.Printf("\n%v\n", createdDeployment.GetAnnotations())
-			Expect(createdDeployment.Spec.Template.GetAnnotations()["configHash"]).ShouldNot(Equal(""))
+			gomega.Expect(createdDeployment.Spec.Template.GetAnnotations()["configHash"]).ShouldNot(gomega.Equal(""))
 
 			createdIngress := &networking.Ingress{}
-			Eventually(func() bool {
+			gomega.Eventually(func() bool {
 				err := k8sClient.Get(ctx, ingressLookupKey, createdIngress)
 				return err == nil
-			}, timeout, interval).Should(BeTrue())
-			Expect(createdIngress.Name).Should(Equal(FrontendName))
+			}, timeout, interval).Should(gomega.BeTrue())
+			gomega.Expect(createdIngress.Name).Should(gomega.Equal(FrontendName))
 
 			createdService := &v1.Service{}
-			Eventually(func() bool {
+			gomega.Eventually(func() bool {
 				err := k8sClient.Get(ctx, serviceLookupKey, createdService)
 				return err == nil
-			}, timeout, interval).Should(BeTrue())
-			Expect(createdService.Name).Should(Equal(FrontendName))
+			}, timeout, interval).Should(gomega.BeTrue())
+			gomega.Expect(createdService.Name).Should(gomega.Equal(FrontendName))
 
 			createdConfigMap := &v1.ConfigMap{}
-			Eventually(func() bool {
+			gomega.Eventually(func() bool {
 				err := k8sClient.Get(ctx, configMapLookupKey, createdConfigMap)
 				if err != nil {
 					return err == nil
@@ -582,18 +582,18 @@ var _ = Describe("Frontend controller with chrome", func() {
 					return false
 				}
 				return true
-			}, timeout, interval).Should(BeTrue())
-			Expect(createdConfigMap.Name).Should(Equal(FrontendEnvName))
-			Expect(createdConfigMap.Data).Should(Equal(map[string]string{
+			}, timeout, interval).Should(gomega.BeTrue())
+			gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName))
+			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
 				"fed-modules.json":     "{\"chrome\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\",\"ssoUrl\":\"https://something-auth\"},\"fullProfile\":false},\"noConfig\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"fullProfile\":false},\"nonChrome\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"},\"fullProfile\":false}}",
 				"test-chrome-env.json": "{\"id\":\"test-chrome-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test\",\"href\":\"/test/href\"}]}"}))
-			Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(Equal(FrontendEnvName))
+			gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(FrontendEnvName))
 
 		})
 	})
 })
 
-var _ = Describe("ServiceMonitor Creation", func() {
+var _ = ginkgo.Describe("ServiceMonitor Creation", func() {
 	const (
 		FrontendName      = "test-service-monitor"
 		FrontendNamespace = "default"
@@ -605,9 +605,9 @@ var _ = Describe("ServiceMonitor Creation", func() {
 		interval = time.Millisecond * 250
 	)
 
-	Context("When creating a Frontend Resource", func() {
-		It("Should create a ServiceMonitor", func() {
-			By("Reading the FrontendEnvironment")
+	ginkgo.Context("When creating a Frontend Resource", func() {
+		ginkgo.It("Should create a ServiceMonitor", func() {
+			ginkgo.By("Reading the FrontendEnvironment")
 			ctx := context.Background()
 
 			frontend := &crd.Frontend{
@@ -647,7 +647,7 @@ var _ = Describe("ServiceMonitor Creation", func() {
 					},
 				},
 			}
-			Expect(k8sClient.Create(ctx, frontend)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
 
 			frontendEnvironment := &crd.FrontendEnvironment{
 				TypeMeta: metav1.TypeMeta{
@@ -667,7 +667,7 @@ var _ = Describe("ServiceMonitor Creation", func() {
 					GenerateNavJSON: true,
 				},
 			}
-			Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
 
 			bundle := &crd.Bundle{
 				TypeMeta: metav1.TypeMeta{
@@ -685,17 +685,17 @@ var _ = Describe("ServiceMonitor Creation", func() {
 					EnvName: FrontendEnvName,
 				},
 			}
-			Expect(k8sClient.Create(ctx, bundle)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, bundle)).Should(gomega.Succeed())
 
 			serviceLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
 			monitorLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: MonitoringNamespace}
 
 			createdService := &v1.Service{}
-			Eventually(func() bool {
+			gomega.Eventually(func() bool {
 				err := k8sClient.Get(ctx, serviceLookupKey, createdService)
 				return err == nil
-			}, timeout, interval).Should(BeTrue())
-			Expect(createdService.Name).Should(Equal(FrontendName))
+			}, timeout, interval).Should(gomega.BeTrue())
+			gomega.Expect(createdService.Name).Should(gomega.Equal(FrontendName))
 
 			createdServiceMonitor := &prom.ServiceMonitor{}
 			ls := metav1.LabelSelector{
@@ -703,17 +703,17 @@ var _ = Describe("ServiceMonitor Creation", func() {
 					"frontend": FrontendName,
 				},
 			}
-			Eventually(func() bool {
+			gomega.Eventually(func() bool {
 				err := k8sClient.Get(ctx, monitorLookupKey, createdServiceMonitor)
 				return err == nil
-			}, timeout, interval).Should(BeTrue())
-			Expect(createdServiceMonitor.Name).Should(Equal(FrontendName))
-			Expect(createdServiceMonitor.Spec.Selector).Should(Equal(ls))
+			}, timeout, interval).Should(gomega.BeTrue())
+			gomega.Expect(createdServiceMonitor.Name).Should(gomega.Equal(FrontendName))
+			gomega.Expect(createdServiceMonitor.Spec.Selector).Should(gomega.Equal(ls))
 		})
 	})
 })
 
-var _ = Describe("Dependencies", func() {
+var _ = ginkgo.Describe("Dependencies", func() {
 	const (
 		FrontendName      = "test-dependencies"
 		FrontendName2     = "test-optional-dependencies"
@@ -727,9 +727,9 @@ var _ = Describe("Dependencies", func() {
 		interval = time.Millisecond * 250
 	)
 
-	Context("When creating a Frontend Resource with dependencies", func() {
-		It("Should create the right config", func() {
-			By("Setting up dependencies and optionaldependencies")
+	ginkgo.Context("When creating a Frontend Resource with dependencies", func() {
+		ginkgo.It("Should create the right config", func() {
+			ginkgo.By("Setting up dependencies and optionaldependencies")
 			ctx := context.Background()
 
 			configMapLookupKey := types.NamespacedName{Name: FrontendEnvName, Namespace: FrontendNamespace}
@@ -772,7 +772,7 @@ var _ = Describe("Dependencies", func() {
 					},
 				},
 			}
-			Expect(k8sClient.Create(ctx, frontend)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
 
 			frontend2 := &crd.Frontend{
 				TypeMeta: metav1.TypeMeta{
@@ -812,7 +812,7 @@ var _ = Describe("Dependencies", func() {
 					},
 				},
 			}
-			Expect(k8sClient.Create(ctx, frontend2)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, frontend2)).Should(gomega.Succeed())
 
 			frontend3 := &crd.Frontend{
 				TypeMeta: metav1.TypeMeta{
@@ -851,7 +851,7 @@ var _ = Describe("Dependencies", func() {
 					},
 				},
 			}
-			Expect(k8sClient.Create(ctx, frontend3)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, frontend3)).Should(gomega.Succeed())
 
 			frontendEnvironment := &crd.FrontendEnvironment{
 				TypeMeta: metav1.TypeMeta{
@@ -871,7 +871,7 @@ var _ = Describe("Dependencies", func() {
 					GenerateNavJSON: true,
 				},
 			}
-			Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
 
 			bundle := &crd.Bundle{
 				TypeMeta: metav1.TypeMeta{
@@ -889,10 +889,10 @@ var _ = Describe("Dependencies", func() {
 					EnvName: FrontendEnvName,
 				},
 			}
-			Expect(k8sClient.Create(ctx, bundle)).Should(Succeed())
+			gomega.Expect(k8sClient.Create(ctx, bundle)).Should(gomega.Succeed())
 
 			createdConfigMap := &v1.ConfigMap{}
-			Eventually(func() bool {
+			gomega.Eventually(func() bool {
 				err := k8sClient.Get(ctx, configMapLookupKey, createdConfigMap)
 				if err != nil {
 					return err == nil
@@ -901,13 +901,13 @@ var _ = Describe("Dependencies", func() {
 					return false
 				}
 				return true
-			}, timeout, interval).Should(BeTrue())
-			Expect(createdConfigMap.Name).Should(Equal(FrontendEnvName))
-			Expect(createdConfigMap.Data).Should(Equal(map[string]string{
+			}, timeout, interval).Should(gomega.BeTrue())
+			gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName))
+			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
 				"test-dependencies-env.json": "{\"id\":\"test-dependencies-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test\",\"href\":\"/test/href\"}]}",
 				"fed-modules.json":           "{\"testDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}],\"dependencies\":[\"depstring\"]}],\"fullProfile\":false},\"testNoDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"fullProfile\":false},\"testOptionalDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}],\"optionalDependencies\":[\"depstring-op\"]}],\"fullProfile\":false}}",
 			}))
-			Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(Equal(FrontendEnvName))
+			gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(FrontendEnvName))
 
 		})
 	})
