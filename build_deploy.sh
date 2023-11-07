@@ -56,7 +56,7 @@ fi
 
 
 # Create a new buildx builder with the unique name
-docker buildx create --name "${BUILDER_NAME}" --use --driver docker-container --driver-opt image=moby/buildkit:latest
+docker buildx create --name "${BUILDER_NAME}" --use --driver docker-container --driver-opt image=quay.io/domino/buildkit:v0.12.3
 
 # Initialize the builder
 docker buildx inspect "${BUILDER_NAME}" --bootstrap
