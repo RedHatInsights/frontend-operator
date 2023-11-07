@@ -4,6 +4,7 @@ set -exv
 
 IMAGE="quay.io/cloudservices/frontend-operator"
 IMAGE_TAG=$(git rev-parse --short=7 HEAD)
+export BUILDER_NAME="builder-${JOB_NAME}-${BUILD_ID}"
 
 if [[ -z "$QUAY_USER" || -z "$QUAY_TOKEN" ]]; then
     echo "QUAY_USER and QUAY_TOKEN must be set"
@@ -17,10 +18,30 @@ fi
 
 DOCKER_CONF="$PWD/.docker"
 mkdir -p "$DOCKER_CONF"
-docker --config="$DOCKER_CONF" buildx ls
 
 
-docker --config="$DOCKER_CONF" buildx inspect --builder multiarchbuilder --bootstrap
+
+# Function to remove Docker builder
+cleanup() {
+  echo "Cleaning up Docker builder..."
+  # Check if the specified builder exists and remove it if it does
+  docker --config="$DOCKER_CONF" buildx inspect "$BUILDER_NAME" &>/dev/null && docker buildx rm "$BUILDER_NAME"
+}
+
+# Create a trap for different signals
+# It will call the cleanup function on EXIT, or if the script receives
+# a SIGINT (Ctrl+C), or a SIGTERM (termination signal)
+trap cleanup EXIT SIGINT SIGTERM
+
+
+# Create a new buildx builder with the unique name
+docker --config="$DOCKER_CONF" buildx create --name "$BUILDER_NAME" --use --driver docker-container --driver-opt image=moby/buildkit:latest
+
+# Initialize the builder
+docker --config="$DOCKER_CONF" buildx inspect "$BUILDER_NAME" --bootstrap
+
+
+docker --config="$DOCKER_CONF" buildx use "$BUILDER_NAME"
 
 docker --config="$DOCKER_CONF" login -u="$QUAY_USER" -p="$QUAY_TOKEN" quay.io
 docker --config="$DOCKER_CONF" login -u="$RH_REGISTRY_USER" -p="$RH_REGISTRY_TOKEN" registry.redhat.io
@@ -37,8 +58,8 @@ echo "received HTTP response: $RESPONSE"
 VALID_TAGS_LENGTH=$(echo $RESPONSE | jq '[ .tags[] | select(.end_ts == null) ] | length')
 
 if [[ "$VALID_TAGS_LENGTH" -eq 0 ]]; then
-    docker --config="$DOCKER_CONF" buildx build --builder multiarchbuilder --platform linux/amd64 -f Dockerfile.base -t "${BASE_IMG}-amd64" --push . 
-    docker --config="$DOCKER_CONF" buildx build --builder multiarchbuilder --platform linux/arm64 -f Dockerfile.base -t "${BASE_IMG}-arm64" --push . 
+    docker --config="$DOCKER_CONF" buildx build  --platform linux/amd64 -f Dockerfile.base -t "${BASE_IMG}-amd64" --push . 
+    docker --config="$DOCKER_CONF" buildx build  --platform linux/arm64 -f Dockerfile.base -t "${BASE_IMG}-arm64" --push . 
     docker --config="$DOCKER_CONF" manifest create "${BASE_IMG}" \
     "${BASE_IMG}-amd64" \
     "${BASE_IMG}-arm64"
@@ -47,8 +68,8 @@ fi
 #### End 
 
 
-docker --config="$DOCKER_CONF" buildx  build --builder multiarchbuilder --platform linux/amd64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}-amd64" --push .
-docker --config="$DOCKER_CONF" buildx  build --builder multiarchbuilder --platform linux/arm64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="arm64" -t "${IMAGE}:${IMAGE_TAG}-arm64" --push .
+docker --config="$DOCKER_CONF" buildx  build  --platform linux/amd64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}-amd64" --push .
+docker --config="$DOCKER_CONF" buildx  build  --platform linux/arm64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="arm64" -t "${IMAGE}:${IMAGE_TAG}-arm64" --push .
 
 docker --config="$DOCKER_CONF" manifest create "${IMAGE}:${IMAGE_TAG}" \
     "${IMAGE}:${IMAGE_TAG}-amd64" \
