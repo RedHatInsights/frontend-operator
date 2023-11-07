@@ -33,14 +33,17 @@ echo "received HTTP response: $RESPONSE"
 # find all non-expired tags
 VALID_TAGS_LENGTH=$(echo $RESPONSE | jq '[ .tags[] | select(.end_ts == null) ] | length')
 
+docker buildx use multiarchbuilder
+
 if [[ "$VALID_TAGS_LENGTH" -eq 0 ]]; then
-    docker --config="$DOCKER_CONF" build -f Dockerfile.base . -t "$BASE_IMG"
+    docker --config="$DOCKER_CONF" buildx build --platform linux/amd64 -f Dockerfile.base --push . -t "${BASE_IMG}-amd64"
+    docker --config="$DOCKER_CONF" buildx build --platform linux/arm64 -f Dockerfile.base --push . -t "${BASE_IMG}-arm64"
+    docker --config="$DOCKER_CONF" manifest create "${BASE_IMG}" \
+    "${BASE_IMG}-amd64" \
+    "${BASE_IMG}-arm64"
 	docker --config="$DOCKER_CONF" push "$BASE_IMG"
 fi
 #### End 
-
-
-docker buildx use multiarchbuilder
 
 
 docker --config="$DOCKER_CONF" buildx build --platform linux/amd64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}-amd64" --push .
