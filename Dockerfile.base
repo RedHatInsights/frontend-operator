@@ -3,12 +3,8 @@ FROM registry.access.redhat.com/ubi8/go-toolset:1.19.13-2.1698062273  as builder
 
 WORKDIR /workspace
 
-
-
 COPY go.mod go.mod
 COPY go.sum go.sum
-
-
 
 
 RUN go mod download
