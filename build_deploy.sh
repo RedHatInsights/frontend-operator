@@ -19,7 +19,6 @@ DOCKER_CONF="$PWD/.docker"
 mkdir -p "$DOCKER_CONF"
 
 docker buildx inspect --builder multiarchbuilder --bootstrap
-docker buildx use multiarchbuilder
 
 docker --config="$DOCKER_CONF" login -u="$QUAY_USER" -p="$QUAY_TOKEN" quay.io
 docker --config="$DOCKER_CONF" login -u="$RH_REGISTRY_USER" -p="$RH_REGISTRY_TOKEN" registry.redhat.io
@@ -36,8 +35,8 @@ echo "received HTTP response: $RESPONSE"
 VALID_TAGS_LENGTH=$(echo $RESPONSE | jq '[ .tags[] | select(.end_ts == null) ] | length')
 
 if [[ "$VALID_TAGS_LENGTH" -eq 0 ]]; then
-    docker --config="$DOCKER_CONF" buildx build --platform linux/amd64 -f Dockerfile.base -t "${BASE_IMG}-amd64" --push . 
-    docker --config="$DOCKER_CONF" buildx build --platform linux/arm64 -f Dockerfile.base -t "${BASE_IMG}-arm64" --push . 
+    docker --config="$DOCKER_CONF" buildx build --builder multiarchbuilder --platform linux/amd64 -f Dockerfile.base -t "${BASE_IMG}-amd64" --push . 
+    docker --config="$DOCKER_CONF" buildx build --builder multiarchbuilder --platform linux/arm64 -f Dockerfile.base -t "${BASE_IMG}-arm64" --push . 
     docker --config="$DOCKER_CONF" manifest create "${BASE_IMG}" \
     "${BASE_IMG}-amd64" \
     "${BASE_IMG}-arm64"
@@ -46,8 +45,8 @@ fi
 #### End 
 
 
-docker --config="$DOCKER_CONF" buildx  build --platform linux/amd64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}-amd64" --push .
-docker --config="$DOCKER_CONF" buildx  build --platform linux/arm64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="arm64" -t "${IMAGE}:${IMAGE_TAG}-arm64" --push .
+docker --config="$DOCKER_CONF" buildx  build --builder multiarchbuilder --platform linux/amd64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}-amd64" --push .
+docker --config="$DOCKER_CONF" buildx  build --builder multiarchbuilder --platform linux/arm64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="arm64" -t "${IMAGE}:${IMAGE_TAG}-arm64" --push .
 
 docker --config="$DOCKER_CONF" manifest create "${IMAGE}:${IMAGE_TAG}" \
     "${IMAGE}:${IMAGE_TAG}-amd64" \
