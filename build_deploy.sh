@@ -47,8 +47,8 @@ fi
 #### End 
 
 
-docker buildx  build  --platform linux/amd64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}-amd64" --push .
-docker buildx  build  --platform linux/arm64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="arm64" -t "${IMAGE}:${IMAGE_TAG}-arm64" --push .
+docker buildx  build  --platform linux/amd64  --build-arg BASE_IMAGE="${BASE_IMG}-amd64" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}-amd64" --push .
+docker buildx  build  --platform linux/arm64  --build-arg BASE_IMAGE="${BASE_IMG}-arm64" --build-arg GOARCH="arm64" -t "${IMAGE}:${IMAGE_TAG}-arm64" --push .
 
 docker manifest create "${IMAGE}:${IMAGE_TAG}" \
     "${IMAGE}:${IMAGE_TAG}-amd64" \
