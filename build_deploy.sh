@@ -17,6 +17,8 @@ fi
 
 DOCKER_CONF="$PWD/.docker"
 mkdir -p "$DOCKER_CONF"
+docker --config="$DOCKER_CONF" buildx ls
+
 
 docker --config="$DOCKER_CONF" buildx inspect --builder multiarchbuilder --bootstrap
 
