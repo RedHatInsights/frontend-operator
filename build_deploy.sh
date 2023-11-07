@@ -37,9 +37,9 @@ echo "received HTTP response: $RESPONSE"
 VALID_TAGS_LENGTH=$(echo $RESPONSE | jq '[ .tags[] | select(.end_ts == null) ] | length')
 
 if [[ "$VALID_TAGS_LENGTH" -eq 0 ]]; then
-    docker buildx build  --platform linux/amd64,linux/arm64 -f Dockerfile.base -t "${BASE_IMG}-amd64" --push . 
+    docker buildx build  --platform linux/amd64,linux/arm64 -f Dockerfile.base -t "${BASE_IMG}" --push . 
 fi
 #### End 
 
 
-docker buildx  build  --platform linux/amd64,linux/arm64  --build-arg BASE_IMAGE="${BASE_IMG}-amd64" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}-amd64" --push .
+docker buildx  build  --platform linux/amd64,linux/arm64  --build-arg BASE_IMAGE="${BASE_IMG}" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}" --push .
