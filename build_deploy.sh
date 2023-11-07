@@ -35,7 +35,7 @@ trap cleanup EXIT SIGINT SIGTERM
 
 
 # Create a new buildx builder with the unique name
-docker --config="$DOCKER_CONF" buildx create --name "$BUILDER_NAME" --use --driver docker-container --driver-opt image=quay.io/domino/buildkit:v0.12.3
+docker --config="$DOCKER_CONF" buildx create --platform linux/amd64,linux/arm64  --name "$BUILDER_NAME" --use --driver docker-container --driver-opt image=quay.io/domino/buildkit:v0.12.3
 
 # Initialize the builder
 docker --config="$DOCKER_CONF" buildx inspect "$BUILDER_NAME" --bootstrap
