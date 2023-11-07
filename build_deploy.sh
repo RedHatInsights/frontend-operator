@@ -4,6 +4,20 @@ set -exv
 
 IMAGE="quay.io/cloudservices/frontend-operator"
 IMAGE_TAG=$(git rev-parse --short=7 HEAD)
+# Generate a unique builder name using Jenkins environment variables
+BUILDER_NAME="builder-${JOB_NAME}-${BUILD_ID}"
+
+# Function to remove Docker builder
+cleanup() {
+  echo "Cleaning up Docker builder..."
+  # Check if the specified builder exists and remove it if it does
+  docker buildx inspect "$BUILDER_NAME" &>/dev/null && docker buildx rm "$BUILDER_NAME"
+}
+
+# Create a trap for different signals
+# It will call the cleanup function on EXIT, or if the script receives
+# a SIGINT (Ctrl+C), or a SIGTERM (termination signal)
+trap cleanup EXIT SIGINT SIGTERM
 
 if [[ -z "$QUAY_USER" || -z "$QUAY_TOKEN" ]]; then
     echo "QUAY_USER and QUAY_TOKEN must be set"
@@ -40,6 +54,15 @@ fi
 #### End 
 
 
-docker buildx use multiarchbuilder
-export DOCKER_CONFIG="$DOCKER_CONF"
-docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE_IMAGE="$BASE_IMG" -t "${IMAGE}:${IMAGE_TAG}" --push .
+
+# Create a new buildx builder with the unique name
+docker buildx create --name "${BUILDER_NAME}" --use --driver docker-container --driver-opt image=moby/buildkit:latest
+
+# Initialize the builder
+docker buildx inspect "${BUILDER_NAME}" --bootstrap
+
+# Build and push the multi-architecture image
+docker --config="$DOCKER_CONF" buildx build --builder "${BUILDER_NAME}" \
+  --platform linux/amd64,linux/arm64 \
+  --build-arg BASE_IMAGE="$BASE_IMG" \
+  -t "${IMAGE}:${IMAGE_TAG}" --push .
