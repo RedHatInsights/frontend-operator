@@ -41,13 +41,5 @@ fi
 
 
 docker buildx use multiarchbuilder
-
-
-docker --config="$DOCKER_CONF" buildx build --platform linux/amd64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}-amd64" --push .
-docker --config="$DOCKER_CONF" buildx build --platform linux/arm64  --build-arg BASE_IMAGE="$BASE_IMG" --build-arg GOARCH="arm64" -t "${IMAGE}:${IMAGE_TAG}-arm64" --push .
-
-docker --config="$DOCKER_CONF" manifest create "${IMAGE}:${IMAGE_TAG}" \
-    "${IMAGE}:${IMAGE_TAG}-amd64" \
-    "${IMAGE}:${IMAGE_TAG}-arm64"
-
-docker --config="$DOCKER_CONF" manifest push "${IMAGE}:${IMAGE_TAG}"
+export DOCKER_CONFIG="$DOCKER_CONF"
+docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE_IMAGE="$BASE_IMG" -t "${IMAGE}:${IMAGE_TAG}" --push .
