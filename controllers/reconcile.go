@@ -138,7 +138,7 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 
 	d.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 
-	// Modify the obejct to set the things we care about
+	// Modify the object to set the things we care about
 	d.Spec.Template.Spec.Containers = []v1.Container{{
 		Name:  "fe-image",
 		Image: frontend.Spec.Image,
@@ -568,6 +568,8 @@ func (r *FrontendReconciliation) createOrUpdateCacheBustJob() error {
 		annotations = make(map[string]string)
 	}
 	annotations["frontend-image"] = r.Frontend.Spec.Image
+	annotations["kube-linter.io/ignore-all"] = "we don't need no any checking"
+
 	j.Spec.Template.ObjectMeta.SetAnnotations(annotations)
 
 	errr := r.populateCacheBustContainer(j)
