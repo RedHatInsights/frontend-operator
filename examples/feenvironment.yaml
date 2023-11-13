@@ -7,3 +7,4 @@ spec:
   monitoring:
     mode: "local"
     disabled: false
+    generateChromeConfig: true

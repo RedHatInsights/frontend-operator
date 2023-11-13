@@ -1,0 +1,107 @@
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: test-bundles-environment
+spec:
+  generateNavJSON: true
+  ssl: false
+  hostname: foo.redhat.com
+  sso: https://sso.foo.redhat.com
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: edge
+  namespace: test-bundles
+spec:
+  envName: test-bundles-environment
+  title: Edge
+  deploymentRepo: https://github.com/RedHatInsights/edge-frontend
+  API:
+    versions:
+      - v1
+  frontend:
+    paths:
+      - /apps/edge
+  image: "quay.io/cloudservices/edge-frontend:3244a17"
+  navItems:
+    - title: Inventory
+      expandable: true
+      routes:
+        - title: "Groups"
+          appId: "edge"
+          filterable: false
+          href: /edge/fleet-management
+          permissions:
+            - method: withEmail
+              args:
+                - "@redhat.com"
+                - "@sbb.ch"
+        - title: "Systems"
+          appId: "edge"
+          filterable: false
+          href: /edge/inventory
+          permissions:
+            - method: withEmail
+              args:
+                - "@redhat.com"
+                - "@sbb.ch"
+      permissions:
+        - method: withEmail
+          args:
+            - "@redhat.com"
+    - title: Manage Images
+      expandable: true
+      routes:
+        - title: "Images"
+          appId: "edge"
+          filterable: false
+          href: /edge/manage-images
+          permissions:
+            - method: withEmail
+              args:
+                - "@redhat.com"
+                - "@sbb.ch"
+        - title: "Custom Repositories"
+          appId: "edge"
+          filterable: false
+          href: /edge/repositories
+          permissions:
+            - method: withEmail
+              args:
+                - "@redhat.com"
+                - "@sbb.ch"
+      permissions:
+        - method: withEmail
+          args:
+            - "@redhat.com"
+            - "@sbb.ch"
+    - title: Learning Resources
+      href: /edge/learning-resources
+      permissions:
+        - method: withEmail
+          args:
+            - "@redhat.com"
+            - "@sbb.ch"
+  module:
+    manifestLocation: /apps/edge/fed-mods.json
+    modules:
+      - id: edge
+        module: ./RootApp
+        routes:
+          - pathname: /edge
+    moduleID: edge
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Bundle
+metadata:
+  name: test-bundles-navigation
+  namespace: test-bundles
+spec:
+  id: test
+  title: FEO Test Bundle
+  appList:
+  - edge
+  envName: test-bundles-environment
+

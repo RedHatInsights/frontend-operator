@@ -10,7 +10,7 @@ import (
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	localUtil "github.com/RedHatInsights/frontend-operator/controllers/utils"
-	resCache "github.com/RedHatInsights/rhc-osdk-utils/resource_cache"
+	resCache "github.com/RedHatInsights/rhc-osdk-utils/resourceCache"
 	"github.com/RedHatInsights/rhc-osdk-utils/utils"
 	"github.com/go-logr/logr"
 
@@ -19,15 +19,22 @@ import (
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	k8serr "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
 
+	batchv1 "k8s.io/api/batch/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const RoutePrefixDefault = "apps"
+const (
+	RoutePrefixDefault      = "apps"
+	AkamaiSecretNameDefault = "akamai"
+)
 
 type FrontendReconciliation struct {
 	Log                 logr.Logger
@@ -41,22 +48,32 @@ type FrontendReconciliation struct {
 }
 
 func (r *FrontendReconciliation) run() error {
-	hash, err := r.setupConfigMap()
+
+	configMap, err := r.setupConfigMaps()
 	if err != nil {
 		return err
 	}
 
-	ssoHash, err := r.createSSOConfigMap()
+	configHash, err := createConfigmapHash(configMap)
 	if err != nil {
 		return err
 	}
+
+	var annotationHashes []map[string]string
+	annotationHashes = append(annotationHashes, map[string]string{"configHash": configHash})
 
 	if r.Frontend.Spec.Image != "" {
-		if err := r.createFrontendDeployment(hash, ssoHash); err != nil {
+		if err := r.createFrontendDeployment(annotationHashes); err != nil {
 			return err
 		}
 		if err := r.createFrontendService(); err != nil {
 			return err
+		}
+		// If cache busting is enabled for the environment, add the akamai cache bust container
+		if r.FrontendEnvironment.Spec.EnableAkamaiCacheBust && r.FrontendEnvironment.Spec.AkamaiCacheBustImage != "" {
+			if err := r.createOrUpdateCacheBustJob(); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -72,10 +89,56 @@ func (r *FrontendReconciliation) run() error {
 	return nil
 }
 
+func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment) []v1.VolumeMount {
+
+	volumeMounts := []v1.VolumeMount{}
+
+	if frontendEnvironment.Spec.GenerateNavJSON {
+		// If we are generating all of the JSON config (nav and fed-modules)
+		// then we just need to mount the while configmap over the whole chrome directory
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      "config",
+			MountPath: "/opt/app-root/src/build/chrome",
+		})
+	}
+
+	// We always want to mount the config map under the operator-generated directory
+	// This will allow chrome to incorperate the generated nav and fed-modules.json
+	// at run time. This means chrome can merge the config in mixed environments
+
+	// We need to have the config mounted in 2 places because of the preview/stable
+	// split. We need to have the config mounted in the preview and stable directories
+	volumeMounts = append(volumeMounts, v1.VolumeMount{
+		Name:      "config",
+		MountPath: "/opt/app-root/src/build/stable/operator-generated",
+	})
+	volumeMounts = append(volumeMounts, v1.VolumeMount{
+		Name:      "config",
+		MountPath: "/opt/app-root/src/build/preview/operator-generated",
+	})
+
+	// We generate SSL cert mounts conditionally
+	if frontendEnvironment.Spec.SSL {
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      "certs",
+			MountPath: "/opt/certs",
+		})
+	}
+
+	return volumeMounts
+}
+
 func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
+
+	// set the URI Scheme for the probe
+	probeScheme := v1.URISchemeHTTP
+	if frontendEnvironment.Spec.SSL {
+		probeScheme = v1.URISchemeHTTPS
+	}
+
 	d.SetOwnerReferences([]metav1.OwnerReference{frontend.MakeOwnerReference()})
 
-	// Modify the obejct to set the things we care about
+	// Modify the object to set the things we care about
 	d.Spec.Template.Spec.Containers = []v1.Container{{
 		Name:  "fe-image",
 		Image: frontend.Spec.Image,
@@ -91,60 +154,244 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 				Protocol:      "TCP",
 			},
 		},
+		VolumeMounts: populateContainerVolumeMounts(frontendEnvironment),
+		Resources: v1.ResourceRequirements{
+			Requests: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("100m"),
+				v1.ResourceMemory: resource.MustParse("256Mi"),
+			},
+			Limits: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("1"),
+				v1.ResourceMemory: resource.MustParse("512Mi"),
+			},
+		},
+		LivenessProbe: &v1.Probe{
+			ProbeHandler: v1.ProbeHandler{
+				HTTPGet: &v1.HTTPGetAction{
+					Path:   "/",
+					Port:   intstr.FromInt(8000),
+					Scheme: probeScheme,
+				},
+			},
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       60,
+			FailureThreshold:    3,
+		},
+		ReadinessProbe: &v1.Probe{
+			ProbeHandler: v1.ProbeHandler{
+				HTTPGet: &v1.HTTPGetAction{
+					Path:   "/",
+					Port:   intstr.FromInt(8000),
+					Scheme: probeScheme,
+				},
+			},
+			InitialDelaySeconds: 10,
+		},
+	}}
+}
+
+func getAkamaiSecretName(frontendEnvironment *crd.FrontendEnvironment) string {
+	if frontendEnvironment.Spec.AkamaiSecretName == "" {
+		return AkamaiSecretNameDefault
+	}
+	return frontendEnvironment.Spec.AkamaiSecretName
+}
+
+// getAkamaiSecret gets the akamai secret from the cluster
+func getAkamaiSecret(ctx context.Context, client client.Client, frontend *crd.Frontend, secretName string) (*v1.Secret, error) {
+	secret := &v1.Secret{}
+	if err := client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: frontend.Namespace}, secret); err != nil {
+		return nil, err
+	}
+	return secret, nil
+}
+
+// constructAkamaiEdgercFileFromSecret constructs the akamai edgerc file from the secret
+func makeAkamaiEdgercFileFromSecret(secret *v1.Secret) string {
+	edgercFile := "[default]\n"
+	edgercFile += fmt.Sprintf("host = %s\n", secret.Data["host"])
+	edgercFile += fmt.Sprintf("access_token = %s\n", secret.Data["access_token"])
+	edgercFile += fmt.Sprintf("client_token = %s\n", secret.Data["client_token"])
+	edgercFile += fmt.Sprintf("client_secret = %s\n", secret.Data["client_secret"])
+	edgercFile += "[ccu]\n"
+	edgercFile += fmt.Sprintf("host = %s\n", secret.Data["host"])
+	edgercFile += fmt.Sprintf("access_token = %s\n", secret.Data["access_token"])
+	edgercFile += fmt.Sprintf("client_token = %s\n", secret.Data["client_token"])
+	edgercFile += fmt.Sprintf("client_secret = %s\n", secret.Data["client_secret"])
+	return edgercFile
+}
+
+func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) []string {
+	var purgeHost string
+	// If the cache bust URL doesn't begin with https:// then add it
+	if strings.HasPrefix(frontendEnvironment.Spec.AkamaiCacheBustURL, "https://") {
+		purgeHost = frontendEnvironment.Spec.AkamaiCacheBustURL
+	} else {
+		purgeHost = fmt.Sprintf("https://%s", frontendEnvironment.Spec.AkamaiCacheBustURL)
+	}
+
+	// If purgeHost ends with a / then remove it
+	purgeHost = strings.TrimSuffix(purgeHost, "/")
+
+	// If there is no purge list return the default
+	if frontend.Spec.AkamaiCacheBustPaths == nil {
+		return []string{fmt.Sprintf("%s/apps/%s/fed-mods.json", purgeHost, frontend.Name)}
+	}
+
+	purgePaths := []string{}
+	// Loop through the frontend purge paths and append them to the purge host
+	for _, path := range frontend.Spec.AkamaiCacheBustPaths {
+		var purgePath string
+		// If the path doesn't begin with a / then add it
+		if strings.HasPrefix(path, "/") {
+			purgePath = fmt.Sprintf("%s%s", purgeHost, path)
+		} else {
+			purgePath = fmt.Sprintf("%s/%s", purgeHost, path)
+		}
+		purgePaths = append(purgePaths, purgePath)
+	}
+	return purgePaths
+}
+
+// populateCacheBustContainer adds the akamai cache bust container to the deployment
+func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) error {
+
+	// Get the akamai secret
+	akamaiSecretName := getAkamaiSecretName(r.FrontendEnvironment)
+	secret, err := getAkamaiSecret(r.Ctx, r.Client, r.Frontend, akamaiSecretName)
+	if err != nil {
+		return err
+	}
+	// Make the akamai file from the secret
+	edgercFile := makeAkamaiEdgercFileFromSecret(secret)
+
+	configMap := &v1.ConfigMap{}
+	configMap.SetName("akamai-edgerc")
+	configMap.SetNamespace(r.Frontend.Namespace)
+
+	nn := types.NamespacedName{
+		Name:      "akamai-edgerc",
+		Namespace: r.Frontend.Namespace,
+	}
+	labels := r.FrontendEnvironment.GetLabels()
+	labler := utils.GetCustomLabeler(labels, nn, r.FrontendEnvironment)
+	labler(configMap)
+
+	configMap.SetOwnerReferences([]metav1.OwnerReference{r.Frontend.MakeOwnerReference()})
+
+	// Add the akamai edgerc file to the configmap
+	configMap.Data = map[string]string{
+		"edgerc": edgercFile,
+	}
+
+	// Create the configmap with the Client if it doesn't already exist
+	if err := r.Client.Create(r.Ctx, configMap); err != nil {
+		if !k8serr.IsAlreadyExists(err) {
+			return err
+		}
+	}
+
+	akamaiVolume := v1.Volume{
+		Name: "akamai-edgerc",
+		VolumeSource: v1.VolumeSource{
+			ConfigMap: &v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: "akamai-edgerc",
+				},
+			},
+		},
+	}
+
+	j.Spec.Template.Spec.Volumes = []v1.Volume{akamaiVolume}
+
+	// Get the paths to cache bust
+	pathsToCacheBust := createCachePurgePathList(r.Frontend, r.FrontendEnvironment)
+
+	// Construct the akamai cache bust command
+	command := fmt.Sprintf("sleep 60; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete %s", strings.Join(pathsToCacheBust, " "))
+
+	// Modify the obejct to set the things we care about
+	cacheBustContainer := v1.Container{
+		Name:  "akamai-cache-bust",
+		Image: r.FrontendEnvironment.Spec.AkamaiCacheBustImage,
+		// Mount the akamai edgerc file from the configmap
 		VolumeMounts: []v1.VolumeMount{
 			{
-				Name:      "config",
-				MountPath: "/opt/app-root/src/build/chrome",
-			},
-			{
-				Name:      "sso",
-				MountPath: "/opt/app-root/src/build/js/sso-url.js",
-				SubPath:   "sso-url.js",
+				Name:      "akamai-edgerc",
+				MountPath: "/opt/app-root/edgerc",
+				SubPath:   "edgerc",
 			},
 		},
-		Env: []v1.EnvVar{{
-			Name:  "SSO_URL",
-			Value: frontendEnvironment.Spec.SSO,
-		}, {
-			Name:  "ROUTE_PREFIX",
-			Value: "apps",
-		}}},
+		// Run the akamai cache bust script
+		Command: []string{"/bin/bash", "-c", command},
 	}
+	// add the container to the spec containers
+	j.Spec.Template.Spec.Containers = []v1.Container{cacheBustContainer}
+
+	// Add the restart policy
+	j.Spec.Template.Spec.RestartPolicy = v1.RestartPolicyNever
+
+	// Add the akamai edgerc configmap to the deployment
+
+	return nil
 }
 
-func populateVolumes(d *apps.Deployment, frontend *crd.Frontend) {
-	d.Spec.Template.Spec.Volumes = []v1.Volume{
-		{
-			Name: "config",
-			VolumeSource: v1.VolumeSource{
-				ConfigMap: &v1.ConfigMapVolumeSource{
-					LocalObjectReference: v1.LocalObjectReference{
-						Name: frontend.Spec.EnvName,
-					},
+func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
+	// By default we just want the config volume
+	volumes := []v1.Volume{}
+	volumes = append(volumes, v1.Volume{
+		Name: "config",
+		VolumeSource: v1.VolumeSource{
+			ConfigMap: &v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: frontend.Spec.EnvName,
 				},
 			},
 		},
-		{
-			Name: "sso",
+	})
+
+	if frontendEnvironment.Spec.SSL {
+		volumes = append(volumes, v1.Volume{
+			Name: "certs",
 			VolumeSource: v1.VolumeSource{
-				ConfigMap: &v1.ConfigMapVolumeSource{
-					LocalObjectReference: v1.LocalObjectReference{
-						Name: fmt.Sprintf("%s-sso", frontend.Spec.EnvName),
-					},
+				Secret: &v1.SecretVolumeSource{
+					SecretName: fmt.Sprintf("%s-cert", frontend.Name),
 				},
 			},
-		},
+		})
 	}
+
+	// Set the volumes on the deployment
+	d.Spec.Template.Spec.Volumes = volumes
 }
 
-func (r *FrontendReconciliation) createFrontendDeployment(hash, ssoHash string) error {
+// Add the SSL env vars if we SSL mode is set in the frontend environment
+func (r *FrontendReconciliation) populateEnvVars(d *apps.Deployment, frontendEnvironment *crd.FrontendEnvironment) {
+	if !frontendEnvironment.Spec.SSL {
+		return
+	}
+	envVars := []v1.EnvVar{
+		{
+			Name:  "CADDY_TLS_MODE",
+			Value: "https_port 8000",
+		},
+		{
+			Name:  "CADDY_TLS_CERT",
+			Value: "tls /opt/certs/tls.crt /opt/certs/tls.key",
+		}}
+	d.Spec.Template.Spec.Containers[0].Env = envVars
+}
+
+func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map[string]string) error {
 
 	// Create new empty struct
 	d := &apps.Deployment{}
 
+	deploymentName := r.Frontend.Name + "-frontend"
+
 	// Define name of resource
 	nn := types.NamespacedName{
-		Name:      r.Frontend.Name,
+		Name:      deploymentName,
 		Namespace: r.Frontend.Namespace,
 	}
 
@@ -159,29 +406,29 @@ func (r *FrontendReconciliation) createFrontendDeployment(hash, ssoHash string) 
 	labeler := utils.GetCustomLabeler(labels, nn, r.Frontend)
 	labeler(d)
 
+	populateVolumes(d, r.Frontend, r.FrontendEnvironment)
 	populateContainer(d, r.Frontend, r.FrontendEnvironment)
-	populateVolumes(d, r.Frontend)
+	r.populateEnvVars(d, r.FrontendEnvironment)
 
 	d.Spec.Template.ObjectMeta.Labels = labels
 
 	d.Spec.Selector = &metav1.LabelSelector{MatchLabels: labels}
 
-	annotations := d.Spec.Template.GetAnnotations()
-	if annotations == nil {
-		annotations = make(map[string]string)
+	utils.UpdateAnnotations(&d.Spec.Template, annotationHashes...)
+
+	// This is a temporary measure to silence DVO from opening 600 million tickets for each frontend - Issue fix ETA is TBD
+	deploymentAnnotation := d.ObjectMeta.GetAnnotations()
+	if deploymentAnnotation == nil {
+		deploymentAnnotation = make(map[string]string)
 	}
 
-	annotations["configHash"] = hash
-	annotations["ssoHash"] = ssoHash
-
-	d.Spec.Template.SetAnnotations(annotations)
+	// Gabor wrote the string "we don't need no any checking" and we will never change it
+	deploymentAnnotation["kube-linter.io/ignore-all"] = "we don't need no any checking"
+	d.ObjectMeta.SetAnnotations(deploymentAnnotation)
 
 	// Inform the cache that our updates are complete
-	if err := r.Cache.Update(CoreDeployment, d); err != nil {
-		return err
-	}
-
-	return nil
+	err := r.Cache.Update(CoreDeployment, d)
+	return err
 }
 
 func createPorts() []v1.ServicePort {
@@ -204,6 +451,135 @@ func createPorts() []v1.ServicePort {
 	}
 }
 
+func (r *FrontendReconciliation) generateJobName() string {
+	return r.Frontend.Name + "-frontend-cachebust"
+}
+
+// getExistingJob returns the existing job if it exists
+// and a bool indicating if it exists or not
+func (r *FrontendReconciliation) getExistingJob() (*batchv1.Job, bool, error) {
+	// Job we'll fill up
+	j := &batchv1.Job{}
+
+	jobName := r.generateJobName()
+
+	// Define name of resource
+	nn := types.NamespacedName{
+		Name:      jobName,
+		Namespace: r.Frontend.Namespace,
+	}
+
+	// Try and get the job
+	err := r.Client.Get(r.Ctx, nn, j)
+	if err != nil {
+		if k8serr.IsNotFound(err) {
+			// It doesn't exist so we can return false and no error
+			return j, false, nil
+		}
+		// Something is wrong so we return the error
+		return j, false, err
+	}
+
+	// It exists so we return true and no error
+	return j, true, nil
+
+}
+
+func (r *FrontendReconciliation) isJobFromCurrentFrontendImage(j *batchv1.Job) bool {
+	return j.Spec.Template.ObjectMeta.Annotations["frontend-image"] == r.Frontend.Spec.Image
+}
+
+// manageExistingJob will delete the existing job if it exists and is not from the current frontend image
+// It will return true if the job exists and is from the current frontend image
+func (r *FrontendReconciliation) manageExistingJob() (bool, error) {
+	j, exists, err := r.getExistingJob()
+	if err != nil {
+		return false, err
+	}
+
+	// If it doesn't exist we can return false and no error
+	if !exists {
+		return false, nil
+	}
+
+	// If it exists but is not from the current frontend image we delete it
+	if !r.isJobFromCurrentFrontendImage(j) {
+		backgroundDeletion := metav1.DeletePropagationBackground
+		return false, r.Client.Delete(r.Ctx, j, &client.DeleteOptions{
+			PropagationPolicy: &backgroundDeletion,
+		})
+	}
+
+	// If it exists and is from the current frontend image we return true and no error
+	return true, nil
+}
+
+// createOrUpdateCacheBustJob will create a new job if it doesn't exist
+// If it does exist and is from the current frontend image it will return
+// If it does exist and is not from the current frontend image it will delete it and create a new one
+func (r *FrontendReconciliation) createOrUpdateCacheBustJob() error {
+	// Guard on frontend opting out of cache busting
+	if r.Frontend.Spec.AkamaiCacheBustDisable {
+		return nil
+	}
+
+	// If the job exists and is from the current frontend image we can return
+	// If the job exists and is not from the current frontend image we delete it
+	// If the job doesn't exist we create it
+	existsAndMatchesCurrentFrontendImage, err := r.manageExistingJob()
+	if err != nil {
+		return err
+	}
+	if existsAndMatchesCurrentFrontendImage {
+		return nil
+	}
+
+	// Create job
+	j := &batchv1.Job{}
+
+	jobName := r.generateJobName()
+
+	// Set name
+	j.SetName(jobName)
+	// Set namespace
+	j.SetNamespace(r.Frontend.Namespace)
+
+	// Label with the right labels
+	labels := r.Frontend.GetLabels()
+
+	// Define name of resource
+	nn := types.NamespacedName{
+		Name:      jobName,
+		Namespace: r.Frontend.Namespace,
+	}
+
+	labeler := utils.GetCustomLabeler(labels, nn, r.Frontend)
+	labeler(j)
+
+	j.SetOwnerReferences([]metav1.OwnerReference{r.Frontend.MakeOwnerReference()})
+
+	j.Spec.Template.Spec.RestartPolicy = v1.RestartPolicyNever
+
+	j.Spec.Completions = utils.Int32Ptr(1)
+
+	// Set the image frontend image annotation
+	annotations := j.Spec.Template.ObjectMeta.Annotations
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	annotations["frontend-image"] = r.Frontend.Spec.Image
+	annotations["kube-linter.io/ignore-all"] = "we don't need no any checking"
+
+	j.Spec.Template.ObjectMeta.SetAnnotations(annotations)
+
+	errr := r.populateCacheBustContainer(j)
+	if errr != nil {
+		return errr
+	}
+
+	return r.Client.Create(r.Ctx, j)
+}
+
 // Will need to create a service resource ident in provider like CoreDeployment
 func (r *FrontendReconciliation) createFrontendService() error {
 	// Create empty service
@@ -220,6 +596,15 @@ func (r *FrontendReconciliation) createFrontendService() error {
 		return err
 	}
 
+	if r.FrontendEnvironment.Spec.SSL {
+		annotations := s.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+		annotations["service.beta.openshift.io/serving-cert-secret-name"] = fmt.Sprintf("%s-%s", r.Frontend.Name, "cert")
+		s.SetAnnotations(annotations)
+	}
+
 	labels := make(map[string]string)
 	labels["frontend"] = r.Frontend.Name
 	labeler := utils.GetCustomLabeler(labels, nn, r.Frontend)
@@ -233,10 +618,9 @@ func (r *FrontendReconciliation) createFrontendService() error {
 	utils.MakeService(s, nn, labels, ports, r.Frontend, false)
 
 	// Inform the cache that our updates are complete
-	if err := r.Cache.Update(CoreService, s); err != nil {
-		return err
-	}
-	return nil
+	err := r.Cache.Update(CoreService, s)
+	return err
+
 }
 
 func (r *FrontendReconciliation) createFrontendIngress() error {
@@ -259,11 +643,8 @@ func (r *FrontendReconciliation) createFrontendIngress() error {
 
 	r.createAnnotationsAndPopulate(nn, netobj)
 
-	if err := r.Cache.Update(WebIngress, netobj); err != nil {
-		return err
-	}
-
-	return nil
+	err := r.Cache.Update(WebIngress, netobj)
+	return err
 }
 
 func (r *FrontendReconciliation) createAnnotationsAndPopulate(nn types.NamespacedName, netobj *networking.Ingress) {
@@ -282,10 +663,20 @@ func (r *FrontendReconciliation) createAnnotationsAndPopulate(nn types.Namespace
 		netobj.SetAnnotations(annotations)
 	}
 
+	if r.FrontendEnvironment.Spec.SSL {
+		annotations := netobj.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+
+		annotations["route.openshift.io/termination"] = "reencrypt"
+		netobj.SetAnnotations(annotations)
+	}
+
 	if r.Frontend.Spec.Image != "" {
-		r.populateConsoleDotIngress(nn, netobj, ingressClass, nn.Name)
+		r.populateConsoleDotIngress(netobj, ingressClass, nn.Name)
 	} else {
-		r.populateConsoleDotIngress(nn, netobj, ingressClass, r.Frontend.Spec.Service)
+		r.populateConsoleDotIngress(netobj, ingressClass, r.Frontend.Spec.Service)
 	}
 }
 
@@ -293,9 +684,12 @@ func (r *FrontendReconciliation) getFrontendPaths() []string {
 	frontendPaths := r.Frontend.Spec.Frontend.Paths
 	defaultPath := fmt.Sprintf("/apps/%s", r.Frontend.Name)
 	defaultBetaPath := fmt.Sprintf("/beta/apps/%s", r.Frontend.Name)
+	defaultPreviewPath := fmt.Sprintf("/preview/apps/%s", r.Frontend.Name)
+
 	if r.Frontend.Spec.AssetsPrefix != "" {
 		defaultPath = fmt.Sprintf("/%s/%s", r.Frontend.Spec.AssetsPrefix, r.Frontend.Name)
 		defaultBetaPath = fmt.Sprintf("/beta/%s/%s", r.Frontend.Spec.AssetsPrefix, r.Frontend.Name)
+		defaultPreviewPath = fmt.Sprintf("/preview/%s/%s", r.Frontend.Spec.AssetsPrefix, r.Frontend.Name)
 	}
 
 	if !r.Frontend.Spec.Frontend.HasPath(defaultPath) {
@@ -305,10 +699,15 @@ func (r *FrontendReconciliation) getFrontendPaths() []string {
 	if !r.Frontend.Spec.Frontend.HasPath(defaultBetaPath) {
 		frontendPaths = append(frontendPaths, defaultBetaPath)
 	}
+
+	if !r.Frontend.Spec.Frontend.HasPath(defaultPreviewPath) {
+		frontendPaths = append(frontendPaths, defaultPreviewPath)
+	}
+
 	return frontendPaths
 }
 
-func (r *FrontendReconciliation) populateConsoleDotIngress(nn types.NamespacedName, netobj *networking.Ingress, ingressClass, serviceName string) {
+func (r *FrontendReconciliation) populateConsoleDotIngress(netobj *networking.Ingress, ingressClass, serviceName string) {
 	frontendPaths := r.getFrontendPaths()
 
 	var ingressPaths []networking.HTTPIngressPath
@@ -418,8 +817,16 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 				modName = frontend.Spec.Module.ModuleID
 			}
 			fedModules[modName] = *frontend.Spec.Module
+
+			module := fedModules[modName]
+
+			if frontend.Spec.Module.FullProfile == nil || !*frontend.Spec.Module.FullProfile {
+				module.FullProfile = crd.FalsePtr()
+			} else {
+				module.FullProfile = crd.TruePtr()
+			}
+
 			if frontend.Name == "chrome" {
-				module := fedModules[modName]
 
 				var configSource apiextensions.JSON
 				err := configSource.UnmarshalJSON([]byte(`{}`))
@@ -449,8 +856,9 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 					return fmt.Errorf("error unmarshaling config: %w", err)
 				}
 
-				fedModules[modName] = module
 			}
+
+			fedModules[modName] = module
 		}
 	}
 	return nil
@@ -487,7 +895,7 @@ func (r *FrontendReconciliation) setupBundleData(cfgMap *v1.ConfigMap, cacheMap 
 	return nil
 }
 
-func createHash(cfgMap *v1.ConfigMap) (string, error) {
+func createConfigmapHash(cfgMap *v1.ConfigMap) (string, error) {
 	hashData, err := json.Marshal(cfgMap.Data)
 	if err != nil {
 		return "", err
@@ -499,60 +907,65 @@ func createHash(cfgMap *v1.ConfigMap) (string, error) {
 	return hash, nil
 }
 
-func (r *FrontendReconciliation) setupConfigMap() (string, error) {
+// setupConfigMaps will create configmaps for the various config json
+// files, including fed-modules.json and the various bundle json files
+func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
 	// Will need to interact directly with the client here, and not the cache because
 	// we need to read ALL the Frontend CRDs in the Env that we care about
 
+	// Create a frontend list
 	frontendList := &crd.FrontendList{}
 
+	// Populate the frontendlist by looking for all frontends in our env
 	if err := r.FRE.Client.List(r.Ctx, frontendList, client.MatchingFields{"spec.envName": r.Frontend.Spec.EnvName}); err != nil {
-		return "", err
+		return &v1.ConfigMap{}, err
 	}
 
+	cfgMap, err := r.createConfigMap(frontendList)
+
+	return cfgMap, err
+}
+
+func (r *FrontendReconciliation) createConfigMap(frontendList *crd.FrontendList) (*v1.ConfigMap, error) {
+	cfgMap := &v1.ConfigMap{}
+
+	// Create a map of frontend names to frontends objects
 	cacheMap := make(map[string]crd.Frontend)
 	for _, frontend := range frontendList.Items {
 		cacheMap[frontend.Name] = frontend
 	}
 
-	cfgMap := &v1.ConfigMap{}
-
-	if err := r.createConfigMap(cfgMap, cacheMap, frontendList); err != nil {
-		return "", err
-	}
-
-	return createHash(cfgMap)
-}
-
-func (r *FrontendReconciliation) createConfigMap(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend, feList *crd.FrontendList) error {
 	nn := types.NamespacedName{
 		Name:      r.Frontend.Spec.EnvName,
 		Namespace: r.Frontend.Namespace,
 	}
 
 	if err := r.Cache.Create(CoreConfig, nn, cfgMap); err != nil {
-		return err
+		return cfgMap, err
 	}
 
 	labels := r.FrontendEnvironment.GetLabels()
 	labler := utils.GetCustomLabeler(labels, nn, r.FrontendEnvironment)
 	labler(cfgMap)
 
-	if err := r.populateConfigMap(cfgMap, cacheMap, feList); err != nil {
-		return err
+	if err := r.populateConfigMap(cfgMap, cacheMap, frontendList); err != nil {
+		return cfgMap, err
 	}
 
 	if err := r.Cache.Update(CoreConfig, cfgMap); err != nil {
-		return err
+		return cfgMap, err
 	}
-	return nil
+	return cfgMap, nil
 }
 
 func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend, feList *crd.FrontendList) error {
 	cfgMap.SetOwnerReferences([]metav1.OwnerReference{r.FrontendEnvironment.MakeOwnerReference()})
 	cfgMap.Data = map[string]string{}
 
-	if err := r.setupBundleData(cfgMap, cacheMap); err != nil {
-		return err
+	if r.FrontendEnvironment.Spec.GenerateNavJSON {
+		if err := r.setupBundleData(cfgMap, cacheMap); err != nil {
+			return err
+		}
 	}
 
 	fedModules := make(map[string]crd.FedModule)
@@ -567,49 +980,6 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 
 	cfgMap.Data["fed-modules.json"] = string(jsonData)
 	return nil
-}
-
-func (r *FrontendReconciliation) createSSOConfigMap() (string, error) {
-	// Will need to interact directly with the client here, and not the cache because
-	// we need to read ALL the Frontend CRDs in the Env that we care about
-
-	cfgMap := &v1.ConfigMap{}
-
-	nn := types.NamespacedName{
-		Name:      fmt.Sprintf("%s-sso", r.Frontend.Spec.EnvName),
-		Namespace: r.Frontend.Namespace,
-	}
-
-	if err := r.Cache.Create(SSOConfig, nn, cfgMap); err != nil {
-		return "", err
-	}
-
-	hashString := ""
-
-	labels := r.FrontendEnvironment.GetLabels()
-	labler := utils.GetCustomLabeler(labels, nn, r.Frontend)
-	labler(cfgMap)
-	cfgMap.SetOwnerReferences([]metav1.OwnerReference{r.Frontend.MakeOwnerReference()})
-
-	ssoData := fmt.Sprintf(`"use strict";(self.webpackChunkinsights_chrome=self.webpackChunkinsights_chrome||[]).push([[172],{30701:(s,e,h)=>{h.r(e),h.d(e,{default:()=>c});const c="%s"}}]);`, r.FrontendEnvironment.Spec.SSO)
-
-	cfgMap.Data = map[string]string{
-		"sso-url.js": ssoData,
-	}
-
-	h := sha256.New()
-	h.Write([]byte(ssoData))
-	hashString += fmt.Sprintf("%x", h.Sum(nil))
-
-	h = sha256.New()
-	h.Write([]byte(hashString))
-	hash := fmt.Sprintf("%x", h.Sum(nil))
-
-	if err := r.Cache.Update(SSOConfig, cfgMap); err != nil {
-		return "", err
-	}
-
-	return hash, nil
 }
 
 func (r *FrontendReconciliation) createServiceMonitor() error {
@@ -649,8 +1019,6 @@ func (r *FrontendReconciliation) createServiceMonitor() error {
 		},
 	}
 
-	if err := r.Cache.Update(MetricsServiceMonitor, svcMonitor); err != nil {
-		return err
-	}
-	return nil
+	err := r.Cache.Update(MetricsServiceMonitor, svcMonitor)
+	return err
 }

@@ -1,0 +1,74 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: edge-frontend
+  namespace: test-bundles
+  labels:
+    frontend: edge
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: edge
+spec:
+  selector:
+    matchLabels:
+      frontend: edge
+  template:
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: test-bundles-environment
+            defaultMode: 420
+      containers:
+        - name: fe-image
+          image: quay.io/cloudservices/edge-frontend:3244a17
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9000
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /opt/app-root/src/build/chrome
+            - name: config
+              mountPath: /opt/app-root/src/build/stable/operator-generated
+            - name: config
+              mountPath: /opt/app-root/src/build/preview/operator-generated
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Bundle
+metadata:
+  name: test-bundles-navigation
+  namespace: test-bundles
+spec:
+  appList:
+    - edge
+  envName: test-bundles-environment
+  id: test
+  title: FEO Test Bundle
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: test-bundles-environment
+  namespace: test-bundles
+  labels:
+    frontendenv: test-bundles-environment
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      name: test-bundles-environment
+data:
+  fed-modules.json: >-
+    {"edge":{"manifestLocation":"/apps/edge/fed-mods.json","modules":[{"id":"edge","module":"./RootApp","routes":[{"pathname":"/edge"}]}],"moduleID":"edge","fullProfile":false}}
+  test-bundles-navigation.json: >-
+    {"id":"test","title":"FEO Test
+    Bundle","navItems":[{"title":"Inventory","permissions":[{"method":"withEmail","args":["@redhat.com"]}],"routes":[{"title":"Groups","appId":"edge","href":"/edge/fleet-management"},{"title":"Systems","appId":"edge","href":"/edge/inventory"}],"expandable":true},{"title":"Manage
+    Images","permissions":[{"method":"withEmail","args":["@redhat.com","@sbb.ch"]}],"routes":[{"title":"Images","appId":"edge","href":"/edge/manage-images"},{"title":"Custom
+    Repositories","appId":"edge","href":"/edge/repositories"}],"expandable":true},{"title":"Learning
+    Resources","href":"/edge/learning-resources","permissions":[{"method":"withEmail","args":["@redhat.com","@sbb.ch"]}]}]}
+
+

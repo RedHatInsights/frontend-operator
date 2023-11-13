@@ -1,0 +1,84 @@
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: chrome
+  namespace: test-networking
+  labels:
+    frontend: chrome
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: chrome
+spec:
+  ingressClassName: nginx
+  tls:
+    - {}
+  rules:
+    - host: foo.redhat.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: chrome
+                port:
+                  number: 8000
+          - path: /apps/chrome
+            pathType: Prefix
+            backend:
+              service:
+                name: chrome
+                port:
+                  number: 8000
+          - path: /beta/apps/chrome
+            pathType: Prefix
+            backend:
+              service:
+                name: chrome
+                port:
+                  number: 8000
+          - path: /preview/apps/chrome
+            pathType: Prefix
+            backend:
+              service:
+                name: chrome
+                port:
+                  number: 8000
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: chrome
+  namespace: test-networking
+  labels:
+    frontend: chrome
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: chrome
+spec:
+  ports:
+    - name: public
+      protocol: TCP
+      appProtocol: http
+      port: 8000
+      targetPort: 8000
+    - name: metrics
+      protocol: TCP
+      appProtocol: http
+      port: 9000
+      targetPort: 9000
+  selector:
+    frontend: chrome
+  type: ClusterIP
+  sessionAffinity: None
+  ipFamilies:
+    - IPv4
+  ipFamilyPolicy: SingleStack
+  internalTrafficPolicy: Cluster
+status:
+  loadBalancer: {}
+
+

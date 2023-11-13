@@ -105,7 +105,10 @@ func GetFrontendFigures(ctx context.Context, client client.Client, o *crd.Fronte
 		}},
 	}
 
-	results := counter.Count(ctx, client)
+	results, err := counter.Count(ctx, client)
+	if err != nil {
+		return crd.FrontendDeployments{}, "", errors.Wrap("count resources: ", err)
+	}
 
 	deploymentStats.ManagedDeployments = int32(results.Managed)
 	deploymentStats.ReadyDeployments = int32(results.Ready)

@@ -59,6 +59,14 @@ spec:
                 required:
                 - versions
                 type: object
+              akamaiCacheBustDisable:
+                description: Akamai cache bust opt-out
+                type: boolean
+              akamaiCacheBustPaths:
+                description: Files to cache bust
+                items:
+                  type: string
+                type: array
               assetsPrefix:
                 type: string
               deploymentRepo:
@@ -82,6 +90,8 @@ spec:
                 properties:
                   config:
                     x-kubernetes-preserve-unknown-fields: true
+                  fullProfile:
+                    type: boolean
                   manifestLocation:
                     type: string
                   moduleID:
@@ -110,6 +120,8 @@ spec:
                                 type: boolean
                               pathname:
                                 type: string
+                              props:
+                                x-kubernetes-preserve-unknown-fields: true
                             required:
                             - pathname
                             type: object

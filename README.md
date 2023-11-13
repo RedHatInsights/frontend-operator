@@ -83,3 +83,25 @@ If you want to access the app from your computer, you have to update /etc/hosts 
 ```
 
 Once you update it you can access the app from `https://env-boot/insights/inventory`
+
+
+## E2E testing with kuttl
+
+[Kuttl](https://kuttl.dev/) is an end to end testing framework for Kubernetes operators. We hope to provide full test coverage for the Frontend Operator with kuttl.
+
+To run the kuttl tests you'll need to be running the operator and Clowder in minikube as shown in the directions above. You also need to make sure you [have kuttl installed on your machine](https://kuttl.dev/docs/cli.html#setup-the-kuttl-kubectl-plugin).
+
+Once all that is in place you can run the kuttl tests:
+
+```bash
+$ make kuttl
+```
+Friendly reminder: make sure you have the frontend operator runnning (`make run-local`) before you run the tests or they will never work and you'll go nuts trying to figure out why.
+
+If you want to run a single test you can do this:
+```bash
+$ kubectl kuttl test --config kuttl-config.yml  ./tests/e2e --test bundles
+```
+where `bundles` is the name of the directory that contains the test you want to run.
+
+

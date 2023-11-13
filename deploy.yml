@@ -346,6 +346,25 @@ objects:
             spec:
               description: FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
               properties:
+                akamaiCacheBustImage:
+                  description: Set Akamai Cache Bust Image
+                  type: string
+                akamaiCacheBustURL:
+                  description: Set Akamai Cache Bust URL that the files will hang
+                    off of
+                  type: string
+                akamaiSecretName:
+                  description: The name of the secret we will use to get the akamai
+                    credentials
+                  type: string
+                enableAkamaiCacheBust:
+                  description: Enable Akamai Cache Bust
+                  type: boolean
+                generateNavJSON:
+                  description: GenerateNavJSON determines if the nav json configmap
+                    parts should be generated for the bundles. We want to do do this
+                    in epehemeral environments but not in production
+                  type: boolean
                 hostname:
                   description: Hostname
                   type: string
@@ -368,6 +387,11 @@ objects:
                   - disabled
                   - mode
                   type: object
+                ssl:
+                  description: SSL mode requests SSL from the services in openshift
+                    and k8s and then applies them to the pod, the route is also set
+                    to reencrypt in the case of OpenShift
+                  type: boolean
                 sso:
                   description: Foo is an example field of FrontendEnvironment. Edit
                     FrontendEnvironment_types.go to remove/update
@@ -456,6 +480,14 @@ objects:
                   required:
                   - versions
                   type: object
+                akamaiCacheBustDisable:
+                  description: Akamai cache bust opt-out
+                  type: boolean
+                akamaiCacheBustPaths:
+                  description: Files to cache bust
+                  items:
+                    type: string
+                  type: array
                 assetsPrefix:
                   type: string
                 deploymentRepo:
@@ -479,6 +511,8 @@ objects:
                   properties:
                     config:
                       x-kubernetes-preserve-unknown-fields: true
+                    fullProfile:
+                      type: boolean
                     manifestLocation:
                       type: string
                     moduleID:
@@ -507,6 +541,8 @@ objects:
                                   type: boolean
                                 pathname:
                                   type: string
+                                props:
+                                  x-kubernetes-preserve-unknown-fields: true
                               required:
                               - pathname
                               type: object
@@ -916,6 +952,7 @@ objects:
     - events
     - namespaces
     - persistentvolumeclaims
+    - secrets
     - serviceaccounts
     - services
     verbs:
@@ -951,6 +988,19 @@ objects:
     - apps
     resources:
     - deployments
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
+  - apiGroups:
+    - batch
+    resources:
+    - cronjobs
+    - jobs
     verbs:
     - create
     - delete
@@ -1167,6 +1217,9 @@ objects:
 - apiVersion: apps/v1
   kind: Deployment
   metadata:
+    annotations:
+      ignore-check.kube-linter.io/minimum-three-replicas: operator doesn't need more
+        than one
     labels:
       control-plane: controller-manager
       operator-name: frontend-operator

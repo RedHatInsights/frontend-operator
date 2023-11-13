@@ -54,6 +54,10 @@ type FrontendSpec struct {
 	Module         *FedModule           `json:"module,omitempty" yaml:"module,omitempty"`
 	NavItems       []*BundleNavItem     `json:"navItems,omitempty" yaml:"navItems,omitempty"`
 	AssetsPrefix   string               `json:"assetsPrefix,omitempty" yaml:"assetsPrefix,omitempty"`
+	// Akamai cache bust opt-out
+	AkamaiCacheBustDisable bool `json:"akamaiCacheBustDisable,omitempty" yaml:"akamaiCacheBustDisable,omitempty"`
+	// Files to cache bust
+	AkamaiCacheBustPaths []string `json:"akamaiCacheBustPaths,omitempty" yaml:"akamaiCacheBustPaths,omitempty"`
 }
 
 var ReconciliationSuccessful clusterv1.ConditionType = "ReconciliationSuccessful"
@@ -77,6 +81,7 @@ type FedModule struct {
 	Modules          []Module            `json:"modules,omitempty" yaml:"modules,omitempty"`
 	ModuleID         string              `json:"moduleID,omitempty" yaml:"moduleID,omitempty"`
 	Config           *apiextensions.JSON `json:"config,omitempty" yaml:"config,omitempty"`
+	FullProfile      *bool               `json:"fullProfile,omitempty" yaml:"fullProfile,omitempty"`
 }
 
 type Module struct {
@@ -88,9 +93,10 @@ type Module struct {
 }
 
 type Route struct {
-	Pathname string `json:"pathname" yaml:"pathname"`
-	Dynamic  bool   `json:"dynamic,omitempty" yaml:"dynamic,omitempty"`
-	Exact    bool   `json:"exact,omitempty" yaml:"exact,omitempty"`
+	Pathname string              `json:"pathname" yaml:"pathname"`
+	Dynamic  bool                `json:"dynamic,omitempty" yaml:"dynamic,omitempty"`
+	Exact    bool                `json:"exact,omitempty" yaml:"exact,omitempty"`
+	Props    *apiextensions.JSON `json:"props,omitempty" yaml:"props,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -145,6 +151,12 @@ func (i *Frontend) MakeOwnerReference() metav1.OwnerReference {
 // TruePtr returns a pointer to True
 func TruePtr() *bool {
 	t := true
+	return &t
+}
+
+// FalsePtr returns a pointer to False
+func FalsePtr() *bool {
+	t := false
 	return &t
 }
 

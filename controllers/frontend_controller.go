@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	apps "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
@@ -36,10 +37,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
-	resCache "github.com/RedHatInsights/rhc-osdk-utils/resource_cache"
+	resCache "github.com/RedHatInsights/rhc-osdk-utils/resourceCache"
 	prom "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 
 	"github.com/RedHatInsights/rhc-osdk-utils/utils"
@@ -68,6 +68,7 @@ func createNewScheme() *runtime.Scheme {
 var scheme = createNewScheme()
 
 var CoreDeployment = resCache.NewSingleResourceIdent("main", "deployment", &apps.Deployment{})
+var CoreJob = resCache.NewSingleResourceIdent("main", "job", &batchv1.Job{})
 var CoreService = resCache.NewSingleResourceIdent("main", "service", &v1.Service{})
 var CoreConfig = resCache.NewSingleResourceIdent("main", "config", &v1.ConfigMap{})
 var SSOConfig = resCache.NewSingleResourceIdent("main", "sso_config", &v1.ConfigMap{})
@@ -113,7 +114,8 @@ type FrontendReconciler struct {
 //+kubebuilder:rbac:groups=cloud.redhat.com,resources=bundles/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=cloud.redhat.com,resources=bundles/finalizers,verbs=update
 
-// +kubebuilder:rbac:groups="",resources=serviceaccounts;configmaps;services;persistentvolumeclaims;events;namespaces,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=serviceaccounts;configmaps;services;secrets;persistentvolumeclaims;events;namespaces,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=batch,resources=cronjobs;jobs,verbs=get;list;create;update;watch;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
@@ -273,12 +275,12 @@ func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&crd.Frontend{}, builder.WithPredicates(defaultPredicate(r.Log, "frontend"))).
 		Watches(
-			&source.Kind{Type: &crd.Bundle{}},
-			handler.EnqueueRequestsFromMapFunc(r.appsToEnqueueUponBundleUpdate),
+			&crd.Bundle{},
+			handler.EnqueueRequestsFromMapFunc(r.appsToEnqueueUponBundleUpdate()),
 		).
 		Watches(
-			&source.Kind{Type: &crd.FrontendEnvironment{}},
-			handler.EnqueueRequestsFromMapFunc(r.appsToEnqueueUponFrontendEnvironmentUpdate),
+			&crd.FrontendEnvironment{},
+			handler.EnqueueRequestsFromMapFunc(r.appsToEnqueueUponFrontendEnvironmentUpdate()),
 		).
 		Owns(&apps.Deployment{}).
 		Owns(&networking.Ingress{}).
@@ -286,7 +288,7 @@ func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func logMessage(logr logr.Logger, ctrlName string, msg string, keysAndValues ...interface{}) {
+func logMessage(logr logr.Logger, msg string, keysAndValues ...interface{}) {
 	logr.Info(msg, keysAndValues...)
 }
 
@@ -294,114 +296,116 @@ func defaultPredicate(logr logr.Logger, ctrlName string) predicate.Funcs {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			gvk, _ := utils.GetKindFromObj(scheme, e.Object)
-			logMessage(logr, ctrlName, "Reconciliation trigger", "ctrl", ctrlName, "type", "create", "resType", gvk.Kind, "name", e.Object.GetName(), "namespace", e.Object.GetNamespace())
+			logMessage(logr, "Reconciliation trigger", "ctrl", ctrlName, "type", "create", "resType", gvk.Kind, "name", e.Object.GetName(), "namespace", e.Object.GetNamespace())
 			return true
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			gvk, _ := utils.GetKindFromObj(scheme, e.Object)
-			logMessage(logr, ctrlName, "Reconciliation trigger", "ctrl", ctrlName, "type", "delete", "resType", gvk.Kind, "name", e.Object.GetName(), "namespace", e.Object.GetNamespace())
+			logMessage(logr, "Reconciliation trigger", "ctrl", ctrlName, "type", "delete", "resType", gvk.Kind, "name", e.Object.GetName(), "namespace", e.Object.GetNamespace())
 			return true
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			gvk, _ := utils.GetKindFromObj(scheme, e.ObjectOld)
-			logMessage(logr, ctrlName, "Reconciliation trigger", "ctrl", ctrlName, "type", "update", "resType", gvk.Kind, "name", e.ObjectNew.GetName(), "namespace", e.ObjectNew.GetNamespace(), "old", e.ObjectOld, "new", e.ObjectNew)
+			logMessage(logr, "Reconciliation trigger", "ctrl", ctrlName, "type", "update", "resType", gvk.Kind, "name", e.ObjectNew.GetName(), "namespace", e.ObjectNew.GetNamespace(), "old", e.ObjectOld, "new", e.ObjectNew)
 			return true
 		},
 		GenericFunc: func(e event.GenericEvent) bool {
 			gvk, _ := utils.GetKindFromObj(scheme, e.Object)
-			logMessage(logr, ctrlName, "Reconciliation trigger", "ctrl", ctrlName, "type", "generic", "resType", gvk.Kind, "name", e.Object.GetName(), "namespace", e.Object.GetNamespace())
+			logMessage(logr, "Reconciliation trigger", "ctrl", ctrlName, "type", "generic", "resType", gvk.Kind, "name", e.Object.GetName(), "namespace", e.Object.GetNamespace())
 			return true
 		},
 	}
 }
 
-func (r *FrontendReconciler) appsToEnqueueUponBundleUpdate(a client.Object) []reconcile.Request {
-	reqs := []reconcile.Request{}
-	ctx := context.Background()
-	obj := types.NamespacedName{
-		Name:      a.GetName(),
-		Namespace: a.GetNamespace(),
-	}
-
-	// Get the Bundle resource
-
-	bundle := crd.Bundle{}
-	err := r.Client.Get(ctx, obj, &bundle)
-
-	if err != nil {
-		if k8serr.IsNotFound(err) {
-			// Must have been deleted
-			return reqs
+func (r *FrontendReconciler) appsToEnqueueUponBundleUpdate() handler.MapFunc {
+	return func(ctx context.Context, clientObject client.Object) []reconcile.Request {
+		reqs := []reconcile.Request{}
+		obj := types.NamespacedName{
+			Name:      clientObject.GetName(),
+			Namespace: clientObject.GetNamespace(),
 		}
-		r.Log.Error(err, "Failed to fetch Bundle")
-		return nil
+
+		// Get the Bundle resource
+
+		bundle := crd.Bundle{}
+		err := r.Client.Get(ctx, obj, &bundle)
+
+		if err != nil {
+			if k8serr.IsNotFound(err) {
+				// Must have been deleted
+				return reqs
+			}
+			r.Log.Error(err, "Failed to fetch Bundle")
+			return nil
+		}
+
+		// Get all the ClowdApp resources
+
+		frontendList := crd.FrontendList{}
+		err = r.Client.List(ctx, &frontendList, client.MatchingFields{"spec.envName": bundle.Spec.EnvName})
+		if err != nil {
+			r.Log.Error(err, "Failed to List Frontends")
+			return nil
+		}
+
+		// Filter based on base attribute
+
+		for _, frontend := range frontendList.Items {
+			reqs = append(reqs, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      frontend.Name,
+					Namespace: frontend.Namespace,
+				},
+			})
+		}
+
+		return reqs
 	}
-
-	// Get all the ClowdApp resources
-
-	frontendList := crd.FrontendList{}
-	err = r.Client.List(ctx, &frontendList, client.MatchingFields{"spec.envName": bundle.Spec.EnvName})
-	if err != nil {
-		r.Log.Error(err, "Failed to List Frontends")
-		return nil
-	}
-
-	// Filter based on base attribute
-
-	for _, frontend := range frontendList.Items {
-		reqs = append(reqs, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      frontend.Name,
-				Namespace: frontend.Namespace,
-			},
-		})
-	}
-
-	return reqs
 }
 
-func (r *FrontendReconciler) appsToEnqueueUponFrontendEnvironmentUpdate(a client.Object) []reconcile.Request {
-	reqs := []reconcile.Request{}
-	ctx := context.Background()
-	obj := types.NamespacedName{
-		Name:      a.GetName(),
-		Namespace: a.GetNamespace(),
-	}
-
-	// Get the Bundle resource
-
-	fe := crd.FrontendEnvironment{}
-	err := r.Client.Get(ctx, obj, &fe)
-
-	if err != nil {
-		if k8serr.IsNotFound(err) {
-			// Must have been deleted
-			return reqs
+func (r *FrontendReconciler) appsToEnqueueUponFrontendEnvironmentUpdate() handler.MapFunc {
+	return func(ctx context.Context, clientObject client.Object) []reconcile.Request {
+		reqs := []reconcile.Request{}
+		obj := types.NamespacedName{
+			Name:      clientObject.GetName(),
+			Namespace: clientObject.GetNamespace(),
 		}
-		r.Log.Error(err, "Failed to fetch Bundle")
-		return nil
+
+		// Get the Bundle resource
+
+		fe := crd.FrontendEnvironment{}
+		err := r.Client.Get(ctx, obj, &fe)
+
+		if err != nil {
+			if k8serr.IsNotFound(err) {
+				// Must have been deleted
+				return reqs
+			}
+			r.Log.Error(err, "Failed to fetch Bundle")
+			return nil
+		}
+
+		// Get all the ClowdApp resources
+
+		frontendList := crd.FrontendList{}
+		if err := r.Client.List(ctx, &frontendList, client.MatchingFields{"spec.envName": fe.Name}); err != nil {
+			r.Log.Error(err, "Failed to List Frontends")
+			return nil
+		}
+
+		// Filter based on base attribute
+
+		for _, frontend := range frontendList.Items {
+			reqs = append(reqs, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      frontend.Name,
+					Namespace: frontend.Namespace,
+				},
+			})
+		}
+
+		return reqs
 	}
-
-	// Get all the ClowdApp resources
-
-	frontendList := crd.FrontendList{}
-	if err := r.Client.List(ctx, &frontendList, client.MatchingFields{"spec.envName": fe.Name}); err != nil {
-		r.Log.Error(err, "Failed to List Frontends")
-		return nil
-	}
-
-	// Filter based on base attribute
-
-	for _, frontend := range frontendList.Items {
-		reqs = append(reqs, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      frontend.Name,
-				Namespace: frontend.Namespace,
-			},
-		})
-	}
-
-	return reqs
 }
 
 func (r *FrontendReconciler) finalizeApp(reqLogger logr.Logger, a *crd.Frontend) error {
