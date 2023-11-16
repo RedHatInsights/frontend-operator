@@ -56,10 +56,10 @@ fi
 if docker buildx ls | grep -q "multiarchbuilder"; then
     echo "Using multiarchbuilder for buildx"
     # Multi-architecture build
-    docker buildx build --platform linux/amd64,linux/arm64 -t "${IMAGE}:${IMAGE_TAG}" --push .
+    docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE_IMAGE="${BASE_IMG}" -t "${IMAGE}:${IMAGE_TAG}" --push .
 else
     echo "Falling back to standard build and push"
     # Standard build and push
-    docker build -t "${IMAGE}:${IMAGE_TAG}" .
+    docker build -t "${IMAGE}:${IMAGE_TAG}" --build-arg BASE_IMAGE="${BASE_IMG}" .
     docker push "${IMAGE}:${IMAGE_TAG}"
 fi
