@@ -37,9 +37,29 @@ echo "received HTTP response: $RESPONSE"
 VALID_TAGS_LENGTH=$(echo $RESPONSE | jq '[ .tags[] | select(.end_ts == null) ] | length')
 
 if [[ "$VALID_TAGS_LENGTH" -eq 0 ]]; then
-    docker buildx build  --platform linux/amd64,linux/arm64 -f Dockerfile.base -t "${BASE_IMG}" --push . 
+    # Check if the multiarchbuilder exists
+    if docker buildx ls | grep -q "multiarchbuilder"; then
+        echo "Using multiarchbuilder for buildx"
+        # Multi-architecture build
+        docker buildx build  --platform linux/amd64,linux/arm64 -f Dockerfile.base -t "${BASE_IMG}" --push . 
+    else
+        echo "Falling back to standard build and push"
+        # Standard build and push
+        docker build -t "${BASE_IMG}" -f Dockerfile.base
+        docker push "${BASE_IMG}" 
+    fi
 fi
 #### End 
 
 
-docker buildx  build  --platform linux/amd64,linux/arm64  --build-arg BASE_IMAGE="${BASE_IMG}" --build-arg GOARCH="amd64" -t "${IMAGE}:${IMAGE_TAG}" --push .
+# Check if the multiarchbuilder exists
+if docker buildx ls | grep -q "multiarchbuilder"; then
+    echo "Using multiarchbuilder for buildx"
+    # Multi-architecture build
+    docker buildx build --platform linux/amd64,linux/arm64 -t "${IMAGE}:${IMAGE_TAG}" --push .
+else
+    echo "Falling back to standard build and push"
+    # Standard build and push
+    docker build -t "${IMAGE}:${IMAGE_TAG}" .
+    docker push "${IMAGE}:${IMAGE_TAG}"
+fi
