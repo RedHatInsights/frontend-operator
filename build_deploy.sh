@@ -20,7 +20,7 @@ DOCKER_CONF="$PWD/.docker"
 mkdir -p "$DOCKER_CONF"
 
 
-docker buildx use multiarchbuilder
+
 
 docker login -u="$QUAY_USER" -p="$QUAY_TOKEN" quay.io
 docker login -u="$RH_REGISTRY_USER" -p="$RH_REGISTRY_TOKEN" registry.redhat.io
@@ -39,6 +39,7 @@ VALID_TAGS_LENGTH=$(echo $RESPONSE | jq '[ .tags[] | select(.end_ts == null) ] |
 if [[ "$VALID_TAGS_LENGTH" -eq 0 ]]; then
     # Check if the multiarchbuilder exists
     if docker buildx ls | grep -q "multiarchbuilder"; then
+        docker buildx use multiarchbuilder
         echo "Using multiarchbuilder for buildx"
         # Multi-architecture build
         docker buildx build  --platform linux/amd64,linux/arm64 -f Dockerfile.base -t "${BASE_IMG}" --push . 
@@ -54,6 +55,7 @@ fi
 
 # Check if the multiarchbuilder exists
 if docker buildx ls | grep -q "multiarchbuilder"; then
+    docker buildx use multiarchbuilder
     echo "Using multiarchbuilder for buildx"
     # Multi-architecture build
     docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE_IMAGE="${BASE_IMG}" -t "${IMAGE}:${IMAGE_TAG}" --push .
