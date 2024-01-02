@@ -485,33 +485,24 @@ func (r *FrontendReconciliation) getExistingJob() (*batchv1.Job, bool, error) {
 
 }
 
-func (r *FrontendReconciliation) isJobFromCurrentFrontendImage(j *batchv1.Job) bool {
-	return j.Spec.Template.ObjectMeta.Annotations["frontend-image"] == r.Frontend.Spec.Image
-}
-
-// manageExistingJob will delete the existing job if it exists and is not from the current frontend image
-// It will return true if the job exists and is from the current frontend image
-func (r *FrontendReconciliation) manageExistingJob() (bool, error) {
+// manageExistingJob will delete the existing job if it exists
+func (r *FrontendReconciliation) deleteExistingJob() error {
 	j, exists, err := r.getExistingJob()
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	// If it doesn't exist we can return false and no error
 	if !exists {
-		return false, nil
+		return nil
 	}
 
-	// If it exists but is not from the current frontend image we delete it
-	if !r.isJobFromCurrentFrontendImage(j) {
-		backgroundDeletion := metav1.DeletePropagationBackground
-		return false, r.Client.Delete(r.Ctx, j, &client.DeleteOptions{
-			PropagationPolicy: &backgroundDeletion,
-		})
-	}
+	//
+	backgroundDeletion := metav1.DeletePropagationBackground
+	return r.Client.Delete(r.Ctx, j, &client.DeleteOptions{
+		PropagationPolicy: &backgroundDeletion,
+	})
 
-	// If it exists and is from the current frontend image we return true and no error
-	return true, nil
 }
 
 // createOrUpdateCacheBustJob will create a new job if it doesn't exist
@@ -526,12 +517,9 @@ func (r *FrontendReconciliation) createOrUpdateCacheBustJob() error {
 	// If the job exists and is from the current frontend image we can return
 	// If the job exists and is not from the current frontend image we delete it
 	// If the job doesn't exist we create it
-	existsAndMatchesCurrentFrontendImage, err := r.manageExistingJob()
+	err := r.deleteExistingJob()
 	if err != nil {
 		return err
-	}
-	if existsAndMatchesCurrentFrontendImage {
-		return nil
 	}
 
 	// Create job
@@ -567,7 +555,6 @@ func (r *FrontendReconciliation) createOrUpdateCacheBustJob() error {
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
-	annotations["frontend-image"] = r.Frontend.Spec.Image
 	annotations["kube-linter.io/ignore-all"] = "we don't need no any checking"
 
 	j.Spec.Template.ObjectMeta.SetAnnotations(annotations)
