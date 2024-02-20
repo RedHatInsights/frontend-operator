@@ -1,5 +1,6 @@
 
 # Binaries for programs and plugins
+manager
 *.exe
 *.exe~
 *.dll
@@ -10,6 +11,8 @@ testbin/*
 __debug_bin
 
 kubeconfig
+
+.DS_Store
 
 # Test binary, build with `go test -c`
 *.test
