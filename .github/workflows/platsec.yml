@@ -40,5 +40,4 @@ jobs:
     #   dockerfile_name: 'Dockerfile.main'
       base_image_build: true
     #   base_dockerfile_path: './test'
-      base_dockerfile_name: 'Dockerfile.base'
-      build_arg: '--build-arg BASE_IMAGE="localbuild/baseimage:latest"'
+      base_dockerfile_name: 'Dockerfile'
