@@ -1,6 +1,28 @@
 # Build the manager binary
-ARG BASE_IMAGE=
-FROM $BASE_IMAGE as builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.19.13-2.1698062273 as base
+
+WORKDIR /workspace
+
+COPY go.mod go.mod
+COPY go.sum go.sum
+
+
+RUN go mod download
+
+COPY main.go main.go
+COPY api/ api/
+COPY controllers/ controllers/
+
+USER 0
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o manager main.go
+
+RUN rm main.go
+RUN rm -rf api
+RUN rm -rf controllers
+
+# Build the manager binary
+FROM base as builder
 
 WORKDIR /workspace
 

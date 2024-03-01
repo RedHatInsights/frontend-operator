@@ -25,43 +25,15 @@ mkdir -p "$DOCKER_CONF"
 docker login -u="$QUAY_USER" -p="$QUAY_TOKEN" quay.io
 docker login -u="$RH_REGISTRY_USER" -p="$RH_REGISTRY_TOKEN" registry.redhat.io
 
-### Start base image build and push
-BASE_TAG=`cat go.mod go.sum Dockerfile.base | sha256sum  | head -c 8`
-BASE_IMG=quay.io/cloudservices/frontend-operator-build-base:$BASE_TAG
-RESPONSE=$( \
-        curl -Ls -H "Authorization: Bearer $QUAY_TOKEN" \
-        "https://quay.io/api/v1/repository/cloudservices/frontend-operator-build-base/tag/?specificTag=$BASE_TAG" \
-    )
-echo "received HTTP response: $RESPONSE"
-# find all non-expired tags
-VALID_TAGS_LENGTH=$(echo $RESPONSE | jq '[ .tags[] | select(.end_ts == null) ] | length')
-
-if [[ "$VALID_TAGS_LENGTH" -eq 0 ]]; then
-    # Check if the multiarchbuilder exists
-    if docker buildx ls | grep -q "multiarchbuilder"; then
-        docker buildx use multiarchbuilder
-        echo "Using multiarchbuilder for buildx"
-        # Multi-architecture build
-        docker buildx build  --platform linux/amd64,linux/arm64 -f Dockerfile.base -t "${BASE_IMG}" --push . 
-    else
-        echo "Falling back to standard build and push"
-        # Standard build and push
-        docker build -t "${BASE_IMG}" -f Dockerfile.base
-        docker push "${BASE_IMG}" 
-    fi
-fi
-#### End 
-
-
 # Check if the multiarchbuilder exists
 if docker buildx ls | grep -q "multiarchbuilder"; then
     docker buildx use multiarchbuilder
     echo "Using multiarchbuilder for buildx"
     # Multi-architecture build
-    docker buildx build --platform linux/amd64,linux/arm64 --build-arg BASE_IMAGE="${BASE_IMG}" -t "${IMAGE}:${IMAGE_TAG}" --push .
+    docker buildx build --platform linux/amd64,linux/arm64 -t "${IMAGE}:${IMAGE_TAG}" --push .
 else
     echo "Falling back to standard build and push"
     # Standard build and push
-    docker build -t "${IMAGE}:${IMAGE_TAG}" --build-arg BASE_IMAGE="${BASE_IMG}" .
+    docker build -t "${IMAGE}:${IMAGE_TAG}" .
     docker push "${IMAGE}:${IMAGE_TAG}"
 fi
