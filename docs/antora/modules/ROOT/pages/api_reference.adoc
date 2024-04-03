@@ -126,20 +126,8 @@ BundleList contains a list of Bundle
 |===
 | Field | Description
 | *`method`* __string__ | 
-| *`args`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermissionarg[$$BundlePermissionArg$$] array__ | 
+| *`args`* __BundlePermissionArg array__ | 
 |===
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermissionarg"]
-==== BundlePermissionArg (string) 
-
-
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$]
-****
-
 
 
 [id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec"]

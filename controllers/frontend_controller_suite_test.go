@@ -6,7 +6,7 @@ import (
 	"time"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
-	"github.com/onsi/ginkgo"
+	ginkgo "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	prom "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	apps "k8s.io/api/apps/v1"
@@ -346,20 +346,24 @@ var _ = ginkgo.Describe("Frontend controller with service", func() {
 			}))
 
 			gomega.Eventually(func() bool {
+				fmt.Printf("TESTING..............")
 				nfe := &crd.Frontend{}
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: frontend.Name, Namespace: frontend.Namespace}, nfe)
 				if err != nil {
+					fmt.Printf("ERRRRORRRRR: %s", err)
 					return false
 				}
-
+				fmt.Printf("SO GO HERE.....")
+				fmt.Printf("%v", nfe.Status.Conditions)
 				// Check the length of Conditions slice before accessing by index
 				if len(nfe.Status.Conditions) > 2 {
-					gomega.Expect(nfe.Status.Conditions[0].Type).Should(gomega.Equal(crd.FrontendsReady))
-					gomega.Expect(nfe.Status.Conditions[0].Status).Should(gomega.Equal(v1.ConditionTrue))
+					fmt.Printf("I GOT TRUE???")
+					gomega.Expect(nfe.Status.Conditions[0].Type).Should(gomega.Equal(crd.ReconciliationSuccessful))
+					gomega.Expect(nfe.Status.Conditions[0].Status).Should(gomega.Equal(metav1.ConditionTrue))
 					gomega.Expect(nfe.Status.Conditions[1].Type).Should(gomega.Equal(crd.ReconciliationFailed))
-					gomega.Expect(nfe.Status.Conditions[1].Status).Should(gomega.Equal(v1.ConditionFalse))
-					gomega.Expect(nfe.Status.Conditions[2].Type).Should(gomega.Equal(crd.ReconciliationSuccessful))
-					gomega.Expect(nfe.Status.Conditions[2].Status).Should(gomega.Equal(v1.ConditionTrue))
+					gomega.Expect(nfe.Status.Conditions[1].Status).Should(gomega.Equal(metav1.ConditionFalse))
+					gomega.Expect(nfe.Status.Conditions[2].Type).Should(gomega.Equal(crd.FrontendsReady))
+					gomega.Expect(nfe.Status.Conditions[2].Status).Should(gomega.Equal(metav1.ConditionTrue))
 					gomega.Expect(nfe.Status.Ready).Should(gomega.Equal(true))
 					return true
 				}
