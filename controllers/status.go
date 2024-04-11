@@ -7,32 +7,32 @@ import (
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	"github.com/RedHatInsights/rhc-osdk-utils/resources"
 	apps "k8s.io/api/apps/v1"
-	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	cond "sigs.k8s.io/cluster-api/util/conditions"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func SetFrontendConditions(ctx context.Context, client client.Client, o *crd.Frontend, state clusterv1.ConditionType, err error) error {
+func SetFrontendConditions(ctx context.Context, client client.Client, o *crd.Frontend, state string, err error) error {
 	oldStatus := o.Status.DeepCopy()
-	conditions := []clusterv1.Condition{}
+	conditions := []metav1.Condition{}
 
-	loopConditions := []clusterv1.ConditionType{crd.ReconciliationSuccessful, crd.ReconciliationFailed}
+	loopConditions := []string{crd.ReconciliationSuccessful, crd.ReconciliationFailed}
 	for _, conditionType := range loopConditions {
-		condition := &clusterv1.Condition{}
+		condition := &metav1.Condition{}
 		condition.Type = conditionType
-		condition.Status = core.ConditionFalse
+		condition.Status = metav1.ConditionFalse
+		condition.Reason = "NoError"
 
 		if state == conditionType {
-			condition.Status = core.ConditionTrue
+			condition.Status = metav1.ConditionTrue
 			if err != nil {
-				condition.Reason = err.Error()
+				condition.Message = err.Error()
+				condition.Reason = "Error"
 			}
 		}
 
-		condition.LastTransitionTime = v1.Now()
+		condition.LastTransitionTime = metav1.Now()
 		conditions = append(conditions, *condition)
 	}
 
@@ -41,25 +41,27 @@ func SetFrontendConditions(ctx context.Context, client client.Client, o *crd.Fro
 		return err
 	}
 
-	condition := &clusterv1.Condition{}
+	condition := &metav1.Condition{}
 
-	condition.Status = core.ConditionFalse
+	condition.Reason = "NoError"
+	condition.Status = metav1.ConditionFalse
 	condition.Message = "Deployments are not yet ready"
 	if frontendStatus {
-		condition.Status = core.ConditionTrue
+		condition.Status = metav1.ConditionTrue
 		condition.Message = "All managed deployments ready"
 	}
 
 	condition.Type = crd.FrontendsReady
-	condition.LastTransitionTime = v1.Now()
+	condition.LastTransitionTime = metav1.Now()
 	if err != nil {
-		condition.Reason = err.Error()
+		condition.Message += err.Error()
+		condition.Reason = "Error"
 	}
 
 	conditions = append(conditions, *condition)
 	for _, condition := range conditions {
 		innerCondition := condition
-		cond.Set(o, &innerCondition)
+		meta.SetStatusCondition(&o.Status.Conditions, innerCondition)
 	}
 
 	o.Status.Ready = frontendStatus

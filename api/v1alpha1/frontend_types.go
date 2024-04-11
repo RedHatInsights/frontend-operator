@@ -24,7 +24,6 @@ import (
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -60,15 +59,15 @@ type FrontendSpec struct {
 	AkamaiCacheBustPaths []string `json:"akamaiCacheBustPaths,omitempty" yaml:"akamaiCacheBustPaths,omitempty"`
 }
 
-var ReconciliationSuccessful clusterv1.ConditionType = "ReconciliationSuccessful"
-var ReconciliationFailed clusterv1.ConditionType = "ReconciliationFailed"
-var FrontendsReady clusterv1.ConditionType = "FrontendsReady"
+var ReconciliationSuccessful = "ReconciliationSuccessful"
+var ReconciliationFailed = "ReconciliationFailed"
+var FrontendsReady = "FrontendsReady"
 
 // FrontendStatus defines the observed state of Frontend
 type FrontendStatus struct {
-	Deployments FrontendDeployments   `json:"deployments,omitempty"`
-	Ready       bool                  `json:"ready"`
-	Conditions  []clusterv1.Condition `json:"conditions,omitempty"`
+	Deployments FrontendDeployments `json:"deployments,omitempty"`
+	Ready       bool                `json:"ready"`
+	Conditions  []metav1.Condition  `json:"conditions,omitempty"`
 }
 
 type FrontendDeployments struct {
@@ -125,11 +124,11 @@ type FrontendList struct {
 	Items           []Frontend `json:"items" yaml:"items"`
 }
 
-func (i *Frontend) GetConditions() clusterv1.Conditions {
+func (i *Frontend) GetConditions() []metav1.Condition {
 	return i.Status.Conditions
 }
 
-func (i *Frontend) SetConditions(conditions clusterv1.Conditions) {
+func (i *Frontend) SetConditions(conditions []metav1.Condition) {
 	i.Status.Conditions = conditions
 }
 
