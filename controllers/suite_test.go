@@ -4,8 +4,9 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
+	"time"
 
-	"github.com/onsi/ginkgo"
+	ginkgo "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	prom "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,7 +40,7 @@ func TestAPIs(t *testing.T) {
 	ginkgo.RunSpecs(t, "Controller Suite")
 }
 
-var _ = ginkgo.BeforeSuite(func() {
+var _ = ginkgo.BeforeSuite(func(_ context.Context) {
 	logf.SetLogger(zap.New(zap.WriteTo(ginkgo.GinkgoWriter), zap.UseDevMode(true)))
 	k8sscheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(k8sscheme))
@@ -98,7 +99,7 @@ var _ = ginkgo.BeforeSuite(func() {
 		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	}()
 
-}, 60)
+}, ginkgo.NodeTimeout(time.Second*60))
 
 var _ = ginkgo.AfterSuite(func() {
 	ginkgo.By("tearing down the test environment")
