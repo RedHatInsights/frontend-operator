@@ -215,6 +215,8 @@ spec:
             value: $(params.NAMESPACE)
           - name: EXPECTED_OUTPUT
             value: $(params.EXPECTED_OUTPUT)
+          - name: GOFLAGS
+            value: “-buildvcs=false”
           script: |
             #!/bin/bash
             set -ex
