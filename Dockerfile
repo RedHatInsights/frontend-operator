@@ -43,6 +43,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o manager main.go
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal:8.9-1161
 WORKDIR /
+COPY licenses/ licenses/
 COPY --from=builder /workspace/manager .
 USER 65534:65534
 
