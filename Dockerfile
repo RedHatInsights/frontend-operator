@@ -37,6 +37,7 @@ RUN go mod download
 COPY main.go main.go
 COPY api/ api/
 COPY controllers/ controllers/
+COPY licenses/ licenses/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux go build -o manager main.go
