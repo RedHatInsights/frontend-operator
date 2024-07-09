@@ -88,34 +88,34 @@ spec:
                 type: string
               module:
                 properties:
+                  analytics:
+                    properties:
+                      APIKey:
+                        type: string
+                    required:
+                    - APIKey
+                    type: object
                   config:
-                    x-kubernetes-preserve-unknown-fields: true
-                  fullProfile:
-                    type: boolean
-                  manifestLocation:
+                    properties:
+                      ssoScopes:
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  defaultDocumentTitle:
                     type: string
-                  moduleID:
+                  manifestLocation:
                     type: string
                   modules:
                     items:
                       properties:
-                        dependencies:
-                          items:
-                            type: string
-                          type: array
                         id:
                           type: string
                         module:
                           type: string
-                        optionalDependencies:
-                          items:
-                            type: string
-                          type: array
                         routes:
                           items:
                             properties:
-                              dynamic:
-                                type: boolean
                               exact:
                                 type: boolean
                               pathname:
@@ -134,6 +134,7 @@ spec:
                     type: array
                 required:
                 - manifestLocation
+                - modules
                 type: object
               navItems:
                 items:

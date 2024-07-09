@@ -75,25 +75,30 @@ type FrontendDeployments struct {
 	ReadyDeployments   int32 `json:"readyDeployments"`
 }
 
+type FedModuleConfig struct {
+	SSOScopes []string `json:"ssoScopes,omitempty" yaml:"ssoScopes,omitempty"`
+}
+
+type FedModulesAnalytics struct {
+	APIKey string `json:"APIKey" yaml:"APIKey"`
+}
+
 type FedModule struct {
-	ManifestLocation string              `json:"manifestLocation" yaml:"manifestLocation"`
-	Modules          []Module            `json:"modules,omitempty" yaml:"modules,omitempty"`
-	ModuleID         string              `json:"moduleID,omitempty" yaml:"moduleID,omitempty"`
-	Config           *apiextensions.JSON `json:"config,omitempty" yaml:"config,omitempty"`
-	FullProfile      *bool               `json:"fullProfile,omitempty" yaml:"fullProfile,omitempty"`
+	ManifestLocation     string               `json:"manifestLocation" yaml:"manifestLocation"`
+	Config               *FedModuleConfig     `json:"config,omitempty" yaml:"config,omitempty"`
+	Analytics            *FedModulesAnalytics `json:"analytics,omitempty" yaml:"analytics,omitempty"`
+	DefaultDocumentTitle string               `json:"defaultDocumentTitle,omitempty" yaml:"defaultDocumentTitle,omitempty"`
+	Modules              []Module             `json:"modules" yaml:"modules"`
 }
 
 type Module struct {
-	ID                   string   `json:"id" yaml:"id"`
-	Module               string   `json:"module" yaml:"module"`
-	Routes               []Route  `json:"routes" yaml:"routes"`
-	Dependencies         []string `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
-	OptionalDependencies []string `json:"optionalDependencies,omitempty" yaml:"optionalDependencies,omitempty"`
+	ID     string  `json:"id" yaml:"id"`
+	Module string  `json:"module" yaml:"module"`
+	Routes []Route `json:"routes" yaml:"routes"`
 }
 
 type Route struct {
 	Pathname string              `json:"pathname" yaml:"pathname"`
-	Dynamic  bool                `json:"dynamic,omitempty" yaml:"dynamic,omitempty"`
 	Exact    bool                `json:"exact,omitempty" yaml:"exact,omitempty"`
 	Props    *apiextensions.JSON `json:"props,omitempty" yaml:"props,omitempty"`
 }

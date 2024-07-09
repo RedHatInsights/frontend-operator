@@ -22,3 +22,9 @@ spec:
       routes:
       - pathname: /
         exact: true
+    - id: "foobar"
+      module: "./RootApp"
+      routes:
+      - pathname: /foo
+        exact: true
+
