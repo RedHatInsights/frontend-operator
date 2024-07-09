@@ -57,6 +57,6 @@ metadata:
       name: test-storage-environment
 data:
   fed-modules.json: >-
-    {"chrome":{"manifestLocation":"/apps/chrome/js/fed-mods.json","config":{"ssoUrl":"https://sso.foo.redhat.com"},"fullProfile":false}}
+    {"chrome":{"manifestLocation":"/apps/chrome/js/fed-mods.json","config":{"ssoUrl":"https://sso.foo.redhat.com"}}}
 
 

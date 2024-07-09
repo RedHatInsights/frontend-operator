@@ -12,7 +12,6 @@ import (
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
-	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -37,13 +36,13 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 			ginkgo.By("ginkgo.By creating a new Frontend")
 			ctx := context.Background()
 
-			var customConfig apiextensions.JSON
-			err := customConfig.UnmarshalJSON([]byte(`{"apple":"pie"}`))
-			gomega.Expect(err).Should(gomega.BeNil())
+			customConfig := &crd.FedModuleConfig{
+				SSOScopes: []string{"openid", "profile", "email"},
+			}
 
-			var customConfig2 apiextensions.JSON
-			err = customConfig2.UnmarshalJSON([]byte(`{"cheese":"pasty"}`))
-			gomega.Expect(err).Should(gomega.BeNil())
+			customConfig2 := &crd.FedModuleConfig{
+				SSOURL: "https://sso.foo.com",
+			}
 
 			frontend := &crd.Frontend{
 				TypeMeta: metav1.TypeMeta{
@@ -65,14 +64,13 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 						Paths: []string{"/things/test"},
 					},
 					Image: "my-image:version",
-					NavItems: []*crd.BundleNavItem{{
+					NavItems: []*crd.ChromeNavItem{{
 						Title:   "Test",
 						GroupID: "",
 						Href:    "/test/href",
 					}},
 					Module: &crd.FedModule{
 						ManifestLocation: "/apps/inventory/fed-mods.json",
-						FullProfile:      crd.TruePtr(),
 						Modules: []crd.Module{{
 							ID:     "test",
 							Module: "./RootApp",
@@ -80,7 +78,7 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 								Pathname: "/test/href",
 							}},
 						}},
-						Config: &customConfig,
+						Config: customConfig,
 					},
 				},
 			}
@@ -106,7 +104,7 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 						Paths: []string{"/things/test"},
 					},
 					Image: "my-image:version",
-					NavItems: []*crd.BundleNavItem{{
+					NavItems: []*crd.ChromeNavItem{{
 						Title:   "Test",
 						GroupID: "",
 						Href:    "/test/href",
@@ -121,8 +119,7 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 								Pathname: "/test/href",
 							}},
 						}},
-						Config:      &customConfig2,
-						FullProfile: crd.FalsePtr(),
+						Config: customConfig2,
 					},
 				},
 			}
@@ -207,8 +204,8 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 			}, timeout, interval).Should(gomega.BeTrue())
 			gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName))
 			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
-				"fed-modules.json": "{\"testFrontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"},\"fullProfile\":true},\"testFrontend2\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"cheese\":\"pasty\"},\"fullProfile\":false}}",
-				"test-env.json":    "{\"id\":\"test-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test\",\"href\":\"/test/href\"}]}",
+				"fed-modules.json": "{\"testFrontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"config\":{\"ssoScopes\":[\"openid\",\"profile\",\"email\"]},\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]},\"testFrontend2\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"config\":{\"ssoUrl\":\"https://sso.foo.com\"},\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]}}",
+				"test-env.json":    "{\"id\":\"test-bundle\",\"title\":\"\",\"navItems\":[{\"href\":\"/test/href\",\"title\":\"Test\"},{\"href\":\"/test/href\",\"title\":\"Test\"}]}",
 			}))
 			gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(FrontendEnvName))
 
@@ -278,7 +275,7 @@ var _ = ginkgo.Describe("Frontend controller with service", func() {
 						Paths: []string{"/things/test"},
 					},
 					Service: ServiceName,
-					NavItems: []*crd.BundleNavItem{
+					NavItems: []*crd.ChromeNavItem{
 						{
 							Title:   "Test",
 							GroupID: "",
@@ -342,7 +339,7 @@ var _ = ginkgo.Describe("Frontend controller with service", func() {
 			}, timeout, interval).Should(gomega.BeTrue())
 			gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName))
 			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
-				"fed-modules.json": "{\"testFrontendService\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"fullProfile\":false}}",
+				"fed-modules.json": "{\"testFrontendService\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]}}",
 			}))
 
 			gomega.Eventually(func() bool {
@@ -393,9 +390,7 @@ var _ = ginkgo.Describe("Frontend controller with chrome", func() {
 			ginkgo.By("ginkgo.By creating a new Frontend")
 			ctx := context.Background()
 
-			var customConfig apiextensions.JSON
-			err := customConfig.UnmarshalJSON([]byte(`{"apple":"pie"}`))
-			gomega.Expect(err).Should(gomega.BeNil())
+			customConfig := &crd.FedModuleConfig{}
 
 			frontend := &crd.Frontend{
 				TypeMeta: metav1.TypeMeta{
@@ -417,7 +412,7 @@ var _ = ginkgo.Describe("Frontend controller with chrome", func() {
 						Paths: []string{"/things/test"},
 					},
 					Image: "my-image:version",
-					NavItems: []*crd.BundleNavItem{{
+					NavItems: []*crd.ChromeNavItem{{
 						Title:   "Test",
 						GroupID: "",
 						Href:    "/test/href",
@@ -431,7 +426,7 @@ var _ = ginkgo.Describe("Frontend controller with chrome", func() {
 								Pathname: "/test/href",
 							}},
 						}},
-						Config: &customConfig,
+						Config: customConfig,
 					},
 				},
 			}
@@ -457,7 +452,7 @@ var _ = ginkgo.Describe("Frontend controller with chrome", func() {
 						Paths: []string{"/things/test"},
 					},
 					Image: "my-image:version",
-					NavItems: []*crd.BundleNavItem{{
+					NavItems: []*crd.ChromeNavItem{{
 						Title:   "Test",
 						GroupID: "",
 						Href:    "/test/href",
@@ -471,7 +466,7 @@ var _ = ginkgo.Describe("Frontend controller with chrome", func() {
 								Pathname: "/test/href",
 							}},
 						}},
-						Config: &customConfig,
+						Config: customConfig,
 					},
 				},
 			}
@@ -497,7 +492,7 @@ var _ = ginkgo.Describe("Frontend controller with chrome", func() {
 						Paths: []string{"/things/test"},
 					},
 					Image: "my-image:version",
-					NavItems: []*crd.BundleNavItem{{
+					NavItems: []*crd.ChromeNavItem{{
 						Title:   "Test",
 						GroupID: "",
 						Href:    "/test/href",
@@ -595,8 +590,9 @@ var _ = ginkgo.Describe("Frontend controller with chrome", func() {
 			}, timeout, interval).Should(gomega.BeTrue())
 			gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName))
 			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
-				"fed-modules.json":     "{\"chrome\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\",\"ssoUrl\":\"https://something-auth\"},\"fullProfile\":false},\"noConfig\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"fullProfile\":false},\"nonChrome\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"},\"fullProfile\":false}}",
-				"test-chrome-env.json": "{\"id\":\"test-chrome-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test\",\"href\":\"/test/href\"}]}"}))
+				"test-chrome-env.json": "{\"id\":\"test-chrome-bundle\",\"title\":\"\",\"navItems\":[{\"href\":\"/test/href\",\"title\":\"Test\"},{\"href\":\"/test/href\",\"title\":\"Test\"},{\"href\":\"/test/href\",\"title\":\"Test\"}]}",
+				"fed-modules.json":     "{\"chrome\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"config\":{\"ssoUrl\":\"https://something-auth\"},\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]},\"noConfig\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]},\"nonChrome\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"config\":{},\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]}}",
+			}))
 			gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(FrontendEnvName))
 
 		})
@@ -640,7 +636,7 @@ var _ = ginkgo.Describe("ServiceMonitor Creation", func() {
 						Paths: []string{"/things/test"},
 					},
 					Image: "my-image:version",
-					NavItems: []*crd.BundleNavItem{{
+					NavItems: []*crd.ChromeNavItem{{
 						Title:   "Test",
 						GroupID: "",
 						Href:    "/test/href",
@@ -764,7 +760,7 @@ var _ = ginkgo.Describe("Dependencies", func() {
 						Paths: []string{"/things/test"},
 					},
 					Image: "my-image:version",
-					NavItems: []*crd.BundleNavItem{{
+					NavItems: []*crd.ChromeNavItem{{
 						Title:   "Test",
 						GroupID: "",
 						Href:    "/test/href",
@@ -777,7 +773,6 @@ var _ = ginkgo.Describe("Dependencies", func() {
 							Routes: []crd.Route{{
 								Pathname: "/test/href",
 							}},
-							Dependencies: []string{"depstring"},
 						}},
 					},
 				},
@@ -804,7 +799,7 @@ var _ = ginkgo.Describe("Dependencies", func() {
 						Paths: []string{"/things/test"},
 					},
 					Image: "my-image:version",
-					NavItems: []*crd.BundleNavItem{{
+					NavItems: []*crd.ChromeNavItem{{
 						Title:   "Test",
 						GroupID: "",
 						Href:    "/test/href",
@@ -817,7 +812,6 @@ var _ = ginkgo.Describe("Dependencies", func() {
 							Routes: []crd.Route{{
 								Pathname: "/test/href",
 							}},
-							OptionalDependencies: []string{"depstring-op"},
 						}},
 					},
 				},
@@ -844,7 +838,7 @@ var _ = ginkgo.Describe("Dependencies", func() {
 						Paths: []string{"/things/test"},
 					},
 					Image: "my-image:version",
-					NavItems: []*crd.BundleNavItem{{
+					NavItems: []*crd.ChromeNavItem{{
 						Title:   "Test",
 						GroupID: "",
 						Href:    "/test/href",
@@ -914,8 +908,8 @@ var _ = ginkgo.Describe("Dependencies", func() {
 			}, timeout, interval).Should(gomega.BeTrue())
 			gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName))
 			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
-				"test-dependencies-env.json": "{\"id\":\"test-dependencies-bundle\",\"title\":\"\",\"navItems\":[{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test\",\"href\":\"/test/href\"},{\"title\":\"Test\",\"href\":\"/test/href\"}]}",
-				"fed-modules.json":           "{\"testDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}],\"dependencies\":[\"depstring\"]}],\"fullProfile\":false},\"testNoDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"fullProfile\":false},\"testOptionalDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}],\"optionalDependencies\":[\"depstring-op\"]}],\"fullProfile\":false}}",
+				"fed-modules.json":           "{\"testDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]},\"testNoDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]},\"testOptionalDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}]}}",
+				"test-dependencies-env.json": "{\"id\":\"test-dependencies-bundle\",\"title\":\"\",\"navItems\":[{\"href\":\"/test/href\",\"title\":\"Test\"},{\"href\":\"/test/href\",\"title\":\"Test\"},{\"href\":\"/test/href\",\"title\":\"Test\"}]}",
 			}))
 			gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(FrontendEnvName))
 

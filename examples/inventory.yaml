@@ -14,10 +14,51 @@ spec:
     - /apps/inventory
   image: quay.io/cloudservices/insights-inventory-frontend:27803c7
   navItems:
-    - appId: "inventory"
-      title: "Inventory"
-      href: "/insights/inventory"
+  - title: "Content"
+    expandable: true
+    routes: 
+    - id: "advisories"
+      appId: "patch"
+      title: "Advisories"
+      href: "/insights/patch/advisories"
+      icon: "InsightsIcon"
       product: "Red Hat Insights"
+      subtitle: "Red Hat Insights for RHEL"
+      description: "View applicable advisories and updates for your Red Hat Enterprise Linux systems."
+    - id: "packages"
+      appId: "patch"
+      title: "Packages"
+      href: "/insights/patch/packages"
+      icon: "InsightsIcon"
+      product: "Red Hat Insights"
+      subtitle: "Red Hat Insights for RHEL"
+      description: "Review package applicability on your Red Hat Enterprise Linux systems.""
+    - id: "repositories"
+      appId: "contentSources"
+      title: "Repositories"
+      href: "/insights/content"
+      icon: "SubscriptionsIcon"
+      product: "Red Hat Insights"
+      subtitle: "Red Hat Insights for RHEL"
+      alt_title: 
+      - "Content"
+      - "custom content"
+      description: "Link your external repositories to build images."
+    - title: "Patch"
+      id: "patch"
+      expandable: true
+      routes: 
+      - id: "patchSystems"
+        appId: "patch"
+        title: "Systems"
+        href: "/insights/patch/systems"
+        product: "Red Hat Insights"
+        description: "View applicable advisories and updates for your Red Hat Enterprise Linux systems."
+      - id: "patchTemplates"
+        appId: "patch"
+        title: "Templates"
+        href: "/insights/patch/templates"
+        product: "Red Hat Insights"
   module:
     manifestLocation: "/apps/inventory/fed-mods.json"
     modules:

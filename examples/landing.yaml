@@ -22,3 +22,18 @@ spec:
       routes:
       - pathname: /
         exact: true
+    - id: "foobar"
+      module: "./RootApp"
+      routes:
+      - pathname: /foo
+        exact: true
+  # partials to be inject into specific places
+  chromeNavigation:
+    - bundle: insights
+      # the ID will be prefixed by the metadata.name -> landing.landingTest 
+      sectionId: landingTest
+      navItems:
+        - id: landing
+          title: "Landing section"
+          href: /apps/landing
+
