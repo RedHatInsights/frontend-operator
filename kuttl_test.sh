@@ -2,9 +2,6 @@
 
 set -exv
 
-# Install kubectl for Konflux
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-
 # Install krew for kubectl
 (
   set -x; cd "$(mktemp -d)" &&
