@@ -250,7 +250,7 @@ spec:
         - name: TEST_OUTPUT
           description: Test output
         steps:
-        - image: registry.redhat.io/ubi8/ubi:8.10-1020
+        - image: fedora
           env:
           - name: SNAPSHOT
             value: $(params.SNAPSHOT)
@@ -267,6 +267,8 @@ spec:
             FEO_PATH="/workspace/output/source"
             
             cd ${FEO_PATH}
+
+            dnf install make
             make kuttl
     - name: prefetch-dependencies
       params:
