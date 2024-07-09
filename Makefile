@@ -117,9 +117,7 @@ junit: gotestsum manifests envtest generate fmt vet
 # entry point for testing kuttl with kind
 kuttl: manifests envtest generate fmt vet
 	curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-	chmod +x kubectl
-	mkdir -p ~/.local/bin
-	mv ./kubectl ~/.local/bin/kubectl
+	chmod +x ./kubectl
 
 	# # Install krew for kubectl
 	# set -x; cd "$(mktemp -d)" && \
@@ -135,9 +133,9 @@ kuttl: manifests envtest generate fmt vet
 	# export PATH="/.local/bin:$PATH"
 
 	# # Install kuttl with krew
-	# kubectl krew install kuttl
+	# ./kubectl krew install kuttl
 
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" kubectl kuttl test --config kuttl-config.yml  ./tests/e2e
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" ./kubectl kuttl test --config kuttl-config.yml  ./tests/e2e
 	
 ##@ Build
 

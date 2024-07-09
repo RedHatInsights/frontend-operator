@@ -12,6 +12,7 @@ set -exv
   tar zxvf "${KREW}.tar.gz" &&
   ./"${KREW}" install krew
 )
+
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 export PATH="/bins:$PATH"
 
