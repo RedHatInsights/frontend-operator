@@ -18,62 +18,49 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
 
 type BundlePermissionArg string
 
 type BundlePermission struct {
-	Method string                `json:"method" yaml:"method"`
-	Args   []BundlePermissionArg `json:"args,omitempty" yaml:"args,omitempty"`
+	Method string `json:"method" yaml:"method"`
+	// an arg can technically be any value, but we're going to restrict it to strings for now
+	// FIXME: allow anything
+	Args []intstr.IntOrString `json:"args,omitempty" yaml:"args,omitempty"`
+	Apps []string             `json:"apps,omitempty" yaml:"apps,omitempty"`
 }
 
-// EmbeddedRoutes allow deeply nested navs to have support for routes
-type EmbeddedRoute struct {
-	Title   string `json:"title,omitempty" yaml:"title,omitempty"`
-	AppID   string `json:"appId,omitempty" yaml:"appId,omitempty"`
-	Href    string `json:"href,omitempty" yaml:"href,omitempty"`
-	Product string `json:"product,omitempty" yaml:"product,omitempty"`
-}
-
-type BundleNavItem struct {
-	Title       string              `json:"title" yaml:"title"`
-	GroupID     string              `json:"groupId,omitempty" yaml:"groupId,omitempty"`
-	Icon        string              `json:"icon,omitempty" yaml:"icon,omitempty"`
-	NavItems    []LeafBundleNavItem `json:"navItems,omitempty" yaml:"navItems,omitempty"`
-	AppID       string              `json:"appId,omitempty" yaml:"appId,omitempty"`
-	Href        string              `json:"href,omitempty" yaml:"href,omitempty"`
-	Product     string              `json:"product,omitempty" yaml:"product,omitempty"`
-	IsExternal  bool                `json:"isExternal,omitempty" yaml:"isExternal,omitempty"`
-	Filterable  bool                `json:"filterable,omitempty" yaml:"filterable,omitempty"`
-	Permissions []BundlePermission  `json:"permissions,omitempty" yaml:"permissions,omitempty"`
-	Routes      []EmbeddedRoute     `json:"routes,omitempty" yaml:"routes,omitempty"`
-	Expandable  bool                `json:"expandable,omitempty" yaml:"expandable,omitempty"`
-	DynamicNav  string              `json:"dynamicNav,omitempty" yaml:"dynamicNav,omitempty"`
-}
-
-type LeafBundleNavItem struct {
-	Title       string             `json:"title" yaml:"title"`
-	GroupID     string             `json:"groupId,omitempty" yaml:"groupId,omitempty"`
-	AppID       string             `json:"appId,omitempty" yaml:"appId,omitempty"`
-	Href        string             `json:"href,omitempty" yaml:"href,omitempty"`
-	Product     string             `json:"product,omitempty" yaml:"product,omitempty"`
-	IsExternal  bool               `json:"isExternal,omitempty" yaml:"isExternal,omitempty"`
-	Filterable  bool               `json:"filterable,omitempty" yaml:"filterable,omitempty"`
-	Expandable  bool               `json:"expandable,omitempty" yaml:"expandable,omitempty"`
-	Notifier    string             `json:"notifier,omitempty" yaml:"notifier,omitempty"`
-	Routes      []EmbeddedRoute    `json:"routes,omitempty" yaml:"routes,omitempty"`
+type ChromeNavItem struct {
+	IsHidden   bool   `json:"isHidden,omitempty" yaml:"isHidden,omitempty"`
+	Filterable bool   `json:"filterable,omitempty" yaml:"filterable,omitempty"`
+	Expandable bool   `json:"expandable,omitempty" yaml:"expandable,omitempty"`
+	IsExternal bool   `json:"isExternal,omitempty" yaml:"isExternal,omitempty"`
+	Href       string `json:"href,omitempty" yaml:"href,omitempty"`
+	AppID      string `json:"appId,omitempty" yaml:"appId,omitempty"`
+	Title      string `json:"title" yaml:"title"`
+	GroupID    string `json:"groupId,omitempty" yaml:"groupId,omitempty"`
+	ID         string `json:"id,omitempty" yaml:"id,omitempty"`
+	Product    string `json:"product,omitempty" yaml:"product,omitempty"`
+	SubTitle   string `json:"subTitle,omitempty" yaml:"subTitle,omitempty"`
+	Notifier   string `json:"notifier,omitempty" yaml:"notifier,omitempty"`
+	// +kubebuilder:validation:Enum=ACSIcon;AnsibleIcon;AppServicesIcon;cloud;database;DataScienceIcon;EdgeIcon;InsightsIcon;OpenShiftIcon;PlaceholderIcon;QuayIoIcon;RHIcon;ServicesIcon;shield;SubscriptionsIcon;trend-up;TrustedContentIcon;wrench
+	Icon string `json:"icon,omitempty" yaml:"icon,omitempty"`
+	// kubebuilder struggles validating recursive fields, it has to be helped a bit
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
+	NavItems    []ChromeNavItem    `json:"navItems,omitempty" yaml:"navItems,omitempty"`
 	Permissions []BundlePermission `json:"permissions,omitempty" yaml:"permissions,omitempty"`
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
+	Routes     []ChromeNavItem `json:"routes,omitempty" yaml:"routes,omitempty"`
+	DynamicNav string          `json:"dynamicNav,omitempty" yaml:"dynamicNav,omitempty"`
 }
 
 type ComputedBundle struct {
 	ID       string          `json:"id" yaml:"id"`
 	Title    string          `json:"title" yaml:"title"`
-	NavItems []BundleNavItem `json:"navItems" yaml:"navItems"`
-}
-
-type ExtraNavItem struct {
-	Name    string        `json:"name" yaml:"name"`
-	NavItem BundleNavItem `json:"navItem" yaml:"navItem"`
+	NavItems []ChromeNavItem `json:"navItems" yaml:"navItems"`
 }
 
 // BundleSpec defines the desired state of Bundle
@@ -82,12 +69,11 @@ type BundleSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of Bundle. Edit Bundle_types.go to remove/update
-	ID            string          `json:"id" yaml:"id"`
-	Title         string          `json:"title,omitempty" yaml:"title,omitempty"`
-	AppList       []string        `json:"appList,omitempty" yaml:"appList,omitempty"`
-	EnvName       string          `json:"envName,omitempty" yaml:"envName,omitempty"`
-	ExtraNavItems []ExtraNavItem  `json:"extraNavItems,omitempty" yaml:"extraNavItems,omitempty"`
-	CustomNav     []BundleNavItem `json:"customNav,omitempty" yaml:"customNav,omitempty"`
+	ID        string          `json:"id" yaml:"id"`
+	Title     string          `json:"title,omitempty" yaml:"title,omitempty"`
+	AppList   []string        `json:"appList,omitempty" yaml:"appList,omitempty"`
+	EnvName   string          `json:"envName,omitempty" yaml:"envName,omitempty"`
+	CustomNav []ChromeNavItem `json:"customNav,omitempty" yaml:"customNav,omitempty"`
 }
 
 // BundleStatus defines the observed state of Bundle

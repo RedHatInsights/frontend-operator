@@ -212,7 +212,6 @@ EmbeddedRoutes allow deeply nested navs to have support for routes
 | *`modules`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-module[$$Module$$] array__ | 
 | *`moduleID`* __string__ | 
 | *`config`* __JSON__ | 
-| *`fullProfile`* __boolean__ | 
 |===
 
 

@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	localUtil "github.com/RedHatInsights/frontend-operator/controllers/utils"
 	resCache "github.com/RedHatInsights/rhc-osdk-utils/resourceCache"
@@ -18,7 +19,6 @@ import (
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
-	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,7 +48,6 @@ type FrontendReconciliation struct {
 }
 
 func (r *FrontendReconciliation) run() error {
-
 	configMap, err := r.setupConfigMaps()
 	if err != nil {
 		return err
@@ -776,13 +775,10 @@ func setupNormalNav(bundle *crd.Bundle, cacheMap map[string]crd.Frontend, cfgMap
 	newBundleObject := crd.ComputedBundle{
 		ID:       bundle.Spec.ID,
 		Title:    bundle.Spec.Title,
-		NavItems: []crd.BundleNavItem{},
+		NavItems: []crd.ChromeNavItem{},
 	}
 
-	bundleCacheMap := make(map[string]crd.BundleNavItem)
-	for _, extraItem := range bundle.Spec.ExtraNavItems {
-		bundleCacheMap[extraItem.Name] = extraItem.NavItem
-	}
+	bundleCacheMap := make(map[string]crd.ChromeNavItem)
 
 	for _, app := range bundle.Spec.AppList {
 		if retrievedFrontend, ok := cacheMap[app]; ok {
@@ -820,19 +816,9 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 
 			module := fedModules[modName]
 
-			if frontend.Spec.Module.FullProfile == nil || !*frontend.Spec.Module.FullProfile {
-				module.FullProfile = crd.FalsePtr()
-			} else {
-				module.FullProfile = crd.TruePtr()
-			}
-
 			if frontend.Name == "chrome" {
 
-				var configSource apiextensions.JSON
-				err := configSource.UnmarshalJSON([]byte(`{}`))
-				if err != nil {
-					return fmt.Errorf("error unmarshaling base config: %w", err)
-				}
+				var configSource v1alpha1.FedModuleConfig
 
 				if module.Config == nil {
 					module.Config = &configSource
@@ -840,21 +826,7 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 					configSource = *module.Config
 				}
 
-				innerConfig := make(map[string]interface{})
-				if err := json.Unmarshal(configSource.Raw, &innerConfig); err != nil {
-					fmt.Printf("error unpacking custom config")
-				}
-				innerConfig["ssoUrl"] = feEnv.Spec.SSO
-
-				bytes, err := json.Marshal(innerConfig)
-				if err != nil {
-					fmt.Print(err)
-				}
-
-				err = module.Config.UnmarshalJSON(bytes)
-				if err != nil {
-					return fmt.Errorf("error unmarshaling config: %w", err)
-				}
+				module.Config.SSOURL = feEnv.Spec.SSO
 
 			}
 

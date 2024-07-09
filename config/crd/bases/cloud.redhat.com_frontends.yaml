@@ -69,6 +69,108 @@ spec:
                 type: array
               assetsPrefix:
                 type: string
+              chromeNavigation:
+                description: needs a new way of injecting the nav into the navigation
+                  to allow gradual migration, it should be optional before the new
+                  resources are Ready
+                items:
+                  properties:
+                    bundle:
+                      description: which bundle this navigation partial is tied to
+                      type: string
+                    navItems:
+                      description: the navigation partial itself
+                      items:
+                        properties:
+                          appId:
+                            type: string
+                          dynamicNav:
+                            type: string
+                          expandable:
+                            type: boolean
+                          filterable:
+                            type: boolean
+                          groupId:
+                            type: string
+                          href:
+                            type: string
+                          icon:
+                            enum:
+                            - ACSIcon
+                            - AnsibleIcon
+                            - AppServicesIcon
+                            - cloud
+                            - database
+                            - DataScienceIcon
+                            - EdgeIcon
+                            - InsightsIcon
+                            - OpenShiftIcon
+                            - PlaceholderIcon
+                            - QuayIoIcon
+                            - RHIcon
+                            - ServicesIcon
+                            - shield
+                            - SubscriptionsIcon
+                            - trend-up
+                            - TrustedContentIcon
+                            - wrench
+                            type: string
+                          id:
+                            type: string
+                          isExternal:
+                            type: boolean
+                          isHidden:
+                            type: boolean
+                          navItems:
+                            description: kubebuilder struggles validating recursive
+                              fields, it has to be helped a bit
+                            x-kubernetes-preserve-unknown-fields: true
+                          notifier:
+                            type: string
+                          permissions:
+                            items:
+                              properties:
+                                apps:
+                                  items:
+                                    type: string
+                                  type: array
+                                args:
+                                  description: 'an arg can technically be any value,
+                                    but we''re going to restrict it to strings for
+                                    now FIXME: allow anything'
+                                  items:
+                                    anyOf:
+                                    - type: integer
+                                    - type: string
+                                    x-kubernetes-int-or-string: true
+                                  type: array
+                                method:
+                                  type: string
+                              required:
+                              - method
+                              type: object
+                            type: array
+                          product:
+                            type: string
+                          routes:
+                            x-kubernetes-preserve-unknown-fields: true
+                          subTitle:
+                            type: string
+                          title:
+                            type: string
+                        required:
+                        - title
+                        type: object
+                      type: array
+                    sectionId:
+                      description: specifies the mount point for the navigation partial
+                      type: string
+                  required:
+                  - bundle
+                  - navItems
+                  - sectionId
+                  type: object
+                type: array
               deploymentRepo:
                 type: string
               disabled:
@@ -101,10 +203,18 @@ spec:
                         items:
                           type: string
                         type: array
+                      ssoUrl:
+                        type: string
                     type: object
                   defaultDocumentTitle:
                     type: string
                   manifestLocation:
+                    type: string
+                  moduleID:
+                    description: artificial field to store the ID. It exists because
+                      of the naming limitations of webpack remote containers using
+                      the `var` typ It needs to be camelCase and the name needs to
+                      be parsed in some cases
                     type: string
                   modules:
                     items:
@@ -152,68 +262,54 @@ spec:
                     href:
                       type: string
                     icon:
+                      enum:
+                      - ACSIcon
+                      - AnsibleIcon
+                      - AppServicesIcon
+                      - cloud
+                      - database
+                      - DataScienceIcon
+                      - EdgeIcon
+                      - InsightsIcon
+                      - OpenShiftIcon
+                      - PlaceholderIcon
+                      - QuayIoIcon
+                      - RHIcon
+                      - ServicesIcon
+                      - shield
+                      - SubscriptionsIcon
+                      - trend-up
+                      - TrustedContentIcon
+                      - wrench
+                      type: string
+                    id:
                       type: string
                     isExternal:
                       type: boolean
+                    isHidden:
+                      type: boolean
                     navItems:
-                      items:
-                        properties:
-                          appId:
-                            type: string
-                          expandable:
-                            type: boolean
-                          filterable:
-                            type: boolean
-                          groupId:
-                            type: string
-                          href:
-                            type: string
-                          isExternal:
-                            type: boolean
-                          notifier:
-                            type: string
-                          permissions:
-                            items:
-                              properties:
-                                args:
-                                  items:
-                                    type: string
-                                  type: array
-                                method:
-                                  type: string
-                              required:
-                              - method
-                              type: object
-                            type: array
-                          product:
-                            type: string
-                          routes:
-                            items:
-                              description: EmbeddedRoutes allow deeply nested navs
-                                to have support for routes
-                              properties:
-                                appId:
-                                  type: string
-                                href:
-                                  type: string
-                                product:
-                                  type: string
-                                title:
-                                  type: string
-                              type: object
-                            type: array
-                          title:
-                            type: string
-                        required:
-                        - title
-                        type: object
-                      type: array
+                      description: kubebuilder struggles validating recursive fields,
+                        it has to be helped a bit
+                      x-kubernetes-preserve-unknown-fields: true
+                    notifier:
+                      type: string
                     permissions:
                       items:
                         properties:
-                          args:
+                          apps:
                             items:
                               type: string
+                            type: array
+                          args:
+                            description: 'an arg can technically be any value, but
+                              we''re going to restrict it to strings for now FIXME:
+                              allow anything'
+                            items:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              x-kubernetes-int-or-string: true
                             type: array
                           method:
                             type: string
@@ -224,20 +320,9 @@ spec:
                     product:
                       type: string
                     routes:
-                      items:
-                        description: EmbeddedRoutes allow deeply nested navs to have
-                          support for routes
-                        properties:
-                          appId:
-                            type: string
-                          href:
-                            type: string
-                          product:
-                            type: string
-                          title:
-                            type: string
-                        type: object
-                      type: array
+                      x-kubernetes-preserve-unknown-fields: true
+                    subTitle:
+                      type: string
                     title:
                       type: string
                   required:

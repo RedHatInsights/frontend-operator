@@ -39,6 +39,15 @@ type ServiceMonitorConfig struct {
 	Disabled bool `json:"disabled,omitempty"`
 }
 
+type ChromeNavigation struct {
+	// which bundle this navigation partial is tied to
+	Bundle string `json:"bundle" yaml:"bundle"`
+	// specifies the mount point for the navigation partial
+	SectionId string `json:"sectionId" yaml:"sectionId"`
+	// the navigation partial itself
+	NavItems []*ChromeNavItem `json:"navItems" yaml:"navItems"`
+}
+
 // FrontendSpec defines the desired state of Frontend
 type FrontendSpec struct {
 	Disabled       bool                 `json:"disabled,omitempty" yaml:"disabled,omitempty"`
@@ -51,8 +60,14 @@ type FrontendSpec struct {
 	Service        string               `json:"service,omitempty" yaml:"service,omitempty"`
 	ServiceMonitor ServiceMonitorConfig `json:"serviceMonitor,omitempty" yaml:"serviceMontior,omitempty"`
 	Module         *FedModule           `json:"module,omitempty" yaml:"module,omitempty"`
-	NavItems       []*BundleNavItem     `json:"navItems,omitempty" yaml:"navItems,omitempty"`
+	NavItems       []*ChromeNavItem     `json:"navItems,omitempty" yaml:"navItems,omitempty"`
 	AssetsPrefix   string               `json:"assetsPrefix,omitempty" yaml:"assetsPrefix,omitempty"`
+
+	// needs a new way of injecting the nav into the navigation
+	// to allow gradual migration, it should be optional before the new resources are Ready
+	// +optional
+	ChromeNavigation []*ChromeNavigation `json:"chromeNavigation,omitempty" yaml:"chromeNavigation,omitempty"`
+
 	// Akamai cache bust opt-out
 	AkamaiCacheBustDisable bool `json:"akamaiCacheBustDisable,omitempty" yaml:"akamaiCacheBustDisable,omitempty"`
 	// Files to cache bust
@@ -77,6 +92,7 @@ type FrontendDeployments struct {
 
 type FedModuleConfig struct {
 	SSOScopes []string `json:"ssoScopes,omitempty" yaml:"ssoScopes,omitempty"`
+	SSOURL    string   `json:"ssoUrl,omitempty" yaml:"ssoUrl,omitempty"`
 }
 
 type FedModulesAnalytics struct {
@@ -89,6 +105,10 @@ type FedModule struct {
 	Analytics            *FedModulesAnalytics `json:"analytics,omitempty" yaml:"analytics,omitempty"`
 	DefaultDocumentTitle string               `json:"defaultDocumentTitle,omitempty" yaml:"defaultDocumentTitle,omitempty"`
 	Modules              []Module             `json:"modules" yaml:"modules"`
+	// artificial field to store the ID.
+	// It exists because of the naming limitations of webpack remote containers using the `var` typ
+	// It needs to be camelCase and the name needs to be parsed in some cases
+	ModuleID string `json:"moduleID,omitempty" yaml:"moduleID,omitempty"`
 }
 
 type Module struct {
