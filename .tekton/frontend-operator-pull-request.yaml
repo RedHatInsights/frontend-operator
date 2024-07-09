@@ -268,7 +268,7 @@ spec:
             
             cd ${FEO_PATH}
 
-            dnf install make
+            dnf install make -y
             make kuttl
     - name: prefetch-dependencies
       params:
