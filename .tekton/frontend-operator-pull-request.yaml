@@ -250,7 +250,7 @@ spec:
         - name: TEST_OUTPUT
           description: Test output
         steps:
-        - image: fedora
+        - image: registry.access.redhat.com/ubi8/go-toolset:1.20.12-5.1712568462
           env:
           - name: SNAPSHOT
             value: $(params.SNAPSHOT)
@@ -267,8 +267,6 @@ spec:
             FEO_PATH="/workspace/output/source"
             
             cd ${FEO_PATH}
-
-            dnf install make -y
             make kuttl
     - name: prefetch-dependencies
       params:
