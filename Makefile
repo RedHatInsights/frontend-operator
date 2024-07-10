@@ -130,9 +130,9 @@ kuttl: manifests envtest generate fmt vet
 	# tar zxvf "${KREW}.tar.gz" && \
 	# ./"${KREW}" install krew
 
-	# export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
-	# export PATH="/bins:$PATH"
-	export PATH="/.local/bin:$PATH"
+	# export PATH="${KREW_ROOT:-${HOME}/.krew}/bin:${PATH}"
+	# export PATH="/bins:${PATH}"
+	export PATH="/.local/bin:${PATH}"
 
 	# # Install kuttl with krew
 	# kubectl krew install kuttl
