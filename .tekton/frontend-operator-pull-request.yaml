@@ -207,7 +207,7 @@ spec:
         - name: TEST_OUTPUT
           description: Test output
         steps:
-        - image: registry.access.redhat.com/ubi8/go-toolset:1.20.12-5.1712568462
+        - image: registry.access.redhat.com/ubi8/go-toolset:1.21
           env:
           - name: SNAPSHOT
             value: $(params.SNAPSHOT)
