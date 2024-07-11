@@ -250,7 +250,7 @@ spec:
         - name: TEST_OUTPUT
           description: Test output
         steps:
-        - image: quay.io/mknop_console_dot/konflux-go-kubectl:0001
+        - image: quay.io/mknop_console_dot/konflux-go-kubectl:latest
           env:
           - name: SNAPSHOT
             value: $(params.SNAPSHOT)
