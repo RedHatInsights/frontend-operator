@@ -250,7 +250,7 @@ spec:
         - name: TEST_OUTPUT
           description: Test output
         steps:
-        - image: registry.access.redhat.com/ubi8/go-toolset:1.20.12-5.1712568462
+        - image: quay.io/mknop_console_dot/konflux-go-kubectl:0001
           env:
           - name: SNAPSHOT
             value: $(params.SNAPSHOT)

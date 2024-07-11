@@ -116,26 +116,21 @@ junit: gotestsum manifests envtest generate fmt vet
 
 # entry point for testing kuttl with kind
 kuttl: manifests envtest generate fmt vet
-	curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-	chmod +x kubectl
-	mkdir -p ~/.local/bin
-	mv ./kubectl ~/.local/bin/kubectl
+	# Install krew for kubectl
+	set -x; cd "$(mktemp -d)" && \
+	OS="$(uname | tr '[:upper:]' '[:lower:]')" && \
+	ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" && \
+	KREW="krew-${OS}_${ARCH}" && \
+	curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" && \
+	tar zxvf "${KREW}.tar.gz" && \
+	./"${KREW}" install krew
 
-	# # Install krew for kubectl
-	# set -x; cd "$(mktemp -d)" && \
-	# OS="$(uname | tr '[:upper:]' '[:lower:]')" && \
-	# ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')" && \
-	# KREW="krew-${OS}_${ARCH}" && \
-	# curl -fsSLO "https://github.com/kubernetes-sigs/krew/releases/latest/download/${KREW}.tar.gz" && \
-	# tar zxvf "${KREW}.tar.gz" && \
-	# ./"${KREW}" install krew
-
-	# export PATH="${KREW_ROOT:-${HOME}/.krew}/bin:${PATH}"
-	# export PATH="/bins:${PATH}"
+	export PATH="${KREW_ROOT:-${HOME}/.krew}/bin:${PATH}"
+	export PATH="/bins:${PATH}"
 	export PATH="/.local/bin:${PATH}"
 
-	# # Install kuttl with krew
-	# kubectl krew install kuttl
+	# Install kuttl with krew
+	kubectl krew install kuttl
 
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" kubectl kuttl test --config kuttl-config.yml  ./tests/e2e
 	
