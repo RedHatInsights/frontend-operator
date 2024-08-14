@@ -4,6 +4,8 @@ set -exv
 
 mkdir -p "$PWD/.docker"
 
+echo $PWD
+
 ghprbPullId=${ghprbPullId:-0001}
 CONTAINER_NAME="${FEO_CONTAINER_NAME:-frontend-operator-pr-check-$ghprbPullId}"
 docker rm -f $CONTAINER_NAME
