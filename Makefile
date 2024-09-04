@@ -41,12 +41,15 @@ BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
+	
+# Go command to use, enables using different Go versions
+GO_CMD ?= go
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
-ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
+ifeq (,$(shell $(GO_CMD) env GOBIN))
+GOBIN=$(shell $(GO_CMD) env GOPATH)/bin
 else
-GOBIN=$(shell go env GOBIN)
+GOBIN=$(shell $(GO_CMD) env GOBIN)
 endif
 
 # Setting SHELL to bash allows bash commands to be executed by recipes.
@@ -97,18 +100,17 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 fmt: ## Run go fmt against code.
-	go fmt ./...
+	$(GO_CMD) fmt ./...
 
 vet: ## Run go vet against code.
-	go vet ./...
-
+	$(GO_CMD) vet ./...
 
 ENVTEST = $(shell pwd)/testbin/bin/setup-envtest
 envtest: ## Download envtest-setup locally if necessary.
 	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@d0396a3d6f9fb554ef2da382a3d0bf05f7565e65)
 
 test: manifests envtest generate fmt vet	
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GO_CMD) test ./... -coverprofile cover.out
 
 # gotestsum is used to generate xml for the tests. Embedded in the Dockerfile.pr
 junit: gotestsum manifests envtest generate fmt vet
@@ -121,10 +123,10 @@ kuttl: manifests envtest generate fmt vet
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.
-	go build -o bin/manager main.go
+	$(GO_CMD) build -o bin/manager main.go
 
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go
+	$(GO_CMD) run ./main.go
 
 docker-build: test ## Build docker image with the manager.
 	docker build -t ${IMG} .	
@@ -146,7 +148,7 @@ install-resources:
 	oc apply -f examples/chrome.yaml -n boot
 
 run-local:
-	go run ./main.go --metrics-bind-address :9090 --health-probe-bind-address :9091
+	$(GO_CMD) run ./main.go --metrics-bind-address :9090 --health-probe-bind-address :9091
 
 ##@ Deployment
 
@@ -181,7 +183,7 @@ PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
 @[ -f $(1) ] || { \
 set -e ;\
-GOBIN=$(PROJECT_DIR)/testbin/bin go install $(2) ;\
+GOBIN=$(PROJECT_DIR)/testbin/bin $(GO_CMD) install $(2) ;\
 }
 endef
 
@@ -208,7 +210,7 @@ ifeq (,$(shell which opm 2>/dev/null))
 	@{ \
 	set -e ;\
 	mkdir -p $(dir $(OPM)) ;\
-	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
+	OS=$(shell $(GO_CMD) env GOOS) && ARCH=$(shell $(GO_CMD) env GOARCH) && \
 	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.15.1/$${OS}-$${ARCH}-opm ;\
 	chmod +x $(OPM) ;\
 	}
