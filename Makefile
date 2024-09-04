@@ -45,6 +45,12 @@ CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 # Go command to use, enables using different Go versions
 GO_CMD ?= go
 
+
+PROJECT_DIR := $(shell pwd)
+
+# directory to store all binaries used during tests
+TESTBIN_DIR := $(PROJECT_DIR)/testbin/bin
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell $(GO_CMD) env GOBIN))
 GOBIN=$(shell $(GO_CMD) env GOPATH)/bin
@@ -105,7 +111,7 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	$(GO_CMD) vet ./...
 
-ENVTEST = $(shell pwd)/testbin/bin/setup-envtest
+ENVTEST = $(TESTBIN_DIR)/setup-envtest
 envtest: ## Download envtest-setup locally if necessary.
 	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@d0396a3d6f9fb554ef2da382a3d0bf05f7565e65)
 
@@ -114,7 +120,7 @@ test: manifests envtest generate fmt vet
 
 # gotestsum is used to generate xml for the tests. Embedded in the Dockerfile.pr
 junit: gotestsum manifests envtest generate fmt vet
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(PROJECT_DIR)/testbin/bin/gotestsum --junitfile artifacts/junit-ginko.xml -- ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(TESTBIN_DIR)/gotestsum --junitfile artifacts/junit-ginko.xml -- ./... -coverprofile cover.out
 
 # entry point for testing kuttl with kind
 kuttl: manifests envtest generate fmt vet
@@ -166,24 +172,23 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
 
-CONTROLLER_GEN = $(shell pwd)/testbin/bin/controller-gen
+CONTROLLER_GEN = $(TESTBIN_DIR)/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
 	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0)
 
-KUSTOMIZE = $(shell pwd)/testbin/bin/kustomize
+KUSTOMIZE = $(TESTBIN_DIR)/kustomize
 kustomize: ## Download kustomize locally if necessary.
 	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.5.2)
 
-GOTESTSUM = $(shell pwd)/testbin/bin/gotestsum
+GOTESTSUM = $(TESTBIN_DIR)/gotestsum
 gotestsum: ## Download if necessary
 	$(call go-get-tool,$(GOTESTSUM),gotest.tools/gotestsum@v1.8.1)
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
-PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
 @[ -f $(1) ] || { \
 set -e ;\
-GOBIN=$(PROJECT_DIR)/testbin/bin $(GO_CMD) install $(2) ;\
+GOBIN=$(TESTBIN_DIR) $(GO_CMD) install $(2) ;\
 }
 endef
 
@@ -242,3 +247,6 @@ catalog-build: opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+
+clean:
+	rm -r $(TESTBIN_DIR)
