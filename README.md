@@ -1,5 +1,7 @@
 # Insights Frontend Operator
 
+# IGNORE
+
 A Kubernetes operator designed to deploy and managed containerized frontends.
 
 ## Usage
