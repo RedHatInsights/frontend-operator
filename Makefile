@@ -41,12 +41,21 @@ BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
+	
+# Go command to use, enables using different Go versions
+GO_CMD ?= go
+
+
+PROJECT_DIR := $(shell pwd)
+
+# directory to store all binaries used during tests
+TESTBIN_DIR := $(PROJECT_DIR)/testbin/bin
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
-ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
+ifeq (,$(shell $(GO_CMD) env GOBIN))
+GOBIN=$(shell $(GO_CMD) env GOPATH)/bin
 else
-GOBIN=$(shell go env GOBIN)
+GOBIN=$(shell $(GO_CMD) env GOBIN)
 endif
 
 # Setting SHELL to bash allows bash commands to be executed by recipes.
@@ -97,22 +106,21 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 fmt: ## Run go fmt against code.
-	go fmt ./...
+	$(GO_CMD) fmt ./...
 
 vet: ## Run go vet against code.
-	go vet ./...
+	$(GO_CMD) vet ./...
 
-
-ENVTEST = $(shell pwd)/testbin/bin/setup-envtest
+ENVTEST = $(TESTBIN_DIR)/setup-envtest
 envtest: ## Download envtest-setup locally if necessary.
 	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@d0396a3d6f9fb554ef2da382a3d0bf05f7565e65)
 
 test: manifests envtest generate fmt vet	
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GO_CMD) test ./... -coverprofile cover.out
 
 # gotestsum is used to generate xml for the tests. Embedded in the Dockerfile.pr
 junit: gotestsum manifests envtest generate fmt vet
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(PROJECT_DIR)/testbin/bin/gotestsum --junitfile artifacts/junit-ginko.xml -- ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(TESTBIN_DIR)/gotestsum --junitfile artifacts/junit-ginko.xml -- ./... -coverprofile cover.out
 
 # entry point for testing kuttl with kind
 kuttl: manifests envtest generate fmt vet
@@ -121,10 +129,10 @@ kuttl: manifests envtest generate fmt vet
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.
-	go build -o bin/manager main.go
+	$(GO_CMD) build -o bin/manager main.go
 
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go
+	$(GO_CMD) run ./main.go
 
 docker-build: test ## Build docker image with the manager.
 	docker build -t ${IMG} .	
@@ -146,7 +154,7 @@ install-resources:
 	oc apply -f examples/chrome.yaml -n boot
 
 run-local:
-	go run ./main.go --metrics-bind-address :9090 --health-probe-bind-address :9091
+	$(GO_CMD) run ./main.go --metrics-bind-address :9090 --health-probe-bind-address :9091
 
 ##@ Deployment
 
@@ -164,24 +172,23 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
 
-CONTROLLER_GEN = $(shell pwd)/testbin/bin/controller-gen
+CONTROLLER_GEN = $(TESTBIN_DIR)/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
 	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0)
 
-KUSTOMIZE = $(shell pwd)/testbin/bin/kustomize
+KUSTOMIZE = $(TESTBIN_DIR)/kustomize
 kustomize: ## Download kustomize locally if necessary.
 	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.5.2)
 
-GOTESTSUM = $(shell pwd)/testbin/bin/gotestsum
+GOTESTSUM = $(TESTBIN_DIR)/gotestsum
 gotestsum: ## Download if necessary
 	$(call go-get-tool,$(GOTESTSUM),gotest.tools/gotestsum@v1.8.1)
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
-PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool
 @[ -f $(1) ] || { \
 set -e ;\
-GOBIN=$(PROJECT_DIR)/testbin/bin go install $(2) ;\
+GOBIN=$(TESTBIN_DIR) $(GO_CMD) install $(2) ;\
 }
 endef
 
@@ -208,7 +215,7 @@ ifeq (,$(shell which opm 2>/dev/null))
 	@{ \
 	set -e ;\
 	mkdir -p $(dir $(OPM)) ;\
-	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
+	OS=$(shell $(GO_CMD) env GOOS) && ARCH=$(shell $(GO_CMD) env GOARCH) && \
 	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.15.1/$${OS}-$${ARCH}-opm ;\
 	chmod +x $(OPM) ;\
 	}
@@ -240,3 +247,6 @@ catalog-build: opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+
+clean:
+	rm -r $(TESTBIN_DIR)
