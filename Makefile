@@ -250,3 +250,6 @@ catalog-push: ## Push a catalog image.
 
 clean:
 	rm -r $(TESTBIN_DIR)
+
+lint:
+	golangci-lint run
