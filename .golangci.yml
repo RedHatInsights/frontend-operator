@@ -1,19 +1,19 @@
 linters:
   # Enable specific linter
-  # https://golangci-lint.run/usage/linters/#enabled-by-default
   enable:
-    - errcheck
+# https://golangci-lint.run/usage/linters/#enabled-by-default
+#    - errcheck
+#    - gosimple
+#    - govet
+#    - ineffassign
+#    - staticcheck
+#    - unused
     - gocritic
     - gofmt
     - goimports
     - gosec
-    - gosimple
-    - govet
-    - ineffassign
     - revive
-    - staticcheck
     - typecheck
-    - unused
     - bodyclose
 issues:
   exclude-rules:
