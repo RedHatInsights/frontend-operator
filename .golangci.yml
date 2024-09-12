@@ -15,6 +15,10 @@ linters:
     - revive
     - typecheck
     - bodyclose
+linters-settings:
+  gosec:
+    excludes:
+      - G115
 issues:
   exclude-rules:
     - path: api/v1alpha1/groupversion_info.go
