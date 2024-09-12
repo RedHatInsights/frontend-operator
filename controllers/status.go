@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"math"
 
 	"github.com/RedHatInsights/clowder/controllers/cloud.redhat.com/errors"
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
@@ -53,6 +54,7 @@ func SetFrontendConditions(ctx context.Context, client client.Client, o *crd.Fro
 
 	condition.Type = crd.FrontendsReady
 	condition.LastTransitionTime = metav1.Now()
+	//FIXME: condition is always false
 	if err != nil {
 		condition.Message += err.Error()
 		condition.Reason = "Error"
@@ -112,7 +114,15 @@ func GetFrontendFigures(ctx context.Context, client client.Client, o *crd.Fronte
 		return crd.FrontendDeployments{}, "", errors.Wrap("count resources: ", err)
 	}
 
+	if results.Managed < math.MinInt32 || results.Managed > math.MaxInt32 {
+		return crd.FrontendDeployments{}, "", errors.NewClowderError("value out of range for int32")
+	}
 	deploymentStats.ManagedDeployments = int32(results.Managed)
+
+	if results.Ready < math.MinInt32 || results.Ready > math.MaxInt32 {
+		return crd.FrontendDeployments{}, "", errors.NewClowderError("value out of range for int32")
+	}
 	deploymentStats.ReadyDeployments = int32(results.Ready)
+
 	return deploymentStats, results.BrokenMessage, nil
 }
