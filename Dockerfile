@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM registry.access.redhat.com/ubi8/go-toolset:1.19.13-2.1698062273 as base
+FROM registry.access.redhat.com/ubi8/go-toolset:1.21.11-8.1724662611 as base
 
 WORKDIR /workspace
 
