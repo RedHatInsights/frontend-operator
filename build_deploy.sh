@@ -32,6 +32,7 @@ if docker buildx ls | grep -q "multiarchbuilder"; then
         docker buildx build --platform linux/amd64,linux/arm64 -t "${IMAGE}:${SECURITY_COMPLIANCE_TAG}" --push .
     else
         docker buildx build --platform linux/amd64,linux/arm64 -t "${IMAGE}:${IMAGE_TAG}" --push .
+    fi
 else
     echo "Falling back to standard build and push"
     # Standard build and push
@@ -41,4 +42,5 @@ else
     else
         docker build -t "${IMAGE}:${IMAGE_TAG}" .
         docker push "${IMAGE}:${IMAGE_TAG}"
+    fi
 fi
