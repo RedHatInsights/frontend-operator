@@ -4,6 +4,7 @@ set -exv
 
 IMAGE="quay.io/cloudservices/frontend-operator"
 IMAGE_TAG=$(git rev-parse --short=7 HEAD)
+SECURITY_COMPLIANCE_TAG="sc-$(date +%Y%m%d)-$(git rev-parse --short=7 HEAD)"
 export BUILDER_NAME="builder-${JOB_NAME}-${BUILD_ID}"
 
 if [[ -z "$QUAY_USER" || -z "$QUAY_TOKEN" ]]; then
@@ -27,10 +28,19 @@ if docker buildx ls | grep -q "multiarchbuilder"; then
     docker buildx use multiarchbuilder
     echo "Using multiarchbuilder for buildx"
     # Multi-architecture build
-    docker buildx build --platform linux/amd64,linux/arm64 -t "${IMAGE}:${IMAGE_TAG}" --push .
+    if [[ $GIT_BRANCH == *"security-compliance"* ]]; then
+        docker buildx build --platform linux/amd64,linux/arm64 -t "${IMAGE}:${SECURITY_COMPLIANCE_TAG}" --push .
+    else
+        docker buildx build --platform linux/amd64,linux/arm64 -t "${IMAGE}:${IMAGE_TAG}" --push .
+    fi
 else
     echo "Falling back to standard build and push"
     # Standard build and push
-    docker build -t "${IMAGE}:${IMAGE_TAG}" .
-    docker push "${IMAGE}:${IMAGE_TAG}"
+    if [[ $GIT_BRANCH == *"security-compliance"* ]]; then
+        docker build -t "${IMAGE}:${SECURITY_COMPLIANCE_TAG}" .
+        docker push "${IMAGE}:${SECURITY_COMPLIANCE_TAG}"
+    else
+        docker build -t "${IMAGE}:${IMAGE_TAG}" .
+        docker push "${IMAGE}:${IMAGE_TAG}"
+    fi
 fi
