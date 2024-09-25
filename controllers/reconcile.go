@@ -677,19 +677,13 @@ func (r *FrontendReconciliation) createAnnotationsAndPopulate(nn types.Namespace
 func (r *FrontendReconciliation) getFrontendPaths() []string {
 	frontendPaths := r.Frontend.Spec.Frontend.Paths
 	defaultPath := fmt.Sprintf("/apps/%s", r.Frontend.Name)
-	defaultBetaPath := fmt.Sprintf("/beta/apps/%s", r.Frontend.Name)
 
 	if r.Frontend.Spec.AssetsPrefix != "" {
 		defaultPath = fmt.Sprintf("/%s/%s", r.Frontend.Spec.AssetsPrefix, r.Frontend.Name)
-		defaultBetaPath = fmt.Sprintf("/beta/%s/%s", r.Frontend.Spec.AssetsPrefix, r.Frontend.Name)
 	}
 
 	if !r.Frontend.Spec.Frontend.HasPath(defaultPath) {
 		frontendPaths = append(frontendPaths, defaultPath)
-	}
-
-	if !r.Frontend.Spec.Frontend.HasPath(defaultBetaPath) {
-		frontendPaths = append(frontendPaths, defaultBetaPath)
 	}
 
 	return frontendPaths

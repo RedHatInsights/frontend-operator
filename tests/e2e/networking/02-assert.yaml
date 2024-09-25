@@ -32,13 +32,6 @@ spec:
                 name: chrome
                 port:
                   number: 8000
-          - path: /beta/apps/chrome
-            pathType: Prefix
-            backend:
-              service:
-                name: chrome
-                port:
-                  number: 8000
 ---
 kind: Service
 apiVersion: v1
