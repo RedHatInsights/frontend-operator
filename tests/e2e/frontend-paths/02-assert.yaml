@@ -40,11 +40,4 @@ spec:
                 name: chrome
                 port:
                   number: 8000
-          - path: /preview/apps/chrome
-            pathType: Prefix
-            backend:
-              service:
-                name: chrome
-                port:
-                  number: 8000
 

@@ -106,15 +106,9 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment)
 	// This will allow chrome to incorperate the generated nav and fed-modules.json
 	// at run time. This means chrome can merge the config in mixed environments
 
-	// We need to have the config mounted in 2 places because of the preview/stable
-	// split. We need to have the config mounted in the preview and stable directories
 	volumeMounts = append(volumeMounts, v1.VolumeMount{
 		Name:      "config",
 		MountPath: "/opt/app-root/src/build/stable/operator-generated",
-	})
-	volumeMounts = append(volumeMounts, v1.VolumeMount{
-		Name:      "config",
-		MountPath: "/opt/app-root/src/build/preview/operator-generated",
 	})
 
 	// We generate SSL cert mounts conditionally
@@ -684,12 +678,10 @@ func (r *FrontendReconciliation) getFrontendPaths() []string {
 	frontendPaths := r.Frontend.Spec.Frontend.Paths
 	defaultPath := fmt.Sprintf("/apps/%s", r.Frontend.Name)
 	defaultBetaPath := fmt.Sprintf("/beta/apps/%s", r.Frontend.Name)
-	defaultPreviewPath := fmt.Sprintf("/preview/apps/%s", r.Frontend.Name)
 
 	if r.Frontend.Spec.AssetsPrefix != "" {
 		defaultPath = fmt.Sprintf("/%s/%s", r.Frontend.Spec.AssetsPrefix, r.Frontend.Name)
 		defaultBetaPath = fmt.Sprintf("/beta/%s/%s", r.Frontend.Spec.AssetsPrefix, r.Frontend.Name)
-		defaultPreviewPath = fmt.Sprintf("/preview/%s/%s", r.Frontend.Spec.AssetsPrefix, r.Frontend.Name)
 	}
 
 	if !r.Frontend.Spec.Frontend.HasPath(defaultPath) {
@@ -698,10 +690,6 @@ func (r *FrontendReconciliation) getFrontendPaths() []string {
 
 	if !r.Frontend.Spec.Frontend.HasPath(defaultBetaPath) {
 		frontendPaths = append(frontendPaths, defaultBetaPath)
-	}
-
-	if !r.Frontend.Spec.Frontend.HasPath(defaultPreviewPath) {
-		frontendPaths = append(frontendPaths, defaultPreviewPath)
 	}
 
 	return frontendPaths
