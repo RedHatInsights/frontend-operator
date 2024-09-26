@@ -302,7 +302,7 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 	pathsToCacheBust := createCachePurgePathList(r.Frontend, r.FrontendEnvironment)
 
 	// Construct the akamai cache bust command
-	command := fmt.Sprintf("sleep 60; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete %s", strings.Join(pathsToCacheBust, " "))
+	command := fmt.Sprintf("sleep 180; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete %s", strings.Join(pathsToCacheBust, " "))
 
 	// Modify the obejct to set the things we care about
 	cacheBustContainer := v1.Container{
