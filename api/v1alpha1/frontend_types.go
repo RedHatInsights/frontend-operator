@@ -76,26 +76,54 @@ type FrontendDeployments struct {
 }
 
 type FedModule struct {
-	ManifestLocation string              `json:"manifestLocation" yaml:"manifestLocation"`
-	Modules          []Module            `json:"modules,omitempty" yaml:"modules,omitempty"`
-	ModuleID         string              `json:"moduleID,omitempty" yaml:"moduleID,omitempty"`
-	Config           *apiextensions.JSON `json:"config,omitempty" yaml:"config,omitempty"`
-	FullProfile      *bool               `json:"fullProfile,omitempty" yaml:"fullProfile,omitempty"`
+	ManifestLocation     string              `json:"manifestLocation" yaml:"manifestLocation"`
+	Modules              []Module            `json:"modules,omitempty" yaml:"modules,omitempty"`
+	ModuleID             string              `json:"moduleID,omitempty" yaml:"moduleID,omitempty"`
+	Config               *apiextensions.JSON `json:"config,omitempty" yaml:"config,omitempty"` // Type does not match what is currently in chrome-service spec
+	ModuleConfig         *ModuleConfig       `json:"moduleConfig,omitempty" yaml:"moduleConfig,omitempty"`
+	FullProfile          *bool               `json:"fullProfile,omitempty" yaml:"fullProfile,omitempty"`
+	DefaultDocumentTitle string              `json:"defaultDocumentTitle,omitempty" yaml:"defaultDocumentTitle,omitempty"`
+	IsFedramp            *bool               `json:"isFedramp,omitempty" yaml:"isFedramp,omitempty"`
+	Analytics            *Analytics          `json:"analytics,omitempty" yaml:"analytics,omitempty"`
 }
 
 type Module struct {
 	ID                   string   `json:"id" yaml:"id"`
 	Module               string   `json:"module" yaml:"module"`
 	Routes               []Route  `json:"routes" yaml:"routes"`
-	Dependencies         []string `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
-	OptionalDependencies []string `json:"optionalDependencies,omitempty" yaml:"optionalDependencies,omitempty"`
+	Dependencies         []string `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`                 // not in the current chrome-service spec
+	OptionalDependencies []string `json:"optionalDependencies,omitempty" yaml:"optionalDependencies,omitempty"` // not in the current chrome-service spec
+}
+
+type ModuleConfig struct {
+	SupportCaseData SupportCaseData `json:"supportCaseData,omitempty" yaml:"supportCaseData,omitempty"`
+	SSOScopes       []string        `json:"ssoScopes,omitempty" yaml:"ssoScopes,omitempty"`
 }
 
 type Route struct {
-	Pathname string              `json:"pathname" yaml:"pathname"`
-	Dynamic  bool                `json:"dynamic,omitempty" yaml:"dynamic,omitempty"`
-	Exact    bool                `json:"exact,omitempty" yaml:"exact,omitempty"`
-	Props    *apiextensions.JSON `json:"props,omitempty" yaml:"props,omitempty"`
+	Pathname        string              `json:"pathname" yaml:"pathname"`
+	Dynamic         bool                `json:"dynamic,omitempty" yaml:"dynamic,omitempty"`
+	Exact           bool                `json:"exact,omitempty" yaml:"exact,omitempty"`
+	Props           *apiextensions.JSON `json:"props,omitempty" yaml:"props,omitempty"`
+	FullProfile     bool                `json:"fullProfile,omitempty" yaml:"fullProfile,omitempty"`
+	IsFedramp       bool                `json:"isFedramp,omitempty" yaml:"isFedramp,omitempty"`
+	SupportCaseData *SupportCaseData    `json:"supportCaseData,omitempty" yaml:"supportCaseData,omitempty"`
+	Permissions     []Permission        `json:"permissions,omitempty" yaml:"permissions,omitempty"`
+}
+
+type Analytics struct {
+	APIKey string `json:"APIKey" yaml:"APIKey"`
+}
+
+type SupportCaseData struct {
+	Version string `json:"version" yaml:"version"`
+	Product string `json:"product" yaml:"product"`
+}
+
+type Permission struct {
+	Method string   `json:"method" yaml:"method"`
+	Apps   []string `json:"apps,omitempty" yaml:"apps,omitempty"`
+	Args   []string `json:"args,omitempty" yaml:"args,omitempty"` // TODO validate array item type (string?)
 }
 
 // +kubebuilder:object:root=true

@@ -92,12 +92,40 @@ spec:
                 type: string
               module:
                 properties:
+                  analytics:
+                    properties:
+                      APIKey:
+                        type: string
+                    required:
+                    - APIKey
+                    type: object
                   config:
                     x-kubernetes-preserve-unknown-fields: true
+                  defaultDocumentTitle:
+                    type: string
                   fullProfile:
+                    type: boolean
+                  isFedramp:
                     type: boolean
                   manifestLocation:
                     type: string
+                  moduleConfig:
+                    properties:
+                      ssoScopes:
+                        items:
+                          type: string
+                        type: array
+                      supportCaseData:
+                        properties:
+                          product:
+                            type: string
+                          version:
+                            type: string
+                        required:
+                        - product
+                        - version
+                        type: object
+                    type: object
                   moduleID:
                     type: string
                   modules:
@@ -122,10 +150,41 @@ spec:
                                 type: boolean
                               exact:
                                 type: boolean
+                              fullProfile:
+                                type: boolean
+                              isFedramp:
+                                type: boolean
                               pathname:
                                 type: string
+                              permissions:
+                                items:
+                                  properties:
+                                    apps:
+                                      items:
+                                        type: string
+                                      type: array
+                                    args:
+                                      items:
+                                        type: string
+                                      type: array
+                                    method:
+                                      type: string
+                                  required:
+                                  - method
+                                  type: object
+                                type: array
                               props:
                                 x-kubernetes-preserve-unknown-fields: true
+                              supportCaseData:
+                                properties:
+                                  product:
+                                    type: string
+                                  version:
+                                    type: string
+                                required:
+                                - product
+                                - version
+                                type: object
                             required:
                             - pathname
                             type: object
