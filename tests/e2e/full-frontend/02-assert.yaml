@@ -1,0 +1,49 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: chrome-frontend
+  namespace: test-full-app
+  labels:
+    frontend: chrome
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: chrome
+spec:
+  selector:
+    matchLabels:
+      frontend: chrome
+  template:
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name:  test-full-app-environment
+            defaultMode: 420
+      containers:
+        - name: fe-image
+          image: 'quay.io/cloudservices/insights-chrome-frontend:720317c'
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9000
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /opt/app-root/src/build/stable/operator-generated
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: test-full-app-environment
+  namespace: test-full-app
+  labels:
+    frontendenv: test-full-app-environment
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      name: test-full-app-environment
+data:
+  fed-modules.json: '{"chrome":{"manifestLocation":"/apps/chrome/js/fed-mods.json","modules":[{"id":"landing","module":"./RootApp","routes":[{"pathname":"/","exact":true,"permissions":[{"method":"withEmail","args":["@redhat.com",2]}]}]},{"id":"landingFoo","module":"./OtherApp","routes":[{"pathname":"/","exact":true}]}],"config":{"ssoUrl":"https://sso.foo.redhat.com"},"fullProfile":false}}'
