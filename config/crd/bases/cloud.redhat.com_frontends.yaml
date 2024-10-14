@@ -164,9 +164,7 @@ spec:
                                         type: string
                                       type: array
                                     args:
-                                      items:
-                                        type: string
-                                      type: array
+                                      x-kubernetes-preserve-unknown-fields: true
                                     method:
                                       type: string
                                   required:

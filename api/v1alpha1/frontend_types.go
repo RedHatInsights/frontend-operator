@@ -121,9 +121,9 @@ type SupportCaseData struct {
 }
 
 type Permission struct {
-	Method string   `json:"method" yaml:"method"`
-	Apps   []string `json:"apps,omitempty" yaml:"apps,omitempty"`
-	Args   []string `json:"args,omitempty" yaml:"args,omitempty"` // TODO validate array item type (string?)
+	Method string              `json:"method" yaml:"method"`
+	Apps   []string            `json:"apps,omitempty" yaml:"apps,omitempty"`
+	Args   *apiextensions.JSON `json:"args,omitempty" yaml:"args,omitempty"` // TODO validate array item type (string?)
 }
 
 // +kubebuilder:object:root=true

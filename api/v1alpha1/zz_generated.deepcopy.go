@@ -683,8 +683,8 @@ func (in *Permission) DeepCopyInto(out *Permission) {
 	}
 	if in.Args != nil {
 		in, out := &in.Args, &out.Args
-		*out = make([]string, len(*in))
-		copy(*out, *in)
+		*out = new(apiextensionsv1.JSON)
+		(*in).DeepCopyInto(*out)
 	}
 }
 
