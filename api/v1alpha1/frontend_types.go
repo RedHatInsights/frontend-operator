@@ -58,6 +58,24 @@ type ServiceTile struct {
 	IsExternal bool   `json:"isExternal,omitempty" yaml:"isExternal,omitempty"`
 }
 
+type WidgetHeaderLink struct {
+	Title string `json:"title" yaml:"title"`
+	Href  string `json:"href" yaml:"href"`
+}
+
+type WidgetConfig struct {
+	Icon        string           `json:"icon" yaml:"icon"`
+	Title       string           `json:"title" yaml:"title"`
+	Permissions []Permission     `json:"permissions,omitempty" yaml:"permissions,omitempty"`
+	HeaderLink  WidgetHeaderLink `json:"headerLink,omitempty" yaml:"headerLink,omitempty"`
+}
+
+type WidgetEntry struct {
+	Scope  string       `json:"scope" yaml:"scope"`
+	Module string       `json:"module" yaml:"module"`
+	Config WidgetConfig `json:"config" yaml:"config"`
+}
+
 // FrontendSpec defines the desired state of Frontend
 type FrontendSpec struct {
 	Disabled       bool                 `json:"disabled,omitempty" yaml:"disabled,omitempty"`
@@ -80,6 +98,8 @@ type FrontendSpec struct {
 	SearchEntries []*SearchEntry `json:"searchEntries,omitempty" yaml:"searchEntries,omitempty"`
 	// Data for the all services dropdown
 	ServiceTiles []*ServiceTile `json:"serviceTiles,omitempty" yaml:"serviceTiles,omitempty"`
+	// Data for the available widgets for the resource
+	WidgetRegistry []*WidgetEntry `json:"widgetRegistry,omitempty" yaml:"widgetRegistry,omitempty"`
 }
 
 var ReconciliationSuccessful = "ReconciliationSuccessful"

@@ -367,6 +367,55 @@ spec:
                 type: array
               title:
                 type: string
+              widgetRegistry:
+                description: Data for the available widgets for the resource
+                items:
+                  properties:
+                    config:
+                      properties:
+                        headerLink:
+                          properties:
+                            href:
+                              type: string
+                            title:
+                              type: string
+                          required:
+                          - href
+                          - title
+                          type: object
+                        icon:
+                          type: string
+                        permissions:
+                          items:
+                            properties:
+                              apps:
+                                items:
+                                  type: string
+                                type: array
+                              args:
+                                x-kubernetes-preserve-unknown-fields: true
+                              method:
+                                type: string
+                            required:
+                            - method
+                            type: object
+                          type: array
+                        title:
+                          type: string
+                      required:
+                      - icon
+                      - title
+                      type: object
+                    module:
+                      type: string
+                    scope:
+                      type: string
+                  required:
+                  - config
+                  - module
+                  - scope
+                  type: object
+                type: array
             required:
             - API
             - deploymentRepo
