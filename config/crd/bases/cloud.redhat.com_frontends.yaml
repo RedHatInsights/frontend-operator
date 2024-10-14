@@ -247,6 +247,33 @@ spec:
                   - title
                   type: object
                 type: array
+              searchEntries:
+                description: The search index partials for the resource
+                items:
+                  properties:
+                    alt_title:
+                      items:
+                        type: string
+                      type: array
+                    description:
+                      type: string
+                    href:
+                      type: string
+                    id:
+                      type: string
+                    isExternal:
+                      type: boolean
+                    title:
+                      type: string
+                  required:
+                  - alt_title
+                  - description
+                  - href
+                  - id
+                  - isExternal
+                  - title
+                  type: object
+                type: array
               service:
                 type: string
               serviceMonitor:
