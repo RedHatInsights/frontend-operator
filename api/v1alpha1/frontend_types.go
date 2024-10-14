@@ -39,6 +39,25 @@ type ServiceMonitorConfig struct {
 	Disabled bool `json:"disabled,omitempty"`
 }
 
+type SearchEntry struct {
+	ID          string   `json:"id" yaml:"id"`
+	Href        string   `json:"href" yaml:"href"`
+	Title       string   `json:"title" yaml:"title"`
+	Description string   `json:"description" yaml:"description"`
+	AltTitle    []string `json:"alt_title" yaml:"alt_title"`
+	IsExternal  bool     `json:"isExternal" yaml:"isExternal"`
+}
+
+type ServiceTile struct {
+	Section    string `json:"section" yaml:"section"`
+	Group      string `json:"group" yaml:"group"`
+	ID         string `json:"id" yaml:"id"`
+	Href       string `json:"href" yaml:"href"`
+	Title      string `json:"title" yaml:"title"`
+	Icon       string `json:"icon" yaml:"icon"`
+	IsExternal bool   `json:"isExternal,omitempty" yaml:"isExternal,omitempty"`
+}
+
 // FrontendSpec defines the desired state of Frontend
 type FrontendSpec struct {
 	Disabled       bool                 `json:"disabled,omitempty" yaml:"disabled,omitempty"`
@@ -57,6 +76,10 @@ type FrontendSpec struct {
 	AkamaiCacheBustDisable bool `json:"akamaiCacheBustDisable,omitempty" yaml:"akamaiCacheBustDisable,omitempty"`
 	// Files to cache bust
 	AkamaiCacheBustPaths []string `json:"akamaiCacheBustPaths,omitempty" yaml:"akamaiCacheBustPaths,omitempty"`
+	// The search index partials for the resource
+	SearchEntries []*SearchEntry `json:"searchEntries,omitempty" yaml:"searchEntries,omitempty"`
+	// Data for the all services dropdown
+	ServiceTiles []*ServiceTile `json:"serviceTiles,omitempty" yaml:"serviceTiles,omitempty"`
 }
 
 var ReconciliationSuccessful = "ReconciliationSuccessful"
