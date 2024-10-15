@@ -70,10 +70,25 @@ type WidgetConfig struct {
 	HeaderLink  WidgetHeaderLink `json:"headerLink,omitempty" yaml:"headerLink,omitempty"`
 }
 
+type WidgetDefaultVariant struct {
+	Width     int `json:"w" yaml:"w"`
+	Height    int `json:"h" yaml:"h"`
+	MaxHeight int `json:"maxH" yaml:"maxH"`
+	MinHeight int `json:"minH" yaml:"minH"`
+}
+
+type WidgetDefaults struct {
+	Small  WidgetDefaultVariant `json:"sm" yaml:"sm"`
+	Medium WidgetDefaultVariant `json:"md" yaml:"md"`
+	Large  WidgetDefaultVariant `json:"lg" yaml:"lg"`
+	XLarge WidgetDefaultVariant `json:"xl" yaml:"xl"`
+}
+
 type WidgetEntry struct {
-	Scope  string       `json:"scope" yaml:"scope"`
-	Module string       `json:"module" yaml:"module"`
-	Config WidgetConfig `json:"config" yaml:"config"`
+	Scope    string         `json:"scope" yaml:"scope"`
+	Module   string         `json:"module" yaml:"module"`
+	Config   WidgetConfig   `json:"config" yaml:"config"`
+	Defaults WidgetDefaults `json:"defaults" yaml:"defaults"`
 }
 
 // FrontendSpec defines the desired state of Frontend

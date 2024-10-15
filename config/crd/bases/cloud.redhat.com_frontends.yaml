@@ -406,12 +406,85 @@ spec:
                       - icon
                       - title
                       type: object
+                    defaults:
+                      properties:
+                        lg:
+                          properties:
+                            h:
+                              type: integer
+                            maxH:
+                              type: integer
+                            minH:
+                              type: integer
+                            w:
+                              type: integer
+                          required:
+                          - h
+                          - maxH
+                          - minH
+                          - w
+                          type: object
+                        md:
+                          properties:
+                            h:
+                              type: integer
+                            maxH:
+                              type: integer
+                            minH:
+                              type: integer
+                            w:
+                              type: integer
+                          required:
+                          - h
+                          - maxH
+                          - minH
+                          - w
+                          type: object
+                        sm:
+                          properties:
+                            h:
+                              type: integer
+                            maxH:
+                              type: integer
+                            minH:
+                              type: integer
+                            w:
+                              type: integer
+                          required:
+                          - h
+                          - maxH
+                          - minH
+                          - w
+                          type: object
+                        xl:
+                          properties:
+                            h:
+                              type: integer
+                            maxH:
+                              type: integer
+                            minH:
+                              type: integer
+                            w:
+                              type: integer
+                          required:
+                          - h
+                          - maxH
+                          - minH
+                          - w
+                          type: object
+                      required:
+                      - lg
+                      - md
+                      - sm
+                      - xl
+                      type: object
                     module:
                       type: string
                     scope:
                       type: string
                   required:
                   - config
+                  - defaults
                   - module
                   - scope
                   type: object
