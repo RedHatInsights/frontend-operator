@@ -11,7 +11,7 @@ metadata:
       kind: Frontend
       name: chrome-big
 spec:
-  replicas: 4
+  replicas: 3
   selector:
     matchLabels:
       frontend: chrome-big
@@ -85,7 +85,7 @@ metadata:
       kind: Frontend
       name: chrome-default
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       frontend: chrome-default
