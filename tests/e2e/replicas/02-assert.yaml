@@ -3,7 +3,7 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: chrome-frontend
-  namespace: test-basic-app
+  namespace: test-replicas
   labels:
     frontend: chrome
   ownerReferences:
@@ -20,7 +20,7 @@ spec:
       volumes:
         - name: config
           configMap:
-            name:  test-basic-app-environment
+            name:  test-replicas-environment
             defaultMode: 420
       containers:
         - name: fe-image
@@ -40,7 +40,7 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: chrome-small
-  namespace: test-basic-app
+  namespace: test-replicas
   labels:
     frontend: chrome
   ownerReferences:
@@ -57,7 +57,7 @@ spec:
       volumes:
         - name: config
           configMap:
-            name:  test-basic-app-environment
+            name:  test-replicas-environment
             defaultMode: 420
       containers:
         - name: fe-image
@@ -77,7 +77,7 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: chrome-default
-  namespace: test-basic-app
+  namespace: test-replicas
   labels:
     frontend: chrome
   ownerReferences:
@@ -94,7 +94,7 @@ spec:
       volumes:
         - name: config
           configMap:
-            name:  test-basic-app-environment
+            name:  test-replicas-environment
             defaultMode: 420
       containers:
         - name: fe-image
