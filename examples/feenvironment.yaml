@@ -4,7 +4,8 @@ metadata:
   name: env-boot
 spec:
   sso: https://env-boot-auth/auth/
+  targetNamespaces:
+    - feo-testing
   monitoring:
     mode: "local"
     disabled: false
-    generateChromeConfig: true

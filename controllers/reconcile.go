@@ -903,23 +903,40 @@ func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
 		return &v1.ConfigMap{}, err
 	}
 
-	cfgMap, err := r.createConfigMap(frontendList)
+	// default config map, should be always created
+	defaultNN := types.NamespacedName{
+		Name:      r.Frontend.Spec.EnvName,
+		Namespace: r.Frontend.Namespace,
+	}
 
-	return cfgMap, err
+	frontendCFGContextName := "feo-context-cfg"
+	additionalNN := []types.NamespacedName{}
+	for _, n := range r.FrontendEnvironment.Spec.TargetNamespaces {
+		additionalNN = append(additionalNN, types.NamespacedName{
+			Name:      frontendCFGContextName,
+			Namespace: n,
+		})
+	}
+
+	defaultCfgMap, err := r.createConfigMap(defaultNN, frontendList)
+
+	for _, nn := range additionalNN {
+		_, err = r.createConfigMap(nn, frontendList)
+		if err != nil {
+			return defaultCfgMap, err
+		}
+	}
+
+	return defaultCfgMap, err
 }
 
-func (r *FrontendReconciliation) createConfigMap(frontendList *crd.FrontendList) (*v1.ConfigMap, error) {
+func (r *FrontendReconciliation) createConfigMap(nn types.NamespacedName, frontendList *crd.FrontendList) (*v1.ConfigMap, error) {
 	cfgMap := &v1.ConfigMap{}
 
-	// Create a map of frontend names to frontends objects
+	// Create a map of frontend names to frontend objects
 	cacheMap := make(map[string]crd.Frontend)
 	for _, frontend := range frontendList.Items {
 		cacheMap[frontend.Name] = frontend
-	}
-
-	nn := types.NamespacedName{
-		Name:      r.Frontend.Spec.EnvName,
-		Namespace: r.Frontend.Namespace,
 	}
 
 	if err := r.Cache.Create(CoreConfig, nn, cfgMap); err != nil {
