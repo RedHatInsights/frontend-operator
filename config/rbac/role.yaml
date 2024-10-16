@@ -2,7 +2,6 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
   name: manager-role
 rules:
 - apiGroups:
@@ -172,3 +171,29 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - webapp.test.k8s.elastic.co
+  resources:
+  - guestbooks
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - webapp.test.k8s.elastic.co
+  resources:
+  - guestbooks/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - webapp.test.k8s.elastic.co
+  resources:
+  - guestbooks/status
+  verbs:
+  - get
+  - patch
+  - update
