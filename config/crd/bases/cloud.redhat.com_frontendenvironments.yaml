@@ -3,7 +3,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.8.0
+  creationTimestamp: null
   name: frontendenvironments.cloud.redhat.com
 spec:
   group: cloud.redhat.com
@@ -30,19 +31,14 @@ spec:
           API
         properties:
           apiVersion:
-            description: |-
-              APIVersion defines the versioned schema of this representation of an object.
-              Servers should convert recognized schemas to the latest internal value, and
-              may reject unrecognized values.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
-            description: |-
-              Kind is a string value representing the REST resource this object represents.
-              Servers may infer this from the endpoint the client submits requests to.
-              Cannot be updated.
-              In CamelCase.
-              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -64,10 +60,9 @@ spec:
                 description: Enable Akamai Cache Bust
                 type: boolean
               generateNavJSON:
-                description: |-
-                  GenerateNavJSON determines if the nav json configmap
-                  parts should be generated for the bundles. We want to do
-                  do this in epehemeral environments but not in production
+                description: GenerateNavJSON determines if the nav json configmap
+                  parts should be generated for the bundles. We want to do do this
+                  in epehemeral environments but not in production
                 type: boolean
               hostname:
                 description: Hostname
@@ -76,10 +71,9 @@ spec:
                 description: Ingress class
                 type: string
               monitoring:
-                description: |-
-                  MonitorMode determines where a ServiceMonitor object will be placed
-                  local will add it to the frontend's namespace
-                  app-interface will add it to "openshift-customer-monitoring"
+                description: MonitorMode determines where a ServiceMonitor object
+                  will be placed local will add it to the frontend's namespace app-interface
+                  will add it to "openshift-customer-monitoring"
                 properties:
                   disabled:
                     type: boolean
@@ -93,9 +87,9 @@ spec:
                 - mode
                 type: object
               ssl:
-                description: |-
-                  SSL mode requests SSL from the services in openshift and k8s and then applies them to the
-                  pod, the route is also set to reencrypt in the case of OpenShift
+                description: SSL mode requests SSL from the services in openshift
+                  and k8s and then applies them to the pod, the route is also set
+                  to reencrypt in the case of OpenShift
                 type: boolean
               sso:
                 description: Foo is an example field of FrontendEnvironment. Edit
@@ -117,3 +111,9 @@ spec:
     storage: true
     subresources:
       status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
