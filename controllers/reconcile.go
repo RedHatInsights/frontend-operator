@@ -400,6 +400,13 @@ func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map
 	labeler := utils.GetCustomLabeler(labels, nn, r.Frontend)
 	labeler(d)
 
+	// Set the replicas if specified, otherwise default to 1
+	if r.Frontend.Spec.Replicas != nil {
+		d.Spec.Replicas = r.Frontend.Spec.Replicas
+	} else {
+		d.Spec.Replicas = utils.Int32Ptr(1)
+	}
+
 	populateVolumes(d, r.Frontend, r.FrontendEnvironment)
 	populateContainer(d, r.Frontend, r.FrontendEnvironment)
 	r.populateEnvVars(d, r.FrontendEnvironment)

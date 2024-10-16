@@ -115,7 +115,7 @@ type FrontendSpec struct {
 	ServiceTiles []*ServiceTile `json:"serviceTiles,omitempty" yaml:"serviceTiles,omitempty"`
 	// Data for the available widgets for the resource
 	WidgetRegistry []*WidgetEntry `json:"widgetRegistry,omitempty" yaml:"widgetRegistry,omitempty"`
-	Replicas       int32          `json:"replicas,omitempty" yaml:"replicas,omitempty"`
+	Replicas       *int32         `json:"replicas,omitempty" yaml:"replicas,omitempty"`
 }
 
 var ReconciliationSuccessful = "ReconciliationSuccessful"
