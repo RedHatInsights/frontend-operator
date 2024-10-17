@@ -1,0 +1,111 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: chrome-big-frontend
+  namespace: test-replicas
+  labels:
+    frontend: chrome-big
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: chrome-big
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      frontend: chrome-big
+  template:
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name:  test-replicas-environment
+            defaultMode: 420
+      containers:
+        - name: fe-image
+          image: 'quay.io/cloudservices/insights-chrome-frontend:720317c'
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9000
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /opt/app-root/src/build/stable/operator-generated
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: chrome-small-frontend
+  namespace: test-replicas
+  labels:
+    frontend: chrome-small
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: chrome-small
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      frontend: chrome-small
+  template:
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name:  test-replicas-environment
+            defaultMode: 420
+      containers:
+        - name: fe-image
+          image: 'quay.io/cloudservices/insights-chrome-frontend:720317c'
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9000
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /opt/app-root/src/build/stable/operator-generated
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: chrome-default-frontend
+  namespace: test-replicas
+  labels:
+    frontend: chrome-default
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: chrome-default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      frontend: chrome-default
+  template:
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name:  test-replicas-environment
+            defaultMode: 420
+      containers:
+        - name: fe-image
+          image: 'quay.io/cloudservices/insights-chrome-frontend:720317c'
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9000
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /opt/app-root/src/build/stable/operator-generated

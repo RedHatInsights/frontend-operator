@@ -751,6 +751,9 @@ objects:
                     - title
                     type: object
                   type: array
+                replicas:
+                  format: int32
+                  type: integer
                 searchEntries:
                   description: The search index partials for the resource
                   items:
