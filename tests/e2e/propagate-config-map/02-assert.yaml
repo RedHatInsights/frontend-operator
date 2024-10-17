@@ -1,0 +1,43 @@
+# The config map should be present in the default namespace
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: test-bundles-namespaces-environment
+  namespace: test-bundles-namespaces
+  labels:
+    frontendenv: test-bundles-namespaces-environment
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      name: test-bundles-namespaces-environment
+data:
+  fed-modules.json: >-
+    {"edge":{"manifestLocation":"/apps/edge/fed-mods.json","modules":[{"id":"edge","module":"./RootApp","routes":[{"pathname":"/edge"}]}],"moduleID":"edge","fullProfile":false}}
+  test-bundles-namespaces-navigation.json: >-
+    {"id":"test","title":"FEO Test
+    Bundle","navItems":[{"title":"Inventory","permissions":[{"method":"withEmail","args":["@redhat.com"]}],"routes":[{"title":"Groups","appId":"edge","href":"/edge/fleet-management"},{"title":"Systems","appId":"edge","href":"/edge/inventory"}],"expandable":true},{"title":"Manage
+    Images","permissions":[{"method":"withEmail","args":["@redhat.com","@sbb.ch"]}],"routes":[{"title":"Images","appId":"edge","href":"/edge/manage-images"},{"title":"Custom
+    Repositories","appId":"edge","href":"/edge/repositories"}],"expandable":true},{"title":"Learning
+    Resources","href":"/edge/learning-resources","permissions":[{"method":"withEmail","args":["@redhat.com","@sbb.ch"]}]}]}
+---
+# Make sure the same exact config map ws propagated to the other namespace(s)
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: feo-context-cfg
+  namespace: test-bundles-namespaces-chrome
+  labels:
+    frontendenv: test-bundles-namespaces-environment
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      name: test-bundles-namespaces-environment
+data:
+  fed-modules.json: >-
+    {"edge":{"manifestLocation":"/apps/edge/fed-mods.json","modules":[{"id":"edge","module":"./RootApp","routes":[{"pathname":"/edge"}]}],"moduleID":"edge","fullProfile":false}}
+  test-bundles-namespaces-navigation.json: >-
+    {"id":"test","title":"FEO Test
+    Bundle","navItems":[{"title":"Inventory","permissions":[{"method":"withEmail","args":["@redhat.com"]}],"routes":[{"title":"Groups","appId":"edge","href":"/edge/fleet-management"},{"title":"Systems","appId":"edge","href":"/edge/inventory"}],"expandable":true},{"title":"Manage
+    Images","permissions":[{"method":"withEmail","args":["@redhat.com","@sbb.ch"]}],"routes":[{"title":"Images","appId":"edge","href":"/edge/manage-images"},{"title":"Custom
+    Repositories","appId":"edge","href":"/edge/repositories"}],"expandable":true},{"title":"Learning
+    Resources","href":"/edge/learning-resources","permissions":[{"method":"withEmail","args":["@redhat.com","@sbb.ch"]}]}]}
+
+

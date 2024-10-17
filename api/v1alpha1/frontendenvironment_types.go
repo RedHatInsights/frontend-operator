@@ -62,6 +62,9 @@ type FrontendEnvironmentSpec struct {
 	AkamaiCacheBustURL string `json:"akamaiCacheBustURL,omitempty"`
 	// The name of the secret we will use to get the akamai credentials
 	AkamaiSecretName string `json:"akamaiSecretName,omitempty"`
+	// List of namespaces that should receive a copy of the frontend configuration as a config map
+	// By configurations we mean the fed-modules.json, navigation files, etc.
+	TargetNamespaces []string `json:"targetNamespaces,omitempty" yaml:"targetNamespaces,omitempty"`
 }
 
 type MonitoringConfig struct {
