@@ -35,6 +35,7 @@ type EmbeddedRoute struct {
 	Product string `json:"product,omitempty" yaml:"product,omitempty"`
 }
 
+// Deprecated: Use ChromeNavItem instead, has to be switched for the updated reconciliation, needs to exist to prevent breaking changes for the Fronted resources and legacy NavItems attribute
 type BundleNavItem struct {
 	Title       string              `json:"title" yaml:"title"`
 	GroupID     string              `json:"groupId,omitempty" yaml:"groupId,omitempty"`
@@ -66,14 +67,15 @@ type LeafBundleNavItem struct {
 }
 
 type ComputedBundle struct {
-	ID       string          `json:"id" yaml:"id"`
-	Title    string          `json:"title" yaml:"title"`
-	NavItems []BundleNavItem `json:"navItems" yaml:"navItems"`
+	ID    string `json:"id" yaml:"id"`
+	Title string `json:"title" yaml:"title"`
+	// Deprecated: Use ChromeNavItems instead, has to be switched for the updated reconciliation, needs to exist to prevent breaking changes for the Fronted resources and legacy NavItems attribute
+	NavItems []ChromeNavItem `json:"navItems" yaml:"navItems"`
 }
 
 type ExtraNavItem struct {
 	Name    string        `json:"name" yaml:"name"`
-	NavItem BundleNavItem `json:"navItem" yaml:"navItem"`
+	NavItem ChromeNavItem `json:"navItem" yaml:"navItem"`
 }
 
 // BundleSpec defines the desired state of Bundle
@@ -87,7 +89,7 @@ type BundleSpec struct {
 	AppList       []string        `json:"appList,omitempty" yaml:"appList,omitempty"`
 	EnvName       string          `json:"envName,omitempty" yaml:"envName,omitempty"`
 	ExtraNavItems []ExtraNavItem  `json:"extraNavItems,omitempty" yaml:"extraNavItems,omitempty"`
-	CustomNav     []BundleNavItem `json:"customNav,omitempty" yaml:"customNav,omitempty"`
+	CustomNav     []ChromeNavItem `json:"customNav,omitempty" yaml:"customNav,omitempty"`
 }
 
 // BundleStatus defines the observed state of Bundle
