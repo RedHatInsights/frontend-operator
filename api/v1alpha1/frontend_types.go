@@ -92,6 +92,17 @@ type WidgetEntry struct {
 	Defaults WidgetDefaults `json:"defaults" yaml:"defaults"`
 }
 
+type NavigationSegment struct {
+	SectionID string `json:"sectionId" yaml:"sectionId"`
+	// Id of the bundle to which the segment should be injected
+	BundleID string `json:"bundleId" yaml:"bundleId"`
+	// A position of the segment within the bundle
+	// 0 is the first position
+	// The position "steps" should be at least 100 to make sure there is enough space in case some segments should be injected between existing ones
+	Position uint             `json:"position" yaml:"position"`
+	NavItems *[]ChromeNavItem `json:"navItems" yaml:"navItems"`
+}
+
 // FrontendSpec defines the desired state of Frontend
 type FrontendSpec struct {
 	Disabled       bool                 `json:"disabled,omitempty" yaml:"disabled,omitempty"`
@@ -105,7 +116,9 @@ type FrontendSpec struct {
 	ServiceMonitor ServiceMonitorConfig `json:"serviceMonitor,omitempty" yaml:"serviceMontior,omitempty"`
 	Module         *FedModule           `json:"module,omitempty" yaml:"module,omitempty"`
 	NavItems       []*BundleNavItem     `json:"navItems,omitempty" yaml:"navItems,omitempty"`
-	AssetsPrefix   string               `json:"assetsPrefix,omitempty" yaml:"assetsPrefix,omitempty"`
+	// navigation segments for the frontend
+	NavigationSegments []*NavigationSegment `json:"navigationSegments,omitempty" yaml:"navigationSegments,omitempty"`
+	AssetsPrefix       string               `json:"assetsPrefix,omitempty" yaml:"assetsPrefix,omitempty"`
 	// Akamai cache bust opt-out
 	AkamaiCacheBustDisable bool `json:"akamaiCacheBustDisable,omitempty" yaml:"akamaiCacheBustDisable,omitempty"`
 	// Files to cache bust
@@ -184,6 +197,29 @@ type Permission struct {
 	Method string              `json:"method" yaml:"method"`
 	Apps   []string            `json:"apps,omitempty" yaml:"apps,omitempty"`
 	Args   *apiextensions.JSON `json:"args,omitempty" yaml:"args,omitempty"` // TODO validate array item type (string?)
+}
+
+type ChromeNavItem struct {
+	IsHidden   bool   `json:"isHidden,omitempty" yaml:"isHidden,omitempty"`
+	Expandable bool   `json:"expandable,omitempty" yaml:"expandable,omitempty"`
+	Href       string `json:"href,omitempty" yaml:"href,omitempty"`
+	AppID      string `json:"appId,omitempty" yaml:"appId,omitempty"`
+	IsExternal bool   `json:"isExternal,omitempty" yaml:"isExternal,omitempty"`
+	Title      string `json:"title" yaml:"title"`
+	GroupID    string `json:"groupId,omitempty" yaml:"groupId,omitempty"`
+	ID         string `json:"id,omitempty" yaml:"id,omitempty"`
+	Product    string `json:"product,omitempty" yaml:"product,omitempty"`
+	Notifier   string `json:"notifier,omitempty" yaml:"notifier,omitempty"`
+	Icon       string `json:"icon,omitempty" yaml:"icon,omitempty"`
+	IsBeta     bool   `json:"isBeta,omitempty" yaml:"isBeta,omitempty"`
+	// kubebuilder struggles validating recursive fields, it has to be helped a bit
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
+	NavItems []ChromeNavItem `json:"navItems,omitempty" yaml:"navItems,omitempty"`
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
+	Routes      []ChromeNavItem `json:"routes,omitempty" yaml:"routes,omitempty"`
+	Permissions []Permission    `json:"permissions,omitempty" yaml:"permissions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
