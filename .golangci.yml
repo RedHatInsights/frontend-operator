@@ -16,6 +16,11 @@ linters:
     - typecheck
     - bodyclose
 linters-settings:
+  staticcheck:
+    checks:
+      - all
+      # Ignore usage of deprecated things, will be removed after frontend resources are using new navigation
+      - '-SA1019'
   gosec:
     excludes:
       - G115
