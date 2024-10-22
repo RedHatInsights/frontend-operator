@@ -893,11 +893,11 @@ func getServiceTilePath(section string, group string) string {
 	return fmt.Sprintf("%s-%s", section, group)
 }
 
-func setupServiceTilesData(felist *crd.FrontendList, feEnvironment crd.FrontendEnvironment) []crd.FrontendServiceCategoryGenerated {
+func setupServiceTilesData(felist *crd.FrontendList, feEnvironment crd.FrontendEnvironment) ([]crd.FrontendServiceCategoryGenerated, []string) {
 	categories := []crd.FrontendServiceCategoryGenerated{}
 	if feEnvironment.Spec.ServiceCategories == nil {
 		// skip if we do not have service categories
-		return categories
+		return categories, []string{}
 	}
 
 	// just a quick cache to make it easier and faster to assign tiles to their destination
@@ -925,20 +925,23 @@ func setupServiceTilesData(felist *crd.FrontendList, feEnvironment crd.FrontendE
 		categories = append(categories, newCategory)
 	}
 
+	skippedTiles := []string{}
 	for _, frontend := range felist.Items {
 		if frontend.Spec.ServiceTiles != nil {
 			for _, tile := range frontend.Spec.ServiceTiles {
 				groupKey := getServiceTilePath(tile.Section, tile.Group)
-				// ignore the tile if destination does not exist
 				if groupTiles, ok := tileGroupAccessMap[groupKey]; ok {
 					// assign the tile to the service category and group
 					*groupTiles = append(*groupTiles, *tile)
+				} else {
+					// ignore the tile if destination does not exist
+					skippedTiles = append(skippedTiles, tile.ID)
 				}
 			}
 		}
 	}
 
-	return categories
+	return categories, skippedTiles
 }
 
 func (r *FrontendReconciliation) setupBundleData(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend) error {
@@ -1071,7 +1074,7 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 
 	widgetRegistry := setupWidgetRegistry(feList)
 
-	serviceCategories := setupServiceTilesData(feList, *r.FrontendEnvironment)
+	serviceCategories, skippedTiles := setupServiceTilesData(feList, *r.FrontendEnvironment)
 
 	fedModulesJSONData, err := json.Marshal(fedModules)
 	if err != nil {
@@ -1093,6 +1096,10 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 
 	if err != nil {
 		return err
+	}
+
+	if len(skippedTiles) > 0 {
+		r.Log.Info("Unable to find service categories for tiles:", strings.Join(skippedTiles, ","))
 	}
 
 	cfgMap.Data["fed-modules.json"] = string(fedModulesJSONData)

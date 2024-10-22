@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"time"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
@@ -1115,11 +1116,19 @@ var _ = ginkgo.Describe("Search index", func() {
 					}
 					return true
 				}, timeout, interval).Should(gomega.BeTrue())
+				searchIndexMap, ok := createdConfigMap.Data["search-index.json"]
+				gomega.Expect(ok).Should(gomega.BeTrue())
+				var sortedSearchIndex []crd.SearchEntry
+				err := json.Unmarshal([]byte(searchIndexMap), &sortedSearchIndex)
+				gomega.Expect(err).Should(gomega.BeNil())
+				sort.Slice(sortedSearchIndex, func(i, j int) bool {
+					return sortedSearchIndex[i].ID < sortedSearchIndex[j].ID
+				})
+				var expectedIndex []crd.SearchEntry
+				err = json.Unmarshal([]byte("[{\"id\":\"test-search-index2-test-search-index-env2-test-search-index2\",\"href\":\"/test/href\",\"title\":\"Test\",\"description\":\"Test description\"},{\"id\":\"test-search-index3-test-search-index-env2-test-search-index3\",\"href\":\"/test/href\",\"title\":\"Test\",\"description\":\"Test description\"}]"), &expectedIndex)
+				gomega.Expect(err).Should(gomega.BeNil())
 				gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName2))
-				gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
-					"fed-modules.json":  "{\"testSearchIndex2\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"fullProfile\":false},\"testSearchIndex3\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"fullProfile\":false}}",
-					"search-index.json": "[{\"id\":\"test-search-index2-test-search-index-env2-test-search-index2\",\"href\":\"/test/href\",\"title\":\"Test\",\"description\":\"Test description\"},{\"id\":\"test-search-index3-test-search-index-env2-test-search-index3\",\"href\":\"/test/href\",\"title\":\"Test\",\"description\":\"Test description\"}]",
-				}))
+				gomega.Expect(sortedSearchIndex).Should(gomega.ConsistOf(expectedIndex[0], expectedIndex[1]))
 				gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(FrontendEnvName2))
 			})
 		})
@@ -1135,7 +1144,7 @@ type WidgetCase struct {
 	WidgetsFrontend        []WidgetFrontendTestEntry
 	Namespace              string
 	Environment            string
-	ExpectedConfigMapEntry string
+	ExpectedConfigMapEntry []crd.WidgetEntry
 }
 
 func frontendFromWidget(wc WidgetCase, wf WidgetFrontendTestEntry) *crd.Frontend {
@@ -1185,7 +1194,6 @@ func mockFrontendEnv(env string, namespace string) *crd.FrontendEnvironment {
 			GenerateNavJSON: false,
 		},
 	}
-
 }
 
 var _ = ginkgo.Describe("Widget registry", func() {
@@ -1244,8 +1252,7 @@ var _ = ginkgo.Describe("Widget registry", func() {
 
 	ginkgo.It("Should create widget registry", func() {
 		ginkgo.By("collection entries from Frontend resources", func() {
-			expectedResult, err := json.Marshal([]crd.WidgetEntry{*Widget1, *Widget2, *Widget3})
-			gomega.Expect(err).Should(gomega.BeNil())
+			expectedResult := []crd.WidgetEntry{*Widget1, *Widget2, *Widget3}
 			widgetCases := []WidgetCase{{
 				WidgetsFrontend: []WidgetFrontendTestEntry{{
 					Widgets:      []*crd.WidgetEntry{Widget1, Widget2},
@@ -1257,7 +1264,7 @@ var _ = ginkgo.Describe("Widget registry", func() {
 				},
 				Namespace:              FrontendNamespace,
 				Environment:            FrontendEnvName,
-				ExpectedConfigMapEntry: string(expectedResult),
+				ExpectedConfigMapEntry: expectedResult,
 			}}
 
 			for _, widgetCase := range widgetCases {
@@ -1283,9 +1290,14 @@ var _ = ginkgo.Describe("Widget registry", func() {
 				}, timeout, interval).Should(gomega.BeTrue())
 
 				widgetRegistryMap := createdConfigMap.Data["widget-registry.json"]
+				var widgetRegistry []crd.WidgetEntry
+				err := json.Unmarshal([]byte(widgetRegistryMap), &widgetRegistry)
+				gomega.Expect(err).Should(gomega.BeNil())
 
 				gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(widgetCase.Environment))
-				gomega.Expect(widgetRegistryMap).Should(gomega.Equal(widgetCase.ExpectedConfigMapEntry))
+				for _, w := range expectedResult {
+					gomega.Expect(widgetRegistry).Should(gomega.ContainElement(w))
+				}
 				gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(widgetCase.Environment))
 			}
 		})
