@@ -782,11 +782,9 @@ objects:
                       title:
                         type: string
                     required:
-                    - alt_title
                     - description
                     - href
                     - id
-                    - isExternal
                     - title
                     type: object
                   type: array
@@ -949,7 +947,6 @@ objects:
                     type: object
                   type: array
               required:
-              - API
               - deploymentRepo
               - envName
               - frontend

@@ -853,6 +853,31 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 	return nil
 }
 
+func adjustSearchEntry(searchEntry *crd.SearchEntry, frontend crd.Frontend) crd.SearchEntry {
+	newSearchEntry := crd.SearchEntry{
+		// make the id environment and frontend specific to reduce duplicate ids across Frontend resources
+		ID:          fmt.Sprintf("%s-%s-%s", frontend.Name, frontend.Spec.EnvName, searchEntry.ID),
+		Title:       searchEntry.Title,
+		Description: searchEntry.Description,
+		Href:        searchEntry.Href,
+		AltTitle:    searchEntry.AltTitle,
+		IsExternal:  searchEntry.IsExternal,
+	}
+	return newSearchEntry
+}
+
+func setupSearchIndex(feList *crd.FrontendList) []crd.SearchEntry {
+	searchIndex := []crd.SearchEntry{}
+	for _, frontend := range feList.Items {
+		if frontend.Spec.SearchEntries != nil {
+			for _, searchEntry := range frontend.Spec.SearchEntries {
+				searchIndex = append(searchIndex, adjustSearchEntry(searchEntry, frontend))
+			}
+		}
+	}
+	return searchIndex
+}
+
 func (r *FrontendReconciliation) setupBundleData(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend) error {
 	bundleList := &crd.BundleList{}
 
@@ -979,12 +1004,23 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 		return fmt.Errorf("error setting up fedModules: %w", err)
 	}
 
-	jsonData, err := json.Marshal(fedModules)
+	searchIndex := setupSearchIndex(feList)
+
+	fedModulesJSONData, err := json.Marshal(fedModules)
 	if err != nil {
 		return err
 	}
 
-	cfgMap.Data["fed-modules.json"] = string(jsonData)
+	searchIndexJSONData, err := json.Marshal(searchIndex)
+
+	if err != nil {
+		return err
+	}
+
+	cfgMap.Data["fed-modules.json"] = string(fedModulesJSONData)
+	if len(searchIndex) > 0 {
+		cfgMap.Data["search-index.json"] = string(searchIndexJSONData)
+	}
 	return nil
 }
 

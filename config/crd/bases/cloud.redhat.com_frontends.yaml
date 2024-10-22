@@ -326,11 +326,9 @@ spec:
                     title:
                       type: string
                   required:
-                  - alt_title
                   - description
                   - href
                   - id
-                  - isExternal
                   - title
                   type: object
                 type: array
@@ -493,7 +491,6 @@ spec:
                   type: object
                 type: array
             required:
-            - API
             - deploymentRepo
             - envName
             - frontend

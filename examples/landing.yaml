@@ -22,3 +22,15 @@ spec:
       routes:
       - pathname: /
         exact: true
+  searchEntries:
+    - id: "landing"
+      title: "Landing"
+      href: /
+      description: "Landing page description"
+      alt_title:
+        - HCC Home page
+        - Home
+    - id: "landing-widgets"
+      title: "Widget fantastic"
+      href: /widgets
+      description: "Widget"
