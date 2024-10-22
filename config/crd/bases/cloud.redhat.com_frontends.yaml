@@ -343,6 +343,8 @@ spec:
                 description: Data for the all services dropdown
                 items:
                   properties:
+                    description:
+                      type: string
                     group:
                       type: string
                     href:
@@ -358,6 +360,7 @@ spec:
                     title:
                       type: string
                   required:
+                  - description
                   - group
                   - href
                   - icon

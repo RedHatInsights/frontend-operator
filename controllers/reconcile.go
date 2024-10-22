@@ -889,6 +889,58 @@ func setupWidgetRegistry(felist *crd.FrontendList) []crd.WidgetEntry {
 	return widgetRegistry
 }
 
+func getServiceTilePath(section string, group string) string {
+	return fmt.Sprintf("%s-%s", section, group)
+}
+
+func setupServiceTilesData(felist *crd.FrontendList, feEnvironment crd.FrontendEnvironment) []crd.FrontendServiceCategoryGenerated {
+	categories := []crd.FrontendServiceCategoryGenerated{}
+	if feEnvironment.Spec.ServiceCategories == nil {
+		// skip if we do not have service categories
+		return categories
+	}
+
+	// just a quick cache to make it easier and faster to assign tiles to their destination
+	tileGroupAccessMap := make(map[string]*[]crd.ServiceTile)
+
+	for _, category := range *feEnvironment.Spec.ServiceCategories {
+		groups := []crd.FrontendServiceCategoryGroupGenerated{}
+		for _, gr := range category.Groups {
+			tiles := []crd.ServiceTile{}
+			group := crd.FrontendServiceCategoryGroupGenerated{
+				ID:    gr.ID,
+				Title: gr.Title,
+				Tiles: &tiles,
+			}
+			groups = append(groups, group)
+			groupKey := getServiceTilePath(category.ID, gr.ID)
+			tileGroupAccessMap[groupKey] = &tiles
+		}
+		newCategory := crd.FrontendServiceCategoryGenerated{
+			ID:     category.ID,
+			Title:  category.Title,
+			Groups: groups,
+		}
+
+		categories = append(categories, newCategory)
+	}
+
+	for _, frontend := range felist.Items {
+		if frontend.Spec.ServiceTiles != nil {
+			for _, tile := range frontend.Spec.ServiceTiles {
+				groupKey := getServiceTilePath(tile.Section, tile.Group)
+				// ignore the tile if destination does not exist
+				if groupTiles, ok := tileGroupAccessMap[groupKey]; ok {
+					// assign the tile to the service category and group
+					*groupTiles = append(*groupTiles, *tile)
+				}
+			}
+		}
+	}
+
+	return categories
+}
+
 func (r *FrontendReconciliation) setupBundleData(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend) error {
 	bundleList := &crd.BundleList{}
 
@@ -1019,6 +1071,8 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 
 	widgetRegistry := setupWidgetRegistry(feList)
 
+	serviceCategories := setupServiceTilesData(feList, *r.FrontendEnvironment)
+
 	fedModulesJSONData, err := json.Marshal(fedModules)
 	if err != nil {
 		return err
@@ -1035,6 +1089,12 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 		return err
 	}
 
+	serviceCategoriesJSONData, err := json.Marshal(serviceCategories)
+
+	if err != nil {
+		return err
+	}
+
 	cfgMap.Data["fed-modules.json"] = string(fedModulesJSONData)
 	if len(searchIndex) > 0 {
 		cfgMap.Data["search-index.json"] = string(searchIndexJSONData)
@@ -1043,6 +1103,11 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 	if len(widgetRegistry) > 0 {
 		cfgMap.Data["widget-registry.json"] = string(widgetRegistryJSONData)
 	}
+
+	if len(serviceCategories) > 0 {
+		cfgMap.Data["service-tiles.json"] = string(serviceCategoriesJSONData)
+	}
+
 	return nil
 }
 

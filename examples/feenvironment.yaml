@@ -9,3 +9,16 @@ spec:
   monitoring:
     mode: "local"
     disabled: false
+  serviceCategories:
+    - id: automation
+      title: Automation
+      groups:
+        - id: ansible
+          title: Ansible
+        - id: rhel
+          title: Red Hat Enterprise Linux
+    - id: iam
+      title: Identity and Access Management
+      groups:
+        - id: iam
+          title: IAM

@@ -61,3 +61,19 @@ spec:
           h: 1
           maxH: 1
           minH: 1
+  serviceTiles:
+    - section: automation
+      group: ansible
+      id: ansible-link
+      title: Ansible FOO
+      href: /ansible/foo
+      description: Ansible FOO description thing
+      icon: AnsibleIcon
+    - section: iam
+      group: iam
+      id: iam-link
+      title: IAM FOO
+      href: /iam
+      description: Some Iam thing
+      icon: IAMIcon
+      isExternal: false

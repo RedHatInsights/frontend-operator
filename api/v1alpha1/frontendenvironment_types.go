@@ -24,6 +24,33 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type FrontendServiceCategoryGroup struct {
+	ID    string `json:"id" yaml:"id"`
+	Title string `json:"title" yaml:"title"`
+}
+
+// FrontendServiceCategory defines the category to which service can inject ServiceTiles
+// Chroming UI will use this to render the service dropdown component
+type FrontendServiceCategory struct {
+	ID    string `json:"id" yaml:"id"`
+	Title string `json:"title" yaml:"title"`
+	// +kubebuilder:validation:items:MinItems:=1
+	Groups []FrontendServiceCategoryGroup `json:"groups" yaml:"groups"`
+}
+
+type FrontendServiceCategoryGroupGenerated struct {
+	ID    string         `json:"id" yaml:"id"`
+	Title string         `json:"title" yaml:"title"`
+	Tiles *[]ServiceTile `json:"tiles" yaml:"tiles"`
+}
+
+// The categories but with the groups filled with service tiles
+type FrontendServiceCategoryGenerated struct {
+	ID     string                                  `json:"id" yaml:"id"`
+	Title  string                                  `json:"title" yaml:"title"`
+	Groups []FrontendServiceCategoryGroupGenerated `json:"groups" yaml:"groups"`
+}
+
 // FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
 type FrontendEnvironmentSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
@@ -65,6 +92,8 @@ type FrontendEnvironmentSpec struct {
 	// List of namespaces that should receive a copy of the frontend configuration as a config map
 	// By configurations we mean the fed-modules.json, navigation files, etc.
 	TargetNamespaces []string `json:"targetNamespaces,omitempty" yaml:"targetNamespaces,omitempty"`
+	// For the ChromeUI to render additional global components
+	ServiceCategories *[]FrontendServiceCategory `json:"serviceCategories,omitempty" yaml:"serviceCategories,omitempty"`
 }
 
 type MonitoringConfig struct {

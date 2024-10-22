@@ -1291,3 +1291,165 @@ var _ = ginkgo.Describe("Widget registry", func() {
 		})
 	})
 })
+
+type ServiceTileTestEntry struct {
+	ServiceTiles []*crd.ServiceTile
+	FrontendName string
+}
+
+type ServiceTileCase struct {
+	ServiceTiles           []*ServiceTileTestEntry
+	Namespace              string
+	Environment            string
+	ExpectedConfigMapEntry string
+}
+
+func frontendFromServiceTile(sct ServiceTileCase, ste ServiceTileTestEntry) *crd.Frontend {
+	frontend := &crd.Frontend{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "cloud.redhat.com/v1",
+			Kind:       "Frontend",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ste.FrontendName,
+			Namespace: sct.Namespace,
+		},
+		Spec: crd.FrontendSpec{
+			EnvName:        sct.Environment,
+			Title:          "",
+			DeploymentRepo: "",
+			Frontend: crd.FrontendInfo{
+				Paths: []string{""},
+			},
+			Image: "my-image:version",
+			Module: &crd.FedModule{
+				ManifestLocation: "",
+				Modules:          []crd.Module{},
+			},
+			ServiceTiles: ste.ServiceTiles,
+		},
+	}
+	return frontend
+}
+
+var _ = ginkgo.Describe("Service tiles", func() {
+	const (
+		FrontendName           = "test-service-tile"
+		FrontendName2          = "test-service-tile2"
+		FrontendNamespace      = "default"
+		FrontendEnvName        = "test-service-tile-env"
+		ServiceSectionID       = "test-service-section"
+		ServiceSectionGroupID1 = "test-service-section-group1"
+		ServiceSectionGroupID2 = "test-service-section-group2"
+
+		timeout  = time.Second * 10
+		duration = time.Second * 10
+		interval = time.Millisecond * 250
+	)
+
+	var (
+		ServiceTile1 = &crd.ServiceTile{
+			Section:     ServiceSectionID,
+			Group:       ServiceSectionGroupID1,
+			ID:          "test-service-tile1",
+			Href:        "/foo",
+			Title:       "bar",
+			Description: "",
+			Icon:        "",
+		}
+		ServiceTile2 = &crd.ServiceTile{
+			Section:     ServiceSectionID,
+			Group:       ServiceSectionGroupID1,
+			ID:          "test-service-tile2",
+			Href:        "/bar",
+			Title:       "bar",
+			Description: "",
+			Icon:        "",
+		}
+		ServiceTile3 = &crd.ServiceTile{
+			Section:     ServiceSectionID,
+			Group:       ServiceSectionGroupID2,
+			ID:          "test-service-tile3",
+			Href:        "/baz",
+			Title:       "baz",
+			Description: "",
+			Icon:        "",
+		}
+		ExpectedServiceTiles1 = []crd.FrontendServiceCategoryGenerated{
+			{
+				ID:    ServiceSectionID,
+				Title: "Service Section",
+				Groups: []crd.FrontendServiceCategoryGroupGenerated{{
+					ID:    ServiceSectionGroupID1,
+					Title: "Service Section Group 1",
+					Tiles: &[]crd.ServiceTile{*ServiceTile1, *ServiceTile2},
+				}, {
+					ID:    ServiceSectionGroupID2,
+					Title: "Service Section Group 2",
+					Tiles: &[]crd.ServiceTile{*ServiceTile3},
+				}},
+			},
+		}
+	)
+
+	ginkgo.It("Should create service tiles", func() {
+		ginkgo.By("collection entries from Frontend resources", func() {
+			expectedResult, err := json.Marshal(ExpectedServiceTiles1)
+			gomega.Expect(err).Should(gomega.BeNil())
+			serviceTileCases := []ServiceTileCase{{
+				Namespace:              FrontendNamespace,
+				Environment:            FrontendEnvName,
+				ExpectedConfigMapEntry: string(expectedResult),
+				ServiceTiles: []*ServiceTileTestEntry{{
+					ServiceTiles: []*crd.ServiceTile{ServiceTile1, ServiceTile2, ServiceTile3},
+					FrontendName: FrontendName,
+				}},
+			}}
+
+			for _, serviceCase := range serviceTileCases {
+				ctx := context.Background()
+				configMapLookupKey := types.NamespacedName{Name: serviceCase.Environment, Namespace: serviceCase.Namespace}
+				for _, sc := range serviceCase.ServiceTiles {
+					frontend := frontendFromServiceTile(serviceCase, *sc)
+					gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
+				}
+
+				frontendEnvironment := mockFrontendEnv(serviceCase.Environment, serviceCase.Namespace)
+				frontendEnvironment.Spec.ServiceCategories = &[]crd.FrontendServiceCategory{
+					{
+						ID:    ServiceSectionID,
+						Title: "Service Section",
+						Groups: []crd.FrontendServiceCategoryGroup{
+							{
+								ID:    ServiceSectionGroupID1,
+								Title: "Service Section Group 1",
+							},
+							{
+								ID:    ServiceSectionGroupID2,
+								Title: "Service Section Group 2",
+							},
+						},
+					},
+				}
+				gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
+				createdConfigMap := &v1.ConfigMap{}
+				gomega.Eventually(func() bool {
+					err := k8sClient.Get(ctx, configMapLookupKey, createdConfigMap)
+					if err != nil {
+						return err == nil
+					}
+					if len(createdConfigMap.Data) != 2 {
+						return false
+					}
+					return true
+				}, timeout, interval).Should(gomega.BeTrue())
+
+				serviceTileRegistryMap := createdConfigMap.Data["service-tiles.json"]
+
+				gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(serviceCase.Environment))
+				gomega.Expect(serviceTileRegistryMap).Should(gomega.Equal(serviceCase.ExpectedConfigMapEntry))
+				gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(serviceCase.Environment))
+			}
+		})
+	})
+})

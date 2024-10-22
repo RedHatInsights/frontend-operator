@@ -49,13 +49,14 @@ type SearchEntry struct {
 }
 
 type ServiceTile struct {
-	Section    string `json:"section" yaml:"section"`
-	Group      string `json:"group" yaml:"group"`
-	ID         string `json:"id" yaml:"id"`
-	Href       string `json:"href" yaml:"href"`
-	Title      string `json:"title" yaml:"title"`
-	Icon       string `json:"icon" yaml:"icon"`
-	IsExternal bool   `json:"isExternal,omitempty" yaml:"isExternal,omitempty"`
+	Section     string `json:"section" yaml:"section"`
+	Group       string `json:"group" yaml:"group"`
+	ID          string `json:"id" yaml:"id"`
+	Href        string `json:"href" yaml:"href"`
+	Title       string `json:"title" yaml:"title"`
+	Description string `json:"description" yaml:"description"`
+	Icon        string `json:"icon" yaml:"icon"`
+	IsExternal  bool   `json:"isExternal,omitempty" yaml:"isExternal,omitempty"`
 }
 
 type WidgetHeaderLink struct {
