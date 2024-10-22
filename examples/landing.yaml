@@ -34,3 +34,30 @@ spec:
       title: "Widget fantastic"
       href: /widgets
       description: "Widget"
+  widgetRegistry:
+    - scope: "landing"
+      module: "./RandomWidget"
+      config:
+        icon: "CogIcon"
+        title: "Random Widget"
+      defaults:
+        sm: 
+          w: 1
+          h: 1
+          maxH: 1
+          minH: 1
+        md: 
+          w: 1
+          h: 1
+          maxH: 1
+          minH: 1
+        lg: 
+          w: 1
+          h: 1
+          maxH: 1
+          minH: 1
+        xl: 
+          w: 1
+          h: 1
+          maxH: 1
+          minH: 1

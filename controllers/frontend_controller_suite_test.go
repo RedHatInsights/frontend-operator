@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -1121,6 +1122,172 @@ var _ = ginkgo.Describe("Search index", func() {
 				}))
 				gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(FrontendEnvName2))
 			})
+		})
+	})
+})
+
+type WidgetFrontendTestEntry struct {
+	Widgets      []*crd.WidgetEntry
+	FrontendName string
+}
+
+type WidgetCase struct {
+	WidgetsFrontend        []WidgetFrontendTestEntry
+	Namespace              string
+	Environment            string
+	ExpectedConfigMapEntry string
+}
+
+func frontendFromWidget(wc WidgetCase, wf WidgetFrontendTestEntry) *crd.Frontend {
+	frontend := &crd.Frontend{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "cloud.redhat.com/v1",
+			Kind:       "Frontend",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      wf.FrontendName,
+			Namespace: wc.Namespace,
+		},
+		Spec: crd.FrontendSpec{
+			EnvName:        wc.Environment,
+			Title:          "",
+			DeploymentRepo: "",
+			Frontend: crd.FrontendInfo{
+				Paths: []string{""},
+			},
+			Image: "my-image:version",
+			Module: &crd.FedModule{
+				ManifestLocation: "",
+				Modules:          []crd.Module{},
+			},
+			WidgetRegistry: wf.Widgets,
+		},
+	}
+	return frontend
+}
+
+func mockFrontendEnv(env string, namespace string) *crd.FrontendEnvironment {
+	return &crd.FrontendEnvironment{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "cloud.redhat.com/v1",
+			Kind:       "FrontendEnvironment",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      env,
+			Namespace: namespace,
+		},
+		Spec: crd.FrontendEnvironmentSpec{
+			SSO:      "https://something-auth",
+			Hostname: "something",
+			Monitoring: &crd.MonitoringConfig{
+				Mode: "app-interface",
+			},
+			GenerateNavJSON: false,
+		},
+	}
+
+}
+
+var _ = ginkgo.Describe("Widget registry", func() {
+	const (
+		FrontendName      = "test-widget-registry"
+		FrontendName2     = "test-widget-registry2"
+		FrontendNamespace = "default"
+		FrontendEnvName   = "test-widget-registry-env"
+
+		timeout  = time.Second * 10
+		duration = time.Second * 10
+		interval = time.Millisecond * 250
+	)
+
+	var (
+		DefaultWidgetVariant = crd.WidgetDefaultVariant{
+			Width:     1,
+			Height:    1,
+			MaxHeight: 2,
+			MinHeight: 1,
+		}
+		WidgetDefaults = crd.WidgetDefaults{
+			Small:  DefaultWidgetVariant,
+			Medium: DefaultWidgetVariant,
+			Large:  DefaultWidgetVariant,
+			XLarge: DefaultWidgetVariant,
+		}
+		Widget1 = &crd.WidgetEntry{
+			Scope:  "test",
+			Module: "./foo",
+			Config: crd.WidgetConfig{
+				Icon:  "icon",
+				Title: "title",
+			},
+			Defaults: WidgetDefaults,
+		}
+		Widget2 = &crd.WidgetEntry{
+			Scope:  "test",
+			Module: "./bar",
+			Config: crd.WidgetConfig{
+				Icon:  "icon-bar",
+				Title: "Bar",
+			},
+			Defaults: WidgetDefaults,
+		}
+		Widget3 = &crd.WidgetEntry{
+			Scope:  "baz",
+			Module: "./default",
+			Config: crd.WidgetConfig{
+				Icon:  "baz",
+				Title: "Baz",
+			},
+			Defaults: WidgetDefaults,
+		}
+	)
+
+	ginkgo.It("Should create widget registry", func() {
+		ginkgo.By("collection entries from Frontend resources", func() {
+			expectedResult, err := json.Marshal([]crd.WidgetEntry{*Widget1, *Widget2, *Widget3})
+			gomega.Expect(err).Should(gomega.BeNil())
+			widgetCases := []WidgetCase{{
+				WidgetsFrontend: []WidgetFrontendTestEntry{{
+					Widgets:      []*crd.WidgetEntry{Widget1, Widget2},
+					FrontendName: FrontendName,
+				}, {
+					Widgets:      []*crd.WidgetEntry{Widget3},
+					FrontendName: FrontendName2,
+				},
+				},
+				Namespace:              FrontendNamespace,
+				Environment:            FrontendEnvName,
+				ExpectedConfigMapEntry: string(expectedResult),
+			}}
+
+			for _, widgetCase := range widgetCases {
+				ctx := context.Background()
+				configMapLookupKey := types.NamespacedName{Name: widgetCase.Environment, Namespace: widgetCase.Namespace}
+				for _, wf := range widgetCase.WidgetsFrontend {
+					frontend := frontendFromWidget(widgetCase, wf)
+					gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
+				}
+
+				frontendEnvironment := mockFrontendEnv(widgetCase.Environment, widgetCase.Namespace)
+				gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
+				createdConfigMap := &v1.ConfigMap{}
+				gomega.Eventually(func() bool {
+					err := k8sClient.Get(ctx, configMapLookupKey, createdConfigMap)
+					if err != nil {
+						return err == nil
+					}
+					if len(createdConfigMap.Data) != 2 {
+						return false
+					}
+					return true
+				}, timeout, interval).Should(gomega.BeTrue())
+
+				widgetRegistryMap := createdConfigMap.Data["widget-registry.json"]
+
+				gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(widgetCase.Environment))
+				gomega.Expect(widgetRegistryMap).Should(gomega.Equal(widgetCase.ExpectedConfigMapEntry))
+				gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(widgetCase.Environment))
+			}
 		})
 	})
 })

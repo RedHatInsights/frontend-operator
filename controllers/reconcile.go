@@ -878,6 +878,17 @@ func setupSearchIndex(feList *crd.FrontendList) []crd.SearchEntry {
 	return searchIndex
 }
 
+func setupWidgetRegistry(felist *crd.FrontendList) []crd.WidgetEntry {
+	widgetRegistry := []crd.WidgetEntry{}
+	for _, frontend := range felist.Items {
+		for _, widget := range frontend.Spec.WidgetRegistry {
+			widgetRegistry = append(widgetRegistry, *widget)
+		}
+	}
+
+	return widgetRegistry
+}
+
 func (r *FrontendReconciliation) setupBundleData(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend) error {
 	bundleList := &crd.BundleList{}
 
@@ -1006,6 +1017,8 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 
 	searchIndex := setupSearchIndex(feList)
 
+	widgetRegistry := setupWidgetRegistry(feList)
+
 	fedModulesJSONData, err := json.Marshal(fedModules)
 	if err != nil {
 		return err
@@ -1017,9 +1030,18 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 		return err
 	}
 
+	widgetRegistryJSONData, err := json.Marshal(widgetRegistry)
+	if err != nil {
+		return err
+	}
+
 	cfgMap.Data["fed-modules.json"] = string(fedModulesJSONData)
 	if len(searchIndex) > 0 {
 		cfgMap.Data["search-index.json"] = string(searchIndexJSONData)
+	}
+
+	if len(widgetRegistry) > 0 {
+		cfgMap.Data["widget-registry.json"] = string(widgetRegistryJSONData)
 	}
 	return nil
 }
