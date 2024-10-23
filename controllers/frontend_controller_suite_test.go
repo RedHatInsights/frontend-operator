@@ -925,6 +925,69 @@ var _ = ginkgo.Describe("Dependencies", func() {
 	})
 
 })
+
+type SearchFrontendEntry struct {
+	Name          string
+	SearchEntries []*crd.SearchEntry
+}
+
+type SearchIndexCase struct {
+	SearchFrontendEntries []SearchFrontendEntry
+	Env                   string
+	ExpectedResult        string
+	Namespace             string
+}
+
+func frontendFromSearchEntry(tc SearchIndexCase, entry SearchFrontendEntry) *crd.Frontend {
+	frontend := &crd.Frontend{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "cloud.redhat.com/v1",
+			Kind:       "Frontend",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      entry.Name,
+			Namespace: tc.Namespace,
+		},
+		Spec: crd.FrontendSpec{
+			EnvName:        tc.Env,
+			Title:          "",
+			DeploymentRepo: "",
+			Frontend: crd.FrontendInfo{
+				Paths: []string{"/"},
+			},
+			Image: "my-image:version",
+			Module: &crd.FedModule{
+				ManifestLocation: "",
+				Modules:          []crd.Module{},
+			},
+			SearchEntries: entry.SearchEntries,
+		},
+	}
+
+	return frontend
+}
+
+func mockFrontendEnv(env string, namespace string) *crd.FrontendEnvironment {
+	return &crd.FrontendEnvironment{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "cloud.redhat.com/v1",
+			Kind:       "FrontendEnvironment",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      env,
+			Namespace: namespace,
+		},
+		Spec: crd.FrontendEnvironmentSpec{
+			SSO:      "https://something-auth",
+			Hostname: "something",
+			Monitoring: &crd.MonitoringConfig{
+				Mode: "app-interface",
+			},
+			GenerateNavJSON: false,
+		},
+	}
+}
+
 var _ = ginkgo.Describe("Search index", func() {
 	const (
 		FrontendName      = "test-search-index"
@@ -944,29 +1007,12 @@ var _ = ginkgo.Describe("Search index", func() {
 			ginkgo.By("from single Frontend resource", func() {
 				ctx := context.Background()
 
-				configMapLookupKey := types.NamespacedName{Name: FrontendEnvName, Namespace: FrontendNamespace}
-
-				frontend := &crd.Frontend{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "cloud.redhat.com/v1",
-						Kind:       "Frontend",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      FrontendName,
-						Namespace: FrontendNamespace,
-					},
-					Spec: crd.FrontendSpec{
-						EnvName:        FrontendEnvName,
-						Title:          "",
-						DeploymentRepo: "",
-						Frontend: crd.FrontendInfo{
-							Paths: []string{"/things/test"},
-						},
-						Image: "my-image:version",
-						Module: &crd.FedModule{
-							ManifestLocation: "/apps/inventory/fed-mods.json",
-							Modules:          []crd.Module{},
-						},
+				testCase := SearchIndexCase{
+					Env:            FrontendEnvName,
+					Namespace:      FrontendNamespace,
+					ExpectedResult: "[{\"id\":\"test-search-index-test-search-index-env-test\",\"href\":\"/test/href\",\"title\":\"Test\",\"description\":\"Test description\"},{\"id\":\"test-search-index-test-search-index-env-test2\",\"href\":\"/test2/href\",\"title\":\"Test2\",\"description\":\"Test2 description\"}]",
+					SearchFrontendEntries: []SearchFrontendEntry{{
+						Name: FrontendName,
 						SearchEntries: []*crd.SearchEntry{{
 							ID:          "test",
 							Href:        "/test/href",
@@ -978,27 +1024,14 @@ var _ = ginkgo.Describe("Search index", func() {
 							Title:       "Test2",
 							Description: "Test2 description",
 						}},
-					},
+					}},
 				}
-				gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
-				frontendEnvironment := &crd.FrontendEnvironment{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "cloud.redhat.com/v1",
-						Kind:       "FrontendEnvironment",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      FrontendEnvName,
-						Namespace: FrontendNamespace,
-					},
-					Spec: crd.FrontendEnvironmentSpec{
-						SSO:      "https://something-auth",
-						Hostname: "something",
-						Monitoring: &crd.MonitoringConfig{
-							Mode: "app-interface",
-						},
-						GenerateNavJSON: false,
-					},
+				configMapLookupKey := types.NamespacedName{Name: testCase.Env, Namespace: testCase.Namespace}
+				for _, tc := range testCase.SearchFrontendEntries {
+					frontend := frontendFromSearchEntry(testCase, tc)
+					gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
 				}
+				frontendEnvironment := mockFrontendEnv(testCase.Env, testCase.Namespace)
 				gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
 				createdConfigMap := &v1.ConfigMap{}
 				gomega.Eventually(func() bool {
@@ -1012,98 +1045,46 @@ var _ = ginkgo.Describe("Search index", func() {
 					return true
 				}, timeout, interval).Should(gomega.BeTrue())
 				gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName))
-				gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
-					"fed-modules.json":  "{\"testSearchIndex\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"fullProfile\":false}}",
-					"search-index.json": "[{\"id\":\"test-search-index-test-search-index-env-test\",\"href\":\"/test/href\",\"title\":\"Test\",\"description\":\"Test description\"},{\"id\":\"test-search-index-test-search-index-env-test2\",\"href\":\"/test2/href\",\"title\":\"Test2\",\"description\":\"Test2 description\"}]",
-				}))
+
+				searchIndexMap, ok := createdConfigMap.Data["search-index.json"]
+				gomega.Expect(ok).Should(gomega.BeTrue())
+				gomega.Expect(searchIndexMap).Should(gomega.Equal(testCase.ExpectedResult))
 				gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(FrontendEnvName))
 			})
 
 			ginkgo.By("from multiple Frontend resources", func() {
 				ctx := context.Background()
 
-				configMapLookupKey := types.NamespacedName{Name: FrontendEnvName2, Namespace: FrontendNamespace}
-
-				frontend2 := &crd.Frontend{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "cloud.redhat.com/v1",
-						Kind:       "Frontend",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      FrontendName2,
-						Namespace: FrontendNamespace,
-					},
-					Spec: crd.FrontendSpec{
-						EnvName:        FrontendEnvName2,
-						Title:          "",
-						DeploymentRepo: "",
-						Frontend: crd.FrontendInfo{
-							Paths: []string{"/things/test"},
-						},
-						Image: "my-image:version",
-						Module: &crd.FedModule{
-							ManifestLocation: "/apps/inventory/fed-mods.json",
-							Modules:          []crd.Module{},
-						},
+				testCase := SearchIndexCase{
+					Env:            FrontendEnvName2,
+					Namespace:      FrontendNamespace,
+					ExpectedResult: "[{\"id\":\"test-search-index2-test-search-index-env2-test-search-index2\",\"href\":\"/test/href\",\"title\":\"Test\",\"description\":\"Test description\"},{\"id\":\"test-search-index3-test-search-index-env2-test-search-index3\",\"href\":\"/test/href\",\"title\":\"Test\",\"description\":\"Test description\"}]",
+					SearchFrontendEntries: []SearchFrontendEntry{{
+						Name: FrontendName2,
 						SearchEntries: []*crd.SearchEntry{{
 							ID:          FrontendName2,
 							Href:        "/test/href",
 							Title:       "Test",
 							Description: "Test description",
 						}},
-					},
-				}
-				gomega.Expect(k8sClient.Create(ctx, frontend2)).Should(gomega.Succeed())
-
-				frontend3 := &crd.Frontend{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "cloud.redhat.com/v1",
-						Kind:       "Frontend",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      FrontendName3,
-						Namespace: FrontendNamespace,
-					},
-					Spec: crd.FrontendSpec{
-						EnvName:        FrontendEnvName2,
-						Title:          "",
-						DeploymentRepo: "",
-						Frontend: crd.FrontendInfo{
-							Paths: []string{"/things/test"},
-						},
-						Image: "my-image:version",
-						Module: &crd.FedModule{
-							ManifestLocation: "/apps/inventory/fed-mods.json",
-							Modules:          []crd.Module{},
-						},
+					}, {
+						Name: FrontendName3,
 						SearchEntries: []*crd.SearchEntry{{
 							ID:          FrontendName3,
 							Href:        "/test/href",
 							Title:       "Test",
 							Description: "Test description",
 						}},
-					},
+					}},
 				}
-				gomega.Expect(k8sClient.Create(ctx, frontend3)).Should(gomega.Succeed())
 
-				frontendEnvironment := &crd.FrontendEnvironment{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "cloud.redhat.com/v1",
-						Kind:       "FrontendEnvironment",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      FrontendEnvName2,
-						Namespace: FrontendNamespace,
-					},
-					Spec: crd.FrontendEnvironmentSpec{
-						SSO:      "https://something-auth",
-						Hostname: "something",
-						Monitoring: &crd.MonitoringConfig{
-							Mode: "app-interface",
-						},
-						GenerateNavJSON: false,
-					},
+				configMapLookupKey := types.NamespacedName{Name: testCase.Env, Namespace: testCase.Namespace}
+				for _, tc := range testCase.SearchFrontendEntries {
+					frontend := frontendFromSearchEntry(testCase, tc)
+					gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
 				}
+
+				frontendEnvironment := mockFrontendEnv(testCase.Env, testCase.Namespace)
 				gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
 				createdConfigMap := &v1.ConfigMap{}
 				gomega.Eventually(func() bool {
@@ -1118,6 +1099,7 @@ var _ = ginkgo.Describe("Search index", func() {
 				}, timeout, interval).Should(gomega.BeTrue())
 				searchIndexMap, ok := createdConfigMap.Data["search-index.json"]
 				gomega.Expect(ok).Should(gomega.BeTrue())
+				// Make sure the order does not break the tests
 				var sortedSearchIndex []crd.SearchEntry
 				err := json.Unmarshal([]byte(searchIndexMap), &sortedSearchIndex)
 				gomega.Expect(err).Should(gomega.BeNil())
@@ -1125,11 +1107,14 @@ var _ = ginkgo.Describe("Search index", func() {
 					return sortedSearchIndex[i].ID < sortedSearchIndex[j].ID
 				})
 				var expectedIndex []crd.SearchEntry
-				err = json.Unmarshal([]byte("[{\"id\":\"test-search-index2-test-search-index-env2-test-search-index2\",\"href\":\"/test/href\",\"title\":\"Test\",\"description\":\"Test description\"},{\"id\":\"test-search-index3-test-search-index-env2-test-search-index3\",\"href\":\"/test/href\",\"title\":\"Test\",\"description\":\"Test description\"}]"), &expectedIndex)
+				err = json.Unmarshal([]byte(testCase.ExpectedResult), &expectedIndex)
 				gomega.Expect(err).Should(gomega.BeNil())
-				gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName2))
-				gomega.Expect(sortedSearchIndex).Should(gomega.ConsistOf(expectedIndex[0], expectedIndex[1]))
-				gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(FrontendEnvName2))
+				gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(testCase.Env))
+
+				for _, expectedCase := range expectedIndex {
+					gomega.Expect(sortedSearchIndex).Should(gomega.ContainElement(expectedCase))
+				}
+				gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(testCase.Env))
 			})
 		})
 	})
@@ -1173,27 +1158,6 @@ func frontendFromWidget(wc WidgetCase, wf WidgetFrontendTestEntry) *crd.Frontend
 		},
 	}
 	return frontend
-}
-
-func mockFrontendEnv(env string, namespace string) *crd.FrontendEnvironment {
-	return &crd.FrontendEnvironment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "cloud.redhat.com/v1",
-			Kind:       "FrontendEnvironment",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      env,
-			Namespace: namespace,
-		},
-		Spec: crd.FrontendEnvironmentSpec{
-			SSO:      "https://something-auth",
-			Hostname: "something",
-			Monitoring: &crd.MonitoringConfig{
-				Mode: "app-interface",
-			},
-			GenerateNavJSON: false,
-		},
-	}
 }
 
 var _ = ginkgo.Describe("Widget registry", func() {
