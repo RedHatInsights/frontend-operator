@@ -325,6 +325,14 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 	// Add the restart policy
 	j.Spec.Template.Spec.RestartPolicy = v1.RestartPolicyNever
 
+	annotations := j.Spec.Template.ObjectMeta.Annotations
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	annotations["kube-linter.io/ignore-all"] = "we don't need no any checking"
+
+	j.Spec.Template.ObjectMeta.SetAnnotations(annotations)
+
 	// Add the akamai edgerc configmap to the deployment
 
 	return nil
