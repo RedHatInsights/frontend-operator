@@ -44,18 +44,19 @@ type SearchEntry struct {
 	Href        string   `json:"href" yaml:"href"`
 	Title       string   `json:"title" yaml:"title"`
 	Description string   `json:"description" yaml:"description"`
-	AltTitle    []string `json:"alt_title" yaml:"alt_title"`
-	IsExternal  bool     `json:"isExternal" yaml:"isExternal"`
+	AltTitle    []string `json:"alt_title,omitempty" yaml:"alt_title,omitempty"`
+	IsExternal  bool     `json:"isExternal,omitempty" yaml:"isExternal,omitempty"`
 }
 
 type ServiceTile struct {
-	Section    string `json:"section" yaml:"section"`
-	Group      string `json:"group" yaml:"group"`
-	ID         string `json:"id" yaml:"id"`
-	Href       string `json:"href" yaml:"href"`
-	Title      string `json:"title" yaml:"title"`
-	Icon       string `json:"icon" yaml:"icon"`
-	IsExternal bool   `json:"isExternal,omitempty" yaml:"isExternal,omitempty"`
+	Section     string `json:"section" yaml:"section"`
+	Group       string `json:"group" yaml:"group"`
+	ID          string `json:"id" yaml:"id"`
+	Href        string `json:"href" yaml:"href"`
+	Title       string `json:"title" yaml:"title"`
+	Description string `json:"description" yaml:"description"`
+	Icon        string `json:"icon" yaml:"icon"`
+	IsExternal  bool   `json:"isExternal,omitempty" yaml:"isExternal,omitempty"`
 }
 
 type WidgetHeaderLink struct {
@@ -97,7 +98,7 @@ type FrontendSpec struct {
 	EnvName        string               `json:"envName" yaml:"envName"`
 	Title          string               `json:"title" yaml:"title"`
 	DeploymentRepo string               `json:"deploymentRepo" yaml:"deploymentRepo"`
-	API            APIInfo              `json:"API" yaml:"API"`
+	API            *APIInfo             `json:"API,omitempty" yaml:"API,omitempty"`
 	Frontend       FrontendInfo         `json:"frontend" yaml:"frontend"`
 	Image          string               `json:"image,omitempty" yaml:"image,omitempty"`
 	Service        string               `json:"service,omitempty" yaml:"service,omitempty"`

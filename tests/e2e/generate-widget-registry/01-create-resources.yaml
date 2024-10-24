@@ -1,0 +1,57 @@
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: test-widget-registry-environment
+spec:
+  generateNavJSON: false
+  ssl: false
+  hostname: foo.redhat.com
+  sso: https://sso.foo.redhat.com
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: widgets
+  namespace: test-widget-registry
+spec:
+  envName: test-widget-registry-environment
+  title: widgets
+  deploymentRepo: https://github.com/RedHatInsights/widgets-frontend
+  frontend:
+    paths:
+      - /apps/widgets
+  image: "quay.io/cloudservices/widgets-frontend:3244a17"
+  widgetRegistry:
+    - scope: "widgets"
+      module: "./RandomWidget"
+      config:
+        icon: "CogIcon"
+        title: "Random Widget"
+      defaults:
+        sm: 
+          w: 1
+          h: 1
+          maxH: 1
+          minH: 1
+        md: 
+          w: 1
+          h: 1
+          maxH: 1
+          minH: 1
+        lg: 
+          w: 1
+          h: 1
+          maxH: 1
+          minH: 1
+        xl: 
+          w: 1
+          h: 1
+          maxH: 1
+          minH: 1
+  module:
+    manifestLocation: /apps/widgets/fed-mods.json
+    modules: []
+    moduleID: widgets
+
+

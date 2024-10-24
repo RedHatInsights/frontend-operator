@@ -43,3 +43,5 @@ artifacts/
 # IDE extras
 .vscode/
 build/.build_venv
+
+kuttl-report.json

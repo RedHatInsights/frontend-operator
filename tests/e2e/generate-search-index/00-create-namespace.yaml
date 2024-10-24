@@ -1,0 +1,8 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-search-index
+spec:
+  finalizers:
+  - kubernetes

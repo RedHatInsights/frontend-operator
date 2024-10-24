@@ -92,6 +92,35 @@ spec:
                 - disabled
                 - mode
                 type: object
+              serviceCategories:
+                description: For the ChromeUI to render additional global components
+                items:
+                  description: |-
+                    FrontendServiceCategory defines the category to which service can inject ServiceTiles
+                    Chroming UI will use this to render the service dropdown component
+                  properties:
+                    groups:
+                      items:
+                        properties:
+                          id:
+                            type: string
+                          title:
+                            type: string
+                        required:
+                        - id
+                        - title
+                        type: object
+                      type: array
+                    id:
+                      type: string
+                    title:
+                      type: string
+                  required:
+                  - groups
+                  - id
+                  - title
+                  type: object
+                type: array
               ssl:
                 description: |-
                   SSL mode requests SSL from the services in openshift and k8s and then applies them to the

@@ -1,0 +1,52 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: service-tiles-frontend
+  namespace: test-service-tiles
+  labels:
+    frontend: service-tiles
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: service-tiles
+spec:
+  selector:
+    matchLabels:
+      frontend: service-tiles
+  template:
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: test-service-tiles-environment
+            defaultMode: 420
+      containers:
+        - name: fe-image
+          image: quay.io/cloudservices/service-tiles-frontend:3244a17
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9000
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /opt/app-root/src/build/stable/operator-generated
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: test-service-tiles-environment
+  namespace: test-service-tiles
+  labels:
+    frontendenv: test-service-tiles-environment
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      name: test-service-tiles-environment
+data:
+  fed-modules.json: >-
+    {"service-tiles":{"manifestLocation":"/apps/service-tiles/fed-mods.json","moduleID":"service-tiles","fullProfile":false}}
+  service-tiles.json: >-
+    [{"id":"automation","title":"Automation","groups":[{"id":"ansible","title":"Ansible","tiles":[{"section":"automation","group":"ansible","id":"ansible-link","href":"/ansible/foo","title":"Ansible FOO","description":"Ansible FOO description thing","icon":"AnsibleIcon"}]},{"id":"rhel","title":"Red Hat Enterprise Linux","tiles":[]}]},{"id":"iam","title":"Identity and Access Management","groups":[{"id":"iam","title":"IAM","tiles":[{"section":"iam","group":"iam","id":"iam-link","href":"/iam","title":"IAM FOO","description":"Some Iam thing","icon":"IAMIcon","isExternal":true}]}]}]

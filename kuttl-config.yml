@@ -12,3 +12,4 @@ commands:
 - command: make build
 - command: ./bin/manager
   background: true
+reportFormat: JSON

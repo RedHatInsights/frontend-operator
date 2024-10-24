@@ -1,0 +1,54 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: search-frontend
+  namespace: test-search-index
+  labels:
+    frontend: search
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: search
+spec:
+  selector:
+    matchLabels:
+      frontend: search
+  template:
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: test-search-index-environment
+            defaultMode: 420
+      containers:
+        - name: fe-image
+          image: quay.io/cloudservices/search-frontend:3244a17
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9000
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /opt/app-root/src/build/stable/operator-generated
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: test-search-index-environment
+  namespace: test-search-index
+  labels:
+    frontendenv: test-search-index-environment
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      name: test-search-index-environment
+data:
+  fed-modules.json: >-
+    {"search":{"manifestLocation":"/apps/search/fed-mods.json","moduleID":"search","fullProfile":false}}
+  search-index.json: >-
+    [{"id":"search-test-search-index-environment-landing","href":"/","title":"Landing","description":"Landing page description","alt_title":["HCC Home page","Home"]},{"id":"search-test-search-index-environment-landing-widgets","href":"/widgets","title":"Widget fantastic","description":"Widget"}]
+
+
