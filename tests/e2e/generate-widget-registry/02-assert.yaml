@@ -1,0 +1,54 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: widgets-frontend
+  namespace: test-widget-registry
+  labels:
+    frontend: widgets
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: widgets
+spec:
+  selector:
+    matchLabels:
+      frontend: widgets
+  template:
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: test-widget-registry-environment
+            defaultMode: 420
+      containers:
+        - name: fe-image
+          image: quay.io/cloudservices/widgets-frontend:3244a17
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9000
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /opt/app-root/src/build/stable/operator-generated
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: test-widget-registry-environment
+  namespace: test-widget-registry
+  labels:
+    frontendenv: test-widget-registry-environment
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      name: test-widget-registry-environment
+data:
+  fed-modules.json: >-
+    {"widgets":{"manifestLocation":"/apps/widgets/fed-mods.json","moduleID":"widgets","fullProfile":false}}
+  widget-registry.json: >-
+    [{"scope":"widgets","module":"./RandomWidget","config":{"icon":"CogIcon","title":"Random Widget","headerLink":{"title":"","href":""}},"defaults":{"sm":{"w":1,"h":1,"maxH":1,"minH":1},"md":{"w":1,"h":1,"maxH":1,"minH":1},"lg":{"w":1,"h":1,"maxH":1,"minH":1},"xl":{"w":1,"h":1,"maxH":1,"minH":1}}}]
+
+

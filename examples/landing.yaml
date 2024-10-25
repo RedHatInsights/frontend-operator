@@ -22,3 +22,58 @@ spec:
       routes:
       - pathname: /
         exact: true
+  searchEntries:
+    - id: "landing"
+      title: "Landing"
+      href: /
+      description: "Landing page description"
+      alt_title:
+        - HCC Home page
+        - Home
+    - id: "landing-widgets"
+      title: "Widget fantastic"
+      href: /widgets
+      description: "Widget"
+  widgetRegistry:
+    - scope: "landing"
+      module: "./RandomWidget"
+      config:
+        icon: "CogIcon"
+        title: "Random Widget"
+      defaults:
+        sm: 
+          w: 1
+          h: 1
+          maxH: 1
+          minH: 1
+        md: 
+          w: 1
+          h: 1
+          maxH: 1
+          minH: 1
+        lg: 
+          w: 1
+          h: 1
+          maxH: 1
+          minH: 1
+        xl: 
+          w: 1
+          h: 1
+          maxH: 1
+          minH: 1
+  serviceTiles:
+    - section: automation
+      group: ansible
+      id: ansible-link
+      title: Ansible FOO
+      href: /ansible/foo
+      description: Ansible FOO description thing
+      icon: AnsibleIcon
+    - section: iam
+      group: iam
+      id: iam-link
+      title: IAM FOO
+      href: /iam
+      description: Some Iam thing
+      icon: IAMIcon
+      isExternal: false

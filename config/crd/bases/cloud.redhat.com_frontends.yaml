@@ -326,11 +326,9 @@ spec:
                     title:
                       type: string
                   required:
-                  - alt_title
                   - description
                   - href
                   - id
-                  - isExternal
                   - title
                   type: object
                 type: array
@@ -345,6 +343,8 @@ spec:
                 description: Data for the all services dropdown
                 items:
                   properties:
+                    description:
+                      type: string
                     group:
                       type: string
                     href:
@@ -360,6 +360,7 @@ spec:
                     title:
                       type: string
                   required:
+                  - description
                   - group
                   - href
                   - icon
@@ -493,7 +494,6 @@ spec:
                   type: object
                 type: array
             required:
-            - API
             - deploymentRepo
             - envName
             - frontend

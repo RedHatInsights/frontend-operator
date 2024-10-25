@@ -861,6 +861,101 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 	return nil
 }
 
+func adjustSearchEntry(searchEntry *crd.SearchEntry, frontend crd.Frontend) crd.SearchEntry {
+	altTitleCopy := make([]string, len(searchEntry.AltTitle))
+	copy(altTitleCopy, searchEntry.AltTitle)
+	newSearchEntry := crd.SearchEntry{
+		// make the id environment and frontend specific to reduce duplicate ids across Frontend resources
+		ID:          fmt.Sprintf("%s-%s-%s", frontend.Name, frontend.Spec.EnvName, searchEntry.ID),
+		Title:       searchEntry.Title,
+		Description: searchEntry.Description,
+		Href:        searchEntry.Href,
+		AltTitle:    altTitleCopy,
+		IsExternal:  searchEntry.IsExternal,
+	}
+	return newSearchEntry
+}
+
+func setupSearchIndex(feList *crd.FrontendList) []crd.SearchEntry {
+	searchIndex := []crd.SearchEntry{}
+	for _, frontend := range feList.Items {
+		if frontend.Spec.SearchEntries != nil {
+			for _, searchEntry := range frontend.Spec.SearchEntries {
+				if searchEntry != nil {
+					searchIndex = append(searchIndex, adjustSearchEntry(searchEntry, frontend))
+				}
+			}
+		}
+	}
+	return searchIndex
+}
+
+func setupWidgetRegistry(feList *crd.FrontendList) []crd.WidgetEntry {
+	widgetRegistry := []crd.WidgetEntry{}
+	for _, frontend := range feList.Items {
+		for _, widget := range frontend.Spec.WidgetRegistry {
+			widgetRegistry = append(widgetRegistry, *widget)
+		}
+	}
+
+	return widgetRegistry
+}
+
+func getServiceTilePath(section string, group string) string {
+	return fmt.Sprintf("%s-%s", section, group)
+}
+
+func setupServiceTilesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnvironment) ([]crd.FrontendServiceCategoryGenerated, []string) {
+	categories := []crd.FrontendServiceCategoryGenerated{}
+	if feEnvironment.Spec.ServiceCategories == nil {
+		// skip if we do not have service categories
+		return categories, []string{}
+	}
+
+	// just a quick cache to make it easier and faster to assign tiles to their destination
+	tileGroupAccessMap := make(map[string]*[]crd.ServiceTile)
+
+	for _, category := range *feEnvironment.Spec.ServiceCategories {
+		groups := []crd.FrontendServiceCategoryGroupGenerated{}
+		for _, gr := range category.Groups {
+			tiles := []crd.ServiceTile{}
+			group := crd.FrontendServiceCategoryGroupGenerated{
+				ID:    gr.ID,
+				Title: gr.Title,
+				Tiles: &tiles,
+			}
+			groups = append(groups, group)
+			groupKey := getServiceTilePath(category.ID, gr.ID)
+			tileGroupAccessMap[groupKey] = &tiles
+		}
+		newCategory := crd.FrontendServiceCategoryGenerated{
+			ID:     category.ID,
+			Title:  category.Title,
+			Groups: groups,
+		}
+
+		categories = append(categories, newCategory)
+	}
+
+	skippedTiles := []string{}
+	for _, frontend := range feList.Items {
+		if frontend.Spec.ServiceTiles != nil {
+			for _, tile := range frontend.Spec.ServiceTiles {
+				groupKey := getServiceTilePath(tile.Section, tile.Group)
+				if groupTiles, ok := tileGroupAccessMap[groupKey]; ok {
+					// assign the tile to the service category and group
+					*groupTiles = append(*groupTiles, *tile)
+				} else {
+					// ignore the tile if destination does not exist
+					skippedTiles = append(skippedTiles, tile.ID)
+				}
+			}
+		}
+	}
+
+	return categories, skippedTiles
+}
+
 func (r *FrontendReconciliation) setupBundleData(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend) error {
 	bundleList := &crd.BundleList{}
 
@@ -987,12 +1082,51 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 		return fmt.Errorf("error setting up fedModules: %w", err)
 	}
 
-	jsonData, err := json.Marshal(fedModules)
+	searchIndex := setupSearchIndex(feList)
+
+	widgetRegistry := setupWidgetRegistry(feList)
+
+	serviceCategories, skippedTiles := setupServiceTilesData(feList, *r.FrontendEnvironment)
+
+	fedModulesJSONData, err := json.Marshal(fedModules)
 	if err != nil {
 		return err
 	}
 
-	cfgMap.Data["fed-modules.json"] = string(jsonData)
+	searchIndexJSONData, err := json.Marshal(searchIndex)
+
+	if err != nil {
+		return err
+	}
+
+	widgetRegistryJSONData, err := json.Marshal(widgetRegistry)
+	if err != nil {
+		return err
+	}
+
+	serviceCategoriesJSONData, err := json.Marshal(serviceCategories)
+
+	if err != nil {
+		return err
+	}
+
+	if len(skippedTiles) > 0 {
+		r.Log.Info("Unable to find service categories for tiles:", strings.Join(skippedTiles, ","))
+	}
+
+	cfgMap.Data["fed-modules.json"] = string(fedModulesJSONData)
+	if len(searchIndex) > 0 {
+		cfgMap.Data["search-index.json"] = string(searchIndexJSONData)
+	}
+
+	if len(widgetRegistry) > 0 {
+		cfgMap.Data["widget-registry.json"] = string(widgetRegistryJSONData)
+	}
+
+	if len(serviceCategories) > 0 {
+		cfgMap.Data["service-tiles.json"] = string(serviceCategoriesJSONData)
+	}
+
 	return nil
 }
 
