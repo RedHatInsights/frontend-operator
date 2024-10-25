@@ -757,52 +757,6 @@ func defaultNetSpec(ingressClass, host string, ingressPaths []networking.HTTPIng
 	}
 }
 
-func setupCustomNav(bundle *crd.Bundle, cfgMap *v1.ConfigMap) error {
-	newBundleObject := bundle.Spec.CustomNav
-
-	jsonData, err := json.Marshal(newBundleObject)
-	if err != nil {
-		return err
-	}
-
-	cfgMap.Data[fmt.Sprintf("%s.json", bundle.Name)] = string(jsonData)
-	return nil
-}
-
-func setupNormalNav(bundle *crd.Bundle, cacheMap map[string]crd.Frontend, cfgMap *v1.ConfigMap) error {
-	newBundleObject := crd.ComputedBundle{
-		ID:       bundle.Spec.ID,
-		Title:    bundle.Spec.Title,
-		NavItems: []crd.BundleNavItem{},
-	}
-
-	bundleCacheMap := make(map[string]crd.BundleNavItem)
-	for _, extraItem := range bundle.Spec.ExtraNavItems {
-		bundleCacheMap[extraItem.Name] = extraItem.NavItem
-	}
-
-	for _, app := range bundle.Spec.AppList {
-		if retrievedFrontend, ok := cacheMap[app]; ok {
-			if retrievedFrontend.Spec.NavItems != nil {
-				for _, navItem := range retrievedFrontend.Spec.NavItems {
-					newBundleObject.NavItems = append(newBundleObject.NavItems, *navItem)
-				}
-			}
-		}
-		if bundleNavItem, ok := bundleCacheMap[app]; ok {
-			newBundleObject.NavItems = append(newBundleObject.NavItems, bundleNavItem)
-		}
-	}
-
-	jsonData, err := json.Marshal(newBundleObject)
-	if err != nil {
-		return err
-	}
-
-	cfgMap.Data[fmt.Sprintf("%s.json", bundle.Name)] = string(jsonData)
-	return nil
-}
-
 func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendList, fedModules map[string]crd.FedModule) error {
 	for _, frontend := range frontendList.Items {
 		if frontend.Spec.Module != nil {
@@ -956,7 +910,7 @@ func setupServiceTilesData(feList *crd.FrontendList, feEnvironment crd.FrontendE
 	return categories, skippedTiles
 }
 
-func (r *FrontendReconciliation) setupBundleData(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend) error {
+func (r *FrontendReconciliation) setupBundleData(_ *v1.ConfigMap, _ map[string]crd.Frontend) error {
 	bundleList := &crd.BundleList{}
 
 	if err := r.FRE.Client.List(r.Ctx, bundleList, client.MatchingFields{"spec.envName": r.Frontend.Spec.EnvName}); err != nil {
@@ -972,18 +926,7 @@ func (r *FrontendReconciliation) setupBundleData(cfgMap *v1.ConfigMap, cacheMap 
 
 	sort.Strings(keys)
 
-	for _, key := range keys {
-		bundle := nBundleMap[key]
-		if bundle.Spec.CustomNav != nil {
-			if err := setupCustomNav(&bundle, cfgMap); err != nil {
-				return err
-			}
-		} else {
-			if err := setupNormalNav(&bundle, cacheMap, cfgMap); err != nil {
-				return err
-			}
-		}
-	}
+	// TODO: Update reconcile to use the position based navigation for bundles
 	return nil
 }
 

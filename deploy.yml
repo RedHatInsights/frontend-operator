@@ -67,11 +67,7 @@ objects:
                     properties:
                       appId:
                         type: string
-                      dynamicNav:
-                        type: string
                       expandable:
-                        type: boolean
-                      filterable:
                         type: boolean
                       groupId:
                         type: string
@@ -79,68 +75,29 @@ objects:
                         type: string
                       icon:
                         type: string
+                      id:
+                        type: string
+                      isBeta:
+                        type: boolean
                       isExternal:
                         type: boolean
+                      isHidden:
+                        type: boolean
                       navItems:
-                        items:
-                          properties:
-                            appId:
-                              type: string
-                            expandable:
-                              type: boolean
-                            filterable:
-                              type: boolean
-                            groupId:
-                              type: string
-                            href:
-                              type: string
-                            isExternal:
-                              type: boolean
-                            notifier:
-                              type: string
-                            permissions:
-                              items:
-                                properties:
-                                  args:
-                                    items:
-                                      type: string
-                                    type: array
-                                  method:
-                                    type: string
-                                required:
-                                - method
-                                type: object
-                              type: array
-                            product:
-                              type: string
-                            routes:
-                              items:
-                                description: EmbeddedRoutes allow deeply nested navs
-                                  to have support for routes
-                                properties:
-                                  appId:
-                                    type: string
-                                  href:
-                                    type: string
-                                  product:
-                                    type: string
-                                  title:
-                                    type: string
-                                type: object
-                              type: array
-                            title:
-                              type: string
-                          required:
-                          - title
-                          type: object
-                        type: array
+                        description: kubebuilder struggles validating recursive fields,
+                          it has to be helped a bit
+                        x-kubernetes-preserve-unknown-fields: true
+                      notifier:
+                        type: string
                       permissions:
                         items:
                           properties:
-                            args:
+                            apps:
                               items:
                                 type: string
                               type: array
+                            args:
+                              x-kubernetes-preserve-unknown-fields: true
                             method:
                               type: string
                           required:
@@ -150,20 +107,7 @@ objects:
                       product:
                         type: string
                       routes:
-                        items:
-                          description: EmbeddedRoutes allow deeply nested navs to
-                            have support for routes
-                          properties:
-                            appId:
-                              type: string
-                            href:
-                              type: string
-                            product:
-                              type: string
-                            title:
-                              type: string
-                          type: object
-                        type: array
+                        x-kubernetes-preserve-unknown-fields: true
                       title:
                         type: string
                     required:
@@ -181,11 +125,7 @@ objects:
                         properties:
                           appId:
                             type: string
-                          dynamicNav:
-                            type: string
                           expandable:
-                            type: boolean
-                          filterable:
                             type: boolean
                           groupId:
                             type: string
@@ -193,68 +133,29 @@ objects:
                             type: string
                           icon:
                             type: string
+                          id:
+                            type: string
+                          isBeta:
+                            type: boolean
                           isExternal:
                             type: boolean
+                          isHidden:
+                            type: boolean
                           navItems:
-                            items:
-                              properties:
-                                appId:
-                                  type: string
-                                expandable:
-                                  type: boolean
-                                filterable:
-                                  type: boolean
-                                groupId:
-                                  type: string
-                                href:
-                                  type: string
-                                isExternal:
-                                  type: boolean
-                                notifier:
-                                  type: string
-                                permissions:
-                                  items:
-                                    properties:
-                                      args:
-                                        items:
-                                          type: string
-                                        type: array
-                                      method:
-                                        type: string
-                                    required:
-                                    - method
-                                    type: object
-                                  type: array
-                                product:
-                                  type: string
-                                routes:
-                                  items:
-                                    description: EmbeddedRoutes allow deeply nested
-                                      navs to have support for routes
-                                    properties:
-                                      appId:
-                                        type: string
-                                      href:
-                                        type: string
-                                      product:
-                                        type: string
-                                      title:
-                                        type: string
-                                    type: object
-                                  type: array
-                                title:
-                                  type: string
-                              required:
-                              - title
-                              type: object
-                            type: array
+                            description: kubebuilder struggles validating recursive
+                              fields, it has to be helped a bit
+                            x-kubernetes-preserve-unknown-fields: true
+                          notifier:
+                            type: string
                           permissions:
                             items:
                               properties:
-                                args:
+                                apps:
                                   items:
                                     type: string
                                   type: array
+                                args:
+                                  x-kubernetes-preserve-unknown-fields: true
                                 method:
                                   type: string
                               required:
@@ -264,20 +165,7 @@ objects:
                           product:
                             type: string
                           routes:
-                            items:
-                              description: EmbeddedRoutes allow deeply nested navs
-                                to have support for routes
-                              properties:
-                                appId:
-                                  type: string
-                                href:
-                                  type: string
-                                product:
-                                  type: string
-                                title:
-                                  type: string
-                              type: object
-                            type: array
+                            x-kubernetes-preserve-unknown-fields: true
                           title:
                             type: string
                         required:
@@ -684,6 +572,10 @@ objects:
                   type: object
                 navItems:
                   items:
+                    description: 'Deprecated: Use ChromeNavItem instead, has to be
+                      switched for the updated reconciliation, needs to exist to prevent
+                      breaking changes for the Fronted resources and legacy NavItems
+                      attribute'
                     properties:
                       appId:
                         type: string
@@ -788,6 +680,84 @@ objects:
                         type: string
                     required:
                     - title
+                    type: object
+                  type: array
+                navigationSegments:
+                  description: navigation segments for the frontend
+                  items:
+                    properties:
+                      bundleId:
+                        description: Id of the bundle to which the segment should
+                          be injected
+                        type: string
+                      navItems:
+                        items:
+                          properties:
+                            appId:
+                              type: string
+                            expandable:
+                              type: boolean
+                            groupId:
+                              type: string
+                            href:
+                              type: string
+                            icon:
+                              type: string
+                            id:
+                              type: string
+                            isBeta:
+                              type: boolean
+                            isExternal:
+                              type: boolean
+                            isHidden:
+                              type: boolean
+                            navItems:
+                              description: kubebuilder struggles validating recursive
+                                fields, it has to be helped a bit
+                              x-kubernetes-preserve-unknown-fields: true
+                            notifier:
+                              type: string
+                            permissions:
+                              items:
+                                properties:
+                                  apps:
+                                    items:
+                                      type: string
+                                    type: array
+                                  args:
+                                    x-kubernetes-preserve-unknown-fields: true
+                                  method:
+                                    type: string
+                                required:
+                                - method
+                                type: object
+                              type: array
+                            product:
+                              type: string
+                            routes:
+                              x-kubernetes-preserve-unknown-fields: true
+                            title:
+                              type: string
+                          required:
+                          - title
+                          type: object
+                        type: array
+                      position:
+                        description: 'A position of the segment within the bundle
+
+                          0 is the first position
+
+                          The position "steps" should be at least 100 to make sure
+                          there is enough space in case some segments should be injected
+                          between existing ones'
+                        type: integer
+                      sectionId:
+                        type: string
+                    required:
+                    - bundleId
+                    - navItems
+                    - position
+                    - sectionId
                     type: object
                   type: array
                 replicas:
