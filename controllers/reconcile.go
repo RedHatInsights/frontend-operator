@@ -854,13 +854,15 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 }
 
 func adjustSearchEntry(searchEntry *crd.SearchEntry, frontend crd.Frontend) crd.SearchEntry {
+	altTitleCopy := make([]string, len(searchEntry.AltTitle))
+	copy(altTitleCopy, searchEntry.AltTitle)
 	newSearchEntry := crd.SearchEntry{
 		// make the id environment and frontend specific to reduce duplicate ids across Frontend resources
 		ID:          fmt.Sprintf("%s-%s-%s", frontend.Name, frontend.Spec.EnvName, searchEntry.ID),
 		Title:       searchEntry.Title,
 		Description: searchEntry.Description,
 		Href:        searchEntry.Href,
-		AltTitle:    searchEntry.AltTitle,
+		AltTitle:    altTitleCopy,
 		IsExternal:  searchEntry.IsExternal,
 	}
 	return newSearchEntry
@@ -871,16 +873,18 @@ func setupSearchIndex(feList *crd.FrontendList) []crd.SearchEntry {
 	for _, frontend := range feList.Items {
 		if frontend.Spec.SearchEntries != nil {
 			for _, searchEntry := range frontend.Spec.SearchEntries {
-				searchIndex = append(searchIndex, adjustSearchEntry(searchEntry, frontend))
+				if searchEntry != nil {
+					searchIndex = append(searchIndex, adjustSearchEntry(searchEntry, frontend))
+				}
 			}
 		}
 	}
 	return searchIndex
 }
 
-func setupWidgetRegistry(felist *crd.FrontendList) []crd.WidgetEntry {
+func setupWidgetRegistry(feList *crd.FrontendList) []crd.WidgetEntry {
 	widgetRegistry := []crd.WidgetEntry{}
-	for _, frontend := range felist.Items {
+	for _, frontend := range feList.Items {
 		for _, widget := range frontend.Spec.WidgetRegistry {
 			widgetRegistry = append(widgetRegistry, *widget)
 		}
@@ -893,7 +897,7 @@ func getServiceTilePath(section string, group string) string {
 	return fmt.Sprintf("%s-%s", section, group)
 }
 
-func setupServiceTilesData(felist *crd.FrontendList, feEnvironment crd.FrontendEnvironment) ([]crd.FrontendServiceCategoryGenerated, []string) {
+func setupServiceTilesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnvironment) ([]crd.FrontendServiceCategoryGenerated, []string) {
 	categories := []crd.FrontendServiceCategoryGenerated{}
 	if feEnvironment.Spec.ServiceCategories == nil {
 		// skip if we do not have service categories
@@ -926,7 +930,7 @@ func setupServiceTilesData(felist *crd.FrontendList, feEnvironment crd.FrontendE
 	}
 
 	skippedTiles := []string{}
-	for _, frontend := range felist.Items {
+	for _, frontend := range feList.Items {
 		if frontend.Spec.ServiceTiles != nil {
 			for _, tile := range frontend.Spec.ServiceTiles {
 				groupKey := getServiceTilePath(tile.Section, tile.Group)
