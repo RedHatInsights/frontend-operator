@@ -222,21 +222,22 @@ func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.F
 	// Initialize with a default path if AkamaiCacheBustPaths is nil
 	purgePaths := []string{fmt.Sprintf("%s/apps/%s/fed-mods.json", purgeHost, frontend.Name)}
 
-	// If custom paths are provided, construct the purge paths list
-	if frontend.Spec.AkamaiCacheBustPaths != nil {
-		purgePaths = make([]string, 0, len(frontend.Spec.AkamaiCacheBustPaths))
-		for _, path := range frontend.Spec.AkamaiCacheBustPaths {
-			// Check if path is a full URL (starts with "http://" or "https://")
-			if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
-				// Add full URL path directly
-				purgePaths = append(purgePaths, path)
-			} else {
-				// Ensure each path has a leading slash but no double slashes
-				if !strings.HasPrefix(path, "/") {
-					path = "/" + path
-				}
-				purgePaths = append(purgePaths, purgeHost+path)
+	if frontend.Spec.AkamaiCacheBustPaths == nil {
+		return purgePaths 
+	}
+
+	purgePaths = make([]string, 0, len(frontend.Spec.AkamaiCacheBustPaths))
+	for _, path := range frontend.Spec.AkamaiCacheBustPaths {
+		// Check if path is a full URL (starts with "http://" or "https://")
+		if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+			// Add full URL path directly
+			purgePaths = append(purgePaths, path)
+		} else {
+			// Ensure each path has a leading slash but no double slashes
+			if !strings.HasPrefix(path, "/") {
+				path = "/" + path
 			}
+			purgePaths = append(purgePaths, purgeHost+path)
 		}
 	}
 	return purgePaths
