@@ -216,33 +216,29 @@ func makeAkamaiEdgercFileFromSecret(secret *v1.Secret) string {
 }
 
 func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) []string {
-	var purgeHost string
-	// If the cache bust URL doesn't begin with https:// then add it
-	if strings.HasPrefix(frontendEnvironment.Spec.AkamaiCacheBustURL, "https://") {
-		purgeHost = frontendEnvironment.Spec.AkamaiCacheBustURL
-	} else {
-		purgeHost = fmt.Sprintf("https://%s", frontendEnvironment.Spec.AkamaiCacheBustURL)
-	}
+	// Set purgeHost by ensuring the URL begins with https:// and has no trailing /
+	purgeHost := strings.TrimSuffix(fmt.Sprintf("https://%s", strings.TrimPrefix(frontendEnvironment.Spec.AkamaiCacheBustURL, "https://")), "/")
 
-	// If purgeHost ends with a / then remove it
-	purgeHost = strings.TrimSuffix(purgeHost, "/")
+	// Initialize with a default path if AkamaiCacheBustPaths is nil
+	purgePaths := []string{fmt.Sprintf("%s/apps/%s/fed-mods.json", purgeHost, frontend.Name)}
 
-	// If there is no purge list return the default
 	if frontend.Spec.AkamaiCacheBustPaths == nil {
-		return []string{fmt.Sprintf("%s/apps/%s/fed-mods.json", purgeHost, frontend.Name)}
+		return purgePaths
 	}
 
-	purgePaths := []string{}
-	// Loop through the frontend purge paths and append them to the purge host
+	purgePaths = make([]string, 0, len(frontend.Spec.AkamaiCacheBustPaths))
 	for _, path := range frontend.Spec.AkamaiCacheBustPaths {
-		var purgePath string
-		// If the path doesn't begin with a / then add it
-		if strings.HasPrefix(path, "/") {
-			purgePath = fmt.Sprintf("%s%s", purgeHost, path)
+		// Check if path is a full URL (starts with "http://" or "https://")
+		if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+			// Add full URL path directly
+			purgePaths = append(purgePaths, path)
 		} else {
-			purgePath = fmt.Sprintf("%s/%s", purgeHost, path)
+			// Ensure each path has a leading slash but no double slashes
+			if !strings.HasPrefix(path, "/") {
+				path = "/" + path
+			}
+			purgePaths = append(purgePaths, purgeHost+path)
 		}
-		purgePaths = append(purgePaths, purgePath)
 	}
 	return purgePaths
 }
@@ -302,7 +298,7 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 	pathsToCacheBust := createCachePurgePathList(r.Frontend, r.FrontendEnvironment)
 
 	// Construct the akamai cache bust command
-	command := fmt.Sprintf("sleep 60; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete %s", strings.Join(pathsToCacheBust, " "))
+	command := fmt.Sprintf("sleep 120; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete %s", strings.Join(pathsToCacheBust, " "))
 
 	// Modify the obejct to set the things we care about
 	cacheBustContainer := v1.Container{
