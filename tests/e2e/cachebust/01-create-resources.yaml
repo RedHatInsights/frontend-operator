@@ -27,6 +27,7 @@ spec:
   akamaiCacheBustPaths:
     - /config/chrome/fed-modules.json
     - apps/chrome/index.html
+    - https://app.company.com
   deploymentRepo: https://github.com/RedHatInsights/insights-chrome
   envName: test-cachebust-environment
   image: quay.io/cloudservices/insights-chrome-frontend:720317c
