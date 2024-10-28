@@ -223,7 +223,7 @@ func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.F
 	purgePaths := []string{fmt.Sprintf("%s/apps/%s/fed-mods.json", purgeHost, frontend.Name)}
 
 	if frontend.Spec.AkamaiCacheBustPaths == nil {
-		return purgePaths 
+		return purgePaths
 	}
 
 	purgePaths = make([]string, 0, len(frontend.Spec.AkamaiCacheBustPaths))
