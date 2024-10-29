@@ -286,7 +286,7 @@ spec:
           - name: kustomize-build
             image: registry.access.redhat.com/ubi8/ubi:latest
             workingDir: /var/workdir/source
-            script: set -e && dnf install -y git make && ./kuttl_test.sh
+            script: set -e && dnf install -y git go make && ./kuttl_test.sh
         volumes:
           # New volume to store a copy of the source code accessible only to this Task.
           - name: workdir
