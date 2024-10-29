@@ -216,28 +216,37 @@ func makeAkamaiEdgercFileFromSecret(secret *v1.Secret) string {
 }
 
 func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) []string {
-	// Set purgeHost by ensuring the URL begins with https:// and has no trailing /
-	purgeHost := strings.TrimSuffix(fmt.Sprintf("https://%s", strings.TrimPrefix(frontendEnvironment.Spec.AkamaiCacheBustURL, "https://")), "/")
+	var purgePaths []string
 
-	// Initialize with a default path if AkamaiCacheBustPaths is nil
-	purgePaths := []string{fmt.Sprintf("%s/apps/%s/fed-mods.json", purgeHost, frontend.Name)}
-
-	if frontend.Spec.AkamaiCacheBustPaths == nil {
+	if frontendEnvironment.Spec.AkamaiCacheBustURLs == nil {
 		return purgePaths
 	}
 
-	purgePaths = make([]string, 0, len(frontend.Spec.AkamaiCacheBustPaths))
-	for _, path := range frontend.Spec.AkamaiCacheBustPaths {
-		// Check if path is a full URL (starts with "http://" or "https://")
-		if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
-			// Add full URL path directly
-			purgePaths = append(purgePaths, path)
-		} else {
-			// Ensure each path has a leading slash but no double slashes
-			if !strings.HasPrefix(path, "/") {
-				path = "/" + path
+	for _, cacheBustURL := range frontendEnvironment.Spec.AkamaiCacheBustURLs {
+
+		// Set purgeHost by ensuring the URL begins with https:// and has no trailing /
+		purgeHost := strings.TrimSuffix(fmt.Sprintf("https://%s", strings.TrimPrefix(cacheBustURL, "https://")), "/")
+
+		// Initialize with a default path if AkamaiCacheBustPaths is nil
+		purgePaths = []string{fmt.Sprintf("%s/apps/%s/fed-mods.json", purgeHost, frontend.Name)}
+
+		if frontend.Spec.AkamaiCacheBustPaths == nil {
+			continue
+		}
+
+		purgePaths = make([]string, 0, len(frontend.Spec.AkamaiCacheBustPaths))
+		for _, path := range frontend.Spec.AkamaiCacheBustPaths {
+			// Check if path is a full URL (starts with "http://" or "https://")
+			if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+				// Add full URL path directly
+				purgePaths = append(purgePaths, path)
+			} else {
+				// Ensure each path has a leading slash but no double slashes
+				if !strings.HasPrefix(path, "/") {
+					path = "/" + path
+				}
+				purgePaths = append(purgePaths, purgeHost+path)
 			}
-			purgePaths = append(purgePaths, purgeHost+path)
 		}
 	}
 	return purgePaths
