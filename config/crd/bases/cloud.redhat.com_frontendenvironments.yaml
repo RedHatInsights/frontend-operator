@@ -52,10 +52,12 @@ spec:
               akamaiCacheBustImage:
                 description: Set Akamai Cache Bust Image
                 type: string
-              akamaiCacheBustURL:
+              akamaiCacheBustURLs:
                 description: Set Akamai Cache Bust URL that the files will hang off
                   of
-                type: string
+                items:
+                  type: string
+                type: array
               akamaiSecretName:
                 description: The name of the secret we will use to get the akamai
                   credentials
