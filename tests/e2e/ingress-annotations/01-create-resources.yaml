@@ -9,7 +9,7 @@ spec:
   hostname: foo.redhat.com
   sso: https://sso.foo.redhat.com
   ingressAnnotations:
-    - "nginx.ingress.kubernetes.io/rewrite-target" : "/"
+    "nginx.ingress.kubernetes.io/rewrite-target" : "/"
 ---
 apiVersion: cloud.redhat.com/v1alpha1
 kind: Frontend
