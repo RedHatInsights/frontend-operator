@@ -2,7 +2,7 @@
 apiVersion: cloud.redhat.com/v1alpha1
 kind: FrontendEnvironment
 metadata:
-  name: test-cachebust-environment
+  name: test-cachebust-multiple-urls-environment
 spec:
   generateNavJSON: false
   ssl: false
@@ -12,12 +12,13 @@ spec:
   akamaiCacheBustImage: "quay.io/rh_ee_addrew/hi_true_bye:add_alias"
   akamaiCacheBustURLs: 
     - "console.doesntexist.redhat.com"
+    - "us.console.doesntexist.redhat.com"
 ---
 apiVersion: cloud.redhat.com/v1alpha1
 kind: Frontend
 metadata:
   name: chrome-test-filelist
-  namespace: test-cachebust
+  namespace: test-cachebust-multiple-urls
 spec:
   API:
     versions:
@@ -30,7 +31,7 @@ spec:
     - apps/chrome/index.html
     - https://app.company.com
   deploymentRepo: https://github.com/RedHatInsights/insights-chrome
-  envName: test-cachebust-environment
+  envName: test-cachebust-multiple-urls-environment
   image: quay.io/cloudservices/insights-chrome-frontend:720317c
   module:
     config:
@@ -42,7 +43,7 @@ apiVersion: cloud.redhat.com/v1alpha1
 kind: Frontend
 metadata:
   name: chrome-test-defaults
-  namespace: test-cachebust
+  namespace: test-cachebust-multiple-urls
 spec:
   API:
     versions:
@@ -51,7 +52,7 @@ spec:
     paths:
       - /chrome/defaults
   deploymentRepo: https://github.com/RedHatInsights/insights-chrome
-  envName: test-cachebust-environment
+  envName: test-cachebust-multiple-urls-environment
   image: quay.io/cloudservices/insights-chrome-frontend:720317c
   module:
     config:
@@ -63,7 +64,7 @@ apiVersion: cloud.redhat.com/v1alpha1
 kind: Frontend
 metadata:
   name: chrome-test-optout
-  namespace: test-cachebust
+  namespace: test-cachebust-multiple-urls
 spec:
   akamaiCacheBustDisable: true
   API:
@@ -73,7 +74,7 @@ spec:
     paths:
       - /chrome2
   deploymentRepo: https://github.com/RedHatInsights/insights-chrome
-  envName: test-cachebust-environment
+  envName: test-cachebust-multiple-urls-environment
   image: quay.io/cloudservices/insights-chrome-frontend:720317c
   module:
     config:
