@@ -967,10 +967,10 @@ func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
 		})
 	}
 
-	defaultCfgMap, err := r.createConfigMap(defaultNN, frontendList)
+	defaultCfgMap, err := r.createConfigMap(defaultNN, frontendList, false)
 
 	for _, nn := range additionalNN {
-		_, err = r.createConfigMap(nn, frontendList)
+		_, err = r.createConfigMap(nn, frontendList, true)
 		if err != nil {
 			return defaultCfgMap, err
 		}
@@ -979,8 +979,26 @@ func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
 	return defaultCfgMap, err
 }
 
-func (r *FrontendReconciliation) createConfigMap(nn types.NamespacedName, frontendList *crd.FrontendList) (*v1.ConfigMap, error) {
+func (r *FrontendReconciliation) createConfigMap(nn types.NamespacedName, frontendList *crd.FrontendList, markForRestart bool) (*v1.ConfigMap, error) {
 	cfgMap := &v1.ConfigMap{}
+	if markForRestart {
+		if cfgMap.Annotations == nil {
+			cfgMap.Annotations = map[string]string{}
+		}
+		// Flag to trigger pod restart if config map changes
+		cfgMap.Annotations["qontract.recycle"] = "true"
+		/**
+				* to use config map in a pod as an env variable use following config:
+		    * podSpec:
+		    *   env:
+		    *    - name: FEO_SEARCH_INDEX
+		    *      valueFrom:
+		    *        configMapKeyRef:
+		    *          key: search-index.json # or other key from config map
+		    *          name: feo-context-cfg # based on the constant in the setupConfigMaps function
+			  *					 optional: true # because keys in configmap can be empty
+		*/
+	}
 
 	// Create a map of frontend names to frontend objects
 	cacheMap := make(map[string]crd.Frontend)
