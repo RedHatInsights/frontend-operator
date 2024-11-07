@@ -658,6 +658,17 @@ func (r *FrontendReconciliation) createAnnotationsAndPopulate(nn types.Namespace
 		ingressClass = "nginx"
 	}
 
+	if r.FrontendEnvironment.Spec.IngressAnnotations != nil {
+		annotations := netobj.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+		for k, v := range r.FrontendEnvironment.Spec.IngressAnnotations {
+			annotations[k] = v
+		}
+		netobj.SetAnnotations(annotations)
+	}
+
 	if len(r.FrontendEnvironment.Spec.Whitelist) != 0 {
 		annotations := netobj.GetAnnotations()
 		if annotations == nil {

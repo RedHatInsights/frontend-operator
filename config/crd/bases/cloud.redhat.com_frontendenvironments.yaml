@@ -72,6 +72,13 @@ spec:
               hostname:
                 description: Hostname
                 type: string
+              ingressAnnotations:
+                additionalProperties:
+                  type: string
+                description: |-
+                  Ingress annotations
+                  These annotations will be applied to the ingress objects created by the frontend
+                type: object
               ingressClass:
                 description: Ingress class
                 type: string

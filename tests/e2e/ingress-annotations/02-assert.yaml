@@ -1,0 +1,43 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: chrome-frontend
+  namespace: test-ingress-annotations
+  labels:
+    frontend: chrome
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: chrome
+spec:
+  selector:
+    matchLabels:
+      frontend: chrome
+  template:
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name:  test-ingress-annotations-environment
+            defaultMode: 420
+      containers:
+        - name: fe-image
+          image: 'quay.io/cloudservices/insights-chrome-frontend:720317c'
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9000
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /opt/app-root/src/build/stable/operator-generated
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  namespace: test-ingress-annotations
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
