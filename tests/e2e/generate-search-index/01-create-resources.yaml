@@ -38,5 +38,4 @@ spec:
     manifestLocation: /apps/search/fed-mods.json
     modules: []
     moduleID: search
-
-
+  feoConfigEnabled: true

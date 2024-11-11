@@ -94,6 +94,7 @@ spec:
         routes:
           - pathname: /edge
     moduleID: edge
+  feoConfigEnabled: true
 ---
 apiVersion: cloud.redhat.com/v1alpha1
 kind: Bundle

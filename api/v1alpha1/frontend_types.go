@@ -130,6 +130,8 @@ type FrontendSpec struct {
 	// Data for the available widgets for the resource
 	WidgetRegistry []*WidgetEntry `json:"widgetRegistry,omitempty" yaml:"widgetRegistry,omitempty"`
 	Replicas       *int32         `json:"replicas,omitempty" yaml:"replicas,omitempty"`
+	// Injects configuration from application when enabled
+	FeoConfigEnabled bool `json:"feoConfigEnabled,omitempty" yaml:"feoConfigEnabled,omitempty"`
 }
 
 var ReconciliationSuccessful = "ReconciliationSuccessful"
