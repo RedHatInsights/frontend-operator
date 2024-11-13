@@ -766,7 +766,7 @@ func defaultNetSpec(ingressClass, host string, ingressPaths []networking.HTTPIng
 
 func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendList, fedModules map[string]crd.FedModule) error {
 	for _, frontend := range frontendList.Items {
-		if frontend.Spec.Module != nil {
+		if (frontend.Name == "chrome" || frontend.Spec.FeoConfigEnabled) && frontend.Spec.Module != nil {
 			// module names in fed-modules.json must be camelCase
 			// K8s does not allow camelCase names, only
 			// whatever-this-case-is, so we convert.
@@ -840,7 +840,7 @@ func adjustSearchEntry(searchEntry *crd.SearchEntry, frontend crd.Frontend) crd.
 func setupSearchIndex(feList *crd.FrontendList) []crd.SearchEntry {
 	searchIndex := []crd.SearchEntry{}
 	for _, frontend := range feList.Items {
-		if frontend.Spec.SearchEntries != nil {
+		if frontend.Spec.FeoConfigEnabled && frontend.Spec.SearchEntries != nil {
 			for _, searchEntry := range frontend.Spec.SearchEntries {
 				if searchEntry != nil {
 					searchIndex = append(searchIndex, adjustSearchEntry(searchEntry, frontend))
@@ -854,8 +854,10 @@ func setupSearchIndex(feList *crd.FrontendList) []crd.SearchEntry {
 func setupWidgetRegistry(feList *crd.FrontendList) []crd.WidgetEntry {
 	widgetRegistry := []crd.WidgetEntry{}
 	for _, frontend := range feList.Items {
-		for _, widget := range frontend.Spec.WidgetRegistry {
-			widgetRegistry = append(widgetRegistry, *widget)
+		if frontend.Spec.FeoConfigEnabled {
+			for _, widget := range frontend.Spec.WidgetRegistry {
+				widgetRegistry = append(widgetRegistry, *widget)
+			}
 		}
 	}
 
@@ -900,7 +902,7 @@ func setupServiceTilesData(feList *crd.FrontendList, feEnvironment crd.FrontendE
 
 	skippedTiles := []string{}
 	for _, frontend := range feList.Items {
-		if frontend.Spec.ServiceTiles != nil {
+		if frontend.Spec.FeoConfigEnabled && frontend.Spec.ServiceTiles != nil {
 			for _, tile := range frontend.Spec.ServiceTiles {
 				groupKey := getServiceTilePath(tile.Section, tile.Group)
 				if groupTiles, ok := tileGroupAccessMap[groupKey]; ok {

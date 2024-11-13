@@ -79,6 +79,9 @@ spec:
                 type: boolean
               envName:
                 type: string
+              feoConfigEnabled:
+                description: Injects configuration from application when enabled
+                type: boolean
               frontend:
                 properties:
                   paths:

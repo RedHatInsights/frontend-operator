@@ -84,6 +84,7 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 						}},
 						Config: &customConfig,
 					},
+					FeoConfigEnabled: true,
 				},
 			}
 			gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
@@ -126,6 +127,7 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 						Config:      &customConfig2,
 						FullProfile: crd.FalsePtr(),
 					},
+					FeoConfigEnabled: true,
 				},
 			}
 			gomega.Expect(k8sClient.Create(ctx, frontend2)).Should(gomega.Succeed())
@@ -301,6 +303,7 @@ var _ = ginkgo.Describe("Frontend controller with service", func() {
 							}},
 						}},
 					},
+					FeoConfigEnabled: true,
 				},
 			}
 			gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
@@ -474,6 +477,7 @@ var _ = ginkgo.Describe("Frontend controller with chrome", func() {
 						}},
 						Config: &customConfig,
 					},
+					FeoConfigEnabled: true,
 				},
 			}
 			gomega.Expect(k8sClient.Create(ctx, frontend2)).Should(gomega.Succeed())
@@ -513,6 +517,7 @@ var _ = ginkgo.Describe("Frontend controller with chrome", func() {
 							}},
 						}},
 					},
+					FeoConfigEnabled: true,
 				},
 			}
 			gomega.Expect(k8sClient.Create(ctx, frontend3)).Should(gomega.Succeed())
@@ -781,6 +786,7 @@ var _ = ginkgo.Describe("Dependencies", func() {
 							Dependencies: []string{"depstring"},
 						}},
 					},
+					FeoConfigEnabled: true,
 				},
 			}
 			gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
@@ -821,6 +827,7 @@ var _ = ginkgo.Describe("Dependencies", func() {
 							OptionalDependencies: []string{"depstring-op"},
 						}},
 					},
+					FeoConfigEnabled: true,
 				},
 			}
 			gomega.Expect(k8sClient.Create(ctx, frontend2)).Should(gomega.Succeed())
@@ -860,6 +867,7 @@ var _ = ginkgo.Describe("Dependencies", func() {
 							}},
 						}},
 					},
+					FeoConfigEnabled: true,
 				},
 			}
 			gomega.Expect(k8sClient.Create(ctx, frontend3)).Should(gomega.Succeed())
@@ -958,7 +966,8 @@ func frontendFromSearchEntry(tc SearchIndexCase, entry SearchFrontendEntry) *crd
 				ManifestLocation: "",
 				Modules:          []crd.Module{},
 			},
-			SearchEntries: entry.SearchEntries,
+			SearchEntries:    entry.SearchEntries,
+			FeoConfigEnabled: true,
 		},
 	}
 
@@ -1152,7 +1161,8 @@ func frontendFromWidget(wc WidgetCase, wf WidgetFrontendTestEntry) *crd.Frontend
 				ManifestLocation: "",
 				Modules:          []crd.Module{},
 			},
-			WidgetRegistry: wf.Widgets,
+			WidgetRegistry:   wf.Widgets,
+			FeoConfigEnabled: true,
 		},
 	}
 	return frontend
@@ -1300,7 +1310,8 @@ func frontendFromServiceTile(sct ServiceTileCase, ste ServiceTileTestEntry) *crd
 				ManifestLocation: "",
 				Modules:          []crd.Module{},
 			},
-			ServiceTiles: ste.ServiceTiles,
+			ServiceTiles:     ste.ServiceTiles,
+			FeoConfigEnabled: true,
 		},
 	}
 	return frontend
