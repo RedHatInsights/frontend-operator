@@ -755,7 +755,7 @@ func defaultNetSpec(ingressClass, host string, ingressPaths []networking.HTTPIng
 
 func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendList, fedModules map[string]crd.FedModule) error {
 	for _, frontend := range frontendList.Items {
-		if frontend.Spec.FeoConfigEnabled && frontend.Spec.Module != nil {
+		if (frontend.Name == "chrome" || frontend.Spec.FeoConfigEnabled) && frontend.Spec.Module != nil {
 			// module names in fed-modules.json must be camelCase
 			// K8s does not allow camelCase names, only
 			// whatever-this-case-is, so we convert.

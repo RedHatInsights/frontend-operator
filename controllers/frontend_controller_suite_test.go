@@ -437,7 +437,6 @@ var _ = ginkgo.Describe("Frontend controller with chrome", func() {
 						}},
 						Config: &customConfig,
 					},
-					FeoConfigEnabled: true,
 				},
 			}
 			gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
