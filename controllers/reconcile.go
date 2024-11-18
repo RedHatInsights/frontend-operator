@@ -218,6 +218,16 @@ func makeAkamaiEdgercFileFromSecret(secret *v1.Secret) string {
 func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) []string {
 	var purgePaths []string
 
+	// Helper function to check if a path is already in the list
+	contains := func(slice []string, item string) bool {
+		for _, existing := range slice {
+			if existing == item {
+				return true
+			}
+		}
+		return false
+	}
+
 	// Return early if there are no AkamaiCacheBustURLs
 	if frontendEnvironment.Spec.AkamaiCacheBustURLs == nil {
 		return purgePaths
@@ -229,21 +239,31 @@ func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.F
 
 		// Add default path if AkamaiCacheBustPaths is nil
 		if frontend.Spec.AkamaiCacheBustPaths == nil {
-			purgePaths = append(purgePaths, fmt.Sprintf("%s/apps/%s/fed-mods.json", purgeHost, frontend.Name))
+			defaultPath := fmt.Sprintf("%s/apps/%s/fed-mods.json", purgeHost, frontend.Name)
+			if !contains(purgePaths, defaultPath) {
+				purgePaths = append(purgePaths, defaultPath)
+			}
 			continue
 		}
 
 		// Append paths based on AkamaiCacheBustPaths
 		for _, path := range frontend.Spec.AkamaiCacheBustPaths {
+			var fullPath string
+
 			if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
 				// Add full URL path directly
-				purgePaths = append(purgePaths, path)
+				fullPath = path
 			} else {
 				// Ensure each path has a leading slash but no double slashes
 				if !strings.HasPrefix(path, "/") {
 					path = "/" + path
 				}
-				purgePaths = append(purgePaths, purgeHost+path)
+				fullPath = purgeHost + path
+			}
+
+			// Append the fullPath only if it doesn't already exist in purgePaths
+			if !contains(purgePaths, fullPath) {
+				purgePaths = append(purgePaths, fullPath)
 			}
 		}
 	}
