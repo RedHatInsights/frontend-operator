@@ -444,6 +444,8 @@ FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
 | Field | Description | Default | Validation
 | *`sso`* __string__ | Foo is an example field of FrontendEnvironment. Edit FrontendEnvironment_types.go to remove/update + |  | 
 | *`ingressClass`* __string__ | Ingress class + |  | 
+| *`ingressAnnotations`* __object (keys:string, values:string)__ | Ingress annotations +
+These annotations will be applied to the ingress objects created by the frontend + |  | 
 | *`hostname`* __string__ | Hostname + |  | 
 | *`whitelist`* __string array__ | Whitelist CIDRs + |  | 
 | *`monitoring`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-monitoringconfig[$$MonitoringConfig$$]__ | MonitorMode determines where a ServiceMonitor object will be placed +

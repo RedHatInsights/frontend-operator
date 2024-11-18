@@ -278,6 +278,14 @@ objects:
                 hostname:
                   description: Hostname
                   type: string
+                ingressAnnotations:
+                  additionalProperties:
+                    type: string
+                  description: 'Ingress annotations
+
+                    These annotations will be applied to the ingress objects created
+                    by the frontend'
+                  type: object
                 ingressClass:
                   description: Ingress class
                   type: string
@@ -455,6 +463,9 @@ objects:
                   type: boolean
                 envName:
                   type: string
+                feoConfigEnabled:
+                  description: Injects configuration from application when enabled
+                  type: boolean
                 frontend:
                   properties:
                     paths:

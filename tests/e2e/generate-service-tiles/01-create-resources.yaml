@@ -55,3 +55,4 @@ spec:
       description: Some Iam thing
       icon: IAMIcon
       isExternal: true
+  feoConfigEnabled: true

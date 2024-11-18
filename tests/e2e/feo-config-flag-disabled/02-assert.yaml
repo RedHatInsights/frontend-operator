@@ -1,0 +1,14 @@
+# The config map should be present in the default namespace
+# however as FeoConfigEnabled is false - json should not be present
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: test-feo-config-flag-namespace-environment
+  namespace: test-feo-config-flag-namespace
+  labels:
+    frontendenv: test-feo-config-flag-namespace-environment
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      name: test-feo-config-flag-namespace-environment
+data:
+  fed-modules.json: '{}'

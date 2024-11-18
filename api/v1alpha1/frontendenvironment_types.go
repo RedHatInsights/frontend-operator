@@ -61,6 +61,9 @@ type FrontendEnvironmentSpec struct {
 
 	// Ingress class
 	IngressClass string `json:"ingressClass,omitempty"`
+	// Ingress annotations
+	// These annotations will be applied to the ingress objects created by the frontend
+	IngressAnnotations map[string]string `json:"ingressAnnotations,omitempty"`
 
 	// Hostname
 	Hostname string `json:"hostname,omitempty"`

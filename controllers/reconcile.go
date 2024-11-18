@@ -667,6 +667,17 @@ func (r *FrontendReconciliation) createAnnotationsAndPopulate(nn types.Namespace
 		ingressClass = "nginx"
 	}
 
+	if r.FrontendEnvironment.Spec.IngressAnnotations != nil {
+		annotations := netobj.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+		for k, v := range r.FrontendEnvironment.Spec.IngressAnnotations {
+			annotations[k] = v
+		}
+		netobj.SetAnnotations(annotations)
+	}
+
 	if len(r.FrontendEnvironment.Spec.Whitelist) != 0 {
 		annotations := netobj.GetAnnotations()
 		if annotations == nil {
@@ -764,7 +775,7 @@ func defaultNetSpec(ingressClass, host string, ingressPaths []networking.HTTPIng
 
 func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendList, fedModules map[string]crd.FedModule) error {
 	for _, frontend := range frontendList.Items {
-		if frontend.Spec.Module != nil {
+		if (frontend.Name == "chrome" || frontend.Spec.FeoConfigEnabled) && frontend.Spec.Module != nil {
 			// module names in fed-modules.json must be camelCase
 			// K8s does not allow camelCase names, only
 			// whatever-this-case-is, so we convert.
@@ -838,7 +849,7 @@ func adjustSearchEntry(searchEntry *crd.SearchEntry, frontend crd.Frontend) crd.
 func setupSearchIndex(feList *crd.FrontendList) []crd.SearchEntry {
 	searchIndex := []crd.SearchEntry{}
 	for _, frontend := range feList.Items {
-		if frontend.Spec.SearchEntries != nil {
+		if frontend.Spec.FeoConfigEnabled && frontend.Spec.SearchEntries != nil {
 			for _, searchEntry := range frontend.Spec.SearchEntries {
 				if searchEntry != nil {
 					searchIndex = append(searchIndex, adjustSearchEntry(searchEntry, frontend))
@@ -852,8 +863,10 @@ func setupSearchIndex(feList *crd.FrontendList) []crd.SearchEntry {
 func setupWidgetRegistry(feList *crd.FrontendList) []crd.WidgetEntry {
 	widgetRegistry := []crd.WidgetEntry{}
 	for _, frontend := range feList.Items {
-		for _, widget := range frontend.Spec.WidgetRegistry {
-			widgetRegistry = append(widgetRegistry, *widget)
+		if frontend.Spec.FeoConfigEnabled {
+			for _, widget := range frontend.Spec.WidgetRegistry {
+				widgetRegistry = append(widgetRegistry, *widget)
+			}
 		}
 	}
 
@@ -898,7 +911,7 @@ func setupServiceTilesData(feList *crd.FrontendList, feEnvironment crd.FrontendE
 
 	skippedTiles := []string{}
 	for _, frontend := range feList.Items {
-		if frontend.Spec.ServiceTiles != nil {
+		if frontend.Spec.FeoConfigEnabled && frontend.Spec.ServiceTiles != nil {
 			for _, tile := range frontend.Spec.ServiceTiles {
 				groupKey := getServiceTilePath(tile.Section, tile.Group)
 				if groupTiles, ok := tileGroupAccessMap[groupKey]; ok {
@@ -976,10 +989,10 @@ func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
 		})
 	}
 
-	defaultCfgMap, err := r.createConfigMap(defaultNN, frontendList)
+	defaultCfgMap, err := r.createConfigMap(defaultNN, frontendList, false)
 
 	for _, nn := range additionalNN {
-		_, err = r.createConfigMap(nn, frontendList)
+		_, err = r.createConfigMap(nn, frontendList, true)
 		if err != nil {
 			return defaultCfgMap, err
 		}
@@ -988,8 +1001,26 @@ func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
 	return defaultCfgMap, err
 }
 
-func (r *FrontendReconciliation) createConfigMap(nn types.NamespacedName, frontendList *crd.FrontendList) (*v1.ConfigMap, error) {
+func (r *FrontendReconciliation) createConfigMap(nn types.NamespacedName, frontendList *crd.FrontendList, markForRestart bool) (*v1.ConfigMap, error) {
 	cfgMap := &v1.ConfigMap{}
+	if markForRestart {
+		if cfgMap.Annotations == nil {
+			cfgMap.Annotations = map[string]string{}
+		}
+		// Flag to trigger pod restart if config map changes
+		cfgMap.Annotations["qontract.recycle"] = "true"
+		/**
+				* to use config map in a pod as an env variable use following config:
+		    * podSpec:
+		    *   env:
+		    *    - name: FEO_SEARCH_INDEX
+		    *      valueFrom:
+		    *        configMapKeyRef:
+		    *          key: search-index.json # or other key from config map
+		    *          name: feo-context-cfg # based on the constant in the setupConfigMaps function
+			  *					 optional: true # because keys in configmap can be empty
+		*/
+	}
 
 	// Create a map of frontend names to frontend objects
 	cacheMap := make(map[string]crd.Frontend)

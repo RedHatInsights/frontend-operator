@@ -53,5 +53,4 @@ spec:
     manifestLocation: /apps/widgets/fed-mods.json
     modules: []
     moduleID: widgets
-
-
+  feoConfigEnabled: true
