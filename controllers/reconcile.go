@@ -218,25 +218,23 @@ func makeAkamaiEdgercFileFromSecret(secret *v1.Secret) string {
 func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) []string {
 	var purgePaths []string
 
+	// Return early if there are no AkamaiCacheBustURLs
 	if frontendEnvironment.Spec.AkamaiCacheBustURLs == nil {
 		return purgePaths
 	}
 
 	for _, cacheBustURL := range frontendEnvironment.Spec.AkamaiCacheBustURLs {
-
-		// Set purgeHost by ensuring the URL begins with https:// and has no trailing /
+		// Ensure the URL begins with https:// and has no trailing /
 		purgeHost := strings.TrimSuffix(fmt.Sprintf("https://%s", strings.TrimPrefix(cacheBustURL, "https://")), "/")
 
-		// Initialize with a default path if AkamaiCacheBustPaths is nil
-		purgePaths = []string{fmt.Sprintf("%s/apps/%s/fed-mods.json", purgeHost, frontend.Name)}
-
+		// Add default path if AkamaiCacheBustPaths is nil
 		if frontend.Spec.AkamaiCacheBustPaths == nil {
+			purgePaths = append(purgePaths, fmt.Sprintf("%s/apps/%s/fed-mods.json", purgeHost, frontend.Name))
 			continue
 		}
 
-		purgePaths = make([]string, 0, len(frontend.Spec.AkamaiCacheBustPaths))
+		// Append paths based on AkamaiCacheBustPaths
 		for _, path := range frontend.Spec.AkamaiCacheBustPaths {
-			// Check if path is a full URL (starts with "http://" or "https://")
 			if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
 				// Add full URL path directly
 				purgePaths = append(purgePaths, path)
@@ -249,6 +247,7 @@ func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.F
 			}
 		}
 	}
+
 	return purgePaths
 }
 
