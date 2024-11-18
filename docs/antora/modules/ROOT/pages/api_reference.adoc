@@ -618,6 +618,7 @@ FrontendSpec defines the desired state of Frontend
 | *`serviceTiles`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicetile[$$ServiceTile$$] array__ | Data for the all services dropdown + |  | 
 | *`widgetRegistry`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-widgetentry[$$WidgetEntry$$] array__ | Data for the available widgets for the resource + |  | 
 | *`replicas`* __integer__ |  |  | 
+| *`feoConfigEnabled`* __boolean__ | Injects configuration from application when enabled + |  | 
 |===
 
 
