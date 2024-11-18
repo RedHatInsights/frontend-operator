@@ -69,7 +69,7 @@ spec:
           command:
             - /bin/bash
             - '-c'
-            - 'sleep 120; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete https://console.doesntexist.redhat.com/config/chrome/fed-modules.json https://console.doesntexist.redhat.com/apps/chrome/index.html https://us.console.doesntexist.redhat.com/config/chrome/fed-modules.json https://us.console.doesntexist.redhat.com/apps/chrome/index.html https://app.company.com'
+            - 'sleep 120; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete https://console.doesntexist.redhat.com/config/chrome/fed-modules.json https://console.doesntexist.redhat.com/apps/chrome/index.html https://app.company.com https://us.console.doesntexist.redhat.com/config/chrome/fed-modules.json https://us.console.doesntexist.redhat.com/apps/chrome/index.html '
           resources: {}
           volumeMounts:
             - name: akamai-edgerc
