@@ -270,6 +270,23 @@ objects:
                   description: The name of the secret we will use to get the akamai
                     credentials
                   type: string
+                bundles:
+                  description: For the ChromeUI to render navigation bundles
+                  items:
+                    description: 'FrontendBundles defines the bundles specific to
+                      an environment that will be used to
+
+                      construct navigation'
+                    properties:
+                      id:
+                        type: string
+                      title:
+                        type: string
+                    required:
+                    - id
+                    - title
+                    type: object
+                  type: array
                 defaultReplicas:
                   format: int32
                   type: integer

@@ -1,0 +1,56 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: landing-page-frontend
+  namespace: test-generate-bundles
+  labels:
+    frontend: landing-page
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: landing-page
+spec:
+  selector:
+    matchLabels:
+      frontend: landing-page
+  template:
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: test-generate-bundles-environment
+            defaultMode: 420
+      containers:
+        - name: fe-image
+          image: quay.io/cloudservices/landing-page-frontend:3244a17
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9000
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /opt/app-root/src/build/stable/operator-generated
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: test-generate-bundles-environment
+  namespace: test-generate-bundles
+  labels:
+    frontendenv: test-generate-bundles-environment
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      name: test-generate-bundles-environment
+data:
+  fed-modules.json: >-
+    {"landing-page":{"manifestLocation":"/apps/landing-page/fed-mods.json","moduleID":"landing-page","fullProfile":false}}
+  bundles.json: >-
+    [{"id":"rhel","title":"Red Hat Enterprise Linux","navItems":[{"href":"/apps/landing","title":"Landing
+    section","id":"landing"},{"expandable":true,"title":"Some new link","id":"bar","routes":[{"href":"/nested/bar","title":"Foo","id":"foo"}]},{"href":"/baz","title":"Some
+    new link","id":"baz"},{"href":"/apps/landing","title":"Landing section","id":"landing2"},{"expandable":true,"title":"Some
+    new link","id":"bar2","routes":[{"href":"/nested/bar","title":"Foo","id":"foo"}]},{"href":"/baz","title":"Some
+    new link","id":"baz2"}]},{"id":"ansible","title":"Ansible","navItems":[]},{"id":"settings","title":"Settings","navItems":[]}]

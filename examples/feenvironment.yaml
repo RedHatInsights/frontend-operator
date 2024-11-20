@@ -22,3 +22,10 @@ spec:
       groups:
         - id: iam
           title: IAM
+  bundles:
+   - id: rhel
+     title: Red Hat Enterprise Linux
+   - id: ansible
+     title: Ansible
+   - id: settings
+     title: Settings

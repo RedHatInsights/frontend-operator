@@ -24,6 +24,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// FrontendBundles defines the bundles specific to an environment that will be used to
+// construct navigation
+type FrontendBundles struct {
+	ID    string `json:"id" yaml:"id"`
+	Title string `json:"title" yaml:"title"`
+}
+
+// The frontend bundles but with the nav items filled with chrome nav items
+type FrontendBundlesGenerated struct {
+	ID       string           `json:"id" yaml:"id"`
+	Title    string           `json:"title" yaml:"title"`
+	NavItems *[]ChromeNavItem `json:"navItems" yaml:"navItems"`
+}
+
 type FrontendServiceCategoryGroup struct {
 	ID    string `json:"id" yaml:"id"`
 	Title string `json:"title" yaml:"title"`
@@ -105,6 +119,8 @@ type FrontendEnvironmentSpec struct {
 	HTTPHeaders map[string]string `json:"httpHeaders,omitempty"`
 
 	DefaultReplicas *int32 `json:"defaultReplicas,omitempty" yaml:"defaultReplicas,omitempty"`
+	// For the ChromeUI to render navigation bundles
+	Bundles *[]FrontendBundles `json:"bundles,omitempty" yaml:"bundles,omitempty"`
 }
 
 type MonitoringConfig struct {
