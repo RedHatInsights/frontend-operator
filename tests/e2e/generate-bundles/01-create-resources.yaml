@@ -34,12 +34,12 @@ spec:
     modules: []
     moduleID: landing-page
   navigationSegments:
-    - segmentId: inventory-partial-2
+    - segmentId: inventory-last-segment
       bundleId: rhel
-      position: 200
+      position: 200 # should be last based on position values
       navItems:
         - id: landing2
-          title: Landing section
+          title: Landing section last
           href: /apps/landing
         - id: bar2
           title: Some new link
@@ -51,12 +51,12 @@ spec:
         - id: baz2
           title: Some new link
           href: /baz
-    - segmentId: inventory-partial
+    - segmentId: c-inventory-segment
       bundleId: rhel
       position: 100
       navItems:
         - id: landing
-          title: Landing section
+          title: Landing section c
           href: /apps/landing
         - id: bar
           title: Some new link
@@ -68,6 +68,27 @@ spec:
         - id: baz
           title: Some new link
           href: /baz
+    - segmentId: a-inventory-segment
+      bundleId: rhel
+      position: 100 # collision with above segment - should sort by segmentId alphabetically
+      navItems:
+        - id: landing
+          title: Landing section A
+          href: /apps/landing
+    - segmentId: b-inventory-segment
+      bundleId: rhel
+      position: 100 # collision with above segment - should sort by segmentId alphabetically
+      navItems:
+        - id: landing
+          title: Landing section B
+          href: /apps/landing
+    - segmentId: d-inventory-segment
+      bundleId: rhel
+      position: 100 # collision with above segment - should sort by segmentId alphabetically
+      navItems:
+        - id: landing
+          title: Landing section D
+          href: /apps/landing
     - segmentId: skipped-partial
       bundleId: skipped
       position: 100

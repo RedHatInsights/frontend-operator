@@ -1012,8 +1012,10 @@ func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnviro
 
 	for _, bundle := range *feEnvironment.Spec.Bundles {
 		delete(skippedNavItemsMap, bundle.ID)
-		// TODO sort alphabetically if position collision
 		sort.Slice(bundleNavSegmentMap[bundle.ID], func(i, j int) bool {
+			if (bundleNavSegmentMap[bundle.ID])[i].Position == (bundleNavSegmentMap[bundle.ID])[j].Position {
+				return (bundleNavSegmentMap[bundle.ID])[i].SegmentID[0] < (bundleNavSegmentMap[bundle.ID])[j].SegmentID[0]
+			}
 			return (bundleNavSegmentMap[bundle.ID])[i].Position < (bundleNavSegmentMap[bundle.ID])[j].Position
 		})
 		navItems := []crd.ChromeNavItem{}
