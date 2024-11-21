@@ -797,13 +797,13 @@ objects:
                           there is enough space in case some segments should be injected
                           between existing ones'
                         type: integer
-                      sectionId:
+                      segmentId:
                         type: string
                     required:
                     - bundleId
                     - navItems
                     - position
-                    - sectionId
+                    - segmentId
                     type: object
                   type: array
                 replicas:

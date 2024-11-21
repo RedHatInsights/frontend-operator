@@ -93,7 +93,7 @@ type WidgetEntry struct {
 }
 
 type NavigationSegment struct {
-	SectionID string `json:"sectionId" yaml:"sectionId"`
+	SegmentID string `json:"segmentId" yaml:"segmentId"`
 	// Id of the bundle to which the segment should be injected
 	BundleID string `json:"bundleId" yaml:"bundleId"`
 	// A position of the segment within the bundle

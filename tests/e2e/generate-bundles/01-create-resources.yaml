@@ -34,7 +34,7 @@ spec:
     modules: []
     moduleID: landing-page
   navigationSegments:
-    - sectionId: inventory-partial-2
+    - segmentId: inventory-partial-2
       bundleId: rhel
       position: 200
       navItems:
@@ -51,7 +51,7 @@ spec:
         - id: baz2
           title: Some new link
           href: /baz
-    - sectionId: inventory-partial
+    - segmentId: inventory-partial
       bundleId: rhel
       position: 100
       navItems:
@@ -68,7 +68,7 @@ spec:
         - id: baz
           title: Some new link
           href: /baz
-    - sectionId: skipped-partial
+    - segmentId: skipped-partial
       bundleId: skipped
       position: 100
       navItems:

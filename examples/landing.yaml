@@ -78,7 +78,7 @@ spec:
       icon: IAMIcon
       isExternal: false
   navigationSegments:
-    - sectionId: inventory-partial
+    - segmentId: inventory-partial
       bundleId: insights
       position: 100
       navItems:

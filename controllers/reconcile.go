@@ -988,8 +988,8 @@ func setupServiceTilesData(feList *crd.FrontendList, feEnvironment crd.FrontendE
 	return categories, skippedTiles
 }
 
-func getNavItemPath(feName string, bundleID string, sectionID string) string {
-	return fmt.Sprintf("%s-%s-%s", feName, bundleID, sectionID)
+func getNavItemPath(feName string, bundleID string, segmentID string) string {
+	return fmt.Sprintf("%s-%s-%s", feName, bundleID, segmentID)
 }
 
 func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnvironment) ([]crd.FrontendBundlesGenerated, []string) {
@@ -1005,7 +1005,7 @@ func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnviro
 		if frontend.Spec.FeoConfigEnabled && frontend.Spec.NavigationSegments != nil {
 			for _, navSegment := range frontend.Spec.NavigationSegments {
 				bundleNavSegmentMap[navSegment.BundleID] = append(bundleNavSegmentMap[navSegment.BundleID], *navSegment)
-				skippedNavItemsMap[navSegment.BundleID] = append(skippedNavItemsMap[navSegment.BundleID], getNavItemPath(frontend.Name, navSegment.BundleID, navSegment.SectionID))
+				skippedNavItemsMap[navSegment.BundleID] = append(skippedNavItemsMap[navSegment.BundleID], getNavItemPath(frontend.Name, navSegment.BundleID, navSegment.SegmentID))
 			}
 		}
 	}
