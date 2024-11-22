@@ -463,6 +463,7 @@ do this in epehemeral environments but not in production + |  |
 | *`targetNamespaces`* __string array__ | List of namespaces that should receive a copy of the frontend configuration as a config map +
 By configurations we mean the fed-modules.json, navigation files, etc. + |  | 
 | *`serviceCategories`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendservicecategory[$$FrontendServiceCategory$$]__ | For the ChromeUI to render additional global components + |  | 
+| *`defaultReplicas`* __integer__ |  |  | 
 |===
 
 
@@ -618,6 +619,7 @@ FrontendSpec defines the desired state of Frontend
 | *`serviceTiles`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicetile[$$ServiceTile$$] array__ | Data for the all services dropdown + |  | 
 | *`widgetRegistry`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-widgetentry[$$WidgetEntry$$] array__ | Data for the available widgets for the resource + |  | 
 | *`replicas`* __integer__ |  |  | 
+| *`feoConfigEnabled`* __boolean__ | Injects configuration from application when enabled + |  | 
 |===
 
 

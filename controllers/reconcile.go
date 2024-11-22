@@ -408,7 +408,11 @@ func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map
 	if r.Frontend.Spec.Replicas != nil {
 		d.Spec.Replicas = r.Frontend.Spec.Replicas
 	} else {
-		d.Spec.Replicas = utils.Int32Ptr(1)
+		if r.FrontendEnvironment.Spec.DefaultReplicas != nil {
+			d.Spec.Replicas = r.FrontendEnvironment.Spec.DefaultReplicas
+		} else {
+			d.Spec.Replicas = utils.Int32Ptr(1)
+		}
 	}
 
 	populateVolumes(d, r.Frontend, r.FrontendEnvironment)

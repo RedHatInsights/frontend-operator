@@ -60,6 +60,9 @@ spec:
                 description: The name of the secret we will use to get the akamai
                   credentials
                 type: string
+              defaultReplicas:
+                format: int32
+                type: integer
               enableAkamaiCacheBust:
                 description: Enable Akamai Cache Bust
                 type: boolean
