@@ -255,6 +255,11 @@ objects:
                 akamaiCacheBustImage:
                   description: Set Akamai Cache Bust Image
                   type: string
+                akamaiCacheBustURL:
+                  description: 'Deprecated: Users should move to AkamaiCacheBustURLs
+
+                    Preserving for backwards compatibility'
+                  type: string
                 akamaiCacheBustURLs:
                   description: Set Akamai Cache Bust URL that the files will hang
                     off of

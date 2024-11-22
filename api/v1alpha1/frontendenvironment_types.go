@@ -88,6 +88,9 @@ type FrontendEnvironmentSpec struct {
 	EnableAkamaiCacheBust bool `json:"enableAkamaiCacheBust,omitempty"`
 	// Set Akamai Cache Bust Image
 	AkamaiCacheBustImage string `json:"akamaiCacheBustImage,omitempty"`
+	// Deprecated: Users should move to AkamaiCacheBustURLs
+	// Preserving for backwards compatibility
+	AkamaiCacheBustURL string `json:"akamaiCacheBustURL,omitempty"`
 	// Set Akamai Cache Bust URL that the files will hang off of
 	AkamaiCacheBustURLs []string `json:"akamaiCacheBustURLs,omitempty"`
 	// The name of the secret we will use to get the akamai credentials

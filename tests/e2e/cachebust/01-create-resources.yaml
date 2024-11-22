@@ -10,8 +10,7 @@ spec:
   sso: https://sso.foo.redhat.com
   enableAkamaiCacheBust: true
   akamaiCacheBustImage: "quay.io/rh_ee_addrew/hi_true_bye:add_alias"
-  akamaiCacheBustURLs: 
-    - "console.doesntexist.redhat.com"
+  akamaiCacheBustURL: "console.doesntexist.redhat.com"
 ---
 apiVersion: cloud.redhat.com/v1alpha1
 kind: Frontend

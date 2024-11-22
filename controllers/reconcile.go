@@ -228,12 +228,18 @@ func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.F
 		return false
 	}
 
-	// Return early if there are no AkamaiCacheBustURLs
-	if frontendEnvironment.Spec.AkamaiCacheBustURLs == nil {
+	cacheBustUrls := frontendEnvironment.Spec.AkamaiCacheBustURLs
+
+	if frontendEnvironment.Spec.AkamaiCacheBustURL != "" {
+		cacheBustUrls = append(cacheBustUrls, frontendEnvironment.Spec.AkamaiCacheBustURL)
+	}
+
+	// Return early if we have no cache bust URLs of any kind to process
+	if len(cacheBustUrls) == 0 {
 		return purgePaths
 	}
 
-	for _, cacheBustURL := range frontendEnvironment.Spec.AkamaiCacheBustURLs {
+	for _, cacheBustURL := range cacheBustUrls {
 		// Ensure the URL begins with https:// and has no trailing /
 		purgeHost := strings.TrimSuffix(fmt.Sprintf("https://%s", strings.TrimPrefix(cacheBustURL, "https://")), "/")
 
