@@ -397,21 +397,52 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 	d.Spec.Template.Spec.Volumes = volumes
 }
 
-// Add the SSL env vars if we SSL mode is set in the frontend environment
+// Add the env vars if eny are set
 func (r *FrontendReconciliation) populateEnvVars(d *apps.Deployment, frontendEnvironment *crd.FrontendEnvironment) {
-	if !frontendEnvironment.Spec.SSL {
-		return
-	}
-	envVars := []v1.EnvVar{
-		{
+	envVars := []v1.EnvVar{}
+
+	if frontendEnvironment.Spec.SSL {
+		envVars = append(envVars, v1.EnvVar{
 			Name:  "CADDY_TLS_MODE",
 			Value: "https_port 8000",
-		},
-		{
+		})
+		envVars = append(envVars, v1.EnvVar{
 			Name:  "CADDY_TLS_CERT",
 			Value: "tls /opt/certs/tls.crt /opt/certs/tls.key",
-		}}
+		})
+	}
+
+	// Add the HTTP Headers to the env vars if the frontend environment has them
+	if frontendEnvironment.Spec.HTTPHeaders != nil {
+		envVars = append(envVars, v1.EnvVar{
+			Name:  "CADDY_HTTP_HEADERS",
+			Value: createCaddyfileHeaderBlock(frontendEnvironment.Spec.HTTPHeaders),
+		})
+	}
+
 	d.Spec.Template.Spec.Containers[0].Env = envVars
+}
+
+// Create a Caddyfile header block from the FrontenbdEnvironment httpHeaders
+func createCaddyfileHeaderBlock(httpHeaders map[string]string) string {
+	if len(httpHeaders) == 0 {
+		return ""
+	}
+	var keys []string
+	for key := range httpHeaders {
+		keys = append(keys, key)
+	}
+	// Sort keys alphabetically
+	// We do this to ensure the order of the headers is consistent
+	// without this tests will be flaky
+	sort.Strings(keys)
+
+	headerBlock := "header {\n"
+	for _, key := range keys {
+		headerBlock += fmt.Sprintf("%s %s\n", key, httpHeaders[key])
+	}
+	headerBlock += "}"
+	return headerBlock
 }
 
 func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map[string]string) error {

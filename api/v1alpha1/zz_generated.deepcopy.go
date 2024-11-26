@@ -501,6 +501,13 @@ func (in *FrontendEnvironmentSpec) DeepCopyInto(out *FrontendEnvironmentSpec) {
 			}
 		}
 	}
+	if in.HTTPHeaders != nil {
+		in, out := &in.HTTPHeaders, &out.HTTPHeaders
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	if in.DefaultReplicas != nil {
 		in, out := &in.DefaultReplicas, &out.DefaultReplicas
 		*out = new(int32)
