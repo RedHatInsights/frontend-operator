@@ -1,0 +1,198 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name:  chrome-test-filelist-frontend 
+  namespace: test-cachebust-multiple-urls
+  labels:
+    frontend: chrome-test-filelist
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: chrome-test-filelist
+spec:
+  selector:
+    matchLabels:
+      frontend: chrome-test-filelist
+  template:
+    metadata:
+      labels:
+        frontend: chrome-test-filelist
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: test-cachebust-multiple-urls-environment
+            defaultMode: 420
+      containers:
+        - name: fe-image
+          image: quay.io/cloudservices/insights-chrome-frontend:720317c
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9000
+              protocol: TCP
+          resources: {}
+          volumeMounts:
+            - name: config
+              mountPath: /opt/app-root/src/build/stable/operator-generated
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: chrome-test-filelist-frontend-cachebust
+  namespace: test-cachebust-multiple-urls
+  labels:
+    frontend: chrome-test-filelist
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: chrome-test-filelist
+spec:
+  template:
+    metadata:
+      annotations:
+        frontend-image: quay.io/cloudservices/insights-chrome-frontend:720317c
+    spec:
+      volumes:
+        - name: akamai-edgerc
+          configMap:
+            name: akamai-edgerc
+            defaultMode: 420
+      containers:
+        - name: akamai-cache-bust
+          image: quay.io/rh_ee_addrew/hi_true_bye:add_alias
+          command:
+            - /bin/bash
+            - '-c'
+            - 'sleep 120; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete https://console.doesntexist.redhat.com/config/chrome/fed-modules.json https://console.doesntexist.redhat.com/apps/chrome/index.html https://app.company.com https://us.console.doesntexist.redhat.com/config/chrome/fed-modules.json https://us.console.doesntexist.redhat.com/apps/chrome/index.html'
+          resources: {}
+          volumeMounts:
+            - name: akamai-edgerc
+              mountPath: /opt/app-root/edgerc
+              subPath: edgerc
+      restartPolicy: Never
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: chrome-test-defaults-frontend 
+  namespace: test-cachebust-multiple-urls
+  labels:
+    frontend: chrome-test-defaults
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: chrome-test-defaults
+spec:
+  selector:
+    matchLabels:
+      frontend: chrome-test-defaults
+  template:
+    metadata:
+      labels:
+        frontend: chrome-test-defaults
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: test-cachebust-multiple-urls-environment
+            defaultMode: 420
+      containers:
+        - name: fe-image
+          image: quay.io/cloudservices/insights-chrome-frontend:720317c
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9000
+              protocol: TCP
+          resources: {}
+          volumeMounts:
+            - name: config
+              mountPath: /opt/app-root/src/build/stable/operator-generated
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: IfNotPresent
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: chrome-test-defaults-frontend-cachebust
+  namespace: test-cachebust-multiple-urls
+  labels:
+    frontend: chrome-test-defaults
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: chrome-test-defaults
+spec:
+  template:
+    metadata:
+      annotations:
+        frontend-image: quay.io/cloudservices/insights-chrome-frontend:720317c
+    spec:
+      volumes:
+        - name: akamai-edgerc
+          configMap:
+            name: akamai-edgerc
+            defaultMode: 420
+      containers:
+        - name: akamai-cache-bust
+          image: quay.io/rh_ee_addrew/hi_true_bye:add_alias
+          command:
+            - /bin/bash
+            - '-c'
+            - 'sleep 120; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete https://console.doesntexist.redhat.com/apps/chrome-test-defaults/fed-mods.json https://us.console.doesntexist.redhat.com/apps/chrome-test-defaults/fed-mods.json'
+          resources: {}
+          volumeMounts:
+            - name: akamai-edgerc
+              mountPath: /opt/app-root/edgerc
+              subPath: edgerc
+      restartPolicy: Never
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name:  chrome-test-optout-frontend 
+  namespace: test-cachebust-multiple-urls
+  labels:
+    frontend: chrome-test-optout
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: chrome-test-optout
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      frontend: chrome-test-optout
+  template:
+    metadata:
+      labels:
+        frontend: chrome-test-optout
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: test-cachebust-multiple-urls-environment
+            defaultMode: 420
+      containers:
+        - name: fe-image
+          image: quay.io/cloudservices/insights-chrome-frontend:720317c
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9000
+              protocol: TCP
+          resources: {}
+          volumeMounts:
+            - name: config
+              mountPath: /opt/app-root/src/build/stable/operator-generated

@@ -480,6 +480,11 @@ func (in *FrontendEnvironmentSpec) DeepCopyInto(out *FrontendEnvironmentSpec) {
 		*out = new(MonitoringConfig)
 		**out = **in
 	}
+	if in.AkamaiCacheBustURLs != nil {
+		in, out := &in.AkamaiCacheBustURLs, &out.AkamaiCacheBustURLs
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.TargetNamespaces != nil {
 		in, out := &in.TargetNamespaces, &out.TargetNamespaces
 		*out = make([]string, len(*in))

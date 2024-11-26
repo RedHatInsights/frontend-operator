@@ -458,7 +458,9 @@ parts should be generated for the bundles. We want to do +
 do this in epehemeral environments but not in production + |  | 
 | *`enableAkamaiCacheBust`* __boolean__ | Enable Akamai Cache Bust + |  | 
 | *`akamaiCacheBustImage`* __string__ | Set Akamai Cache Bust Image + |  | 
-| *`akamaiCacheBustURL`* __string__ | Set Akamai Cache Bust URL that the files will hang off of + |  | 
+| *`akamaiCacheBustURL`* __string__ | Deprecated: Users should move to AkamaiCacheBustURLs +
+Preserving for backwards compatibility + |  | 
+| *`akamaiCacheBustURLs`* __string array__ | Set Akamai Cache Bust URL that the files will hang off of + |  | 
 | *`akamaiSecretName`* __string__ | The name of the secret we will use to get the akamai credentials + |  | 
 | *`targetNamespaces`* __string array__ | List of namespaces that should receive a copy of the frontend configuration as a config map +
 By configurations we mean the fed-modules.json, navigation files, etc. + |  | 
