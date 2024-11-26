@@ -97,6 +97,8 @@ type FrontendEnvironmentSpec struct {
 	TargetNamespaces []string `json:"targetNamespaces,omitempty" yaml:"targetNamespaces,omitempty"`
 	// For the ChromeUI to render additional global components
 	ServiceCategories *[]FrontendServiceCategory `json:"serviceCategories,omitempty" yaml:"serviceCategories,omitempty"`
+
+	DefaultReplicas *int32 `json:"defaultReplicas,omitempty" yaml:"defaultReplicas,omitempty"`
 }
 
 type MonitoringConfig struct {
