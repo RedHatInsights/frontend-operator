@@ -72,6 +72,13 @@ spec:
               hostname:
                 description: Hostname
                 type: string
+              httpHeaders:
+                additionalProperties:
+                  type: string
+                description: |-
+                  Custom HTTP Headers
+                  These populate an ENV var that is then added into the caddy config as a header block
+                type: object
               ingressAnnotations:
                 additionalProperties:
                   type: string

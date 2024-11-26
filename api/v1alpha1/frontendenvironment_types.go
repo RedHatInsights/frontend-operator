@@ -97,6 +97,9 @@ type FrontendEnvironmentSpec struct {
 	TargetNamespaces []string `json:"targetNamespaces,omitempty" yaml:"targetNamespaces,omitempty"`
 	// For the ChromeUI to render additional global components
 	ServiceCategories *[]FrontendServiceCategory `json:"serviceCategories,omitempty" yaml:"serviceCategories,omitempty"`
+	// Custom HTTP Headers
+	// These populate an ENV var that is then added into the caddy config as a header block
+	HTTPHeaders map[string]string `json:"httpHeaders,omitempty"`
 }
 
 type MonitoringConfig struct {
