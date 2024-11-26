@@ -216,30 +216,64 @@ func makeAkamaiEdgercFileFromSecret(secret *v1.Secret) string {
 }
 
 func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) []string {
-	// Set purgeHost by ensuring the URL begins with https:// and has no trailing /
-	purgeHost := strings.TrimSuffix(fmt.Sprintf("https://%s", strings.TrimPrefix(frontendEnvironment.Spec.AkamaiCacheBustURL, "https://")), "/")
+	var purgePaths []string
 
-	// Initialize with a default path if AkamaiCacheBustPaths is nil
-	purgePaths := []string{fmt.Sprintf("%s/apps/%s/fed-mods.json", purgeHost, frontend.Name)}
+	// Helper function to check if a path is already in the list
+	contains := func(slice []string, item string) bool {
+		for _, existing := range slice {
+			if existing == item {
+				return true
+			}
+		}
+		return false
+	}
 
-	if frontend.Spec.AkamaiCacheBustPaths == nil {
+	cacheBustUrls := frontendEnvironment.Spec.AkamaiCacheBustURLs
+
+	if frontendEnvironment.Spec.AkamaiCacheBustURL != "" {
+		cacheBustUrls = append(cacheBustUrls, frontendEnvironment.Spec.AkamaiCacheBustURL)
+	}
+
+	// Return early if we have no cache bust URLs of any kind to process
+	if len(cacheBustUrls) == 0 {
 		return purgePaths
 	}
 
-	purgePaths = make([]string, 0, len(frontend.Spec.AkamaiCacheBustPaths))
-	for _, path := range frontend.Spec.AkamaiCacheBustPaths {
-		// Check if path is a full URL (starts with "http://" or "https://")
-		if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
-			// Add full URL path directly
-			purgePaths = append(purgePaths, path)
-		} else {
-			// Ensure each path has a leading slash but no double slashes
-			if !strings.HasPrefix(path, "/") {
-				path = "/" + path
+	for _, cacheBustURL := range cacheBustUrls {
+		// Ensure the URL begins with https:// and has no trailing /
+		purgeHost := strings.TrimSuffix(fmt.Sprintf("https://%s", strings.TrimPrefix(cacheBustURL, "https://")), "/")
+
+		// Add default path if AkamaiCacheBustPaths is nil
+		if frontend.Spec.AkamaiCacheBustPaths == nil {
+			defaultPath := fmt.Sprintf("%s/apps/%s/fed-mods.json", purgeHost, frontend.Name)
+			if !contains(purgePaths, defaultPath) {
+				purgePaths = append(purgePaths, defaultPath)
 			}
-			purgePaths = append(purgePaths, purgeHost+path)
+			continue
+		}
+
+		// Append paths based on AkamaiCacheBustPaths
+		for _, path := range frontend.Spec.AkamaiCacheBustPaths {
+			var fullPath string
+
+			if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+				// Add full URL path directly
+				fullPath = path
+			} else {
+				// Ensure each path has a leading slash but no double slashes
+				if !strings.HasPrefix(path, "/") {
+					path = "/" + path
+				}
+				fullPath = purgeHost + path
+			}
+
+			// Append the fullPath only if it doesn't already exist in purgePaths
+			if !contains(purgePaths, fullPath) {
+				purgePaths = append(purgePaths, fullPath)
+			}
 		}
 	}
+
 	return purgePaths
 }
 
@@ -439,7 +473,11 @@ func (r *FrontendReconciliation) createFrontendDeployment(annotationHashes []map
 	if r.Frontend.Spec.Replicas != nil {
 		d.Spec.Replicas = r.Frontend.Spec.Replicas
 	} else {
-		d.Spec.Replicas = utils.Int32Ptr(1)
+		if r.FrontendEnvironment.Spec.DefaultReplicas != nil {
+			d.Spec.Replicas = r.FrontendEnvironment.Spec.DefaultReplicas
+		} else {
+			d.Spec.Replicas = utils.Int32Ptr(1)
+		}
 	}
 
 	populateVolumes(d, r.Frontend, r.FrontendEnvironment)
