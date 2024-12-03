@@ -222,7 +222,7 @@ type ChromeNavItem struct {
 	// +kubebuilder:validation:Schemaless
 	Routes      []ChromeNavItem `json:"routes,omitempty" yaml:"routes,omitempty"`
 	Permissions []Permission    `json:"permissions,omitempty" yaml:"permissions,omitempty"`
-	// Position argument inherited from the segment, needed for sooth transition between old a new system and for proper developer experience
+	// Position argument inherited from the segment, needed for smooth transition between old a new system and for proper developer experience
 	Position *uint `json:"position,omitempty" yaml:"position,omitempty"`
 }
 
