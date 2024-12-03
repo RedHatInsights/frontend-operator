@@ -89,6 +89,11 @@ spec:
                         - method
                         type: object
                       type: array
+                    position:
+                      description: Position argument inherited from the segment, needed
+                        for smooth transition between old a new system and for proper
+                        developer experience
+                      type: integer
                     product:
                       type: string
                     routes:
@@ -159,6 +164,11 @@ spec:
                             - method
                             type: object
                           type: array
+                        position:
+                          description: Position argument inherited from the segment,
+                            needed for smooth transition between old a new system
+                            and for proper developer experience
+                          type: integer
                         product:
                           type: string
                         routes:

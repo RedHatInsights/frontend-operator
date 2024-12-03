@@ -1160,7 +1160,13 @@ func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnviro
 		})
 		navItems := []crd.ChromeNavItem{}
 		for _, navSegment := range bundleNavSegmentMap[bundle.ID] {
-			navItems = append(navItems, *navSegment.NavItems...)
+			for _, navItem := range *navSegment.NavItems {
+				// duplicate position for further consumption on the frontend
+				// need a new variable for position to avoid pointer reference issues
+				pos := navSegment.Position
+				navItem.Position = &pos
+				navItems = append(navItems, navItem)
+			}
 		}
 		// fill the nav refs before adding the bundle
 		navItems, err := fillNavRefsTree(navItems, navSegmentsCache, 0)
