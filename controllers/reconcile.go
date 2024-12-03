@@ -988,6 +988,56 @@ func setupServiceTilesData(feList *crd.FrontendList, feEnvironment crd.FrontendE
 	return categories, skippedTiles
 }
 
+func getNavItemPath(feName string, bundleID string, segmentID string) string {
+	return fmt.Sprintf("%s-%s-%s", feName, bundleID, segmentID)
+}
+
+func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnvironment) ([]crd.FrontendBundlesGenerated, []string) {
+	bundles := []crd.FrontendBundlesGenerated{}
+	if feEnvironment.Spec.Bundles == nil {
+		// skip if we do not have bundles in fe environment
+		return bundles, []string{}
+	}
+
+	skippedNavItemsMap := make(map[string][]string)
+	bundleNavSegmentMap := make(map[string][]crd.NavigationSegment)
+	for _, frontend := range feList.Items {
+		if frontend.Spec.FeoConfigEnabled && frontend.Spec.NavigationSegments != nil {
+			for _, navSegment := range frontend.Spec.NavigationSegments {
+				bundleNavSegmentMap[navSegment.BundleID] = append(bundleNavSegmentMap[navSegment.BundleID], *navSegment)
+				skippedNavItemsMap[navSegment.BundleID] = append(skippedNavItemsMap[navSegment.BundleID], getNavItemPath(frontend.Name, navSegment.BundleID, navSegment.SegmentID))
+			}
+		}
+	}
+
+	for _, bundle := range *feEnvironment.Spec.Bundles {
+		delete(skippedNavItemsMap, bundle.ID)
+		sort.Slice(bundleNavSegmentMap[bundle.ID], func(i, j int) bool {
+			if (bundleNavSegmentMap[bundle.ID])[i].Position == (bundleNavSegmentMap[bundle.ID])[j].Position {
+				return (bundleNavSegmentMap[bundle.ID])[i].SegmentID[0] < (bundleNavSegmentMap[bundle.ID])[j].SegmentID[0]
+			}
+			return (bundleNavSegmentMap[bundle.ID])[i].Position < (bundleNavSegmentMap[bundle.ID])[j].Position
+		})
+		navItems := []crd.ChromeNavItem{}
+		for _, navSegment := range bundleNavSegmentMap[bundle.ID] {
+			navItems = append(navItems, *navSegment.NavItems...)
+		}
+		newBundle := crd.FrontendBundlesGenerated{
+			ID:       bundle.ID,
+			Title:    bundle.Title,
+			NavItems: &navItems,
+		}
+		bundles = append(bundles, newBundle)
+	}
+
+	skippedNavItems := []string{}
+	for _, skipped := range skippedNavItemsMap {
+		skippedNavItems = append(skippedNavItems, skipped...)
+	}
+
+	return bundles, skippedNavItems
+}
+
 func (r *FrontendReconciliation) setupBundleData(_ *v1.ConfigMap, _ map[string]crd.Frontend) error {
 	bundleList := &crd.BundleList{}
 
@@ -1127,6 +1177,8 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 
 	serviceCategories, skippedTiles := setupServiceTilesData(feList, *r.FrontendEnvironment)
 
+	bundles, skippedBundles := setupBundlesData(feList, *r.FrontendEnvironment)
+
 	fedModulesJSONData, err := json.Marshal(fedModules)
 	if err != nil {
 		return err
@@ -1149,8 +1201,17 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 		return err
 	}
 
+	bundlesJSONData, err := json.Marshal(bundles)
+	if err != nil {
+		return err
+	}
+
 	if len(skippedTiles) > 0 {
 		r.Log.Info("Unable to find service categories for tiles:", strings.Join(skippedTiles, ","))
+	}
+
+	if len(skippedBundles) > 0 {
+		r.Log.Info("Unable to find bundle for nav items:", "skippedBundles", strings.Join(skippedBundles, ","))
 	}
 
 	cfgMap.Data["fed-modules.json"] = string(fedModulesJSONData)
@@ -1164,6 +1225,10 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 
 	if len(serviceCategories) > 0 {
 		cfgMap.Data["service-tiles.json"] = string(serviceCategoriesJSONData)
+	}
+
+	if len(bundles) > 0 {
+		cfgMap.Data["bundles.json"] = string(bundlesJSONData)
 	}
 
 	return nil

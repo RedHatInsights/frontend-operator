@@ -376,13 +376,13 @@ spec:
                         0 is the first position
                         The position "steps" should be at least 100 to make sure there is enough space in case some segments should be injected between existing ones
                       type: integer
-                    sectionId:
+                    segmentId:
                       type: string
                   required:
                   - bundleId
                   - navItems
                   - position
-                  - sectionId
+                  - segmentId
                   type: object
                 type: array
               replicas:

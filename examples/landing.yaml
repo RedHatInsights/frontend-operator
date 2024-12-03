@@ -77,3 +77,21 @@ spec:
       description: Some Iam thing
       icon: IAMIcon
       isExternal: false
+  navigationSegments:
+    - segmentId: inventory-partial
+      bundleId: insights
+      position: 100
+      navItems:
+        - id: landing
+          title: Landing section
+          href: /apps/landing
+        - id: bar
+          title: Some new link
+          expandable: true
+          routes:
+            - id: foo
+              title: Foo
+              href: /nested/bar
+        - id: baz
+          title: Some new link
+          href: /baz
