@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -992,20 +993,120 @@ func getNavItemPath(feName string, bundleID string, segmentID string) string {
 	return fmt.Sprintf("%s-%s-%s", feName, bundleID, segmentID)
 }
 
-func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnvironment) ([]crd.FrontendBundlesGenerated, []string) {
+type NavSegmentCacheEntry struct {
+	NavItems []crd.ChromeNavItem
+	IsFilled bool
+}
+
+func fillNavRefsTree(navItems []crd.ChromeNavItem, navSegmentsCache map[string]map[string]*NavSegmentCacheEntry, depth uint) ([]crd.ChromeNavItem, error) {
+	parsedNavItems := []crd.ChromeNavItem{}
+	// prevent infinite recursion and navigation nesting
+	// currently max known depth is 2, so 10 should be more than enough for ever
+	// event the depth 2 is challenging when it comes to UX, this should prevent infinite reference loops
+	if depth > 10 {
+		return parsedNavItems, fmt.Errorf("maximum navigation depth reached")
+	}
+	parsedNavItems = navItems
+	var err error
+	for index := 0; index < len(parsedNavItems); index++ {
+		navItem := parsedNavItems[index]
+		if navItem.HasSegmentRef() {
+			segmentRef := navItem.SegmentRef
+			segmentRefCacheEntry, ok := navSegmentsCache[segmentRef.FrontendName][segmentRef.SegmentID]
+			if !ok {
+				// skip if segment ref does not exist
+				continue
+			}
+			segmentRefItems := segmentRefCacheEntry.NavItems
+			// pre-fill the cache for the segment to make the next pass quicker
+			if !segmentRefCacheEntry.IsFilled {
+				segmentRefItems, err = fillNavRefsTree(segmentRefItems, navSegmentsCache, depth+1)
+				if err != nil {
+					return parsedNavItems, err
+				}
+				// don't forget to mark the segment as filled and fill it
+				navSegmentsCache[segmentRef.FrontendName][segmentRef.SegmentID].IsFilled = true
+				navSegmentsCache[segmentRef.FrontendName][segmentRef.SegmentID].NavItems = segmentRefItems
+			}
+			// delete the original ref and replace it with the filled segments
+			parsedNavItems = append(parsedNavItems[:index], parsedNavItems[index+1:]...)
+			parsedNavItems = slices.Insert(parsedNavItems, index, segmentRefItems...)
+		}
+
+		// Make sure nested nav items have their refs filled as well
+		if navItem.IsExpandable() {
+			parsedRoutes, err := fillNavRefsTree(navItem.Routes, navSegmentsCache, depth+1)
+			if err != nil {
+				return parsedNavItems, err
+			}
+			parsedNavItems[index].Routes = parsedRoutes
+		}
+
+		if navItem.IsGroup() {
+			parsedGroupItems, err := fillNavRefsTree(navItem.NavItems, navSegmentsCache, depth+1)
+			if err != nil {
+				return parsedNavItems, err
+			}
+			parsedNavItems[index].NavItems = parsedGroupItems
+		}
+	}
+
+	return parsedNavItems, nil
+}
+
+// Remove segment refs from nav items before they are emitted to bundles
+func filterUnknownNavRefs(navItems []crd.ChromeNavItem) []crd.ChromeNavItem {
+	res := []crd.ChromeNavItem{}
+	for _, navItem := range navItems {
+		if navItem.HasSegmentRef() {
+			// skip if segment is a ref
+			continue
+		}
+
+		if navItem.IsExpandable() {
+			navItem.Routes = filterUnknownNavRefs(navItem.Routes)
+		}
+
+		if navItem.IsGroup() {
+			navItem.NavItems = filterUnknownNavRefs(navItem.NavItems)
+		}
+
+		res = append(res, navItem)
+	}
+	return res
+}
+
+func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnvironment) ([]crd.FrontendBundlesGenerated, []string, error) {
 	bundles := []crd.FrontendBundlesGenerated{}
 	if feEnvironment.Spec.Bundles == nil {
 		// skip if we do not have bundles in fe environment
-		return bundles, []string{}
+		return bundles, []string{}, nil
+	}
+
+	// fill the nav segment cache
+	navSegmentsCache := make(map[string]map[string]*NavSegmentCacheEntry)
+	for _, frontend := range feList.Items {
+		if frontend.Spec.NavigationSegments != nil {
+			// Create empty map for a frontend if not yet in cache
+			if _, ok := navSegmentsCache[frontend.Name]; !ok {
+				navSegmentsCache[frontend.Name] = make(map[string]*NavSegmentCacheEntry)
+			}
+			for _, navSegment := range frontend.Spec.NavigationSegments {
+				navSegmentsCache[frontend.Name][navSegment.SegmentID] = &NavSegmentCacheEntry{
+					IsFilled: false,
+					NavItems: *navSegment.NavItems,
+				}
+			}
+		}
 	}
 
 	skippedNavItemsMap := make(map[string][]string)
-	bundleNavSegmentMap := make(map[string][]crd.NavigationSegment)
+	bundleNavSegmentMap := make(map[string][]crd.BundleSegment)
 	for _, frontend := range feList.Items {
-		if frontend.Spec.FeoConfigEnabled && frontend.Spec.NavigationSegments != nil {
-			for _, navSegment := range frontend.Spec.NavigationSegments {
-				bundleNavSegmentMap[navSegment.BundleID] = append(bundleNavSegmentMap[navSegment.BundleID], *navSegment)
-				skippedNavItemsMap[navSegment.BundleID] = append(skippedNavItemsMap[navSegment.BundleID], getNavItemPath(frontend.Name, navSegment.BundleID, navSegment.SegmentID))
+		if frontend.Spec.FeoConfigEnabled && frontend.Spec.BundleSegments != nil {
+			for _, bundleNavSegment := range frontend.Spec.BundleSegments {
+				bundleNavSegmentMap[bundleNavSegment.BundleID] = append(bundleNavSegmentMap[bundleNavSegment.BundleID], *bundleNavSegment)
+				skippedNavItemsMap[bundleNavSegment.BundleID] = append(skippedNavItemsMap[bundleNavSegment.BundleID], getNavItemPath(frontend.Name, bundleNavSegment.BundleID, bundleNavSegment.SegmentID))
 			}
 		}
 	}
@@ -1022,10 +1123,17 @@ func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnviro
 		for _, navSegment := range bundleNavSegmentMap[bundle.ID] {
 			navItems = append(navItems, *navSegment.NavItems...)
 		}
+		// fill the nav refs before adding the bundle
+		navItems, err := fillNavRefsTree(navItems, navSegmentsCache, 0)
+		if err != nil {
+			return bundles, []string{}, err
+		}
+
+		navItems = filterUnknownNavRefs(navItems)
 		newBundle := crd.FrontendBundlesGenerated{
 			ID:       bundle.ID,
 			Title:    bundle.Title,
-			NavItems: &navItems,
+			NavItems: navItems,
 		}
 		bundles = append(bundles, newBundle)
 	}
@@ -1035,7 +1143,7 @@ func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnviro
 		skippedNavItems = append(skippedNavItems, skipped...)
 	}
 
-	return bundles, skippedNavItems
+	return bundles, skippedNavItems, nil
 }
 
 func (r *FrontendReconciliation) setupBundleData(_ *v1.ConfigMap, _ map[string]crd.Frontend) error {
@@ -1177,7 +1285,10 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 
 	serviceCategories, skippedTiles := setupServiceTilesData(feList, *r.FrontendEnvironment)
 
-	bundles, skippedBundles := setupBundlesData(feList, *r.FrontendEnvironment)
+	bundles, skippedBundles, err := setupBundlesData(feList, *r.FrontendEnvironment)
+	if err != nil {
+		return err
+	}
 
 	fedModulesJSONData, err := json.Marshal(fedModules)
 	if err != nil {
@@ -1211,7 +1322,7 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 	}
 
 	if len(skippedBundles) > 0 {
-		r.Log.Info("Unable to find bundle for nav items:", "skippedBundles", strings.Join(skippedBundles, ","))
+		r.Log.Info(fmt.Sprintf("Unable to find bundle for nav items: %s", strings.Join(skippedBundles, ",")))
 	}
 
 	cfgMap.Data["fed-modules.json"] = string(fedModulesJSONData)

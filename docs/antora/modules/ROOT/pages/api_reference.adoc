@@ -227,7 +227,7 @@ BundleSpec defines the desired state of Bundle
 - xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$]
 - xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-computedbundle[$$ComputedBundle$$]
 - xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem[$$ExtraNavItem$$]
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-navigationsegment[$$NavigationSegment$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-navigationsegment[$$BundleSegment$$]
 ****
 
 [cols="20a,50a,15a,15a", options="header"]
@@ -615,7 +615,7 @@ FrontendSpec defines the desired state of Frontend
 | *`serviceMonitor`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicemonitorconfig[$$ServiceMonitorConfig$$]__ |  |  | 
 | *`module`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule[$$FedModule$$]__ |  |  | 
 | *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$] array__ |  |  | 
-| *`navigationSegments`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-navigationsegment[$$NavigationSegment$$] array__ | navigation segments for the frontend + |  | 
+| *`navigationSegments`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-navigationsegment[$$BundleSegment$$] array__ | navigation segments for the frontend + |  | 
 | *`assetsPrefix`* __string__ |  |  | 
 | *`akamaiCacheBustDisable`* __boolean__ | Akamai cache bust opt-out + |  | 
 | *`akamaiCacheBustPaths`* __string array__ | Files to cache bust + |  | 
@@ -731,7 +731,7 @@ FrontendSpec defines the desired state of Frontend
 
 
 [id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-navigationsegment"]
-==== NavigationSegment
+==== BundleSegment
 
 
 

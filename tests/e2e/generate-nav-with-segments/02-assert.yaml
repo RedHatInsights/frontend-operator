@@ -1,0 +1,15 @@
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: test-generate-nav-segments-json-environment
+  namespace: test-generate-nav-segments-json
+  labels:
+    frontendenv: test-generate-nav-segments-json-environment
+  ownerReferences:
+    - name: test-generate-nav-segments-json-environment
+data:
+  fed-modules.json: >-
+    {"segmentedAppOne":{"manifestLocation":"/apps/chrome/js/fed-mods.json","fullProfile":false},"segmentedAppTwo":{"manifestLocation":"/apps/chrome/js/fed-mods.json","fullProfile":false}}
+  bundles.json: >-
+    [{"id":"segmented-bundle","title":"Segmented bundle","navItems":[{"href":"/link-one","title":"Link one classic","id":"link-one"},{"href":"/link-two","title":"Link two injected","id":"link-two"},{"href":"/link-three","title":"Link three injected","id":"link-three"},{"href":"/link-four","title":"Link four classic","id":"link-four"},{"expandable":true,"title":"Expandable","id":"expandable","routes":[{"href":"/nested/one","title":"Nested one","id":"nested-one"},{"href":"/nested/two","title":"Nested two","id":"nested-two"},{"href":"/nested/three","title":"Nested three","id":"nested-three"},{"href":"/nested/four","title":"Nested four","id":"nested-four"}]}]}]

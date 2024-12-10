@@ -89,10 +89,18 @@ spec:
                       type: string
                     routes:
                       x-kubernetes-preserve-unknown-fields: true
+                    segmentRef:
+                      properties:
+                        frontendName:
+                          type: string
+                        segmentId:
+                          type: string
+                      required:
+                      - frontendName
+                      - segmentId
+                      type: object
                     title:
                       type: string
-                  required:
-                  - title
                   type: object
                 type: array
               envName:
@@ -147,10 +155,18 @@ spec:
                           type: string
                         routes:
                           x-kubernetes-preserve-unknown-fields: true
+                        segmentRef:
+                          properties:
+                            frontendName:
+                              type: string
+                            segmentId:
+                              type: string
+                          required:
+                          - frontendName
+                          - segmentId
+                          type: object
                         title:
                           type: string
-                      required:
-                      - title
                       type: object
                   required:
                   - name
