@@ -92,7 +92,7 @@ type WidgetEntry struct {
 	Defaults WidgetDefaults `json:"defaults" yaml:"defaults"`
 }
 
-type NavigationSegment struct {
+type BundleSegment struct {
 	SegmentID string `json:"segmentId" yaml:"segmentId"`
 	// Id of the bundle to which the segment should be injected
 	BundleID string `json:"bundleId" yaml:"bundleId"`
@@ -101,6 +101,11 @@ type NavigationSegment struct {
 	// The position "steps" should be at least 100 to make sure there is enough space in case some segments should be injected between existing ones
 	Position uint             `json:"position" yaml:"position"`
 	NavItems *[]ChromeNavItem `json:"navItems" yaml:"navItems"`
+}
+
+type NavigationSegment struct {
+	SegmentID string           `json:"segmentId" yaml:"segmentId"`
+	NavItems  *[]ChromeNavItem `json:"navItems" yaml:"navItems"`
 }
 
 // FrontendSpec defines the desired state of Frontend
@@ -117,6 +122,7 @@ type FrontendSpec struct {
 	Module         *FedModule           `json:"module,omitempty" yaml:"module,omitempty"`
 	NavItems       []*BundleNavItem     `json:"navItems,omitempty" yaml:"navItems,omitempty"`
 	// navigation segments for the frontend
+	BundleSegments     []*BundleSegment     `json:"bundleSegments,omitempty" yaml:"bundleSegments,omitempty"`
 	NavigationSegments []*NavigationSegment `json:"navigationSegments,omitempty" yaml:"navigationSegments,omitempty"`
 	AssetsPrefix       string               `json:"assetsPrefix,omitempty" yaml:"assetsPrefix,omitempty"`
 	// Akamai cache bust opt-out
@@ -201,13 +207,18 @@ type Permission struct {
 	Args   *apiextensions.JSON `json:"args,omitempty" yaml:"args,omitempty"` // TODO validate array item type (string?)
 }
 
+type SegmentRef struct {
+	FrontendName string `json:"frontendName" yaml:"frontendName"`
+	SegmentID    string `json:"segmentId" yaml:"segmentId"`
+}
+
 type ChromeNavItem struct {
 	IsHidden   bool   `json:"isHidden,omitempty" yaml:"isHidden,omitempty"`
 	Expandable bool   `json:"expandable,omitempty" yaml:"expandable,omitempty"`
 	Href       string `json:"href,omitempty" yaml:"href,omitempty"`
 	AppID      string `json:"appId,omitempty" yaml:"appId,omitempty"`
 	IsExternal bool   `json:"isExternal,omitempty" yaml:"isExternal,omitempty"`
-	Title      string `json:"title" yaml:"title"`
+	Title      string `json:"title,omitempty" yaml:"title,omitempty"`
 	GroupID    string `json:"groupId,omitempty" yaml:"groupId,omitempty"`
 	ID         string `json:"id,omitempty" yaml:"id,omitempty"`
 	Product    string `json:"product,omitempty" yaml:"product,omitempty"`
@@ -222,6 +233,23 @@ type ChromeNavItem struct {
 	// +kubebuilder:validation:Schemaless
 	Routes      []ChromeNavItem `json:"routes,omitempty" yaml:"routes,omitempty"`
 	Permissions []Permission    `json:"permissions,omitempty" yaml:"permissions,omitempty"`
+	SegmentRef  *SegmentRef     `json:"segmentRef,omitempty" yaml:"segmentRef,omitempty"`
+}
+
+func (navItem ChromeNavItem) HasSegmentRef() bool {
+	return navItem.SegmentRef != nil
+}
+
+func (navItem ChromeNavItem) IsValidNavItem() bool {
+	return navItem.Title != "" && navItem.Href != ""
+}
+
+func (navItem ChromeNavItem) IsExpandable() bool {
+	return navItem.Expandable && navItem.Routes != nil
+}
+
+func (navItem ChromeNavItem) IsGroup() bool {
+	return navItem.GroupID != "" && navItem.NavItems != nil
 }
 
 // +kubebuilder:object:root=true

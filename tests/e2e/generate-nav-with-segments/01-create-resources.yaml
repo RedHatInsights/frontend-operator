@@ -1,0 +1,96 @@
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: test-generate-nav-segments-json-environment
+spec:
+  generateNavJSON: true
+  ssl: false
+  hostname: foo.redhat.com
+  sso: https://sso.foo.redhat.com
+  bundles:
+   - id: segmented-bundle
+     title: Segmented bundle
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: segmented-app-one
+  namespace: test-generate-nav-segments-json
+spec:
+  feoConfigEnabled: true
+  frontend:
+    paths:
+      - /
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  envName: test-generate-nav-segments-json-environment
+  image: quay.io/cloudservices/insights-chrome-frontend:720317c
+  module:
+    manifestLocation: /apps/chrome/js/fed-mods.json
+  title: Segmented app one
+  bundleSegments:
+    - segmentId: segment-one
+      bundleId: segmented-bundle
+      position: 100
+      navItems:
+        - id: link-one
+          title: Link one classic
+          href: /link-one
+        - segmentRef:
+            segmentId: segment-two-item-one
+            frontendName: segmented-app-two
+        - id: link-four
+          title: Link four classic
+          href: /link-four
+    - segmentId: nested-segment
+      bundleId: segmented-bundle
+      position: 200
+      navItems:
+        - id: expandable
+          title: Expandable
+          expandable: true
+          routes:
+            - id: nested-one
+              title: Nested one
+              href: /nested/one
+            - segmentRef:
+                segmentId: nested-segment-two
+                frontendName: segmented-app-two
+            - id: nested-four
+              title: Nested four
+              href: /nested/four
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: segmented-app-two
+  namespace: test-generate-nav-segments-json
+spec:
+  feoConfigEnabled: true
+  frontend:
+    paths:
+      - /bar
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  envName: test-generate-nav-segments-json-environment
+  image: foobar
+  module:
+    manifestLocation: /apps/chrome/js/fed-mods.json
+  title: Segmented app two
+  # does not have any segments but injects its nav segments to segmented-app-one
+  navigationSegments:
+    - segmentId: segment-two-item-one
+      navItems:
+        - id: link-two
+          title: Link two injected
+          href: /link-two
+        - id: link-three
+          title: Link three injected
+          href: /link-three
+    - segmentId: nested-segment-two
+      navItems:
+        - id: nested-two
+          title: Nested two
+          href: /nested/two
+        - id: nested-three
+          title: Nested three
+          href: /nested/three

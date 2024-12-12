@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
@@ -1436,5 +1437,106 @@ var _ = ginkgo.Describe("Service tiles", func() {
 				gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(serviceCase.Environment))
 			}
 		})
+	})
+})
+
+var _ = ginkgo.Describe("Navigation nesting", func() {
+	const (
+		FrontendName      = "test-nested-nav"
+		FrontendNamespace = "default"
+		FrontendEnvName   = "test-nested-nav-env"
+
+		timeout  = time.Second * 20
+		duration = time.Second * 10
+		interval = time.Millisecond * 250
+	)
+	ginkgo.It("Should stop navigation nesting if the limit is exceeded", func() {
+		ctx := context.Background()
+		configMapLookupKey := types.NamespacedName{Name: FrontendEnvName, Namespace: FrontendNamespace}
+		frontendEnvironment := mockFrontendEnv(FrontendEnvName, FrontendNamespace)
+		frontendEnvironment.Spec.Bundles = &[]crd.FrontendBundles{
+			{
+				ID:    "nested-bundle",
+				Title: "Nested Bundle",
+			},
+		}
+		frontend := &crd.Frontend{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "cloud.redhat.com/v1",
+				Kind:       "Frontend",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      FrontendName,
+				Namespace: FrontendNamespace,
+			},
+			Spec: crd.FrontendSpec{
+				EnvName:        FrontendEnvName,
+				Title:          "",
+				DeploymentRepo: "",
+				API: &crd.APIInfo{
+					Versions: []string{"v1"},
+				},
+				Frontend: crd.FrontendInfo{
+					Paths: []string{"/things/test"},
+				},
+				Image: "my-image:version",
+				Module: &crd.FedModule{
+					ManifestLocation: "/apps/inventory/fed-mods.json",
+					Modules: []crd.Module{{
+						ID:     "test",
+						Module: "./RootApp",
+						Routes: []crd.Route{{
+							Pathname: "/test/href",
+						}},
+						Dependencies: []string{"depstring"},
+					}},
+				},
+				FeoConfigEnabled: true,
+				// deliberately create a circular references to test the depth limit
+				NavigationSegments: []*crd.NavigationSegment{{
+					SegmentID: "first-segment",
+					NavItems: &[]crd.ChromeNavItem{{
+						SegmentRef: &crd.SegmentRef{
+							FrontendName: FrontendName,
+							SegmentID:    "second-segment",
+						},
+					}},
+				}, {
+					SegmentID: "second-segment",
+					NavItems: &[]crd.ChromeNavItem{{
+						SegmentRef: &crd.SegmentRef{
+							FrontendName: FrontendName,
+							SegmentID:    "first-segment",
+						},
+					}},
+				}},
+				BundleSegments: []*crd.BundleSegment{{
+					SegmentID: "test",
+					BundleID:  "nested-bundle",
+					Position:  100,
+					NavItems: &[]crd.ChromeNavItem{{
+						SegmentRef: &crd.SegmentRef{
+							FrontendName: FrontendName,
+							SegmentID:    "first-segment",
+						},
+					}},
+				}},
+			},
+		}
+		gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
+		gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
+		createdConfigMap := &v1.ConfigMap{}
+		var depthError error
+		gomega.Eventually(func() string {
+			err := k8sClient.Get(ctx, configMapLookupKey, createdConfigMap)
+			if err != nil {
+				if strings.Contains(err.Error(), `configmaps "test-nested-nav-env" not found`) {
+					depthError = err
+					return depthError.Error()
+				}
+				return ""
+			}
+			return ""
+		}, timeout, interval).Should(gomega.Equal(`configmaps "test-nested-nav-env" not found`))
 	})
 })

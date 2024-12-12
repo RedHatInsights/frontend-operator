@@ -7,6 +7,7 @@ spec:
   envName: env-boot
   title: landing
   deploymentRepo: http://test
+  feoConfigEnabled: true
   API:
     versions:
     - v1
@@ -77,7 +78,7 @@ spec:
       description: Some Iam thing
       icon: IAMIcon
       isExternal: false
-  navigationSegments:
+  bundleSegments:
     - segmentId: inventory-partial
       bundleId: insights
       position: 100
@@ -95,3 +96,53 @@ spec:
         - id: baz
           title: Some new link
           href: /baz
+        - segmentRef:
+            frontendName: landing
+            segmentId: landing-segment-one
+        - segmentRef:
+            frontendName: inventory
+            segmentId: inventory-segment-one
+    - segmentId: segment-one
+      bundleId: segmented-bundle
+      position: 100
+      navItems:
+        - id: link-one
+          title: Link one classic
+          href: /link-one
+        - segmentRef:
+            segmentId: segment-two-item-one
+            frontendName: segmented-app-two
+        - id: link-four
+          title: Link four classic
+          href: /link-four
+    - segmentId: nested-segment
+      bundleId: segmented-bundle
+      position: 200
+      navItems:
+        - id: expandable
+          title: Expandable
+          expandable: true
+          routes:
+            - id: nested-one
+              title: Nested one
+              href: /nested/one
+            - segmentRef:
+                segmentId: nested-segment-two
+                frontendName: inventory
+            - id: nested-four
+              title: Nested four
+              href: /nested/four
+  navigationSegments:
+    - segmentId: landing-segment-one
+      navItems:
+        - id: ssss
+          title: SSSS
+          href: /ssss
+    - segmentId: segment-two-item-one
+      navItems:
+        - id: link-two
+          title: Link two injected
+          href: /link-two
+        - id: link-three
+          title: Link three injected
+          href: /link-three

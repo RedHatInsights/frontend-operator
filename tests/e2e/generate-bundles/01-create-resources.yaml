@@ -33,7 +33,7 @@ spec:
     manifestLocation: /apps/landing-page/fed-mods.json
     modules: []
     moduleID: landing-page
-  navigationSegments:
+  bundleSegments:
     - segmentId: inventory-last-segment
       bundleId: rhel
       position: 200 # should be last based on position values

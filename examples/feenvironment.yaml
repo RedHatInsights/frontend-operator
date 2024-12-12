@@ -23,9 +23,13 @@ spec:
         - id: iam
           title: IAM
   bundles:
-   - id: rhel
-     title: Red Hat Enterprise Linux
-   - id: ansible
-     title: Ansible
-   - id: settings
-     title: Settings
+  #  - id: rhel
+  #    title: Red Hat Enterprise Linux
+  #  - id: ansible
+  #    title: Ansible
+  #  - id: settings
+  #    title: Settings
+  #  - id: insights
+  #    title: Red Hat Enterprise Linux
+    - id: segmented-bundle
+      title: Segmented bundle

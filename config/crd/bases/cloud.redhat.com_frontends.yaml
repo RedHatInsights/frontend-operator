@@ -73,6 +73,89 @@ spec:
                 type: array
               assetsPrefix:
                 type: string
+              bundleSegments:
+                description: navigation segments for the frontend
+                items:
+                  properties:
+                    bundleId:
+                      description: Id of the bundle to which the segment should be
+                        injected
+                      type: string
+                    navItems:
+                      items:
+                        properties:
+                          appId:
+                            type: string
+                          expandable:
+                            type: boolean
+                          groupId:
+                            type: string
+                          href:
+                            type: string
+                          icon:
+                            type: string
+                          id:
+                            type: string
+                          isBeta:
+                            type: boolean
+                          isExternal:
+                            type: boolean
+                          isHidden:
+                            type: boolean
+                          navItems:
+                            description: kubebuilder struggles validating recursive
+                              fields, it has to be helped a bit
+                            x-kubernetes-preserve-unknown-fields: true
+                          notifier:
+                            type: string
+                          permissions:
+                            items:
+                              properties:
+                                apps:
+                                  items:
+                                    type: string
+                                  type: array
+                                args:
+                                  x-kubernetes-preserve-unknown-fields: true
+                                method:
+                                  type: string
+                              required:
+                              - method
+                              type: object
+                            type: array
+                          product:
+                            type: string
+                          routes:
+                            x-kubernetes-preserve-unknown-fields: true
+                          segmentRef:
+                            properties:
+                              frontendName:
+                                type: string
+                              segmentId:
+                                type: string
+                            required:
+                            - frontendName
+                            - segmentId
+                            type: object
+                          title:
+                            type: string
+                        type: object
+                      type: array
+                    position:
+                      description: |-
+                        A position of the segment within the bundle
+                        0 is the first position
+                        The position "steps" should be at least 100 to make sure there is enough space in case some segments should be injected between existing ones
+                      type: integer
+                    segmentId:
+                      type: string
+                  required:
+                  - bundleId
+                  - navItems
+                  - position
+                  - segmentId
+                  type: object
+                type: array
               deploymentRepo:
                 type: string
               disabled:
@@ -311,13 +394,8 @@ spec:
                   type: object
                 type: array
               navigationSegments:
-                description: navigation segments for the frontend
                 items:
                   properties:
-                    bundleId:
-                      description: Id of the bundle to which the segment should be
-                        injected
-                      type: string
                     navItems:
                       items:
                         properties:
@@ -364,24 +442,24 @@ spec:
                             type: string
                           routes:
                             x-kubernetes-preserve-unknown-fields: true
+                          segmentRef:
+                            properties:
+                              frontendName:
+                                type: string
+                              segmentId:
+                                type: string
+                            required:
+                            - frontendName
+                            - segmentId
+                            type: object
                           title:
                             type: string
-                        required:
-                        - title
                         type: object
                       type: array
-                    position:
-                      description: |-
-                        A position of the segment within the bundle
-                        0 is the first position
-                        The position "steps" should be at least 100 to make sure there is enough space in case some segments should be injected between existing ones
-                      type: integer
                     segmentId:
                       type: string
                   required:
-                  - bundleId
                   - navItems
-                  - position
                   - segmentId
                   type: object
                 type: array
