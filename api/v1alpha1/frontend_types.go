@@ -46,6 +46,7 @@ type SearchEntry struct {
 	Description string   `json:"description" yaml:"description"`
 	AltTitle    []string `json:"alt_title,omitempty" yaml:"alt_title,omitempty"`
 	IsExternal  bool     `json:"isExternal,omitempty" yaml:"isExternal,omitempty"`
+	FrontendRef string   `json:"frontendRef,omitempty" yaml:"frontendRef,omitempty"`
 }
 
 type ServiceTile struct {
@@ -57,6 +58,7 @@ type ServiceTile struct {
 	Description string `json:"description" yaml:"description"`
 	Icon        string `json:"icon" yaml:"icon"`
 	IsExternal  bool   `json:"isExternal,omitempty" yaml:"isExternal,omitempty"`
+	FrontendRef string `json:"frontendRef,omitempty" yaml:"frontendRef,omitempty"`
 }
 
 type WidgetHeaderLink struct {
@@ -86,10 +88,11 @@ type WidgetDefaults struct {
 }
 
 type WidgetEntry struct {
-	Scope    string         `json:"scope" yaml:"scope"`
-	Module   string         `json:"module" yaml:"module"`
-	Config   WidgetConfig   `json:"config" yaml:"config"`
-	Defaults WidgetDefaults `json:"defaults" yaml:"defaults"`
+	Scope       string         `json:"scope" yaml:"scope"`
+	Module      string         `json:"module" yaml:"module"`
+	Config      WidgetConfig   `json:"config" yaml:"config"`
+	Defaults    WidgetDefaults `json:"defaults" yaml:"defaults"`
+	FrontendRef string         `json:"frontendRef,omitempty" yaml:"frontendRef,omitempty"`
 }
 
 type BundleSegment struct {
@@ -231,9 +234,11 @@ type ChromeNavItem struct {
 	NavItems []ChromeNavItem `json:"navItems,omitempty" yaml:"navItems,omitempty"`
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Schemaless
-	Routes      []ChromeNavItem `json:"routes,omitempty" yaml:"routes,omitempty"`
-	Permissions []Permission    `json:"permissions,omitempty" yaml:"permissions,omitempty"`
-	SegmentRef  *SegmentRef     `json:"segmentRef,omitempty" yaml:"segmentRef,omitempty"`
+	Routes           []ChromeNavItem `json:"routes,omitempty" yaml:"routes,omitempty"`
+	Permissions      []Permission    `json:"permissions,omitempty" yaml:"permissions,omitempty"`
+	SegmentRef       *SegmentRef     `json:"segmentRef,omitempty" yaml:"segmentRef,omitempty"`
+	BundleSegmentRef string          `json:"bundleSegmentRef,omitempty" yaml:"bundleSegmentRef,omitempty"`
+	FrontendRef      string          `json:"frontendRef,omitempty" yaml:"frontendRef,omitempty"`
 }
 
 func (navItem ChromeNavItem) HasSegmentRef() bool {

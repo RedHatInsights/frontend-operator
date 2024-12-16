@@ -86,8 +86,12 @@ spec:
                         properties:
                           appId:
                             type: string
+                          bundleSegmentRef:
+                            type: string
                           expandable:
                             type: boolean
+                          frontendRef:
+                            type: string
                           groupId:
                             type: string
                           href:
@@ -401,8 +405,12 @@ spec:
                         properties:
                           appId:
                             type: string
+                          bundleSegmentRef:
+                            type: string
                           expandable:
                             type: boolean
+                          frontendRef:
+                            type: string
                           groupId:
                             type: string
                           href:
@@ -476,6 +484,8 @@ spec:
                       type: array
                     description:
                       type: string
+                    frontendRef:
+                      type: string
                     href:
                       type: string
                     id:
@@ -503,6 +513,8 @@ spec:
                 items:
                   properties:
                     description:
+                      type: string
+                    frontendRef:
                       type: string
                     group:
                       type: string
@@ -641,6 +653,8 @@ spec:
                       - sm
                       - xl
                       type: object
+                    frontendRef:
+                      type: string
                     module:
                       type: string
                     scope:

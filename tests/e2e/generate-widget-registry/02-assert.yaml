@@ -49,6 +49,6 @@ data:
   fed-modules.json: >-
     {"widgets":{"manifestLocation":"/apps/widgets/fed-mods.json","moduleID":"widgets","fullProfile":false}}
   widget-registry.json: >-
-    [{"scope":"widgets","module":"./RandomWidget","config":{"icon":"CogIcon","title":"Random Widget","headerLink":{"title":"","href":""}},"defaults":{"sm":{"w":1,"h":1,"maxH":1,"minH":1},"md":{"w":1,"h":1,"maxH":1,"minH":1},"lg":{"w":1,"h":1,"maxH":1,"minH":1},"xl":{"w":1,"h":1,"maxH":1,"minH":1}}}]
+    [{"scope":"widgets","module":"./RandomWidget","config":{"icon":"CogIcon","title":"Random Widget","headerLink":{"title":"","href":""}},"defaults":{"sm":{"w":1,"h":1,"maxH":1,"minH":1},"md":{"w":1,"h":1,"maxH":1,"minH":1},"lg":{"w":1,"h":1,"maxH":1,"minH":1},"xl":{"w":1,"h":1,"maxH":1,"minH":1}},"frontendRef":"widgets"}]
 
 

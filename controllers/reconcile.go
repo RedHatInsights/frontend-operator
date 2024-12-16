@@ -903,6 +903,7 @@ func adjustSearchEntry(searchEntry *crd.SearchEntry, frontend crd.Frontend) crd.
 		Href:        searchEntry.Href,
 		AltTitle:    altTitleCopy,
 		IsExternal:  searchEntry.IsExternal,
+		FrontendRef: frontend.Name,
 	}
 	return newSearchEntry
 }
@@ -926,6 +927,7 @@ func setupWidgetRegistry(feList *crd.FrontendList) []crd.WidgetEntry {
 	for _, frontend := range feList.Items {
 		if frontend.Spec.FeoConfigEnabled {
 			for _, widget := range frontend.Spec.WidgetRegistry {
+				widget.FrontendRef = frontend.Name
 				widgetRegistry = append(widgetRegistry, *widget)
 			}
 		}
@@ -977,6 +979,7 @@ func setupServiceTilesData(feList *crd.FrontendList, feEnvironment crd.FrontendE
 				groupKey := getServiceTilePath(tile.Section, tile.Group)
 				if groupTiles, ok := tileGroupAccessMap[groupKey]; ok {
 					// assign the tile to the service category and group
+					tile.FrontendRef = frontend.Name
 					*groupTiles = append(*groupTiles, *tile)
 				} else {
 					// ignore the tile if destination does not exist
@@ -1010,7 +1013,8 @@ func fillNavRefsTree(navItems []crd.ChromeNavItem, navSegmentsCache map[string]m
 	var err error
 	for index := 0; index < len(parsedNavItems); index++ {
 		navItem := parsedNavItems[index]
-		if navItem.HasSegmentRef() {
+		// if navItem is a segment ref, replace it with the actual segment
+		if navItem.HasSegmentRef() && navItem.Href == "" && navItem.Title == "" {
 			segmentRef := navItem.SegmentRef
 			segmentRefCacheEntry, ok := navSegmentsCache[segmentRef.FrontendName][segmentRef.SegmentID]
 			if !ok {
@@ -1024,13 +1028,26 @@ func fillNavRefsTree(navItems []crd.ChromeNavItem, navSegmentsCache map[string]m
 				if err != nil {
 					return parsedNavItems, err
 				}
+				// add attributes required for the frontend local dev environment
+
 				// don't forget to mark the segment as filled and fill it
 				navSegmentsCache[segmentRef.FrontendName][segmentRef.SegmentID].IsFilled = true
 				navSegmentsCache[segmentRef.FrontendName][segmentRef.SegmentID].NavItems = segmentRefItems
 			}
+
+			// copy segmentRefItems and add segment ref for Frontend local dev environment
+			frontendSegmentRefItems := []crd.ChromeNavItem{}
+			for _, item := range segmentRefItems {
+				newItem := item.DeepCopy()
+				newItem.BundleSegmentRef = navItem.BundleSegmentRef
+				newItem.FrontendRef = segmentRef.FrontendName
+				newItem.SegmentRef = segmentRef
+				frontendSegmentRefItems = append(frontendSegmentRefItems, *newItem)
+			}
+
 			// delete the original ref and replace it with the filled segments
 			parsedNavItems = append(parsedNavItems[:index], parsedNavItems[index+1:]...)
-			parsedNavItems = slices.Insert(parsedNavItems, index, segmentRefItems...)
+			parsedNavItems = slices.Insert(parsedNavItems, index, frontendSegmentRefItems...)
 		}
 
 		// Make sure nested nav items have their refs filled as well
@@ -1058,7 +1075,7 @@ func fillNavRefsTree(navItems []crd.ChromeNavItem, navSegmentsCache map[string]m
 func filterUnknownNavRefs(navItems []crd.ChromeNavItem) []crd.ChromeNavItem {
 	res := []crd.ChromeNavItem{}
 	for _, navItem := range navItems {
-		if navItem.HasSegmentRef() {
+		if navItem.HasSegmentRef() && navItem.Href == "" && navItem.Title == "" {
 			// skip if segment is a ref
 			continue
 		}
@@ -1072,6 +1089,26 @@ func filterUnknownNavRefs(navItems []crd.ChromeNavItem) []crd.ChromeNavItem {
 		}
 
 		res = append(res, navItem)
+	}
+	return res
+}
+
+func addRefsToNavItems(navItems []crd.ChromeNavItem, bundleID string, frontendID string) []crd.ChromeNavItem {
+	res := []crd.ChromeNavItem{}
+	for _, navItem := range navItems {
+		newNavItem := navItem
+		newNavItem.BundleSegmentRef = bundleID
+		newNavItem.FrontendRef = frontendID
+
+		if newNavItem.IsExpandable() {
+			newNavItem.Routes = addRefsToNavItems(newNavItem.Routes, bundleID, frontendID)
+		}
+
+		if newNavItem.IsGroup() {
+			newNavItem.NavItems = addRefsToNavItems(newNavItem.NavItems, bundleID, frontendID)
+		}
+
+		res = append(res, newNavItem)
 	}
 	return res
 }
@@ -1105,6 +1142,8 @@ func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnviro
 	for _, frontend := range feList.Items {
 		if frontend.Spec.FeoConfigEnabled && frontend.Spec.BundleSegments != nil {
 			for _, bundleNavSegment := range frontend.Spec.BundleSegments {
+				navItemsWithRefs := addRefsToNavItems(*bundleNavSegment.NavItems, bundleNavSegment.BundleID, frontend.Name)
+				bundleNavSegment.NavItems = &navItemsWithRefs
 				bundleNavSegmentMap[bundleNavSegment.BundleID] = append(bundleNavSegmentMap[bundleNavSegment.BundleID], *bundleNavSegment)
 				skippedNavItemsMap[bundleNavSegment.BundleID] = append(skippedNavItemsMap[bundleNavSegment.BundleID], getNavItemPath(frontend.Name, bundleNavSegment.BundleID, bundleNavSegment.SegmentID))
 			}

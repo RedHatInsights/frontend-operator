@@ -48,8 +48,12 @@ spec:
                   properties:
                     appId:
                       type: string
+                    bundleSegmentRef:
+                      type: string
                     expandable:
                       type: boolean
+                    frontendRef:
+                      type: string
                     groupId:
                       type: string
                     href:
@@ -114,8 +118,12 @@ spec:
                       properties:
                         appId:
                           type: string
+                        bundleSegmentRef:
+                          type: string
                         expandable:
                           type: boolean
+                        frontendRef:
+                          type: string
                         groupId:
                           type: string
                         href:

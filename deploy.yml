@@ -67,8 +67,12 @@ objects:
                     properties:
                       appId:
                         type: string
+                      bundleSegmentRef:
+                        type: string
                       expandable:
                         type: boolean
+                      frontendRef:
+                        type: string
                       groupId:
                         type: string
                       href:
@@ -133,8 +137,12 @@ objects:
                         properties:
                           appId:
                             type: string
+                          bundleSegmentRef:
+                            type: string
                           expandable:
                             type: boolean
+                          frontendRef:
+                            type: string
                           groupId:
                             type: string
                           href:
@@ -519,8 +527,12 @@ objects:
                           properties:
                             appId:
                               type: string
+                            bundleSegmentRef:
+                              type: string
                             expandable:
                               type: boolean
+                            frontendRef:
+                              type: string
                             groupId:
                               type: string
                             href:
@@ -838,8 +850,12 @@ objects:
                           properties:
                             appId:
                               type: string
+                            bundleSegmentRef:
+                              type: string
                             expandable:
                               type: boolean
+                            frontendRef:
+                              type: string
                             groupId:
                               type: string
                             href:
@@ -913,6 +929,8 @@ objects:
                         type: array
                       description:
                         type: string
+                      frontendRef:
+                        type: string
                       href:
                         type: string
                       id:
@@ -940,6 +958,8 @@ objects:
                   items:
                     properties:
                       description:
+                        type: string
+                      frontendRef:
                         type: string
                       group:
                         type: string
@@ -1078,6 +1098,8 @@ objects:
                         - sm
                         - xl
                         type: object
+                      frontendRef:
+                        type: string
                       module:
                         type: string
                       scope:
