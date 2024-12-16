@@ -1018,7 +1018,7 @@ var _ = ginkgo.Describe("Search index", func() {
 				testCase := SearchIndexCase{
 					Env:            FrontendEnvName,
 					Namespace:      FrontendNamespace,
-					ExpectedResult: "[{\"id\":\"test-search-index-test-search-index-env-test\",\"href\":\"/test/href\",\"title\":\"Test\",\"description\":\"Test description\"},{\"id\":\"test-search-index-test-search-index-env-test2\",\"href\":\"/test2/href\",\"title\":\"Test2\",\"description\":\"Test2 description\"}]",
+					ExpectedResult: fmt.Sprintf("[{\"id\":\"test-search-index-test-search-index-env-test\",\"href\":\"/test/href\",\"title\":\"Test\",\"description\":\"Test description\",\"frontendRef\":\"%s\"},{\"id\":\"test-search-index-test-search-index-env-test2\",\"href\":\"/test2/href\",\"title\":\"Test2\",\"description\":\"Test2 description\",\"frontendRef\":\"%s\"}]", FrontendName, FrontendName),
 					SearchFrontendEntries: []SearchFrontendEntry{{
 						Name: FrontendName,
 						SearchEntries: []*crd.SearchEntry{{
@@ -1066,7 +1066,7 @@ var _ = ginkgo.Describe("Search index", func() {
 				testCase := SearchIndexCase{
 					Env:            FrontendEnvName2,
 					Namespace:      FrontendNamespace,
-					ExpectedResult: "[{\"id\":\"test-search-index2-test-search-index-env2-test-search-index2\",\"href\":\"/test/href\",\"title\":\"Test\",\"description\":\"Test description\"},{\"id\":\"test-search-index3-test-search-index-env2-test-search-index3\",\"href\":\"/test/href\",\"title\":\"Test\",\"description\":\"Test description\"}]",
+					ExpectedResult: fmt.Sprintf("[{\"id\":\"test-search-index2-test-search-index-env2-test-search-index2\",\"href\":\"/test/href\",\"title\":\"Test\",\"description\":\"Test description\",\"frontendRef\":\"%s\"},{\"id\":\"test-search-index3-test-search-index-env2-test-search-index3\",\"href\":\"/test/href\",\"title\":\"Test\",\"description\":\"Test description\",\"frontendRef\":\"%s\"}]", FrontendName2, FrontendName3),
 					SearchFrontendEntries: []SearchFrontendEntry{{
 						Name: FrontendName2,
 						SearchEntries: []*crd.SearchEntry{{
@@ -1225,7 +1225,25 @@ var _ = ginkgo.Describe("Widget registry", func() {
 
 	ginkgo.It("Should create widget registry", func() {
 		ginkgo.By("collection entries from Frontend resources", func() {
-			expectedResult := []crd.WidgetEntry{*Widget1, *Widget2, *Widget3}
+			expectedResult := []crd.WidgetEntry{{
+				FrontendRef: FrontendName,
+				Scope:       Widget1.Scope,
+				Module:      Widget1.Module,
+				Config:      Widget1.Config,
+				Defaults:    WidgetDefaults,
+			}, {
+				FrontendRef: FrontendName,
+				Scope:       Widget2.Scope,
+				Module:      Widget2.Module,
+				Config:      Widget2.Config,
+				Defaults:    WidgetDefaults,
+			}, {
+				FrontendRef: FrontendName2,
+				Scope:       Widget3.Scope,
+				Module:      Widget3.Module,
+				Config:      Widget3.Config,
+				Defaults:    WidgetDefaults,
+			}}
 			widgetCases := []WidgetCase{{
 				WidgetsFrontend: []WidgetFrontendTestEntry{{
 					Widgets:      []*crd.WidgetEntry{Widget1, Widget2},
@@ -1368,11 +1386,38 @@ var _ = ginkgo.Describe("Service tiles", func() {
 				Groups: []crd.FrontendServiceCategoryGroupGenerated{{
 					ID:    ServiceSectionGroupID1,
 					Title: "Service Section Group 1",
-					Tiles: &[]crd.ServiceTile{*ServiceTile1, *ServiceTile2},
+					Tiles: &[]crd.ServiceTile{{
+						Section:     ServiceTile1.Section,
+						Group:       ServiceTile1.Group,
+						ID:          ServiceTile1.ID,
+						Href:        ServiceTile1.Href,
+						Title:       ServiceTile1.Title,
+						Description: ServiceTile1.Description,
+						Icon:        ServiceTile1.Icon,
+						FrontendRef: FrontendName,
+					}, {
+						Section:     ServiceTile2.Section,
+						Group:       ServiceTile2.Group,
+						ID:          ServiceTile2.ID,
+						Href:        ServiceTile2.Href,
+						Title:       ServiceTile2.Title,
+						Description: ServiceTile2.Description,
+						Icon:        ServiceTile2.Icon,
+						FrontendRef: FrontendName,
+					}},
 				}, {
 					ID:    ServiceSectionGroupID2,
 					Title: "Service Section Group 2",
-					Tiles: &[]crd.ServiceTile{*ServiceTile3},
+					Tiles: &[]crd.ServiceTile{{
+						Section:     ServiceTile3.Section,
+						Group:       ServiceTile3.Group,
+						ID:          ServiceTile3.ID,
+						Href:        ServiceTile3.Href,
+						Title:       ServiceTile3.Title,
+						Description: ServiceTile3.Description,
+						Icon:        ServiceTile3.Icon,
+						FrontendRef: FrontendName,
+					}},
 				}},
 			},
 		}
