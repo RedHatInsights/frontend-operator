@@ -49,6 +49,6 @@ data:
   fed-modules.json: >-
     {"search":{"manifestLocation":"/apps/search/fed-mods.json","moduleID":"search","fullProfile":false}}
   search-index.json: >-
-    [{"id":"search-test-search-index-environment-landing","href":"/","title":"Landing","description":"Landing page description","alt_title":["HCC Home page","Home"]},{"id":"search-test-search-index-environment-landing-widgets","href":"/widgets","title":"Widget fantastic","description":"Widget"}]
+    [{"id":"search-test-search-index-environment-landing","href":"/","title":"Landing","description":"Landing page description","alt_title":["HCC Home page","Home"],"frontendRef":"search"},{"id":"search-test-search-index-environment-landing-widgets","href":"/widgets","title":"Widget fantastic","description":"Widget","frontendRef":"search"}]
 
 
