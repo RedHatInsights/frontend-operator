@@ -1093,19 +1093,19 @@ func filterUnknownNavRefs(navItems []crd.ChromeNavItem) []crd.ChromeNavItem {
 	return res
 }
 
-func addRefsToNavItems(navItems []crd.ChromeNavItem, bundleID string, frontendID string) []crd.ChromeNavItem {
+func addRefsToNavItems(navItems []crd.ChromeNavItem, bundleID string, frontendID string, parentBundleSegmentRef string) []crd.ChromeNavItem {
 	res := []crd.ChromeNavItem{}
 	for _, navItem := range navItems {
 		newNavItem := navItem
-		newNavItem.BundleSegmentRef = bundleID
+		newNavItem.BundleSegmentRef = parentBundleSegmentRef
 		newNavItem.FrontendRef = frontendID
 
 		if newNavItem.IsExpandable() {
-			newNavItem.Routes = addRefsToNavItems(newNavItem.Routes, bundleID, frontendID)
+			newNavItem.Routes = addRefsToNavItems(newNavItem.Routes, bundleID, frontendID, parentBundleSegmentRef)
 		}
 
 		if newNavItem.IsGroup() {
-			newNavItem.NavItems = addRefsToNavItems(newNavItem.NavItems, bundleID, frontendID)
+			newNavItem.NavItems = addRefsToNavItems(newNavItem.NavItems, bundleID, frontendID, parentBundleSegmentRef)
 		}
 
 		res = append(res, newNavItem)
@@ -1142,7 +1142,7 @@ func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnviro
 	for _, frontend := range feList.Items {
 		if frontend.Spec.FeoConfigEnabled && frontend.Spec.BundleSegments != nil {
 			for _, bundleNavSegment := range frontend.Spec.BundleSegments {
-				navItemsWithRefs := addRefsToNavItems(*bundleNavSegment.NavItems, bundleNavSegment.BundleID, frontend.Name)
+				navItemsWithRefs := addRefsToNavItems(*bundleNavSegment.NavItems, bundleNavSegment.BundleID, frontend.Name, bundleNavSegment.SegmentID)
 				bundleNavSegment.NavItems = &navItemsWithRefs
 				bundleNavSegmentMap[bundleNavSegment.BundleID] = append(bundleNavSegmentMap[bundleNavSegment.BundleID], *bundleNavSegment)
 				skippedNavItemsMap[bundleNavSegment.BundleID] = append(skippedNavItemsMap[bundleNavSegment.BundleID], getNavItemPath(frontend.Name, bundleNavSegment.BundleID, bundleNavSegment.SegmentID))
