@@ -273,6 +273,11 @@ func (in *ChromeNavItem) DeepCopyInto(out *ChromeNavItem) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.Position != nil {
+		in, out := &in.Position, &out.Position
+		*out = new(uint)
+		**out = **in
+	}
 	if in.SegmentRef != nil {
 		in, out := &in.SegmentRef, &out.SegmentRef
 		*out = new(SegmentRef)
