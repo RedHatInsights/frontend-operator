@@ -1243,7 +1243,13 @@ func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
 		Namespace: r.Frontend.Namespace,
 	}
 
+	// TODO: The conntext map should be configured via env variable from app interface
 	frontendCFGContextName := "feo-context-cfg"
+	if strings.Contains(r.Frontend.Namespace, "beta") {
+		// separate stable and beta config map names
+		// quick patch to see if we can separate the configurations
+		frontendCFGContextName += "-beta"
+	}
 	additionalNN := []types.NamespacedName{}
 	for _, n := range r.FrontendEnvironment.Spec.TargetNamespaces {
 		additionalNN = append(additionalNN, types.NamespacedName{

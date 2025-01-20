@@ -1,0 +1,17 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: propagate-config-map-beta
+spec:
+  finalizers:
+  - kubernetes
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: propagate-config-map-beta-chrome
+spec:
+  finalizers:
+  - kubernetes
+
