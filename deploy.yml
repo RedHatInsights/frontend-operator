@@ -957,6 +957,21 @@ objects:
                         type: string
                       isExternal:
                         type: boolean
+                      permissions:
+                        items:
+                          properties:
+                            apps:
+                              items:
+                                type: string
+                              type: array
+                            args:
+                              x-kubernetes-preserve-unknown-fields: true
+                            method:
+                              type: string
+                          required:
+                          - method
+                          type: object
+                        type: array
                       title:
                         type: string
                     required:
@@ -991,6 +1006,21 @@ objects:
                         type: string
                       isExternal:
                         type: boolean
+                      permissions:
+                        items:
+                          properties:
+                            apps:
+                              items:
+                                type: string
+                              type: array
+                            args:
+                              x-kubernetes-preserve-unknown-fields: true
+                            method:
+                              type: string
+                          required:
+                          - method
+                          type: object
+                        type: array
                       section:
                         type: string
                       title:
