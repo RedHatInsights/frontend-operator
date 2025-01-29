@@ -157,7 +157,7 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 			},
 			Limits: v1.ResourceList{
 				v1.ResourceCPU:    resource.MustParse("40m"),
-				v1.ResourceMemory: resource.MustParse("100Mi"),
+				v1.ResourceMemory: resource.MustParse("200Mi"),
 			},
 		},
 		LivenessProbe: &v1.Probe{
