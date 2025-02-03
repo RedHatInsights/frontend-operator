@@ -1258,7 +1258,7 @@ func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
 		})
 	}
 
-	defaultCfgMap, err := r.createConfigMap(defaultNN, frontendList, false)
+	defaultCfgMap, err := r.createConfigMap(defaultNN, frontendList, true)
 
 	for _, nn := range additionalNN {
 		_, err = r.createConfigMap(nn, frontendList, true)
