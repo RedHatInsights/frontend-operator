@@ -137,20 +137,40 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment)
 	return volumeMounts
 }
 
-func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
+// GetResourceRequirements handles defaults and conditional overrides
+func GetResourceRequirements(spec *FrontendEnvironmentSpec) (resource.Quantity, resource.Quantity, resource.Quantity, resource.Quantity) {
+	// Default values
 	cpuRequests := resource.MustParse("30m")
 	memoryRequests := resource.MustParse("50Mi")
 	cpuLimit := resource.MustParse("40m")
 	memoryLimit := resource.MustParse("100Mi")
 
-	if len(frontendEnvironment.Spec.Requests) > 0 {
-		cpuRequests = frontendEnvironment.Spec.Requests[v1.ResourceCPU]
-		memoryRequests = frontendEnvironment.Spec.Requests[v1.ResourceMemory]
+	// Handle Requests
+	if spec.Requests != nil {
+		if cpu, ok := spec.Requests[v1.ResourceCPU]; ok {
+			cpuRequests = cpu
+		}
+		if memory, ok := spec.Requests[v1.ResourceMemory]; ok {
+			memoryRequests = memory
+		}
 	}
-	if len(frontendEnvironment.Spec.Limits) > 0 {
-		cpuLimit = frontendEnvironment.Spec.Limits[v1.ResourceCPU]
-		memoryLimit = frontendEnvironment.Spec.Limits[v1.ResourceMemory]
+
+	// Handle Limits
+	if spec.Limits != nil {
+		if cpu, ok := spec.Limits[v1.ResourceCPU]; ok {
+			cpuLimit = cpu
+		}
+		if memory, ok := spec.Limits[v1.ResourceMemory]; ok {
+			memoryLimit = memory
+		}
 	}
+
+	return cpuRequests, memoryRequests, cpuLimit, memoryLimit
+}
+
+func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
+	// Get the resource requirements
+	cpuRequests, memoryRequests, cpuLimit, memoryLimit := GetResourceRequirements(&frontendEnvironment.Spec)
 
 	// set the URI Scheme for the probe
 	probeScheme := v1.URISchemeHTTP
