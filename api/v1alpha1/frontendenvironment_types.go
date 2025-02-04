@@ -20,6 +20,7 @@ import (
 	"context"
 
 	errors "github.com/RedHatInsights/clowder/controllers/cloud.redhat.com/errors"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -121,6 +122,9 @@ type FrontendEnvironmentSpec struct {
 	DefaultReplicas *int32 `json:"defaultReplicas,omitempty" yaml:"defaultReplicas,omitempty"`
 	// For the ChromeUI to render navigation bundles
 	Bundles *[]FrontendBundles `json:"bundles,omitempty" yaml:"bundles,omitempty"`
+
+	Requests *v1.ResourceList `json:"requests,omitempty" yaml:"requests,omitempty"`
+	Limits   *v1.ResourceList `json:"limits,omitempty" yaml:"limits,omitempty"`
 }
 
 type MonitoringConfig struct {

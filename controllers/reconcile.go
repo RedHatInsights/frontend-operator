@@ -138,6 +138,19 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment)
 }
 
 func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
+	cpuRequests := resource.MustParse("30m")
+	memoryRequests := resource.MustParse("50Mi")
+	cpuLimit := resource.MustParse("40m")
+	memoryLimit := resource.MustParse("100Mi")
+
+	if frontendEnvironment.Spec.Requests != nil {
+		cpuRequests = *frontendEnvironment.Spec.Requests.Cpu()
+		memoryRequests = *frontendEnvironment.Spec.Requests.Memory()
+	}
+	if frontendEnvironment.Spec.Limits != nil {
+		cpuLimit = *frontendEnvironment.Spec.Limits.Cpu()
+		memoryLimit = *frontendEnvironment.Spec.Limits.Memory()
+	}
 
 	// set the URI Scheme for the probe
 	probeScheme := v1.URISchemeHTTP
@@ -166,12 +179,12 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 		VolumeMounts: populateContainerVolumeMounts(frontendEnvironment),
 		Resources: v1.ResourceRequirements{
 			Requests: v1.ResourceList{
-				v1.ResourceCPU:    resource.MustParse("30m"),
-				v1.ResourceMemory: resource.MustParse("50Mi"),
+				v1.ResourceCPU:    cpuRequests,
+				v1.ResourceMemory: memoryRequests,
 			},
 			Limits: v1.ResourceList{
-				v1.ResourceCPU:    resource.MustParse("40m"),
-				v1.ResourceMemory: resource.MustParse("150Mi"),
+				v1.ResourceCPU:    cpuLimit,
+				v1.ResourceMemory: memoryLimit,
 			},
 		},
 		LivenessProbe: &v1.Probe{
