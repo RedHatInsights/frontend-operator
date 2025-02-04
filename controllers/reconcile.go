@@ -138,7 +138,7 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment)
 }
 
 // GetResourceRequirements handles defaults and conditional overrides
-func GetResourceRequirements(spec *FrontendEnvironmentSpec) (resource.Quantity, resource.Quantity, resource.Quantity, resource.Quantity) {
+func GetResourceRequirements(frontendEnvironment *crd.FrontendEnvironment) (resource.Quantity, resource.Quantity, resource.Quantity, resource.Quantity) {
 	// Default values
 	cpuRequests := resource.MustParse("30m")
 	memoryRequests := resource.MustParse("50Mi")
@@ -146,21 +146,21 @@ func GetResourceRequirements(spec *FrontendEnvironmentSpec) (resource.Quantity, 
 	memoryLimit := resource.MustParse("100Mi")
 
 	// Handle Requests
-	if spec.Requests != nil {
-		if cpu, ok := spec.Requests[v1.ResourceCPU]; ok {
+	if frontendEnvironment.Spec.Requests != nil {
+		if cpu, ok := frontendEnvironment.Spec.Requests[v1.ResourceCPU]; ok {
 			cpuRequests = cpu
 		}
-		if memory, ok := spec.Requests[v1.ResourceMemory]; ok {
+		if memory, ok := frontendEnvironment.Spec.Requests[v1.ResourceMemory]; ok {
 			memoryRequests = memory
 		}
 	}
 
 	// Handle Limits
-	if spec.Limits != nil {
-		if cpu, ok := spec.Limits[v1.ResourceCPU]; ok {
+	if frontendEnvironment.Spec.Limits != nil {
+		if cpu, ok := frontendEnvironment.Spec.Limits[v1.ResourceCPU]; ok {
 			cpuLimit = cpu
 		}
-		if memory, ok := spec.Limits[v1.ResourceMemory]; ok {
+		if memory, ok := frontendEnvironment.Spec.Limits[v1.ResourceMemory]; ok {
 			memoryLimit = memory
 		}
 	}
@@ -170,7 +170,7 @@ func GetResourceRequirements(spec *FrontendEnvironmentSpec) (resource.Quantity, 
 
 func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
 	// Get the resource requirements
-	cpuRequests, memoryRequests, cpuLimit, memoryLimit := GetResourceRequirements(&frontendEnvironment.Spec)
+	cpuRequests, memoryRequests, cpuLimit, memoryLimit := GetResourceRequirements(frontendEnvironment)
 
 	// set the URI Scheme for the probe
 	probeScheme := v1.URISchemeHTTP
