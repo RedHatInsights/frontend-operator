@@ -143,13 +143,13 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 	cpuLimit := resource.MustParse("40m")
 	memoryLimit := resource.MustParse("100Mi")
 
-	if frontendEnvironment.Spec.Requests != nil {
-		cpuRequests = *frontendEnvironment.Spec.Requests.Cpu()
-		memoryRequests = *frontendEnvironment.Spec.Requests.Memory()
+	if len(frontendEnvironment.Spec.Requests) > 0 {
+		cpuRequests = frontendEnvironment.Spec.Requests[v1.ResourceCPU]
+		memoryRequests = frontendEnvironment.Spec.Requests[v1.ResourceMemory]
 	}
-	if frontendEnvironment.Spec.Limits != nil {
-		cpuLimit = *frontendEnvironment.Spec.Limits.Cpu()
-		memoryLimit = *frontendEnvironment.Spec.Limits.Memory()
+	if len(frontendEnvironment.Spec.Limits) > 0 {
+		cpuLimit = frontendEnvironment.Spec.Limits[v1.ResourceCPU]
+		memoryLimit = frontendEnvironment.Spec.Limits[v1.ResourceMemory]
 	}
 
 	// set the URI Scheme for the probe

@@ -21,6 +21,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -593,6 +594,20 @@ func (in *FrontendEnvironmentSpec) DeepCopyInto(out *FrontendEnvironmentSpec) {
 			in, out := *in, *out
 			*out = make([]FrontendBundles, len(*in))
 			copy(*out, *in)
+		}
+	}
+	if in.Requests != nil {
+		in, out := &in.Requests, &out.Requests
+		*out = make(corev1.ResourceList, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val.DeepCopy()
+		}
+	}
+	if in.Limits != nil {
+		in, out := &in.Limits, &out.Limits
+		*out = make(corev1.ResourceList, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val.DeepCopy()
 		}
 	}
 }

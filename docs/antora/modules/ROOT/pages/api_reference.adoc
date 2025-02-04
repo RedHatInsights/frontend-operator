@@ -184,6 +184,32 @@ _Underlying type:_ _string_
 
 
 
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlesegment"]
+==== BundleSegment
+
+
+
+
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]
+****
+
+[cols="20a,50a,15a,15a", options="header"]
+|===
+| Field | Description | Default | Validation
+| *`segmentId`* __string__ |  |  | 
+| *`bundleId`* __string__ | Id of the bundle to which the segment should be injected + |  | 
+| *`position`* __integer__ | A position of the segment within the bundle +
+0 is the first position +
+The position "steps" should be at least 100 to make sure there is enough space in case some segments should be injected between existing ones + |  | 
+| *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$]__ |  |  | 
+|===
+
+
 [id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec"]
 ==== BundleSpec
 
@@ -223,11 +249,13 @@ BundleSpec defines the desired state of Bundle
 
 .Appears In:
 ****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlesegment[$$BundleSegment$$]
 - xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec[$$BundleSpec$$]
 - xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$]
 - xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-computedbundle[$$ComputedBundle$$]
 - xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem[$$ExtraNavItem$$]
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-navigationsegment[$$BundleSegment$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendbundlesgenerated[$$FrontendBundlesGenerated$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-navigationsegment[$$NavigationSegment$$]
 ****
 
 [cols="20a,50a,15a,15a", options="header"]
@@ -250,6 +278,10 @@ BundleSpec defines the desired state of Bundle
 | *`routes`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$] array__ |  |  | Schemaless: {} +
 
 | *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-permission[$$Permission$$] array__ |  |  | 
+| *`position`* __integer__ | Position argument inherited from the segment, needed for smooth transition between old a new system and for proper developer experience + |  | 
+| *`segmentRef`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-segmentref[$$SegmentRef$$]__ |  |  | 
+| *`bundleSegmentRef`* __string__ |  |  | 
+| *`frontendRef`* __string__ |  |  | 
 |===
 
 
@@ -354,6 +386,31 @@ Frontend is the Schema for the frontends API
  |  | 
 | *`spec`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]__ |  |  | 
 |===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendbundles"]
+==== FrontendBundles
+
+
+
+FrontendBundles defines the bundles specific to an environment that will be used to
+construct navigation
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentspec[$$FrontendEnvironmentSpec$$]
+****
+
+[cols="20a,50a,15a,15a", options="header"]
+|===
+| Field | Description | Default | Validation
+| *`id`* __string__ |  |  | 
+| *`title`* __string__ |  |  | 
+|===
+
+
 
 
 [id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontenddeployments"]
@@ -468,6 +525,9 @@ By configurations we mean the fed-modules.json, navigation files, etc. + |  |
 | *`httpHeaders`* __object (keys:string, values:string)__ | Custom HTTP Headers +
 These populate an ENV var that is then added into the caddy config as a header block + |  | 
 | *`defaultReplicas`* __integer__ |  |  | 
+| *`bundles`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendbundles[$$FrontendBundles$$]__ | For the ChromeUI to render navigation bundles + |  | 
+| *`requests`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#resourcelist-v1-core[$$ResourceList$$]__ |  |  | 
+| *`limits`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#resourcelist-v1-core[$$ResourceList$$]__ |  |  | 
 |===
 
 
@@ -615,7 +675,8 @@ FrontendSpec defines the desired state of Frontend
 | *`serviceMonitor`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicemonitorconfig[$$ServiceMonitorConfig$$]__ |  |  | 
 | *`module`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule[$$FedModule$$]__ |  |  | 
 | *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$] array__ |  |  | 
-| *`navigationSegments`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-navigationsegment[$$BundleSegment$$] array__ | navigation segments for the frontend + |  | 
+| *`bundleSegments`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlesegment[$$BundleSegment$$] array__ | navigation segments for the frontend + |  | 
+| *`navigationSegments`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-navigationsegment[$$NavigationSegment$$] array__ |  |  | 
 | *`assetsPrefix`* __string__ |  |  | 
 | *`akamaiCacheBustDisable`* __boolean__ | Akamai cache bust opt-out + |  | 
 | *`akamaiCacheBustPaths`* __string array__ | Files to cache bust + |  | 
@@ -731,7 +792,7 @@ FrontendSpec defines the desired state of Frontend
 
 
 [id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-navigationsegment"]
-==== BundleSegment
+==== NavigationSegment
 
 
 
@@ -747,11 +808,7 @@ FrontendSpec defines the desired state of Frontend
 [cols="20a,50a,15a,15a", options="header"]
 |===
 | Field | Description | Default | Validation
-| *`sectionId`* __string__ |  |  | 
-| *`bundleId`* __string__ | Id of the bundle to which the segment should be injected + |  | 
-| *`position`* __integer__ | A position of the segment within the bundle +
-0 is the first position +
-The position "steps" should be at least 100 to make sure there is enough space in case some segments should be injected between existing ones + |  | 
+| *`segmentId`* __string__ |  |  | 
 | *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$]__ |  |  | 
 |===
 
@@ -769,6 +826,8 @@ _Underlying type:_ _xref:{anchor_prefix}-github-com-redhatinsights-frontend-oper
 ****
 - xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$]
 - xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-route[$$Route$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-searchentry[$$SearchEntry$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicetile[$$ServiceTile$$]
 - xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-widgetconfig[$$WidgetConfig$$]
 ****
 
@@ -825,7 +884,25 @@ _Underlying type:_ _xref:{anchor_prefix}-github-com-redhatinsights-frontend-oper
 | *`description`* __string__ |  |  | 
 | *`alt_title`* __string array__ |  |  | 
 | *`isExternal`* __boolean__ |  |  | 
+| *`frontendRef`* __string__ |  |  | 
+| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-permission[$$Permission$$] array__ |  |  | 
 |===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-segmentref"]
+==== SegmentRef
+
+_Underlying type:_ _xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-struct-frontendname string -json-frontendname- yaml-frontendname- segmentid string -json-segmentid- yaml-segmentid-[$$struct{FrontendName string "json:\"frontendName\" yaml:\"frontendName\""; SegmentID string "json:\"segmentId\" yaml:\"segmentId\""}$$]_
+
+
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$]
+****
+
 
 
 [id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicemonitorconfig"]
@@ -875,6 +952,8 @@ _Underlying type:_ _xref:{anchor_prefix}-github-com-redhatinsights-frontend-oper
 | *`description`* __string__ |  |  | 
 | *`icon`* __string__ |  |  | 
 | *`isExternal`* __boolean__ |  |  | 
+| *`frontendRef`* __string__ |  |  | 
+| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-permission[$$Permission$$] array__ |  |  | 
 |===
 
 
@@ -994,6 +1073,7 @@ _Underlying type:_ _xref:{anchor_prefix}-github-com-redhatinsights-frontend-oper
 | *`module`* __string__ |  |  | 
 | *`config`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-widgetconfig[$$WidgetConfig$$]__ |  |  | 
 | *`defaults`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-widgetdefaults[$$WidgetDefaults$$]__ |  |  | 
+| *`frontendRef`* __string__ |  |  | 
 |===
 
 

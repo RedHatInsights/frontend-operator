@@ -123,8 +123,8 @@ type FrontendEnvironmentSpec struct {
 	// For the ChromeUI to render navigation bundles
 	Bundles *[]FrontendBundles `json:"bundles,omitempty" yaml:"bundles,omitempty"`
 
-	Requests *v1.ResourceList `json:"requests,omitempty" yaml:"requests,omitempty"`
-	Limits   *v1.ResourceList `json:"limits,omitempty" yaml:"limits,omitempty"`
+	Requests v1.ResourceList `json:"requests,omitempty" yaml:"requests,omitempty"`
+	Limits   v1.ResourceList `json:"limits,omitempty" yaml:"limits,omitempty"`
 }
 
 type MonitoringConfig struct {
