@@ -137,7 +137,40 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment)
 	return volumeMounts
 }
 
+// GetResourceRequirements handles defaults and conditional overrides
+func GetResourceRequirements(frontendEnvironment *crd.FrontendEnvironment) (resource.Quantity, resource.Quantity, resource.Quantity, resource.Quantity) {
+	// Default values
+	cpuRequests := resource.MustParse("30m")
+	memoryRequests := resource.MustParse("50Mi")
+	cpuLimit := resource.MustParse("40m")
+	memoryLimit := resource.MustParse("100Mi")
+
+	// Handle Requests
+	if frontendEnvironment.Spec.Requests != nil {
+		if cpu, ok := frontendEnvironment.Spec.Requests[v1.ResourceCPU]; ok {
+			cpuRequests = cpu
+		}
+		if memory, ok := frontendEnvironment.Spec.Requests[v1.ResourceMemory]; ok {
+			memoryRequests = memory
+		}
+	}
+
+	// Handle Limits
+	if frontendEnvironment.Spec.Limits != nil {
+		if cpu, ok := frontendEnvironment.Spec.Limits[v1.ResourceCPU]; ok {
+			cpuLimit = cpu
+		}
+		if memory, ok := frontendEnvironment.Spec.Limits[v1.ResourceMemory]; ok {
+			memoryLimit = memory
+		}
+	}
+
+	return cpuRequests, memoryRequests, cpuLimit, memoryLimit
+}
+
 func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
+	// Get the resource requirements
+	cpuRequests, memoryRequests, cpuLimit, memoryLimit := GetResourceRequirements(frontendEnvironment)
 
 	// set the URI Scheme for the probe
 	probeScheme := v1.URISchemeHTTP
@@ -166,12 +199,12 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 		VolumeMounts: populateContainerVolumeMounts(frontendEnvironment),
 		Resources: v1.ResourceRequirements{
 			Requests: v1.ResourceList{
-				v1.ResourceCPU:    resource.MustParse("30m"),
-				v1.ResourceMemory: resource.MustParse("50Mi"),
+				v1.ResourceCPU:    cpuRequests,
+				v1.ResourceMemory: memoryRequests,
 			},
 			Limits: v1.ResourceList{
-				v1.ResourceCPU:    resource.MustParse("40m"),
-				v1.ResourceMemory: resource.MustParse("150Mi"),
+				v1.ResourceCPU:    cpuLimit,
+				v1.ResourceMemory: memoryLimit,
 			},
 		},
 		LivenessProbe: &v1.Probe{
