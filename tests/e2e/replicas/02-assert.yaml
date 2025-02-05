@@ -35,8 +35,6 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /opt/app-root/src/build/stable/operator-generated
-            - name: config
-              mountPath: /srv/dist/operator-generated
 ---
 kind: Deployment
 apiVersion: apps/v1
@@ -74,8 +72,6 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /opt/app-root/src/build/stable/operator-generated
-            - name: config
-              mountPath: /srv/dist/operator-generated
 ---
 kind: Deployment
 apiVersion: apps/v1
@@ -113,5 +109,3 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /opt/app-root/src/build/stable/operator-generated
-            - name: config
-              mountPath: /srv/dist/operator-generated

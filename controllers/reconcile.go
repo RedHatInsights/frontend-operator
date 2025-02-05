@@ -91,7 +91,6 @@ func (r *FrontendReconciliation) run() error {
 }
 
 func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment) []v1.VolumeMount {
-	// FIXME: Remove chrome specific exceptions once FEO generated assets are fully available and used in all envs
 
 	volumeMounts := []v1.VolumeMount{}
 
@@ -102,12 +101,6 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment)
 			Name:      "config",
 			MountPath: "/opt/app-root/src/build/chrome",
 		})
-		// We need to have duplicate entries for a while as we have a transition period
-		// In this transition we are "unchronifying" the chrome and making it a regular app with regular dir structure
-		volumeMounts = append(volumeMounts, v1.VolumeMount{
-			Name:      "config",
-			MountPath: "/srv/dist",
-		})
 	}
 
 	// We always want to mount the config map under the operator-generated directory
@@ -117,13 +110,6 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment)
 	volumeMounts = append(volumeMounts, v1.VolumeMount{
 		Name:      "config",
 		MountPath: "/opt/app-root/src/build/stable/operator-generated",
-	})
-
-	// We need to have duplicate entries for a while as we have a transition period
-	// In this transition we are "unchronifying" the chrome and making it a regular app with regular dir structure
-	volumeMounts = append(volumeMounts, v1.VolumeMount{
-		Name:      "config",
-		MountPath: "/srv/dist/operator-generated",
 	})
 
 	// We generate SSL cert mounts conditionally
