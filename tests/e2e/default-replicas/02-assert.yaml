@@ -22,6 +22,13 @@ spec:
           configMap:
             name:  test-default-replicas-environment
             defaultMode: 420
+        - name: caddy
+          configMap:
+            name: test-default-replicas-environment
+            defaultMode: 420
+            items:
+            - key: Caddyfile
+              path: Caddyfile
       containers:
         - name: fe-image
           image: 'quay.io/cloudservices/insights-chrome-frontend:720317c'

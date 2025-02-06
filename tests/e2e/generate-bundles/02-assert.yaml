@@ -21,6 +21,13 @@ spec:
           configMap:
             name: test-generate-bundles-environment
             defaultMode: 420
+        - name: caddy
+          configMap:
+            name: test-generate-bundles-environment
+            defaultMode: 420
+            items:
+            - key: Caddyfile
+              path: Caddyfile
       containers:
         - name: fe-image
           image: quay.io/cloudservices/landing-page-frontend:3244a17
@@ -34,6 +41,9 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /opt/app-root/src/build/stable/operator-generated
+            - name: caddy
+              mountPath: /opt/app-root/src/Caddyfile
+              subPath: Caddyfile
 ---
 kind: ConfigMap
 apiVersion: v1

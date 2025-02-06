@@ -21,6 +21,13 @@ spec:
           configMap:
             name:  test-basic-app-environment
             defaultMode: 420
+        - name: caddy
+          configMap:
+            name: test-basic-app-environment
+            defaultMode: 420
+            items:
+            - key: Caddyfile
+              path: Caddyfile
       containers:
         - name: fe-image
           image: 'quay.io/cloudservices/insights-chrome-frontend:720317c'

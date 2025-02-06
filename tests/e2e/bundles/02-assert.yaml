@@ -21,6 +21,13 @@ spec:
           configMap:
             name: test-bundles-environment
             defaultMode: 420
+        - name: caddy
+          configMap:
+            name: test-bundles-environment
+            defaultMode: 420
+            items:
+            - key: Caddyfile
+              path: Caddyfile
       containers:
         - name: fe-image
           image: quay.io/cloudservices/edge-frontend:3244a17
@@ -36,6 +43,9 @@ spec:
               mountPath: /opt/app-root/src/build/chrome
             - name: config
               mountPath: /opt/app-root/src/build/stable/operator-generated
+            - name: caddy
+              mountPath: /opt/app-root/src/Caddyfile
+              subPath: Caddyfile
 ---
 apiVersion: cloud.redhat.com/v1alpha1
 kind: Bundle

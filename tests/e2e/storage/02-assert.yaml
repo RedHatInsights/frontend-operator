@@ -37,10 +37,17 @@ spec:
       securityContext: {}
       terminationGracePeriodSeconds: 30
       volumes:
-      - configMap:
-          defaultMode: 420
-          name: test-storage-environment
-        name: config
+        - configMap:
+            defaultMode: 420
+            name: test-storage-environment
+          name: config
+        - name: caddy
+          configMap:
+            name: test-storage-environment
+            defaultMode: 420
+            items:
+            - key: Caddyfile
+              path: Caddyfile
 ---
 kind: ConfigMap
 apiVersion: v1

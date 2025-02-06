@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"crypto/sha256"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"slices"
@@ -47,6 +48,9 @@ type FrontendReconciliation struct {
 	Ctx                 context.Context
 	Client              client.Client
 }
+
+//go:embed templates/Caddyfile
+var caddyFileTemplate string
 
 func (r *FrontendReconciliation) run() error {
 
@@ -1232,45 +1236,6 @@ func (r *FrontendReconciliation) setupBundleData(_ *v1.ConfigMap, _ map[string]c
 	return nil
 }
 
-func setupCaddyFile() string {
-	caddyFileContent := `
-	{
-		{$CADDY_TLS_MODE}
-		auto_https disable_redirects
-		servers {
-			metrics
-		}
-	}
-
-	:9000 {
-		metrics /metrics
-	}
-
-	:8000 {
-		{$CADDY_TLS_CERT}
-		header -Vary
-		log
-
-		# Handle main app route
-		@app_match {
-			path ${ROUTE_PATH}*
-		}
-		handle @app_match {
-			uri strip_prefix ${ROUTE_PATH}
-			file_server * {
-				root /srv/${OUTPUT_DIR}
-				browse
-			}
-		}
-
-		handle / {
-			redir /apps/chrome/index.html permanent
-		}
-	}
-	`
-	return caddyFileContent
-}
-
 func createConfigmapHash(cfgMap *v1.ConfigMap) (string, error) {
 	hashData, err := json.Marshal(cfgMap.Data)
 	if err != nil {
@@ -1437,7 +1402,7 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 	}
 
 	cfgMap.Data["fed-modules.json"] = string(fedModulesJSONData)
-	cfgMap.Data["Caddyfile"] = setupCaddyFile()
+	cfgMap.Data["Caddyfile"] = caddyFileTemplate
 	if len(searchIndex) > 0 {
 		cfgMap.Data["search-index.json"] = string(searchIndexJSONData)
 	}
