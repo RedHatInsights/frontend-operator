@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"crypto/sha256"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"slices"
@@ -48,6 +49,9 @@ type FrontendReconciliation struct {
 	Client              client.Client
 }
 
+//go:embed templates/Caddyfile
+var caddyFileTemplate string
+
 func (r *FrontendReconciliation) run() error {
 
 	configMap, err := r.setupConfigMaps()
@@ -90,7 +94,7 @@ func (r *FrontendReconciliation) run() error {
 	return nil
 }
 
-func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment) []v1.VolumeMount {
+func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment, frontend *crd.Frontend) []v1.VolumeMount {
 
 	volumeMounts := []v1.VolumeMount{}
 
@@ -111,6 +115,14 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment)
 		Name:      "config",
 		MountPath: "/opt/app-root/src/build/stable/operator-generated",
 	})
+
+	if frontend.Name != "chrome" {
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      "caddy",
+			MountPath: "/opt/app-root/src/Caddyfile",
+			SubPath:   "Caddyfile",
+		})
+	}
 
 	// We generate SSL cert mounts conditionally
 	if frontendEnvironment.Spec.SSL {
@@ -182,7 +194,7 @@ func populateContainer(d *apps.Deployment, frontend *crd.Frontend, frontendEnvir
 				Protocol:      "TCP",
 			},
 		},
-		VolumeMounts: populateContainerVolumeMounts(frontendEnvironment),
+		VolumeMounts: populateContainerVolumeMounts(frontendEnvironment, frontend),
 		Resources: v1.ResourceRequirements{
 			Requests: v1.ResourceList{
 				v1.ResourceCPU:    cpuRequests,
@@ -403,7 +415,7 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 }
 
 func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
-	// By default we just want the config volume
+	// By default we just want the config and caddy volume
 	volumes := []v1.Volume{}
 	volumes = append(volumes, v1.Volume{
 		Name: "config",
@@ -412,6 +424,19 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 				LocalObjectReference: v1.LocalObjectReference{
 					Name: frontend.Spec.EnvName,
 				},
+			},
+		},
+	}, v1.Volume{
+		Name: "caddy",
+		VolumeSource: v1.VolumeSource{
+			ConfigMap: &v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: frontend.Spec.EnvName,
+				},
+				Items: []v1.KeyToPath{{
+					Key:  "Caddyfile",
+					Path: "Caddyfile",
+				}},
 			},
 		},
 	})
@@ -1312,15 +1337,15 @@ func (r *FrontendReconciliation) createConfigMap(nn types.NamespacedName, fronte
 		// Flag to trigger pod restart if config map changes
 		cfgMap.Annotations["qontract.recycle"] = "true"
 		/**
-				* to use config map in a pod as an env variable use following config:
-		    * podSpec:
-		    *   env:
-		    *    - name: FEO_SEARCH_INDEX
-		    *      valueFrom:
-		    *        configMapKeyRef:
-		    *          key: search-index.json # or other key from config map
-		    *          name: feo-context-cfg # based on the constant in the setupConfigMaps function
-			  *					 optional: true # because keys in configmap can be empty
+			* to use config map in a pod as an env variable use following config:
+		* podSpec:
+		*   env:
+		*    - name: FEO_SEARCH_INDEX
+		*      valueFrom:
+		*        configMapKeyRef:
+		*          key: search-index.json # or other key from config map
+		*          name: feo-context-cfg # based on the constant in the setupConfigMaps function
+		  *					 optional: true # because keys in configmap can be empty
 		*/
 	}
 
@@ -1410,6 +1435,7 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 	}
 
 	cfgMap.Data["fed-modules.json"] = string(fedModulesJSONData)
+	cfgMap.Data["Caddyfile"] = caddyFileTemplate
 	if len(searchIndex) > 0 {
 		cfgMap.Data["search-index.json"] = string(searchIndexJSONData)
 	}

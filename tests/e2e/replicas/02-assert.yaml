@@ -22,6 +22,13 @@ spec:
           configMap:
             name:  test-replicas-environment
             defaultMode: 420
+        - name: caddy
+          configMap:
+            name: test-replicas-environment
+            defaultMode: 420
+            items:
+            - key: Caddyfile
+              path: Caddyfile
       containers:
         - name: fe-image
           image: 'quay.io/cloudservices/insights-chrome-frontend:720317c'
@@ -35,6 +42,9 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /opt/app-root/src/build/stable/operator-generated
+            - name: caddy
+              mountPath: /opt/app-root/src/Caddyfile
+              subPath: Caddyfile
 ---
 kind: Deployment
 apiVersion: apps/v1
@@ -59,6 +69,13 @@ spec:
           configMap:
             name:  test-replicas-environment
             defaultMode: 420
+        - name: caddy
+          configMap:
+            name: test-replicas-environment
+            defaultMode: 420
+            items:
+            - key: Caddyfile
+              path: Caddyfile
       containers:
         - name: fe-image
           image: 'quay.io/cloudservices/insights-chrome-frontend:720317c'
@@ -72,6 +89,9 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /opt/app-root/src/build/stable/operator-generated
+            - name: caddy
+              mountPath: /opt/app-root/src/Caddyfile
+              subPath: Caddyfile
 ---
 kind: Deployment
 apiVersion: apps/v1
@@ -96,6 +116,13 @@ spec:
           configMap:
             name:  test-replicas-environment
             defaultMode: 420
+        - name: caddy
+          configMap:
+            name: test-replicas-environment
+            defaultMode: 420
+            items:
+            - key: Caddyfile
+              path: Caddyfile
       containers:
         - name: fe-image
           image: 'quay.io/cloudservices/insights-chrome-frontend:720317c'
@@ -109,3 +136,6 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /opt/app-root/src/build/stable/operator-generated
+            - name: caddy
+              mountPath: /opt/app-root/src/Caddyfile
+              subPath: Caddyfile

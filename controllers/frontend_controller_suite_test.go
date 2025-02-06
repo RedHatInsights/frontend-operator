@@ -181,7 +181,23 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 				err := k8sClient.Get(ctx, deploymentLookupKey, createdDeployment)
 				return err == nil
 			}, timeout, interval).Should(gomega.BeTrue())
+			expectedVolumeMounts := []v1.VolumeMount{
+				{
+					Name:      "config",
+					MountPath: "/opt/app-root/src/build/chrome",
+				},
+				{
+					Name:      "config",
+					MountPath: "/opt/app-root/src/build/stable/operator-generated",
+				},
+				{
+					Name:      "caddy",
+					MountPath: "/opt/app-root/src/Caddyfile",
+					SubPath:   "Caddyfile",
+				},
+			}
 			gomega.Expect(createdDeployment.Name).Should(gomega.Equal(FrontendName + "-frontend"))
+			gomega.Expect(createdDeployment.Spec.Template.Spec.Containers[0].VolumeMounts).Should(gomega.Equal(expectedVolumeMounts))
 			fmt.Printf("\n%v\n", createdDeployment.GetAnnotations())
 			gomega.Expect(createdDeployment.Spec.Template.GetAnnotations()["configHash"]).ShouldNot(gomega.Equal(""))
 
@@ -205,13 +221,14 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 				if err != nil {
 					return err == nil
 				}
-				if len(createdConfigMap.Data) != 1 {
+				if len(createdConfigMap.Data) != 2 {
 					return false
 				}
 				return true
 			}, timeout, interval).Should(gomega.BeTrue())
 			gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName))
 			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
+				"Caddyfile":        caddyFileTemplate,
 				"fed-modules.json": "{\"testFrontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"},\"fullProfile\":true},\"testFrontend2\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"cheese\":\"pasty\"},\"fullProfile\":false}}",
 			}))
 			gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(FrontendEnvName))
@@ -347,6 +364,7 @@ var _ = ginkgo.Describe("Frontend controller with service", func() {
 			}, timeout, interval).Should(gomega.BeTrue())
 			gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName))
 			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
+				"Caddyfile":        caddyFileTemplate,
 				"fed-modules.json": "{\"testFrontendService\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"fullProfile\":false}}",
 			}))
 
@@ -571,7 +589,18 @@ var _ = ginkgo.Describe("Frontend controller with chrome", func() {
 				err := k8sClient.Get(ctx, deploymentLookupKey, createdDeployment)
 				return err == nil
 			}, timeout, interval).Should(gomega.BeTrue())
+			expectedVolumeMounts := []v1.VolumeMount{
+				{
+					Name:      "config",
+					MountPath: "/opt/app-root/src/build/chrome",
+				},
+				{
+					Name:      "config",
+					MountPath: "/opt/app-root/src/build/stable/operator-generated",
+				},
+			}
 			gomega.Expect(createdDeployment.Name).Should(gomega.Equal(FrontendName + "-frontend"))
+			gomega.Expect(createdDeployment.Spec.Template.Spec.Containers[0].VolumeMounts).Should(gomega.Equal(expectedVolumeMounts))
 			fmt.Printf("\n%v\n", createdDeployment.GetAnnotations())
 			gomega.Expect(createdDeployment.Spec.Template.GetAnnotations()["configHash"]).ShouldNot(gomega.Equal(""))
 
@@ -595,13 +624,14 @@ var _ = ginkgo.Describe("Frontend controller with chrome", func() {
 				if err != nil {
 					return err == nil
 				}
-				if len(createdConfigMap.Data) != 1 {
+				if len(createdConfigMap.Data) != 2 {
 					return false
 				}
 				return true
 			}, timeout, interval).Should(gomega.BeTrue())
 			gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName))
 			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
+				"Caddyfile":        caddyFileTemplate,
 				"fed-modules.json": "{\"chrome\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\",\"ssoUrl\":\"https://something-auth\"},\"fullProfile\":false},\"noConfig\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"fullProfile\":false},\"nonChrome\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"},\"fullProfile\":false}}",
 			}))
 			gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(FrontendEnvName))
@@ -917,13 +947,14 @@ var _ = ginkgo.Describe("Dependencies", func() {
 				if err != nil {
 					return err == nil
 				}
-				if len(createdConfigMap.Data) != 1 {
+				if len(createdConfigMap.Data) != 2 {
 					return false
 				}
 				return true
 			}, timeout, interval).Should(gomega.BeTrue())
 			gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName))
 			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
+				"Caddyfile":        caddyFileTemplate,
 				"fed-modules.json": "{\"testDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}],\"dependencies\":[\"depstring\"]}],\"fullProfile\":false},\"testNoDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"fullProfile\":false},\"testOptionalDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}],\"optionalDependencies\":[\"depstring-op\"]}],\"fullProfile\":false}}",
 			}))
 			gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(FrontendEnvName))
@@ -1047,7 +1078,7 @@ var _ = ginkgo.Describe("Search index", func() {
 					if err != nil {
 						return err == nil
 					}
-					if len(createdConfigMap.Data) != 2 {
+					if len(createdConfigMap.Data) != 3 {
 						return false
 					}
 					return true
@@ -1100,7 +1131,7 @@ var _ = ginkgo.Describe("Search index", func() {
 					if err != nil {
 						return err == nil
 					}
-					if len(createdConfigMap.Data) != 2 {
+					if len(createdConfigMap.Data) != 3 {
 						return false
 					}
 					return true
@@ -1274,7 +1305,7 @@ var _ = ginkgo.Describe("Widget registry", func() {
 					if err != nil {
 						return err == nil
 					}
-					if len(createdConfigMap.Data) != 2 {
+					if len(createdConfigMap.Data) != 3 {
 						return false
 					}
 					return true
@@ -1469,7 +1500,7 @@ var _ = ginkgo.Describe("Service tiles", func() {
 					if err != nil {
 						return err == nil
 					}
-					if len(createdConfigMap.Data) != 2 {
+					if len(createdConfigMap.Data) != 3 {
 						return false
 					}
 					return true

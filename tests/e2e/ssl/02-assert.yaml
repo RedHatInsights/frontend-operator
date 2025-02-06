@@ -21,6 +21,13 @@ spec:
           configMap:
             name:  test-ssl-environment
             defaultMode: 420
+        - name: caddy
+          configMap:
+            name: test-ssl-environment
+            defaultMode: 420
+            items:
+            - key: Caddyfile
+              path: Caddyfile
         - name: certs
           secret:
             secretName: chrome-cert
