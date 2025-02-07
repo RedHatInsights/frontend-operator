@@ -34,6 +34,8 @@ spec:
         volumeMounts:
         - mountPath: /opt/app-root/src/build/stable/operator-generated
           name: config
+        - name: config
+          mountPath: /srv/dist/operator-generated
       securityContext: {}
       terminationGracePeriodSeconds: 30
       volumes:
