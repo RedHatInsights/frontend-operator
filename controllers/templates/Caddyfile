@@ -2,7 +2,7 @@
     {$CADDY_TLS_MODE}
     auto_https disable_redirects
     servers {
-        metrics
+      metrics
     }
 }
 
@@ -17,14 +17,46 @@
 
     # Handle main app route
     @app_match {
-        path ${ROUTE_PATH}*
+        path {$ROUTE_PATH}*
     }
     handle @app_match {
-        uri strip_prefix ${ROUTE_PATH}
+        uri strip_prefix {$ROUTE_PATH}
         file_server * {
-            root /srv/${OUTPUT_DIR}
+            root /opt/app-root/src/dist/stable
             browse
         }
+    }
+
+    # Handle beta app route
+    @beta_match {
+        path {$BETA_ROUTE_PATH}*
+    }
+    handle @beta_match {
+        uri strip_prefix {$BETA_ROUTE_PATH}
+        file_server * {
+            root /opt/app-root/src/dist/preview
+            browse
+        }
+    }
+
+    # Handle preview app route
+    @preview_match {
+        path {$PREVIEW_ROUTE_PATH}*
+    }
+    handle @preview_match {
+        uri strip_prefix {$PREVIEW_ROUTE_PATH}
+        file_server * {
+            root /opt/app-root/src/dist/preview
+            browse
+        }
+    }
+
+    handle /beta/ {
+        redir /beta/apps/chrome/index.html permanent
+    }
+
+    handle /preview/ {
+        redir /preview/apps/chrome/index.html permanent
     }
 
     handle / {

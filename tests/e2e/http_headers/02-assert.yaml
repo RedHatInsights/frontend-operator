@@ -41,6 +41,14 @@ spec:
                 X-Frame-Options Set
                 X-XSS-Protection 1; mode=block;
                 }
+            - name: APP_NAME
+              value: chrome
+            - name: ROUTE_PATH
+              value: /apps/$(APP_NAME)
+            - name: BETA_ROUTE_PATH
+              value: /beta$(ROUTE_PATH)
+            - name: PREVIEW_ROUTE_PATH
+              value: /preview$(ROUTE_PATH)
           ports:
             - name: web
               containerPort: 80
