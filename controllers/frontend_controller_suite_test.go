@@ -148,7 +148,8 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 					Monitoring: &crd.MonitoringConfig{
 						Mode: "app-interface",
 					},
-					GenerateNavJSON: true,
+					GenerateNavJSON:      true,
+					OverwriteCaddyConfig: true,
 				},
 			}
 			gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())

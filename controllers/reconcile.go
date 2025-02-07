@@ -116,7 +116,7 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment,
 		MountPath: "/opt/app-root/src/build/stable/operator-generated",
 	})
 
-	if frontend.Name != "chrome" {
+	if frontendEnvironment.Spec.OverwriteCaddyConfig && frontend.Name != "chrome" {
 		volumeMounts = append(volumeMounts, v1.VolumeMount{
 			Name:      "caddy",
 			MountPath: "/opt/app-root/src/Caddyfile",

@@ -385,6 +385,12 @@ objects:
                   - disabled
                   - mode
                   type: object
+                overwriteCaddyConfig:
+                  description: 'OverwriteCaddyConfig determines if the operator should
+                    overwrite
+
+                    frontend container Caddyfiles with a common core Caddyfile'
+                  type: boolean
                 requests:
                   additionalProperties:
                     anyOf:
