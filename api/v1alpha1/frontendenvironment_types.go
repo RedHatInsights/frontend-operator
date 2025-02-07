@@ -118,6 +118,9 @@ type FrontendEnvironmentSpec struct {
 	// Custom HTTP Headers
 	// These populate an ENV var that is then added into the caddy config as a header block
 	HTTPHeaders map[string]string `json:"httpHeaders,omitempty"`
+	// OverwriteCaddyConfig determines if the operator should overwrite
+	// frontend container Caddyfiles with a common core Caddyfile
+	OverwriteCaddyConfig bool `json:"overwriteCaddyConfig,omitempty"`
 
 	DefaultReplicas *int32 `json:"defaultReplicas,omitempty" yaml:"defaultReplicas,omitempty"`
 	// For the ChromeUI to render navigation bundles

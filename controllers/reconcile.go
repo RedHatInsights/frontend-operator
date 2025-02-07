@@ -116,7 +116,7 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment,
 		MountPath: "/opt/app-root/src/build/stable/operator-generated",
 	})
 
-	if frontend.Name != "chrome" {
+	if frontendEnvironment.Spec.OverwriteCaddyConfig && frontend.Name != "chrome" {
 		volumeMounts = append(volumeMounts, v1.VolumeMount{
 			Name:      "caddy",
 			MountPath: "/opt/app-root/src/Caddyfile",
@@ -478,6 +478,26 @@ func (r *FrontendReconciliation) populateEnvVars(d *apps.Deployment, frontendEnv
 			Value: createCaddyfileHeaderBlock(frontendEnvironment.Spec.HTTPHeaders),
 		})
 	}
+
+	envVars = append(envVars, v1.EnvVar{
+		Name:  "APP_NAME",
+		Value: r.Frontend.Name,
+	})
+
+	envVars = append(envVars, v1.EnvVar{
+		Name:  "ROUTE_PATH",
+		Value: "/apps/$(APP_NAME)",
+	})
+
+	envVars = append(envVars, v1.EnvVar{
+		Name:  "BETA_ROUTE_PATH",
+		Value: "/beta$(ROUTE_PATH)",
+	})
+
+	envVars = append(envVars, v1.EnvVar{
+		Name:  "PREVIEW_ROUTE_PATH",
+		Value: "/preview$(ROUTE_PATH)",
+	})
 
 	d.Spec.Template.Spec.Containers[0].Env = envVars
 }
