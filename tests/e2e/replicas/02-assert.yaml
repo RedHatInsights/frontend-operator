@@ -42,6 +42,8 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /opt/app-root/src/build/stable/operator-generated
+            - name: config
+              mountPath: /srv/dist/operator-generated
             - name: caddy
               mountPath: /opt/app-root/src/Caddyfile
               subPath: Caddyfile
@@ -88,7 +90,9 @@ spec:
               protocol: TCP
           volumeMounts:
             - name: config
-              mountPath: /opt/app-root/src/build/stable/operator-generated
+              mountPath: /opt/app-root/src/build/stable/operator-generated 
+            - name: config
+              mountPath: /srv/dist/operator-generated
             - name: caddy
               mountPath: /opt/app-root/src/Caddyfile
               subPath: Caddyfile
@@ -135,7 +139,9 @@ spec:
               protocol: TCP
           volumeMounts:
             - name: config
-              mountPath: /opt/app-root/src/build/stable/operator-generated
+              mountPath: /opt/app-root/src/build/stable/operator-generated 
+            - name: config
+              mountPath: /srv/dist/operator-generated
             - name: caddy
               mountPath: /opt/app-root/src/Caddyfile
               subPath: Caddyfile
