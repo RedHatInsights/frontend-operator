@@ -988,6 +988,7 @@ func adjustSearchEntry(searchEntry *crd.SearchEntry, frontend crd.Frontend) crd.
 
 func setupSearchIndex(feList *crd.FrontendList) []crd.SearchEntry {
 	searchIndex := []crd.SearchEntry{}
+
 	for _, frontend := range feList.Items {
 		if frontend.Spec.FeoConfigEnabled && frontend.Spec.SearchEntries != nil {
 			for _, searchEntry := range frontend.Spec.SearchEntries {
@@ -997,11 +998,18 @@ func setupSearchIndex(feList *crd.FrontendList) []crd.SearchEntry {
 			}
 		}
 	}
+
+	// Sort searchIndex alphabetically
+	sort.Slice(searchIndex, func(i, j int) bool {
+		return searchIndex[i].Title < searchIndex[j].Title && searchIndex[i].Description < searchIndex[j].Description
+	})
+
 	return searchIndex
 }
 
 func setupWidgetRegistry(feList *crd.FrontendList) []crd.WidgetEntry {
 	widgetRegistry := []crd.WidgetEntry{}
+
 	for _, frontend := range feList.Items {
 		if frontend.Spec.FeoConfigEnabled {
 			for _, widget := range frontend.Spec.WidgetRegistry {
@@ -1010,6 +1018,11 @@ func setupWidgetRegistry(feList *crd.FrontendList) []crd.WidgetEntry {
 			}
 		}
 	}
+
+	// Sort widgetRegistry alphabetically by .FrontendRef
+	sort.Slice(widgetRegistry, func(i, j int) bool {
+		return widgetRegistry[i].FrontendRef < widgetRegistry[j].FrontendRef
+	})
 
 	return widgetRegistry
 }
