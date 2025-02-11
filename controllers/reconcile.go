@@ -1001,7 +1001,7 @@ func setupSearchIndex(feList *crd.FrontendList) []crd.SearchEntry {
 
 	// Sort searchIndex alphabetically
 	sort.Slice(searchIndex, func(i, j int) bool {
-		return searchIndex[i].Title < searchIndex[j].Title
+		return searchIndex[i].Title < searchIndex[j].Title && searchIndex[i].Description < searchIndex[j].Description
 	})
 
 	return searchIndex
