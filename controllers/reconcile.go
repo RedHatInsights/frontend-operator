@@ -116,6 +116,15 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment,
 		MountPath: "/opt/app-root/src/build/stable/operator-generated",
 	})
 
+	// FIXME: Remove chrome specific exceptions once FEO generated assets are fully available and used in all envs
+	// We need to have duplicate entries for a while as we have a transition period
+	// In this transition we are "unchronifying" the chrome and making it a regular app with regular dir structure
+	volumeMounts = append(volumeMounts, v1.VolumeMount{
+		Name:      "config",
+		MountPath: "/srv/dist/operator-generated",
+		SubPath:   "operator-generated",
+	})
+
 	if frontendEnvironment.Spec.OverwriteCaddyConfig && frontend.Name != "chrome" {
 		volumeMounts = append(volumeMounts, v1.VolumeMount{
 			Name:      "caddy",

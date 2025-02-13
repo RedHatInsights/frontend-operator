@@ -41,6 +41,8 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /opt/app-root/src/build/stable/operator-generated
+            - name: config
+              mountPath: /srv/dist/operator-generated
 ---
 kind: Ingress
 apiVersion: networking.k8s.io/v1
