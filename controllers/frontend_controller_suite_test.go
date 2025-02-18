@@ -192,17 +192,17 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 					MountPath: "/opt/app-root/src/build/stable/operator-generated",
 				},
 				{
-					Name:             "config",
-					ReadOnly:         false,
-					MountPath:        "/srv/dist/operator-generated",
-					SubPath:          "operator-generated",
-					MountPropagation: nil,
-					SubPathExpr:      "",
-				},
-				{
 					Name:      "caddy",
 					MountPath: "/opt/app-root/src/Caddyfile",
 					SubPath:   "Caddyfile",
+				},
+				{
+					Name:             "config-chrome",
+					ReadOnly:         false,
+					MountPath:        "/srv/dist/operator-generated/fed-modules.json",
+					SubPath:          "fed-modules.json",
+					MountPropagation: nil,
+					SubPathExpr:      "",
 				},
 			}
 			gomega.Expect(createdDeployment.Name).Should(gomega.Equal(FrontendName + "-frontend"))
@@ -608,10 +608,10 @@ var _ = ginkgo.Describe("Frontend controller with chrome", func() {
 					MountPath: "/opt/app-root/src/build/stable/operator-generated",
 				},
 				{
-					Name:             "config",
+					Name:             "config-chrome",
 					ReadOnly:         false,
-					MountPath:        "/srv/dist/operator-generated",
-					SubPath:          "operator-generated",
+					MountPath:        "/srv/dist/operator-generated/fed-modules.json",
+					SubPath:          "fed-modules.json",
 					MountPropagation: nil,
 					SubPathExpr:      "",
 				},

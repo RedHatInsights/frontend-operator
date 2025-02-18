@@ -116,15 +116,6 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment,
 		MountPath: "/opt/app-root/src/build/stable/operator-generated",
 	})
 
-	// FIXME: Remove chrome specific exceptions once FEO generated assets are fully available and used in all envs
-	// We need to have duplicate entries for a while as we have a transition period
-	// In this transition we are "unchronifying" the chrome and making it a regular app with regular dir structure
-	volumeMounts = append(volumeMounts, v1.VolumeMount{
-		Name:      "config",
-		MountPath: "/srv/dist/operator-generated",
-		SubPath:   "operator-generated",
-	})
-
 	if frontendEnvironment.Spec.OverwriteCaddyConfig && frontend.Name != "chrome" {
 		volumeMounts = append(volumeMounts, v1.VolumeMount{
 			Name:      "caddy",
@@ -140,6 +131,12 @@ func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment,
 			MountPath: "/opt/certs",
 		})
 	}
+
+	volumeMounts = append(volumeMounts, v1.VolumeMount{
+		Name:      "config-chrome",
+		MountPath: "/srv/dist/operator-generated/fed-modules.json",
+		SubPath:   "fed-modules.json",
+	})
 
 	return volumeMounts
 }
@@ -445,6 +442,19 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 				Items: []v1.KeyToPath{{
 					Key:  "Caddyfile",
 					Path: "Caddyfile",
+				}},
+			},
+		},
+	}, v1.Volume{
+		Name: "config-chrome",
+		VolumeSource: v1.VolumeSource{
+			ConfigMap: &v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: frontend.Spec.EnvName,
+				},
+				Items: []v1.KeyToPath{{
+					Key:  "fed-modules.json",
+					Path: "fed-modules.json",
 				}},
 			},
 		},

@@ -29,6 +29,13 @@ spec:
             items:
             - key: Caddyfile
               path: Caddyfile
+        - name: config-chrome
+          configMap:
+            defaultMode: 420
+            items:
+            - key: fed-modules.json
+              path: fed-modules.json
+            name: test-replicas-environment
       containers:
         - name: fe-image
           image: 'quay.io/cloudservices/insights-chrome-frontend:720317c'
@@ -42,11 +49,12 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /opt/app-root/src/build/stable/operator-generated
-            - name: config
-              mountPath: /srv/dist/operator-generated
             - name: caddy
               mountPath: /opt/app-root/src/Caddyfile
               subPath: Caddyfile
+            - name: config-chrome
+              mountPath: /srv/dist/operator-generated/fed-modules.json
+              subPath: fed-modules.json
 ---
 kind: Deployment
 apiVersion: apps/v1
@@ -78,6 +86,13 @@ spec:
             items:
             - key: Caddyfile
               path: Caddyfile
+        - name: config-chrome
+          configMap:
+            defaultMode: 420
+            items:
+            - key: fed-modules.json
+              path: fed-modules.json
+            name: test-replicas-environment
       containers:
         - name: fe-image
           image: 'quay.io/cloudservices/insights-chrome-frontend:720317c'
@@ -91,11 +106,12 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /opt/app-root/src/build/stable/operator-generated 
-            - name: config
-              mountPath: /srv/dist/operator-generated
             - name: caddy
               mountPath: /opt/app-root/src/Caddyfile
               subPath: Caddyfile
+            - name: config-chrome
+              mountPath: /srv/dist/operator-generated/fed-modules.json
+              subPath: fed-modules.json
 ---
 kind: Deployment
 apiVersion: apps/v1
@@ -127,6 +143,13 @@ spec:
             items:
             - key: Caddyfile
               path: Caddyfile
+        - name: config-chrome
+          configMap:
+            defaultMode: 420
+            items:
+            - key: fed-modules.json
+              path: fed-modules.json
+            name: test-replicas-environment
       containers:
         - name: fe-image
           image: 'quay.io/cloudservices/insights-chrome-frontend:720317c'
@@ -140,8 +163,9 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /opt/app-root/src/build/stable/operator-generated 
-            - name: config
-              mountPath: /srv/dist/operator-generated
             - name: caddy
               mountPath: /opt/app-root/src/Caddyfile
               subPath: Caddyfile
+            - name: config-chrome
+              mountPath: /srv/dist/operator-generated/fed-modules.json
+              subPath: fed-modules.json
