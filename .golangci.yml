@@ -38,6 +38,7 @@ issues:
   # Set to 0 to disable.
   # Default: 3
   max-same-issues: 20
+  uniq-by-line: false
 
 output:
 # The formats used to render issues.
@@ -76,7 +77,6 @@ output:
   sort-results: true
 # Make issues output unique by line.
 # Default: true
-  uniq-by-line: false
 
 run:
   # Timeout for analysis, e.g. 30s, 5m.
