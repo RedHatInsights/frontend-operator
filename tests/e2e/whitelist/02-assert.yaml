@@ -28,6 +28,13 @@ spec:
             items:
             - key: Caddyfile
               path: Caddyfile
+        - name: config-chrome
+          configMap:
+            defaultMode: 420
+            items:
+            - key: fed-modules.json
+              path: fed-modules.json
+            name: test-whitelist-environment
       containers:
         - name: fe-image
           image: 'quay.io/cloudservices/insights-chrome-frontend:720317c'
@@ -41,8 +48,9 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /opt/app-root/src/build/stable/operator-generated
-            - name: config
-              mountPath: /srv/dist/operator-generated
+            - name: config-chrome
+              mountPath: /srv/dist/operator-generated/fed-modules.json
+              subPath: fed-modules.json
 ---
 kind: Ingress
 apiVersion: networking.k8s.io/v1

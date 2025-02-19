@@ -34,8 +34,9 @@ spec:
         volumeMounts:
         - mountPath: /opt/app-root/src/build/stable/operator-generated
           name: config
-        - name: config
-          mountPath: /srv/dist/operator-generated
+        - name: config-chrome
+          mountPath: /srv/dist/operator-generated/fed-modules.json
+          subPath: fed-modules.json
       securityContext: {}
       terminationGracePeriodSeconds: 30
       volumes:
@@ -50,6 +51,13 @@ spec:
             items:
             - key: Caddyfile
               path: Caddyfile
+        - name: config-chrome
+          configMap:
+            defaultMode: 420
+            items:
+            - key: fed-modules.json
+              path: fed-modules.json
+            name: test-storage-environment
 ---
 kind: ConfigMap
 apiVersion: v1
