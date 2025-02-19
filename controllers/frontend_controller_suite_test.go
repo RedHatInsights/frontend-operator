@@ -1390,6 +1390,7 @@ var _ = ginkgo.Describe("Service tiles", func() {
 		FrontendName2          = "test-service-tile2"
 		FrontendNamespace      = "default"
 		FrontendEnvName        = "test-service-tile-env"
+		FrontendEnvName2       = "test-service-tile-env2"
 		ServiceSectionID       = "test-service-section"
 		ServiceSectionGroupID1 = "test-service-section-group1"
 		ServiceSectionGroupID2 = "test-service-section-group2"
@@ -1426,6 +1427,30 @@ var _ = ginkgo.Describe("Service tiles", func() {
 			Title:       "baz",
 			Description: "",
 			Icon:        "",
+		}
+		ServiceTile4 = &crd.ServiceTile{
+			Section:     ServiceSectionID,
+			Group:       ServiceSectionGroupID2,
+			ID:          "test-service-tile4",
+			Href:        "/baz",
+			Title:       "z",
+			Description: "z",
+		}
+		ServiceTile5 = &crd.ServiceTile{
+			Section:     ServiceSectionID,
+			Group:       ServiceSectionGroupID2,
+			ID:          "test-service-tile5",
+			Href:        "/baz",
+			Title:       "z",
+			Description: "a",
+		}
+		ServiceTile6 = &crd.ServiceTile{
+			Section:     ServiceSectionID,
+			Group:       ServiceSectionGroupID2,
+			ID:          "test-service-tile6",
+			Href:        "/baz",
+			Title:       "a",
+			Description: "a",
 		}
 		ExpectedServiceTiles1 = []crd.FrontendServiceCategoryGenerated{
 			{
@@ -1469,21 +1494,75 @@ var _ = ginkgo.Describe("Service tiles", func() {
 				}},
 			},
 		}
+		ExpectedServiceTiles2 = []crd.FrontendServiceCategoryGenerated{
+			{
+				ID:    ServiceSectionID,
+				Title: "Service Section",
+				Groups: []crd.FrontendServiceCategoryGroupGenerated{{
+					ID:    ServiceSectionGroupID1,
+					Title: "Service Section Group 1",
+					Tiles: &[]crd.ServiceTile{},
+				}, {
+					ID:    ServiceSectionGroupID2,
+					Title: "Service Section Group 2",
+					Tiles: &[]crd.ServiceTile{
+						{
+							Section:     ServiceTile6.Section,
+							Group:       ServiceTile6.Group,
+							ID:          ServiceTile6.ID,
+							Href:        ServiceTile6.Href,
+							Title:       ServiceTile6.Title,
+							Description: ServiceTile6.Description,
+							FrontendRef: FrontendName2,
+						},
+						{
+							Section:     ServiceTile5.Section,
+							Group:       ServiceTile5.Group,
+							ID:          ServiceTile5.ID,
+							Href:        ServiceTile5.Href,
+							Title:       ServiceTile5.Title,
+							Description: ServiceTile5.Description,
+							FrontendRef: FrontendName2,
+						},
+						{
+							Section:     ServiceTile4.Section,
+							Group:       ServiceTile4.Group,
+							ID:          ServiceTile4.ID,
+							Href:        ServiceTile4.Href,
+							Title:       ServiceTile4.Title,
+							Description: ServiceTile4.Description,
+							FrontendRef: FrontendName2,
+						},
+					},
+				}},
+			},
+		}
 	)
 
 	ginkgo.It("Should create service tiles", func() {
 		ginkgo.By("collection entries from Frontend resources", func() {
-			expectedResult, err := json.Marshal(ExpectedServiceTiles1)
+			expectedResult1, err := json.Marshal(ExpectedServiceTiles1)
+			gomega.Expect(err).Should(gomega.BeNil())
+			expectedResult2, err := json.Marshal(ExpectedServiceTiles2)
 			gomega.Expect(err).Should(gomega.BeNil())
 			serviceTileCases := []ServiceTileCase{{
 				Namespace:              FrontendNamespace,
 				Environment:            FrontendEnvName,
-				ExpectedConfigMapEntry: string(expectedResult),
+				ExpectedConfigMapEntry: string(expectedResult1),
 				ServiceTiles: []*ServiceTileTestEntry{{
 					ServiceTiles: []*crd.ServiceTile{ServiceTile1, ServiceTile2, ServiceTile3},
 					FrontendName: FrontendName,
 				}},
-			}}
+			},
+				{
+					Namespace:              FrontendNamespace,
+					Environment:            FrontendEnvName2,
+					ExpectedConfigMapEntry: string(expectedResult2),
+					ServiceTiles: []*ServiceTileTestEntry{{
+						ServiceTiles: []*crd.ServiceTile{ServiceTile4, ServiceTile5, ServiceTile6},
+						FrontendName: FrontendName2,
+					}},
+				}}
 
 			for _, serviceCase := range serviceTileCases {
 				ctx := context.Background()
