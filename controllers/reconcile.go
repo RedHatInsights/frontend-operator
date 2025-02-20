@@ -1099,6 +1099,18 @@ func setupServiceTilesData(feList *crd.FrontendList, feEnvironment crd.FrontendE
 		}
 	}
 
+	for _, category := range categories {
+		for _, group := range category.Groups {
+			sort.Slice(*group.Tiles, func(i, j int) bool {
+				pos := strings.Compare((*group.Tiles)[i].Title, (*group.Tiles)[j].Title)
+				if pos == 0 {
+					return (*group.Tiles)[i].Description < (*group.Tiles)[j].Description
+				}
+				return pos == -1
+			})
+		}
+	}
+
 	return categories, skippedTiles
 }
 
