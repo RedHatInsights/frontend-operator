@@ -11,6 +11,7 @@ spec:
   bundles:
    - id: segmented-bundle
      title: Segmented bundle
+     description: ""
 ---
 apiVersion: cloud.redhat.com/v1alpha1
 kind: Frontend

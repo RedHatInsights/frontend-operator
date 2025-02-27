@@ -33,3 +33,4 @@ spec:
   #    title: Red Hat Enterprise Linux
     - id: segmented-bundle
       title: Segmented bundle
+      description: ""
