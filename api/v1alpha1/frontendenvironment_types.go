@@ -30,7 +30,7 @@ import (
 type FrontendBundles struct {
 	ID          string `json:"id" yaml:"id"`
 	Title       string `json:"title" yaml:"title"`
-	Description string `json:"description" yaml:"description"`
+	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 }
 
 // The frontend bundles but with the nav items filled with chrome nav items
