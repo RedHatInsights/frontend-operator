@@ -81,7 +81,6 @@ spec:
                     title:
                       type: string
                   required:
-                  - description
                   - id
                   - title
                   type: object
