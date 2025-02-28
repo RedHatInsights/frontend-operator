@@ -312,11 +312,14 @@ objects:
 
                       construct navigation'
                     properties:
+                      description:
+                        type: string
                       id:
                         type: string
                       title:
                         type: string
                     required:
+                    - description
                     - id
                     - title
                     type: object

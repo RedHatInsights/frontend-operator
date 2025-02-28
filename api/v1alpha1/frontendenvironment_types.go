@@ -28,8 +28,9 @@ import (
 // FrontendBundles defines the bundles specific to an environment that will be used to
 // construct navigation
 type FrontendBundles struct {
-	ID    string `json:"id" yaml:"id"`
-	Title string `json:"title" yaml:"title"`
+	ID          string `json:"id" yaml:"id"`
+	Title       string `json:"title" yaml:"title"`
+	Description string `json:"description" yaml:"description"`
 }
 
 // The frontend bundles but with the nav items filled with chrome nav items

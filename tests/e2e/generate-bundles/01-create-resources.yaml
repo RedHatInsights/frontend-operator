@@ -12,10 +12,13 @@ spec:
   bundles:
    - id: rhel
      title: Red Hat Enterprise Linux
+     description: ""
    - id: ansible
      title: Ansible
+     description: ""
    - id: settings
      title: Settings
+     description: ""
 ---
 apiVersion: cloud.redhat.com/v1alpha1
 kind: Frontend

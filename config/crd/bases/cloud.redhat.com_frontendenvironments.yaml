@@ -74,11 +74,14 @@ spec:
                     FrontendBundles defines the bundles specific to an environment that will be used to
                     construct navigation
                   properties:
+                    description:
+                      type: string
                     id:
                       type: string
                     title:
                       type: string
                   required:
+                  - description
                   - id
                   - title
                   type: object
