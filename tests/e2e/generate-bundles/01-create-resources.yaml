@@ -12,13 +12,13 @@ spec:
   bundles:
    - id: rhel
      title: Red Hat Enterprise Linux
-     description: ""
+     description: "Single, consistent management solution across on-premise, hybrid cloud, and public cloud."
    - id: ansible
      title: Ansible
-     description: ""
+     description: "Create, manage, and scale automation across physical, cloud, virtual, and edge environments."
    - id: settings
      title: Settings
-     description: ""
+     description: "Alert users to events, using email and integrations such as webhooks and third-party tools."
 ---
 apiVersion: cloud.redhat.com/v1alpha1
 kind: Frontend
