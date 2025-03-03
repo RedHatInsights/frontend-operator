@@ -1298,9 +1298,10 @@ func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnviro
 
 		navItems = filterUnknownNavRefs(navItems)
 		newBundle := crd.FrontendBundlesGenerated{
-			ID:       bundle.ID,
-			Title:    bundle.Title,
-			NavItems: navItems,
+			ID:          bundle.ID,
+			Title:       bundle.Title,
+			Description: bundle.Description,
+			NavItems:    navItems,
 		}
 		bundles = append(bundles, newBundle)
 	}

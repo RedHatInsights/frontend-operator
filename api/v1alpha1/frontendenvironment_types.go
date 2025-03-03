@@ -35,9 +35,10 @@ type FrontendBundles struct {
 
 // The frontend bundles but with the nav items filled with chrome nav items
 type FrontendBundlesGenerated struct {
-	ID       string          `json:"id" yaml:"id"`
-	Title    string          `json:"title" yaml:"title"`
-	NavItems []ChromeNavItem `json:"navItems" yaml:"navItems"`
+	ID          string          `json:"id" yaml:"id"`
+	Title       string          `json:"title" yaml:"title"`
+	Description string          `json:"description,omitempty" yaml:"description,omitempty"`
+	NavItems    []ChromeNavItem `json:"navItems" yaml:"navItems"`
 }
 
 type FrontendServiceCategoryGroup struct {
