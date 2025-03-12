@@ -82,6 +82,10 @@ func (r *FrontendReconciliation) run() error {
 		}
 	}
 
+	if err := r.createUploadAssetsJob(); err != nil {
+		return err
+	}
+
 	if err := r.createFrontendIngress(); err != nil {
 		return err
 	}
@@ -684,6 +688,73 @@ func (r *FrontendReconciliation) manageExistingJob() (bool, error) {
 
 	// If it exists and is from the current frontend image we return true and no error
 	return true, nil
+}
+
+func (r *FrontendReconciliation) populateAssetUploadContainer(j *batchv1.Job) error {
+	// get minio pod info for ephemeral
+	nn := types.NamespacedName{
+		Name:      "minio",
+		Namespace: r.Frontend.Namespace,
+	}
+	minioPod := &v1.Pod{}
+	err := r.Client.Get(r.Ctx, nn, minioPod)
+	if err != nil {
+		return err
+	}
+	// here we will need the arguments for the upload job like s3 secrets bucket names, etc
+	frontendPaths := strings.Join(r.Frontend.Spec.Frontend.Paths[:], ",")
+	uploadCommand := fmt.Sprintf(`echo "uploading assets to %s"`, frontendPaths)
+	if r.Frontend.Spec.Image != "" {
+		assetUploadContainer := v1.Container{
+			Name: "s3-asset-upload",
+			// we should have the valpop cli ready in the frontend container
+			Image: r.Frontend.Spec.Image,
+			// Run the upload script
+			Command: []string{"/bin/bash", "-c", uploadCommand},
+		}
+		// add the container to the spec containers
+		j.Spec.Template.Spec.Containers = []v1.Container{assetUploadContainer}
+
+	}
+	return nil
+}
+
+func (r *FrontendReconciliation) createUploadAssetsJob() error {
+	jobName := r.Frontend.Name + "-upload-assets"
+
+	nn := types.NamespacedName{
+		Name:      jobName,
+		Namespace: r.Frontend.Namespace,
+	}
+
+	j := &batchv1.Job{}
+	j.SetName(jobName)
+	j.SetNamespace(r.Frontend.Namespace)
+	labels := r.Frontend.GetLabels()
+	labeler := utils.GetCustomLabeler(labels, nn, r.Frontend)
+	labeler(j)
+
+	j.SetOwnerReferences([]metav1.OwnerReference{r.Frontend.MakeOwnerReference()})
+
+	j.Spec.Template.Spec.RestartPolicy = v1.RestartPolicyNever
+
+	j.Spec.Completions = utils.Int32Ptr(1)
+
+	// Set the image frontend image annotation
+	annotations := j.Spec.Template.ObjectMeta.Annotations
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	annotations["frontend-image"] = r.Frontend.Spec.Image
+	annotations["kube-linter.io/ignore-all"] = "we don't need no any checking"
+
+	j.Spec.Template.ObjectMeta.SetAnnotations(annotations)
+
+	err := r.populateAssetUploadContainer(j)
+	if err != nil {
+		return err
+	}
+	return r.Client.Create(r.Ctx, j)
 }
 
 // createOrUpdateCacheBustJob will create a new job if it doesn't exist
