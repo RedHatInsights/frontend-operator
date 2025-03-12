@@ -259,6 +259,10 @@ spec:
             image: registry.access.redhat.com/ubi8/ubi:latest
             workingDir: /var/workdir/source
             script: set -xe && dnf install -y go make && make test
+            computeResources:
+              requests:
+                memory: 256Mi
+                cpu: 100m
         volumes:
           # New volume to store a copy of the source code accessible only to this Task.
           - name: workdir
@@ -290,6 +294,10 @@ spec:
             image: registry.access.redhat.com/ubi8/ubi:latest
             workingDir: /var/workdir/source
             script: set -e && dnf install -y git go make && ./kuttl_test.sh
+            computeResources:
+              requests:
+                memory: 256Mi
+                cpu: 100m
         volumes:
           # New volume to store a copy of the source code accessible only to this Task.
           - name: workdir
