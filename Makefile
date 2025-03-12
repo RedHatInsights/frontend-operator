@@ -26,6 +26,7 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.28
+ENVTEST_VERSION = release-0.19
 
 # IMAGE_TAG_BASE defines the docker.io namespace and part of the image name for remote images.
 # This variable is used to construct full image tags for bundle and catalog images.
@@ -47,9 +48,6 @@ GO_CMD ?= go
 
 
 PROJECT_DIR := $(shell pwd)
-
-# directory to store all binaries used during tests
-TESTBIN_DIR := $(PROJECT_DIR)/testbin/bin
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell $(GO_CMD) env GOBIN))
@@ -111,16 +109,14 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	$(GO_CMD) vet ./...
 
-ENVTEST = $(TESTBIN_DIR)/setup-envtest
-envtest: ## Download envtest-setup locally if necessary.
-	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@d0396a3d6f9fb554ef2da382a3d0bf05f7565e65)
+ENVTEST = $(LOCALBIN)/setup-envtest
 
 test: manifests envtest generate fmt vet	
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GO_CMD) test ./... -coverprofile cover.out
 
 # gotestsum is used to generate xml for the tests. Embedded in the Dockerfile.pr
 junit: gotestsum manifests envtest generate fmt vet
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(TESTBIN_DIR)/gotestsum --junitfile artifacts/junit-ginko.xml -- ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(LOCALBIN)/gotestsum --junitfile artifacts/junit-ginko.xml -- ./... -coverprofile cover.out
 
 # entry point for testing kuttl with kind
 kuttl: manifests envtest generate fmt vet
@@ -171,26 +167,42 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
+##@ Build Dependencies
 
-CONTROLLER_GEN = $(TESTBIN_DIR)/controller-gen
-controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.14.0)
+## Location to install dependencies to
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
 
-KUSTOMIZE = $(TESTBIN_DIR)/kustomize
-kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.5.2)
+## Tool Binaries
+KUSTOMIZE ?= $(LOCALBIN)/kustomize
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+ENVTEST ?= $(LOCALBIN)/setup-envtest
 
-GOTESTSUM = $(TESTBIN_DIR)/gotestsum
-gotestsum: ## Download if necessary
-	$(call go-get-tool,$(GOTESTSUM),gotest.tools/gotestsum@v1.8.1)
+## Tool Versions
+KUSTOMIZE_VERSION ?= v5.5.0
+CONTROLLER_TOOLS_VERSION ?= v0.16.4
+GO_TEST_SUM_VERSION ?= v1.8.1
 
-# go-get-tool will 'go get' any package $2 and install it to $1.
-define go-get-tool
-@[ -f $(1) ] || { \
-set -e ;\
-GOBIN=$(TESTBIN_DIR) $(GO_CMD) install $(2) ;\
-}
-endef
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
+$(CONTROLLER_GEN): $(LOCALBIN)
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+
+.PHONY: kustomize
+kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
+$(KUSTOMIZE): $(LOCALBIN)
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/kustomize/kustomize/v5@$(KUSTOMIZE_VERSION)
+
+.PHONY: gotestsum
+gotestsum: $(GOTESTSUM) ## Download kustomize locally if necessary.
+$(GOTESTSUM): $(LOCALBIN)
+	GOBIN=$(LOCALBIN) go install gotest.tools/gotestsum@$(GO_TEST_SUM_VERSION)
+
+.PHONY: envtest
+envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
+$(ENVTEST): $(LOCALBIN)
+	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION)
 
 .PHONY: bundle
 bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
@@ -249,7 +261,7 @@ catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
 
 clean:
-	rm -r $(TESTBIN_DIR)
+	rm -r $(LOCALBIN)
 
 lint:
 	golangci-lint run

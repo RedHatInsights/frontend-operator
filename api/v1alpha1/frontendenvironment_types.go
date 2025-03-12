@@ -51,7 +51,7 @@ type FrontendServiceCategoryGroup struct {
 type FrontendServiceCategory struct {
 	ID    string `json:"id" yaml:"id"`
 	Title string `json:"title" yaml:"title"`
-	// +kubebuilder:validation:items:MinItems:=1
+	// +kubebuilder:validation:MinItems:=1
 	Groups []FrontendServiceCategoryGroup `json:"groups" yaml:"groups"`
 }
 
