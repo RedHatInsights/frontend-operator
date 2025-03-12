@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/go-toolset:1.22.9-2
+FROM registry.access.redhat.com/ubi8/go-toolset:1.22.9-2.1740673425
 USER 0
 RUN dnf install -y openssh-clients git podman make which go jq python3
 RUN mkdir /root/go -p
