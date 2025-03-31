@@ -951,6 +951,17 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 				module.FullProfile = crd.TruePtr()
 			}
 
+			if len(frontend.Spec.Frontend.Paths) > 0 {
+				module.CDNPath = frontend.Spec.Frontend.Paths[0]
+				// make sure the path start and ends with "/"
+				if !strings.HasPrefix(module.CDNPath, "/") {
+					module.CDNPath = "/" + module.CDNPath
+				}
+				if !strings.HasSuffix(module.CDNPath, "/") {
+					module.CDNPath += "/"
+				}
+			}
+
 			if frontend.Name == "chrome" {
 
 				var configSource apiextensions.JSON
