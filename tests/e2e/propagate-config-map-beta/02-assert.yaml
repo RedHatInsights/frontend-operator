@@ -11,7 +11,7 @@ metadata:
       name: propagate-config-map-beta-environment-beta
 data:
   fed-modules.json: >-
-    {"edge":{"manifestLocation":"/apps/edge/fed-mods.json","modules":[{"id":"edge","module":"./RootApp","routes":[{"pathname":"/edge"}]}],"moduleID":"edge","fullProfile":false}}
+    {"edge":{"manifestLocation":"/apps/edge/fed-mods.json","modules":[{"id":"edge","module":"./RootApp","routes":[{"pathname":"/edge"}]}],"moduleID":"edge","fullProfile":false,"cdnPath":"/apps/edge/"}}
 ---
 # Make sure the same exact config map ws propagated to the other namespace(s)
 kind: ConfigMap
@@ -26,6 +26,6 @@ metadata:
       name: propagate-config-map-beta-environment-beta
 data:
   fed-modules.json: >-
-    {"edge":{"manifestLocation":"/apps/edge/fed-mods.json","modules":[{"id":"edge","module":"./RootApp","routes":[{"pathname":"/edge"}]}],"moduleID":"edge","fullProfile":false}}
+    {"edge":{"manifestLocation":"/apps/edge/fed-mods.json","modules":[{"id":"edge","module":"./RootApp","routes":[{"pathname":"/edge"}]}],"moduleID":"edge","fullProfile":false,"cdnPath":"/apps/edge/"}}
 
 
