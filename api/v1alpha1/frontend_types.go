@@ -171,6 +171,7 @@ type FedModule struct {
 	DefaultDocumentTitle string              `json:"defaultDocumentTitle,omitempty" yaml:"defaultDocumentTitle,omitempty"`
 	IsFedramp            *bool               `json:"isFedramp,omitempty" yaml:"isFedramp,omitempty"`
 	Analytics            *Analytics          `json:"analytics,omitempty" yaml:"analytics,omitempty"`
+	CDNPath              string              `json:"cdnPath,omitempty" yaml:"cdnPath,omitempty"` // populated automatically from frontend.paths, used for modules with automated public path
 }
 
 type Module struct {

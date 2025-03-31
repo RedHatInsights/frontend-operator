@@ -81,6 +81,6 @@ metadata:
       name: test-bundles-environment
 data:
   fed-modules.json: >-
-    {"edge":{"manifestLocation":"/apps/edge/fed-mods.json","modules":[{"id":"edge","module":"./RootApp","routes":[{"pathname":"/edge"}]}],"moduleID":"edge","fullProfile":false}}
+    {"edge":{"manifestLocation":"/apps/edge/fed-mods.json","modules":[{"id":"edge","module":"./RootApp","routes":[{"pathname":"/edge"}]}],"moduleID":"edge","fullProfile":false,"cdnPath":"/apps/edge/"}}
 
 
