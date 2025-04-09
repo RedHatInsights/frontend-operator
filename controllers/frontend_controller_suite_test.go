@@ -9,6 +9,7 @@ import (
 	"time"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
+	"github.com/gobeam/stringy"
 	ginkgo "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	prom "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
@@ -238,7 +239,7 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 			gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName))
 			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
 				"Caddyfile":        caddyFileTemplate,
-				"fed-modules.json": "{\"testFrontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"},\"fullProfile\":true},\"testFrontend2\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"cheese\":\"pasty\"},\"fullProfile\":false}}",
+				"fed-modules.json": "{\"testFrontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"},\"fullProfile\":true,\"cdnPath\":\"/things/test/\"},\"testFrontend2\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"cheese\":\"pasty\"},\"fullProfile\":false,\"cdnPath\":\"/things/test/\"}}",
 			}))
 			gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(FrontendEnvName))
 
@@ -374,7 +375,7 @@ var _ = ginkgo.Describe("Frontend controller with service", func() {
 			gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName))
 			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
 				"Caddyfile":        caddyFileTemplate,
-				"fed-modules.json": "{\"testFrontendService\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"fullProfile\":false}}",
+				"fed-modules.json": "{\"testFrontendService\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"fullProfile\":false,\"cdnPath\":\"/things/test/\"}}",
 			}))
 
 			gomega.Eventually(func() bool {
@@ -649,7 +650,7 @@ var _ = ginkgo.Describe("Frontend controller with chrome", func() {
 			gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName))
 			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
 				"Caddyfile":        caddyFileTemplate,
-				"fed-modules.json": "{\"chrome\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\",\"ssoUrl\":\"https://something-auth\"},\"fullProfile\":false},\"noConfig\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"fullProfile\":false},\"nonChrome\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"},\"fullProfile\":false}}",
+				"fed-modules.json": "{\"chrome\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\",\"ssoUrl\":\"https://something-auth\"},\"fullProfile\":false,\"cdnPath\":\"/things/test/\"},\"noConfig\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"fullProfile\":false,\"cdnPath\":\"/things/test/\"},\"nonChrome\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"},\"fullProfile\":false,\"cdnPath\":\"/things/test/\"}}",
 			}))
 			gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(FrontendEnvName))
 
@@ -972,7 +973,7 @@ var _ = ginkgo.Describe("Dependencies", func() {
 			gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName))
 			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
 				"Caddyfile":        caddyFileTemplate,
-				"fed-modules.json": "{\"testDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}],\"dependencies\":[\"depstring\"]}],\"fullProfile\":false},\"testNoDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"fullProfile\":false},\"testOptionalDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}],\"optionalDependencies\":[\"depstring-op\"]}],\"fullProfile\":false}}",
+				"fed-modules.json": "{\"testDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}],\"dependencies\":[\"depstring\"]}],\"fullProfile\":false,\"cdnPath\":\"/things/test/\"},\"testNoDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"fullProfile\":false,\"cdnPath\":\"/things/test/\"},\"testOptionalDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}],\"optionalDependencies\":[\"depstring-op\"]}],\"fullProfile\":false,\"cdnPath\":\"/things/test/\"}}",
 			}))
 			gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(FrontendEnvName))
 
@@ -1711,4 +1712,139 @@ var _ = ginkgo.Describe("Navigation nesting", func() {
 			return ""
 		}, timeout, interval).Should(gomega.Equal(`configmaps "test-nested-nav-env" not found`))
 	})
+})
+
+type CDNTestEntry struct {
+	Paths           []string
+	ExpectedPath    string
+	FrontendName    string
+	Namespace       string
+	CaseDescription string
+}
+
+func frontendFromCDN(tc CDNTestEntry) *crd.Frontend {
+	frontend := &crd.Frontend{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "cloud.redhat.com/v1",
+			Kind:       "Frontend",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      tc.FrontendName,
+			Namespace: tc.Namespace,
+		},
+		Spec: crd.FrontendSpec{
+			EnvName:        tc.FrontendName,
+			Title:          "",
+			DeploymentRepo: "",
+			API: &crd.APIInfo{
+				Versions: []string{"v1"},
+			},
+			Frontend: crd.FrontendInfo{
+				Paths: tc.Paths,
+			},
+			Module: &crd.FedModule{
+				ManifestLocation: "/foo/bar.json",
+				Modules:          []crd.Module{},
+			},
+			FeoConfigEnabled: true,
+		},
+	}
+
+	return frontend
+}
+
+var _ = ginkgo.Describe("CDN Path", func() {
+	const (
+		FrontendNamespace = "default"
+		FrontendName      = "test-cdn-path"
+		FrontendName2     = "test-cdn-path-2"
+		FrontendName3     = "test-cdn-path-3"
+		FrontendName4     = "test-cdn-path-4"
+
+		timeout  = time.Second * 20
+		duration = time.Second * 10
+		interval = time.Millisecond * 250
+	)
+
+	cdnTestCases := []CDNTestEntry{
+		{
+			Paths:           []string{"/apps/inventory/"},
+			ExpectedPath:    "/apps/inventory/",
+			FrontendName:    FrontendName,
+			Namespace:       FrontendNamespace,
+			CaseDescription: "Should move the path to the config map with no modifications",
+		},
+		{
+			Paths:           []string{"apps/inventory"},
+			ExpectedPath:    "/apps/inventory/",
+			FrontendName:    FrontendName2,
+			Namespace:       FrontendNamespace,
+			CaseDescription: "Should move the path to the config map and add leading and trailing slashes",
+		},
+		{
+			Paths:           []string{"/apps/inventory/", "/foo/bar"},
+			ExpectedPath:    "/apps/inventory/",
+			FrontendName:    FrontendName3,
+			Namespace:       FrontendNamespace,
+			CaseDescription: "Should move the first path to the config map",
+		},
+		{
+			Paths:           []string{},
+			ExpectedPath:    "",
+			FrontendName:    FrontendName4,
+			Namespace:       FrontendNamespace,
+			CaseDescription: "Should not move the path to the config map",
+		},
+	}
+
+	for _, cdnTestCase := range cdnTestCases {
+		ginkgo.It(cdnTestCase.CaseDescription, func() {
+			ctx := context.Background()
+
+			frontendEnvironment := crd.FrontendEnvironment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "FrontendEnvironment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      cdnTestCase.FrontendName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendEnvironmentSpec{
+					SSO:      "https://something-auth",
+					Hostname: "something",
+					Whitelist: []string{
+						"192.168.0.0/24",
+						"10.10.0.0/24",
+					},
+					Monitoring: &crd.MonitoringConfig{
+						Mode: "local",
+					},
+					GenerateNavJSON: false,
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, &frontendEnvironment)).Should(gomega.Succeed())
+
+			frontend := frontendFromCDN(cdnTestCase)
+
+			gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
+
+			configMapLookupKey := types.NamespacedName{Name: frontendEnvironment.Name, Namespace: cdnTestCase.Namespace}
+
+			createdConfigMap := &v1.ConfigMap{}
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, configMapLookupKey, createdConfigMap)
+				return err == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			fedModules := createdConfigMap.Data["fed-modules.json"]
+
+			// unmarshal the fed-modules.json to check the CDN path
+			var fedModulesMap map[string]crd.FedModule
+			err := json.Unmarshal([]byte(fedModules), &fedModulesMap)
+			gomega.Expect(err).Should(gomega.BeNil())
+			fn := stringy.New(cdnTestCase.FrontendName).CamelCase().Get()
+			gomega.Expect(fedModulesMap[fn].CDNPath).Should(gomega.Equal(cdnTestCase.ExpectedPath))
+		})
+	}
 })

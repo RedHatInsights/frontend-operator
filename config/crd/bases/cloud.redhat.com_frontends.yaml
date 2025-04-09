@@ -194,6 +194,8 @@ spec:
                     required:
                     - APIKey
                     type: object
+                  cdnPath:
+                    type: string
                   config:
                     x-kubernetes-preserve-unknown-fields: true
                   defaultDocumentTitle:
