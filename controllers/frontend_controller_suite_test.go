@@ -1071,15 +1071,15 @@ var _ = ginkgo.Describe("Search index", func() {
 					SearchFrontendEntries: []SearchFrontendEntry{{
 						Name: FrontendName,
 						SearchEntries: []*crd.SearchEntry{{
-							ID:          "test",
-							Href:        "/test/href",
-							Title:       "Test",
-							Description: "Test description",
-						}, {
 							ID:          "test2",
 							Href:        "/test2/href",
 							Title:       "Test2",
 							Description: "Test2 description",
+						}, {
+							ID:          "test",
+							Href:        "/test/href",
+							Title:       "Test",
+							Description: "Test description",
 						}},
 					}},
 				}
