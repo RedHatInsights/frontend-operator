@@ -1,6 +1,8 @@
 module github.com/RedHatInsights/frontend-operator
 
-go 1.22.9
+go 1.23.0
+
+toolchain go1.23.4
 
 require (
 	github.com/RedHatInsights/clowder v0.100.0
@@ -61,7 +63,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp v0.0.0-20240808152545-0cdaa3abc0fa // indirect
 	golang.org/x/net v0.35.0 // indirect
-	golang.org/x/oauth2 v0.22.0 // indirect
+	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/term v0.29.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
