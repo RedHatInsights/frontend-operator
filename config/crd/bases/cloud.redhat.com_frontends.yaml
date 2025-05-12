@@ -195,7 +195,6 @@ spec:
                         type: string
                     required:
                     - APIKey
-                    - APIKeyDev
                     type: object
                   cdnPath:
                     type: string
