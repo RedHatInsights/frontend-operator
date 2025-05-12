@@ -674,6 +674,8 @@ objects:
                       properties:
                         APIKey:
                           type: string
+                        APIKeyDev:
+                          type: string
                       required:
                       - APIKey
                       type: object
