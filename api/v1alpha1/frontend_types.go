@@ -199,7 +199,8 @@ type Route struct {
 }
 
 type Analytics struct {
-	APIKey string `json:"APIKey" yaml:"APIKey"`
+	APIKey    string `json:"APIKey" yaml:"APIKey"`
+	APIKeyDev string `json:"APIKeyDev,omitempty" yaml:"APIKeyDev,omitempty"`
 }
 
 type SupportCaseData struct {
