@@ -501,6 +501,9 @@ spec:
                   - segmentId
                   type: object
                 type: array
+              pushCacheDisable:
+                description: Push cache job opt-out
+                type: boolean
               replicas:
                 format: int32
                 type: integer
