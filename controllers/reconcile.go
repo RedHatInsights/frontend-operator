@@ -75,8 +75,14 @@ func (r *FrontendReconciliation) run() error {
 			return err
 		}
 		// If cache busting is enabled for the environment, add the akamai cache bust container
-		if r.FrontendEnvironment.Spec.EnableAkamaiCacheBust && r.FrontendEnvironment.Spec.AkamaiCacheBustImage != "" {
-			if err := r.createOrUpdateCacheBustJob(); err != nil {
+		if r.FrontendEnvironment.Spec.EnableAkamaiCacheBust && r.FrontendEnvironment.Spec.AkamaiCacheBustImage != "" && !r.Frontend.Spec.AkamaiCacheBustDisable {
+			if err := r.createOrUpdateJob(r.generateCacheBustJobName, r.populateCacheBustContainer); err != nil {
+				return err
+			}
+		}
+		// If push cache is enabled for the environment, add the push cache container
+		if r.FrontendEnvironment.Spec.EnablePushCache && r.FrontendEnvironment.Spec.PushCacheImage != "" && !r.Frontend.Spec.PushCacheDisable {
+			if err := r.createOrUpdateJob(r.generatePushCacheJobName, r.populatePushCacheContainer); err != nil {
 				return err
 			}
 		}
@@ -420,6 +426,76 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 	return nil
 }
 
+// populatePushCacheContainer adds the push cache container to the deployment
+func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) error {
+	configMap := &v1.ConfigMap{}
+	configMap.SetName("pushcache")
+	configMap.SetNamespace(r.Frontend.Namespace)
+
+	nn := types.NamespacedName{
+		Name:      "pushcache",
+		Namespace: r.Frontend.Namespace,
+	}
+	labels := r.FrontendEnvironment.GetLabels()
+	labler := utils.GetCustomLabeler(labels, nn, r.FrontendEnvironment)
+	labler(configMap)
+
+	configMap.SetOwnerReferences([]metav1.OwnerReference{r.Frontend.MakeOwnerReference()})
+
+	// Create the configmap with the Client if it doesn't already exist
+	if err := r.Client.Create(r.Ctx, configMap); err != nil {
+		if !k8serr.IsAlreadyExists(err) {
+			return err
+		}
+	}
+
+	pushCacheVolume := v1.Volume{
+		Name: "pushcache",
+		VolumeSource: v1.VolumeSource{
+			ConfigMap: &v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: "pushcache",
+				},
+			},
+		},
+	}
+
+	j.Spec.Template.Spec.Volumes = []v1.Volume{pushCacheVolume}
+
+	// Construct the pushcache startup command
+	command := "sleep 120;" // TODO: needs to updated with the correct command to start up valpop
+
+	// Modify the obejct to set the things we care about
+	cacheBustContainer := v1.Container{
+		Name:  "valpop-pushcache",
+		Image: r.FrontendEnvironment.Spec.PushCacheImage,
+		VolumeMounts: []v1.VolumeMount{
+			{
+				Name:      "pushcache",
+				MountPath: "/opt/app-root/pushcache",
+				SubPath:   "valpop",
+			},
+		},
+		// Run the pushcache startup command
+		Command: []string{"/bin/bash", "-c", command},
+	}
+	// add the container to the spec containers
+	j.Spec.Template.Spec.Containers = []v1.Container{cacheBustContainer}
+
+	// Add the restart policy
+	j.Spec.Template.Spec.RestartPolicy = v1.RestartPolicyNever
+
+	annotations := j.Spec.Template.ObjectMeta.Annotations
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	annotations["kube-linter.io/ignore-all"] = "we don't need no any checking"
+
+	j.Spec.Template.ObjectMeta.SetAnnotations(annotations)
+
+	return nil
+}
+
 func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
 	// By default we just want the config and caddy volume
 	volumes := []v1.Volume{}
@@ -623,17 +699,19 @@ func createPorts() []v1.ServicePort {
 	}
 }
 
-func (r *FrontendReconciliation) generateJobName() string {
+func (r *FrontendReconciliation) generateCacheBustJobName() string {
 	return r.Frontend.Name + "-frontend-cachebust"
+}
+
+func (r *FrontendReconciliation) generatePushCacheJobName() string {
+	return r.Frontend.Name + "-frontend-pushcache"
 }
 
 // getExistingJob returns the existing job if it exists
 // and a bool indicating if it exists or not
-func (r *FrontendReconciliation) getExistingJob() (*batchv1.Job, bool, error) {
+func (r *FrontendReconciliation) getExistingJob(jobName string) (*batchv1.Job, bool, error) {
 	// Job we'll fill up
 	j := &batchv1.Job{}
-
-	jobName := r.generateJobName()
 
 	// Define name of resource
 	nn := types.NamespacedName{
@@ -663,8 +741,8 @@ func (r *FrontendReconciliation) isJobFromCurrentFrontendImage(j *batchv1.Job) b
 
 // manageExistingJob will delete the existing job if it exists and is not from the current frontend image
 // It will return true if the job exists and is from the current frontend image
-func (r *FrontendReconciliation) manageExistingJob() (bool, error) {
-	j, exists, err := r.getExistingJob()
+func (r *FrontendReconciliation) manageExistingJob(jobName string) (bool, error) {
+	j, exists, err := r.getExistingJob(jobName)
 	if err != nil {
 		return false, err
 	}
@@ -686,19 +764,21 @@ func (r *FrontendReconciliation) manageExistingJob() (bool, error) {
 	return true, nil
 }
 
-// createOrUpdateCacheBustJob will create a new job if it doesn't exist
+// createOrUpdateJob will create a new job if it doesn't exist
 // If it does exist and is from the current frontend image it will return
 // If it does exist and is not from the current frontend image it will delete it and create a new one
-func (r *FrontendReconciliation) createOrUpdateCacheBustJob() error {
+func (r *FrontendReconciliation) createOrUpdateJob(generateJobName func() string, populateContainer func(*batchv1.Job) error) error {
 	// Guard on frontend opting out of cache busting
-	if r.Frontend.Spec.AkamaiCacheBustDisable {
+	if r.Frontend.Spec.PushCacheDisable {
 		return nil
 	}
+
+	jobName := generateJobName()
 
 	// If the job exists and is from the current frontend image we can return
 	// If the job exists and is not from the current frontend image we delete it
 	// If the job doesn't exist we create it
-	existsAndMatchesCurrentFrontendImage, err := r.manageExistingJob()
+	existsAndMatchesCurrentFrontendImage, err := r.manageExistingJob(jobName)
 	if err != nil {
 		return err
 	}
@@ -708,8 +788,6 @@ func (r *FrontendReconciliation) createOrUpdateCacheBustJob() error {
 
 	// Create job
 	j := &batchv1.Job{}
-
-	jobName := r.generateJobName()
 
 	// Set name
 	j.SetName(jobName)
@@ -744,7 +822,7 @@ func (r *FrontendReconciliation) createOrUpdateCacheBustJob() error {
 
 	j.Spec.Template.ObjectMeta.SetAnnotations(annotations)
 
-	errr := r.populateCacheBustContainer(j)
+	errr := populateContainer(j)
 	if errr != nil {
 		return errr
 	}
