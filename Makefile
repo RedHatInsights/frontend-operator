@@ -148,6 +148,8 @@ install-resources:
 	oc apply -f examples/inventory.yaml -n boot
 	oc apply -f examples/bundle.yaml -n boot
 	oc apply -f examples/chrome.yaml -n boot
+	oc apply -f examples/bucketSecretsAnno.yaml -n boot
+	oc apply -f examples/bucketSecretsSingle.yaml -n boot
 
 run-local:
 	$(GO_CMD) run ./main.go --metrics-bind-address :9090 --health-probe-bind-address :9091
