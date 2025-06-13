@@ -154,6 +154,9 @@ spec:
               pushCacheImage:
                 description: Set Push Cache Image
                 type: string
+              pushCacheBucket:
+                description: S3 Push Cache Bucket Name
+                type: string
               requests:
                 additionalProperties:
                   anyOf:
