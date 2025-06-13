@@ -462,11 +462,22 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 
 	j.Spec.Template.Spec.Volumes = []v1.Volume{pushCacheVolume}
 
+	secrets := v1.SecretList{}
+	r.Client.List(r.Ctx, &secrets, client.InNamespace(r.Frontend.Namespace))
+
+	objectStoreInfo, err := ExtractBucketConfigFromSecret(secrets.Items, r.FrontendEnvironment.Spec.PushCacheBucket)
+	if err != nil {
+
+	}
+	aws_username := objectStoreInfo.AccessKey
+	aws_password := objectStoreInfo.SecretKey
+
+	// TODO: Is the source directory "-s $(pwd) accurate"??
 	// Construct the pushcache startup command
-	command := "sleep 120;" // TODO: needs to updated with the correct command to start up valpop
+	command := fmt.Sprintf("sleep 120; valpop populate -r data/${ROUTE_PATH} -s $(pwd) --hostname 127.0.0.1 --username ${%s} --password ${%s}", *aws_username, *aws_password)
 
 	// Modify the obejct to set the things we care about
-	cacheBustContainer := v1.Container{
+	pushCacheContainer := v1.Container{
 		Name:  "valpop-pushcache",
 		Image: r.FrontendEnvironment.Spec.PushCacheImage,
 		VolumeMounts: []v1.VolumeMount{
@@ -480,7 +491,7 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 		Command: []string{"/bin/bash", "-c", command},
 	}
 	// add the container to the spec containers
-	j.Spec.Template.Spec.Containers = []v1.Container{cacheBustContainer}
+	j.Spec.Template.Spec.Containers = []v1.Container{pushCacheContainer}
 
 	// Add the restart policy
 	j.Spec.Template.Spec.RestartPolicy = v1.RestartPolicyNever
@@ -549,6 +560,96 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 
 	// Set the volumes on the deployment
 	d.Spec.Template.Spec.Volumes = volumes
+}
+
+// ObjectStoreBucket represents the configuration for an object storage bucket.
+type ObjectStoreBucket struct {
+	AccessKey *string
+	SecretKey *string
+	Name      string
+	Region    *string
+	Endpoint  *string
+	Tls       *bool
+}
+
+// ExtractBucketConfigFromSecret extracts ObjectStoreBucket configuration for a specific bucket name
+// from a given Kubernetes Secret. It searches for the bucket name either directly
+// in the secret's Data map under the "bucket" key, or within the
+// "clowder/bucket-names" annotation (if it's a comma-separated list).
+//
+// It returns the ObjectStoreBucket configuration and an error if the secret data is
+// invalid or incomplete for the specified bucket, or if the bucket name isn't found.
+func ExtractBucketConfigFromSecret(secrets []v1.Secret, targetBucketName string) (*ObjectStoreBucket, error) {
+	if len(secrets) == 0 {
+		return nil, fmt.Errorf("no secrets provided to search for bucket '%s'", targetBucketName)
+	}
+
+	clowderBucketNamesAnnotation := "clowder/bucket-names"
+
+	for _, secret := range secrets {
+		currentSecret := secret
+
+		// Check if essential credential keys are present in the current secret's Data
+		requiredCredentialKeys := []string{
+			"aws_access_key_id",
+			"aws_secret_access_key",
+		}
+
+		credentialsPresent := true
+		for _, key := range requiredCredentialKeys {
+			if _, ok := currentSecret.Data[key]; !ok {
+				credentialsPresent = false
+				break
+			}
+		}
+		if !credentialsPresent {
+			continue
+		}
+
+		bucketNameFoundInThisSecret := false
+
+		// Check for "bucket" key in secret.Data
+		if secretBucketData, ok := currentSecret.Data["bucket"]; ok {
+			if string(secretBucketData) == targetBucketName {
+				bucketNameFoundInThisSecret = true
+			}
+		}
+
+		// If not found in Data, check "clowder/bucket-names" annotation
+		if !bucketNameFoundInThisSecret {
+			if annoValue, ok := currentSecret.Annotations[clowderBucketNamesAnnotation]; ok {
+				annotatedBucketNames := strings.Split(annoValue, ",")
+				for _, name := range annotatedBucketNames {
+					if strings.TrimSpace(name) == targetBucketName {
+						bucketNameFoundInThisSecret = true
+						break // Found the bucket name in the annotation
+					}
+				}
+			}
+		}
+
+		// If the target bucket name was found in this specific secret, extract its configuration
+		if bucketNameFoundInThisSecret {
+			bucketConfig := &ObjectStoreBucket{
+				Name:      targetBucketName,
+				AccessKey: utils.StringPtr(string(currentSecret.Data["aws_access_key_id"])),
+				SecretKey: utils.StringPtr(string(currentSecret.Data["aws_secret_access_key"])),
+				Tls:       utils.TruePtr(),
+			}
+
+			if regionData, ok := currentSecret.Data["aws_region"]; ok {
+				bucketConfig.Region = utils.StringPtr(string(regionData))
+			}
+			if endpointData, ok := currentSecret.Data["endpoint"]; ok {
+				bucketConfig.Endpoint = utils.StringPtr(string(endpointData))
+			}
+
+			return bucketConfig, nil
+		}
+	}
+
+	// If the loop completes and no matching secret was found
+	return nil, fmt.Errorf("configuration for bucket '%s' not found in any of the provided secrets", targetBucketName)
 }
 
 // Add the env vars if eny are set

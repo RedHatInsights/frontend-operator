@@ -335,6 +335,9 @@ objects:
                 enablePushCache:
                   description: Enable Push Cache container
                   type: boolean
+                pushCacheBucket:
+                  description: The AWS S3 bucket for Push Cache
+                  type: string
                 generateNavJSON:
                   description: 'GenerateNavJSON determines if the nav json configmap
 
