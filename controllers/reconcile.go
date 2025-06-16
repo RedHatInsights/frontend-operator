@@ -463,18 +463,22 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 	j.Spec.Template.Spec.Volumes = []v1.Volume{pushCacheVolume}
 
 	secrets := v1.SecretList{}
-	r.Client.List(r.Ctx, &secrets, client.InNamespace(r.Frontend.Namespace))
+	err := r.Client.List(r.Ctx, &secrets, client.InNamespace(r.Frontend.Namespace))
+	if err != nil {
+		return err
+	}
 
 	objectStoreInfo, err := ExtractBucketConfigFromSecret(secrets.Items, r.FrontendEnvironment.Spec.PushCacheBucket)
 	if err != nil {
-
+		return err
 	}
-	aws_username := objectStoreInfo.AccessKey
-	aws_password := objectStoreInfo.SecretKey
+
+	awsUsername := objectStoreInfo.AccessKey
+	awsPassword := objectStoreInfo.SecretKey
 
 	// TODO: Is the source directory "-s $(pwd) accurate"??
 	// Construct the pushcache startup command
-	command := fmt.Sprintf("sleep 120; valpop populate -r data/${ROUTE_PATH} -s $(pwd) --hostname 127.0.0.1 --username ${%s} --password ${%s}", *aws_username, *aws_password)
+	command := fmt.Sprintf("sleep 120; valpop populate -r data/${ROUTE_PATH} -s ${DIST_FOLDER} --hostname 127.0.0.1 --username ${%s} --password ${%s}", *awsUsername, *awsPassword)
 
 	// Modify the obejct to set the things we care about
 	pushCacheContainer := v1.Container{
@@ -569,7 +573,7 @@ type ObjectStoreBucket struct {
 	Name      string
 	Region    *string
 	Endpoint  *string
-	Tls       *bool
+	TLS       *bool
 }
 
 // ExtractBucketConfigFromSecret extracts ObjectStoreBucket configuration for a specific bucket name
@@ -634,7 +638,7 @@ func ExtractBucketConfigFromSecret(secrets []v1.Secret, targetBucketName string)
 				Name:      targetBucketName,
 				AccessKey: utils.StringPtr(string(currentSecret.Data["aws_access_key_id"])),
 				SecretKey: utils.StringPtr(string(currentSecret.Data["aws_secret_access_key"])),
-				Tls:       utils.TruePtr(),
+				TLS:       utils.TruePtr(),
 			}
 
 			if regionData, ok := currentSecret.Data["aws_region"]; ok {
