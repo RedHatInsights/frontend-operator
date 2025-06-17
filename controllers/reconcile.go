@@ -475,11 +475,10 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 
 	awsUsername := objectStoreInfo.AccessKey
 	awsPassword := objectStoreInfo.SecretKey
-
-	hostname := r.FrontendEnvironment.Spec.Hostname
+	hostname := objectStoreInfo.Endpoint
 
 	// Construct the pushcache startup command
-	command := fmt.Sprintf("sleep 120; valpop populate -r data/${ROUTE_PATH} -s ${DIST_FOLDER} --hostname %s --username %s --password %s", hostname, *awsUsername, *awsPassword)
+	command := fmt.Sprintf("sleep 120; valpop populate -r data/${ROUTE_PATH} -s ${DIST_FOLDER} --hostname %s --username %s --password %s", *hostname, *awsUsername, *awsPassword)
 
 	// Modify the obejct to set the things we care about
 	pushCacheContainer := v1.Container{
