@@ -1208,7 +1208,7 @@ var _ = ginkgo.Describe("Search index", func() {
 })
 
 type WidgetFrontendTestEntry struct {
-	Widgets      []*crd.WidgetEntry
+	Widgets      []*crd.WidgetModuleFederationMetadata
 	FrontendName string
 }
 
@@ -1216,7 +1216,7 @@ type WidgetCase struct {
 	WidgetsFrontend        []WidgetFrontendTestEntry
 	Namespace              string
 	Environment            string
-	ExpectedConfigMapEntry []crd.WidgetEntry
+	ExpectedConfigMapEntry []crd.WidgetModuleFederationMetadata
 }
 
 func frontendFromWidget(wc WidgetCase, wf WidgetFrontendTestEntry) *crd.Frontend {
@@ -1261,40 +1261,34 @@ var _ = ginkgo.Describe("Widget registry", func() {
 	)
 
 	var (
-		DefaultWidgetVariant = crd.WidgetDefaultVariant{
+		WidgetDefaults = crd.WidgetBaseDimensions{
 			Width:     1,
 			Height:    1,
 			MaxHeight: 2,
 			MinHeight: 1,
 		}
-		WidgetDefaults = crd.WidgetDefaults{
-			Small:  DefaultWidgetVariant,
-			Medium: DefaultWidgetVariant,
-			Large:  DefaultWidgetVariant,
-			XLarge: DefaultWidgetVariant,
-		}
-		Widget1 = &crd.WidgetEntry{
+		Widget1 = &crd.WidgetModuleFederationMetadata{
 			Scope:  "test",
 			Module: "./foo",
-			Config: crd.WidgetConfig{
+			Config: crd.WidgetConfiguration{
 				Icon:  "icon",
 				Title: "title",
 			},
 			Defaults: WidgetDefaults,
 		}
-		Widget2 = &crd.WidgetEntry{
+		Widget2 = &crd.WidgetModuleFederationMetadata{
 			Scope:  "test",
 			Module: "./bar",
-			Config: crd.WidgetConfig{
+			Config: crd.WidgetConfiguration{
 				Icon:  "icon-bar",
 				Title: "Bar",
 			},
 			Defaults: WidgetDefaults,
 		}
-		Widget3 = &crd.WidgetEntry{
+		Widget3 = &crd.WidgetModuleFederationMetadata{
 			Scope:  "baz",
 			Module: "./default",
-			Config: crd.WidgetConfig{
+			Config: crd.WidgetConfiguration{
 				Icon:  "baz",
 				Title: "Baz",
 			},
@@ -1304,7 +1298,7 @@ var _ = ginkgo.Describe("Widget registry", func() {
 
 	ginkgo.It("Should create widget registry", func() {
 		ginkgo.By("collection entries from Frontend resources", func() {
-			expectedResult := []crd.WidgetEntry{{
+			expectedResult := []crd.WidgetModuleFederationMetadata{{
 				FrontendRef: FrontendName,
 				Scope:       Widget1.Scope,
 				Module:      Widget1.Module,
@@ -1325,10 +1319,10 @@ var _ = ginkgo.Describe("Widget registry", func() {
 			}}
 			widgetCases := []WidgetCase{{
 				WidgetsFrontend: []WidgetFrontendTestEntry{{
-					Widgets:      []*crd.WidgetEntry{Widget1, Widget2},
+					Widgets:      []*crd.WidgetModuleFederationMetadata{Widget1, Widget2},
 					FrontendName: FrontendName,
 				}, {
-					Widgets:      []*crd.WidgetEntry{Widget3},
+					Widgets:      []*crd.WidgetModuleFederationMetadata{Widget3},
 					FrontendName: FrontendName2,
 				},
 				},
@@ -1360,7 +1354,7 @@ var _ = ginkgo.Describe("Widget registry", func() {
 				}, timeout, interval).Should(gomega.BeTrue())
 
 				widgetRegistryMap := createdConfigMap.Data["widget-registry.json"]
-				var widgetRegistry []crd.WidgetEntry
+				var widgetRegistry []crd.WidgetModuleFederationMetadata
 				err := json.Unmarshal([]byte(widgetRegistryMap), &widgetRegistry)
 				gomega.Expect(err).Should(gomega.BeNil())
 

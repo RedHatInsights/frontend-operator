@@ -1039,8 +1039,8 @@ func setupSearchIndex(feList *crd.FrontendList) []crd.SearchEntry {
 	return searchIndex
 }
 
-func setupWidgetRegistry(feList *crd.FrontendList) []crd.WidgetEntry {
-	widgetRegistry := []crd.WidgetEntry{}
+func setupWidgetRegistry(feList *crd.FrontendList) []crd.WidgetModuleFederationMetadata {
+	widgetRegistry := []crd.WidgetModuleFederationMetadata{}
 
 	for _, frontend := range feList.Items {
 		if frontend.Spec.FeoConfigEnabled {

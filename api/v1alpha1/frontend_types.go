@@ -70,40 +70,6 @@ type ServiceTile struct {
 	Permissions []Permission `json:"permissions,omitempty" yaml:"permissions,omitempty"`
 }
 
-type WidgetHeaderLink struct {
-	Title string `json:"title" yaml:"title"`
-	Href  string `json:"href" yaml:"href"`
-}
-
-type WidgetConfig struct {
-	Icon        string           `json:"icon" yaml:"icon"`
-	Title       string           `json:"title" yaml:"title"`
-	Permissions []Permission     `json:"permissions,omitempty" yaml:"permissions,omitempty"`
-	HeaderLink  WidgetHeaderLink `json:"headerLink,omitempty" yaml:"headerLink,omitempty"`
-}
-
-type WidgetDefaultVariant struct {
-	Width     int `json:"w" yaml:"w"`
-	Height    int `json:"h" yaml:"h"`
-	MaxHeight int `json:"maxH" yaml:"maxH"`
-	MinHeight int `json:"minH" yaml:"minH"`
-}
-
-type WidgetDefaults struct {
-	Small  WidgetDefaultVariant `json:"sm" yaml:"sm"`
-	Medium WidgetDefaultVariant `json:"md" yaml:"md"`
-	Large  WidgetDefaultVariant `json:"lg" yaml:"lg"`
-	XLarge WidgetDefaultVariant `json:"xl" yaml:"xl"`
-}
-
-type WidgetEntry struct {
-	Scope       string         `json:"scope" yaml:"scope"`
-	Module      string         `json:"module" yaml:"module"`
-	Config      WidgetConfig   `json:"config" yaml:"config"`
-	Defaults    WidgetDefaults `json:"defaults" yaml:"defaults"`
-	FrontendRef string         `json:"frontendRef,omitempty" yaml:"frontendRef,omitempty"`
-}
-
 type BundleSegment struct {
 	SegmentID string `json:"segmentId" yaml:"segmentId"`
 	// Id of the bundle to which the segment should be injected
@@ -145,9 +111,10 @@ type FrontendSpec struct {
 	SearchEntries []*SearchEntry `json:"searchEntries,omitempty" yaml:"searchEntries,omitempty"`
 	// Data for the all services dropdown
 	ServiceTiles []*ServiceTile `json:"serviceTiles,omitempty" yaml:"serviceTiles,omitempty"`
-	// Data for the available widgets for the resource
-	WidgetRegistry []*WidgetEntry `json:"widgetRegistry,omitempty" yaml:"widgetRegistry,omitempty"`
-	Replicas       *int32         `json:"replicas,omitempty" yaml:"replicas,omitempty"`
+	// Data for the available widgets for the resource and the base widget layouts
+	WidgetRegistry    []*WidgetModuleFederationMetadata `json:"widgetRegistry,omitempty" yaml:"widgetRegistry,omitempty"`
+	BaseWidgetLayouts []*BaseWidgetDashboardTemplate    `json:"widgetLayouts,omitempty" yaml:"widgetLayouts,omitempty"`
+	Replicas          *int32                            `json:"replicas,omitempty" yaml:"replicas,omitempty"`
 	// Injects configuration from application when enabled
 	FeoConfigEnabled bool `json:"feoConfigEnabled,omitempty" yaml:"feoConfigEnabled,omitempty"`
 }
@@ -218,7 +185,7 @@ type SupportCaseData struct {
 type Permission struct {
 	Method string              `json:"method" yaml:"method"`
 	Apps   []string            `json:"apps,omitempty" yaml:"apps,omitempty"`
-	Args   *apiextensions.JSON `json:"args,omitempty" yaml:"args,omitempty"` // TODO validate array item type (string?)
+	Args   *apiextensions.JSON `json:"args,omitempty" yaml:"args,omitempty"` // array of any JS literals, // e.g. ["arg1", "arg2"] or [1, 2, 3] or [true, false]
 }
 
 type SegmentRef struct {

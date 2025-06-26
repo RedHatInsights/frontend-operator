@@ -602,8 +602,158 @@ spec:
                 type: array
               title:
                 type: string
+              widgetLayouts:
+                items:
+                  description: A base template which users can "fork" and customize
+                    for their own dashboards.
+                  properties:
+                    displayName:
+                      type: string
+                    name:
+                      type: string
+                    templateConfig:
+                      description: TemplateConfig defines the configuration for different
+                        screen sizes.
+                      properties:
+                        lg:
+                          items:
+                            description: WidgetTemplateConfigItem represents a single
+                              widget's configuration within the grid.
+                            properties:
+                              h:
+                                type: integer
+                              i:
+                                type: string
+                              maxH:
+                                type: integer
+                              minH:
+                                type: integer
+                              static:
+                                type: boolean
+                              title:
+                                type: string
+                              w:
+                                type: integer
+                              x:
+                                type: integer
+                              "y":
+                                type: integer
+                            required:
+                            - h
+                            - i
+                            - w
+                            - x
+                            - "y"
+                            type: object
+                          type: array
+                        md:
+                          items:
+                            description: WidgetTemplateConfigItem represents a single
+                              widget's configuration within the grid.
+                            properties:
+                              h:
+                                type: integer
+                              i:
+                                type: string
+                              maxH:
+                                type: integer
+                              minH:
+                                type: integer
+                              static:
+                                type: boolean
+                              title:
+                                type: string
+                              w:
+                                type: integer
+                              x:
+                                type: integer
+                              "y":
+                                type: integer
+                            required:
+                            - h
+                            - i
+                            - w
+                            - x
+                            - "y"
+                            type: object
+                          type: array
+                        sm:
+                          items:
+                            description: WidgetTemplateConfigItem represents a single
+                              widget's configuration within the grid.
+                            properties:
+                              h:
+                                type: integer
+                              i:
+                                type: string
+                              maxH:
+                                type: integer
+                              minH:
+                                type: integer
+                              static:
+                                type: boolean
+                              title:
+                                type: string
+                              w:
+                                type: integer
+                              x:
+                                type: integer
+                              "y":
+                                type: integer
+                            required:
+                            - h
+                            - i
+                            - w
+                            - x
+                            - "y"
+                            type: object
+                          type: array
+                        xl:
+                          items:
+                            description: WidgetTemplateConfigItem represents a single
+                              widget's configuration within the grid.
+                            properties:
+                              h:
+                                type: integer
+                              i:
+                                type: string
+                              maxH:
+                                type: integer
+                              minH:
+                                type: integer
+                              static:
+                                type: boolean
+                              title:
+                                type: string
+                              w:
+                                type: integer
+                              x:
+                                type: integer
+                              "y":
+                                type: integer
+                            required:
+                            - h
+                            - i
+                            - w
+                            - x
+                            - "y"
+                            type: object
+                          type: array
+                      required:
+                      - lg
+                      - md
+                      - sm
+                      - xl
+                      type: object
+                  required:
+                  - displayName
+                  - name
+                  - templateConfig
+                  type: object
+                type: array
               widgetRegistry:
-                description: Data for the available widgets for the resource
+                description: Data for the available widgets for the resource and the
+                  base widget layouts
                 items:
                   properties:
                     config:
@@ -638,82 +788,29 @@ spec:
                         title:
                           type: string
                       required:
-                      - icon
                       - title
                       type: object
                     defaults:
                       properties:
-                        lg:
-                          properties:
-                            h:
-                              type: integer
-                            maxH:
-                              type: integer
-                            minH:
-                              type: integer
-                            w:
-                              type: integer
-                          required:
-                          - h
-                          - maxH
-                          - minH
-                          - w
-                          type: object
-                        md:
-                          properties:
-                            h:
-                              type: integer
-                            maxH:
-                              type: integer
-                            minH:
-                              type: integer
-                            w:
-                              type: integer
-                          required:
-                          - h
-                          - maxH
-                          - minH
-                          - w
-                          type: object
-                        sm:
-                          properties:
-                            h:
-                              type: integer
-                            maxH:
-                              type: integer
-                            minH:
-                              type: integer
-                            w:
-                              type: integer
-                          required:
-                          - h
-                          - maxH
-                          - minH
-                          - w
-                          type: object
-                        xl:
-                          properties:
-                            h:
-                              type: integer
-                            maxH:
-                              type: integer
-                            minH:
-                              type: integer
-                            w:
-                              type: integer
-                          required:
-                          - h
-                          - maxH
-                          - minH
-                          - w
-                          type: object
+                        h:
+                          type: integer
+                        maxH:
+                          type: integer
+                        minH:
+                          type: integer
+                        w:
+                          type: integer
                       required:
-                      - lg
-                      - md
-                      - sm
-                      - xl
+                      - h
+                      - maxH
+                      - minH
+                      - w
                       type: object
+                    featureFlag:
+                      type: string
                     frontendRef:
+                      type: string
+                    importName:
                       type: string
                     module:
                       type: string
