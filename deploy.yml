@@ -569,6 +569,173 @@ objects:
                   type: array
                 assetsPrefix:
                   type: string
+                baseWidgetLayouts:
+                  items:
+                    description: A base template which users can "fork" and customize
+                      for their own dashboards.
+                    properties:
+                      displayName:
+                        type: string
+                      frontendRef:
+                        type: string
+                      name:
+                        type: string
+                      templateConfig:
+                        description: TemplateConfig defines the configuration for
+                          different screen sizes.
+                        properties:
+                          lg:
+                            items:
+                              description: WidgetTemplateConfigItem represents a single
+                                widget's configuration within the grid.
+                              properties:
+                                cx:
+                                  description: 'The original coordinates of the widget
+                                    are x and y, we have to use CX/CY because in some
+                                    YAML parsers y is a reserved keyword and translates
+                                    to a boolean value.
+
+                                    CX and CY are used to avoid this issue.'
+                                  type: integer
+                                cy:
+                                  type: integer
+                                h:
+                                  type: integer
+                                i:
+                                  type: string
+                                maxH:
+                                  type: integer
+                                minH:
+                                  type: integer
+                                static:
+                                  type: boolean
+                                w:
+                                  type: integer
+                              required:
+                              - cx
+                              - cy
+                              - h
+                              - i
+                              - w
+                              type: object
+                            type: array
+                          md:
+                            items:
+                              description: WidgetTemplateConfigItem represents a single
+                                widget's configuration within the grid.
+                              properties:
+                                cx:
+                                  description: 'The original coordinates of the widget
+                                    are x and y, we have to use CX/CY because in some
+                                    YAML parsers y is a reserved keyword and translates
+                                    to a boolean value.
+
+                                    CX and CY are used to avoid this issue.'
+                                  type: integer
+                                cy:
+                                  type: integer
+                                h:
+                                  type: integer
+                                i:
+                                  type: string
+                                maxH:
+                                  type: integer
+                                minH:
+                                  type: integer
+                                static:
+                                  type: boolean
+                                w:
+                                  type: integer
+                              required:
+                              - cx
+                              - cy
+                              - h
+                              - i
+                              - w
+                              type: object
+                            type: array
+                          sm:
+                            items:
+                              description: WidgetTemplateConfigItem represents a single
+                                widget's configuration within the grid.
+                              properties:
+                                cx:
+                                  description: 'The original coordinates of the widget
+                                    are x and y, we have to use CX/CY because in some
+                                    YAML parsers y is a reserved keyword and translates
+                                    to a boolean value.
+
+                                    CX and CY are used to avoid this issue.'
+                                  type: integer
+                                cy:
+                                  type: integer
+                                h:
+                                  type: integer
+                                i:
+                                  type: string
+                                maxH:
+                                  type: integer
+                                minH:
+                                  type: integer
+                                static:
+                                  type: boolean
+                                w:
+                                  type: integer
+                              required:
+                              - cx
+                              - cy
+                              - h
+                              - i
+                              - w
+                              type: object
+                            type: array
+                          xl:
+                            items:
+                              description: WidgetTemplateConfigItem represents a single
+                                widget's configuration within the grid.
+                              properties:
+                                cx:
+                                  description: 'The original coordinates of the widget
+                                    are x and y, we have to use CX/CY because in some
+                                    YAML parsers y is a reserved keyword and translates
+                                    to a boolean value.
+
+                                    CX and CY are used to avoid this issue.'
+                                  type: integer
+                                cy:
+                                  type: integer
+                                h:
+                                  type: integer
+                                i:
+                                  type: string
+                                maxH:
+                                  type: integer
+                                minH:
+                                  type: integer
+                                static:
+                                  type: boolean
+                                w:
+                                  type: integer
+                              required:
+                              - cx
+                              - cy
+                              - h
+                              - i
+                              - w
+                              type: object
+                            type: array
+                        required:
+                        - lg
+                        - md
+                        - sm
+                        - xl
+                        type: object
+                    required:
+                    - displayName
+                    - name
+                    - templateConfig
+                    type: object
+                  type: array
                 bundleSegments:
                   description: navigation segments for the frontend
                   items:
@@ -1086,155 +1253,6 @@ objects:
                   type: array
                 title:
                   type: string
-                widgetLayouts:
-                  items:
-                    description: A base template which users can "fork" and customize
-                      for their own dashboards.
-                    properties:
-                      displayName:
-                        type: string
-                      name:
-                        type: string
-                      templateConfig:
-                        description: TemplateConfig defines the configuration for
-                          different screen sizes.
-                        properties:
-                          lg:
-                            items:
-                              description: WidgetTemplateConfigItem represents a single
-                                widget's configuration within the grid.
-                              properties:
-                                h:
-                                  type: integer
-                                i:
-                                  type: string
-                                maxH:
-                                  type: integer
-                                minH:
-                                  type: integer
-                                static:
-                                  type: boolean
-                                title:
-                                  type: string
-                                w:
-                                  type: integer
-                                x:
-                                  type: integer
-                                y:
-                                  type: integer
-                              required:
-                              - h
-                              - i
-                              - w
-                              - x
-                              - y
-                              type: object
-                            type: array
-                          md:
-                            items:
-                              description: WidgetTemplateConfigItem represents a single
-                                widget's configuration within the grid.
-                              properties:
-                                h:
-                                  type: integer
-                                i:
-                                  type: string
-                                maxH:
-                                  type: integer
-                                minH:
-                                  type: integer
-                                static:
-                                  type: boolean
-                                title:
-                                  type: string
-                                w:
-                                  type: integer
-                                x:
-                                  type: integer
-                                y:
-                                  type: integer
-                              required:
-                              - h
-                              - i
-                              - w
-                              - x
-                              - y
-                              type: object
-                            type: array
-                          sm:
-                            items:
-                              description: WidgetTemplateConfigItem represents a single
-                                widget's configuration within the grid.
-                              properties:
-                                h:
-                                  type: integer
-                                i:
-                                  type: string
-                                maxH:
-                                  type: integer
-                                minH:
-                                  type: integer
-                                static:
-                                  type: boolean
-                                title:
-                                  type: string
-                                w:
-                                  type: integer
-                                x:
-                                  type: integer
-                                y:
-                                  type: integer
-                              required:
-                              - h
-                              - i
-                              - w
-                              - x
-                              - y
-                              type: object
-                            type: array
-                          xl:
-                            items:
-                              description: WidgetTemplateConfigItem represents a single
-                                widget's configuration within the grid.
-                              properties:
-                                h:
-                                  type: integer
-                                i:
-                                  type: string
-                                maxH:
-                                  type: integer
-                                minH:
-                                  type: integer
-                                static:
-                                  type: boolean
-                                title:
-                                  type: string
-                                w:
-                                  type: integer
-                                x:
-                                  type: integer
-                                y:
-                                  type: integer
-                              required:
-                              - h
-                              - i
-                              - w
-                              - x
-                              - y
-                              type: object
-                            type: array
-                        required:
-                        - lg
-                        - md
-                        - sm
-                        - xl
-                        type: object
-                    required:
-                    - displayName
-                    - name
-                    - templateConfig
-                    type: object
-                  type: array
                 widgetRegistry:
                   description: Data for the available widgets for the resource and
                     the base widget layouts
@@ -1286,8 +1304,6 @@ objects:
                             type: integer
                         required:
                         - h
-                        - maxH
-                        - minH
                         - w
                         type: object
                       featureFlag:

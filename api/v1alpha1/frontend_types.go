@@ -113,7 +113,7 @@ type FrontendSpec struct {
 	ServiceTiles []*ServiceTile `json:"serviceTiles,omitempty" yaml:"serviceTiles,omitempty"`
 	// Data for the available widgets for the resource and the base widget layouts
 	WidgetRegistry    []*WidgetModuleFederationMetadata `json:"widgetRegistry,omitempty" yaml:"widgetRegistry,omitempty"`
-	BaseWidgetLayouts []*BaseWidgetDashboardTemplate    `json:"widgetLayouts,omitempty" yaml:"widgetLayouts,omitempty"`
+	BaseWidgetLayouts []*BaseWidgetDashboardTemplate    `json:"baseWidgetLayouts,omitempty" yaml:"baseWidgetLayouts,omitempty"`
 	Replicas          *int32                            `json:"replicas,omitempty" yaml:"replicas,omitempty"`
 	// Injects configuration from application when enabled
 	FeoConfigEnabled bool `json:"feoConfigEnabled,omitempty" yaml:"feoConfigEnabled,omitempty"`

@@ -49,17 +49,43 @@ type FrontendReconciliation struct {
 	Client              client.Client
 }
 
+// setupConfigMapWithLabels creates a ConfigMap with the specified name and namespace,
+// applies labels, and optionally sets the recycle annotation for pod restart
+func (r *FrontendReconciliation) setupConfigMapWithLabels(nn types.NamespacedName, markForRestart bool) *v1.ConfigMap {
+	cfgMap := &v1.ConfigMap{}
+	if markForRestart {
+		if cfgMap.Annotations == nil {
+			cfgMap.Annotations = map[string]string{}
+		}
+		// Flag to trigger pod restart if config map changes
+		cfgMap.Annotations["qontract.recycle"] = "true"
+	}
+
+	labels := r.FrontendEnvironment.GetLabels()
+	labler := utils.GetCustomLabeler(labels, nn, r.FrontendEnvironment)
+	labler(cfgMap)
+
+	return cfgMap
+}
+
 //go:embed templates/Caddyfile
 var caddyFileTemplate string
 
 func (r *FrontendReconciliation) run() error {
 
-	configMap, err := r.setupConfigMaps()
+	configMaps, err := r.setupConfigMaps()
 	if err != nil {
 		return err
 	}
 
-	configHash, err := createConfigmapHash(configMap)
+	var configHashBase []map[string]string
+	var configHash string
+
+	for _, cm := range configMaps {
+		configHashBase = append(configHashBase, cm.Data)
+	}
+
+	configHash, err = createConfigmapHash(configHashBase)
 	if err != nil {
 		return err
 	}
@@ -1051,12 +1077,34 @@ func setupWidgetRegistry(feList *crd.FrontendList) []crd.WidgetModuleFederationM
 		}
 	}
 
-	// Sort widgetRegistry alphabetically by .FrontendRef
+	// Sort widgetRegistry alphabetically
 	sort.Slice(widgetRegistry, func(i, j int) bool {
-		return widgetRegistry[i].FrontendRef < widgetRegistry[j].FrontendRef
+		return widgetRegistry[i].FrontendRef+widgetRegistry[i].Scope+widgetRegistry[i].Module+widgetRegistry[i].ImportName < widgetRegistry[j].FrontendRef+widgetRegistry[j].Scope+widgetRegistry[j].Module+widgetRegistry[j].ImportName
 	})
 
 	return widgetRegistry
+}
+
+func setupBaseWidgetDashboardTemplates(feList *crd.FrontendList) []crd.BaseWidgetDashboardTemplate {
+	baseWidgetDashboardTemplates := []crd.BaseWidgetDashboardTemplate{}
+
+	for _, frontend := range feList.Items {
+		if frontend.Spec.FeoConfigEnabled && frontend.Spec.BaseWidgetLayouts != nil {
+			for _, template := range frontend.Spec.BaseWidgetLayouts {
+				template.FrontendRef = frontend.Name
+				// ensure bases are unique
+				template.Name = frontend.Name + "-" + template.Name
+				baseWidgetDashboardTemplates = append(baseWidgetDashboardTemplates, *template)
+			}
+		}
+	}
+
+	// Sort baseWidgetDashboardTemplates alphabetically
+	sort.Slice(baseWidgetDashboardTemplates, func(i, j int) bool {
+		return baseWidgetDashboardTemplates[i].FrontendRef+baseWidgetDashboardTemplates[i].Name+baseWidgetDashboardTemplates[i].DisplayName < baseWidgetDashboardTemplates[j].FrontendRef+baseWidgetDashboardTemplates[j].Name+baseWidgetDashboardTemplates[j].DisplayName
+	})
+
+	return baseWidgetDashboardTemplates
 }
 
 func getServiceTilePath(section string, group string) string {
@@ -1347,8 +1395,8 @@ func (r *FrontendReconciliation) setupBundleData(_ *v1.ConfigMap, _ map[string]c
 	return nil
 }
 
-func createConfigmapHash(cfgMap *v1.ConfigMap) (string, error) {
-	hashData, err := json.Marshal(cfgMap.Data)
+func createConfigmapHash(hashBase []map[string]string) (string, error) {
+	hashData, err := json.Marshal(hashBase)
 	if err != nil {
 		return "", err
 	}
@@ -1401,7 +1449,7 @@ func setupAPISpecs(feList *crd.FrontendList) []crd.APISpecInfo {
 
 // setupConfigMaps will create configmaps for the various config json
 // files, including fed-modules.json and the various bundle json files
-func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
+func (r *FrontendReconciliation) setupConfigMaps() ([]*v1.ConfigMap, error) {
 	// Will need to interact directly with the client here, and not the cache because
 	// we need to read ALL the Frontend CRDs in the Env that we care about
 
@@ -1410,8 +1458,10 @@ func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
 
 	// Populate the frontendlist by looking for all frontends in our env
 	if err := r.FRE.Client.List(r.Ctx, frontendList, client.MatchingFields{"spec.envName": r.Frontend.Spec.EnvName}); err != nil {
-		return &v1.ConfigMap{}, err
+		return []*v1.ConfigMap{}, err
 	}
+
+	configMaps := []*v1.ConfigMap{}
 
 	// default config map, should be always created
 	defaultNN := types.NamespacedName{
@@ -1419,8 +1469,20 @@ func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
 		Namespace: r.Frontend.Namespace,
 	}
 
+	defaultWidgetNN := types.NamespacedName{
+		Name:      r.Frontend.Spec.EnvName + "-widget-registry",
+		Namespace: r.Frontend.Namespace,
+	}
+
+	defaultBaseLayoutNN := types.NamespacedName{
+		Name:      r.Frontend.Spec.EnvName + "-base-widget-dashboard-templates",
+		Namespace: r.Frontend.Namespace,
+	}
+
 	// TODO: The conntext map should be configured via env variable from app interface
 	frontendCFGContextName := "feo-context-cfg"
+	widgetsCFGContextName := "widget-registry-cfg"
+	baseLayoutsCFGContextName := "base-widget-dashboard-templates-cfg"
 	if strings.Contains(r.Frontend.Namespace, "beta") {
 		// separate stable and beta config map names
 		// quick patch to see if we can separate the configurations
@@ -1435,51 +1497,128 @@ func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
 	}
 
 	defaultCfgMap, err := r.createConfigMap(defaultNN, frontendList, true)
+	if err != nil {
+		return []*v1.ConfigMap{}, err
+	}
+	configMaps = append(configMaps, defaultCfgMap)
+	widgetCfgMap, err := r.createWidgetRegistryConfigMap(defaultWidgetNN, frontendList, true)
+	if err != nil {
+		return []*v1.ConfigMap{}, err
+	}
+	configMaps = append(configMaps, widgetCfgMap)
+
+	baseWidgetDashboardTemplatesConfigMap, err := r.createBaseWidgetDashboardTemplatesConfigMap(defaultBaseLayoutNN, frontendList, true)
+	if err != nil {
+		return configMaps, err
+	}
+	configMaps = append(configMaps, baseWidgetDashboardTemplatesConfigMap)
 
 	for _, nn := range additionalNN {
+		widgetsNN := types.NamespacedName{
+			Name:      widgetsCFGContextName,
+			Namespace: nn.Namespace,
+		}
+		baseLayoutsNN := types.NamespacedName{
+			Name:      baseLayoutsCFGContextName,
+			Namespace: nn.Namespace,
+		}
 		_, err = r.createConfigMap(nn, frontendList, true)
 		if err != nil {
-			return defaultCfgMap, err
+			return configMaps, err
+		}
+		_, err = r.createWidgetRegistryConfigMap(widgetsNN, frontendList, true)
+		if err != nil {
+			return configMaps, err
+		}
+
+		_, err = r.createBaseWidgetDashboardTemplatesConfigMap(baseLayoutsNN, frontendList, true)
+		if err != nil {
+			return configMaps, err
 		}
 	}
 
-	return defaultCfgMap, err
+	return configMaps, err
+}
+
+func (r *FrontendReconciliation) createBaseWidgetDashboardTemplatesConfigMap(nn types.NamespacedName, frontendList *crd.FrontendList, markForRestart bool) (*v1.ConfigMap, error) {
+	cfgMap := &v1.ConfigMap{}
+	if err := r.Cache.Create(CoreConfig, nn, cfgMap); err != nil {
+		return cfgMap, err
+	}
+
+	cacheMap := make(map[string]crd.Frontend)
+	for _, frontend := range frontendList.Items {
+		cacheMap[frontend.Name] = frontend
+	}
+
+	cfgMap = r.setupConfigMapWithLabels(nn, markForRestart)
+
+	baseWidgetDashboardTemplates := setupBaseWidgetDashboardTemplates(frontendList)
+
+	baseWidgetDashboardTemplatesJSONData, err := json.Marshal(baseWidgetDashboardTemplates)
+	if err != nil {
+		return cfgMap, err
+	}
+
+	cfgMap.Data = map[string]string{}
+	if len(baseWidgetDashboardTemplates) > 0 {
+		cfgMap.Data["base-widget-dashboard-templates.json"] = string(baseWidgetDashboardTemplatesJSONData)
+	}
+
+	if err := r.Cache.Update(CoreConfig, cfgMap); err != nil {
+		return cfgMap, err
+	}
+
+	return cfgMap, nil
+}
+
+func (r *FrontendReconciliation) createWidgetRegistryConfigMap(nn types.NamespacedName, frontendList *crd.FrontendList, markForRestart bool) (*v1.ConfigMap, error) {
+	cfgMap := &v1.ConfigMap{}
+	if err := r.Cache.Create(CoreConfig, nn, cfgMap); err != nil {
+		return cfgMap, err
+	}
+
+	// Apply the common setup (annotations and labels)
+	cfgMap = r.setupConfigMapWithLabels(nn, markForRestart)
+
+	cacheMap := make(map[string]crd.Frontend)
+	for _, frontend := range frontendList.Items {
+		cacheMap[frontend.Name] = frontend
+	}
+
+	widgetRegistry := setupWidgetRegistry(frontendList)
+
+	widgetRegistryJSONData, err := json.Marshal(widgetRegistry)
+	if err != nil {
+		return cfgMap, err
+	}
+
+	cfgMap.Data = map[string]string{}
+	if len(widgetRegistry) > 0 {
+		cfgMap.Data["widget-registry.json"] = string(widgetRegistryJSONData)
+	}
+
+	if err := r.Cache.Update(CoreConfig, cfgMap); err != nil {
+		return cfgMap, err
+	}
+
+	return cfgMap, nil
 }
 
 func (r *FrontendReconciliation) createConfigMap(nn types.NamespacedName, frontendList *crd.FrontendList, markForRestart bool) (*v1.ConfigMap, error) {
 	cfgMap := &v1.ConfigMap{}
-	if markForRestart {
-		if cfgMap.Annotations == nil {
-			cfgMap.Annotations = map[string]string{}
-		}
-		// Flag to trigger pod restart if config map changes
-		cfgMap.Annotations["qontract.recycle"] = "true"
-		/**
-			* to use config map in a pod as an env variable use following config:
-		* podSpec:
-		*   env:
-		*    - name: FEO_SEARCH_INDEX
-		*      valueFrom:
-		*        configMapKeyRef:
-		*          key: search-index.json # or other key from config map
-		*          name: feo-context-cfg # based on the constant in the setupConfigMaps function
-		  *					 optional: true # because keys in configmap can be empty
-		*/
+	if err := r.Cache.Create(CoreConfig, nn, cfgMap); err != nil {
+		return cfgMap, err
 	}
+
+	// Apply the common setup (annotations and labels)
+	cfgMap = r.setupConfigMapWithLabels(nn, markForRestart)
 
 	// Create a map of frontend names to frontend objects
 	cacheMap := make(map[string]crd.Frontend)
 	for _, frontend := range frontendList.Items {
 		cacheMap[frontend.Name] = frontend
 	}
-
-	if err := r.Cache.Create(CoreConfig, nn, cfgMap); err != nil {
-		return cfgMap, err
-	}
-
-	labels := r.FrontendEnvironment.GetLabels()
-	labler := utils.GetCustomLabeler(labels, nn, r.FrontendEnvironment)
-	labler(cfgMap)
 
 	if err := r.populateConfigMap(cfgMap, cacheMap, frontendList); err != nil {
 		return cfgMap, err
@@ -1508,8 +1647,6 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 
 	searchIndex := setupSearchIndex(feList)
 
-	widgetRegistry := setupWidgetRegistry(feList)
-
 	serviceCategories, skippedTiles := setupServiceTilesData(feList, *r.FrontendEnvironment)
 
 	bundles, skippedBundles, err := setupBundlesData(feList, *r.FrontendEnvironment)
@@ -1532,11 +1669,6 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 
 	searchIndexJSONData, err := json.Marshal(searchIndex)
 
-	if err != nil {
-		return err
-	}
-
-	widgetRegistryJSONData, err := json.Marshal(widgetRegistry)
 	if err != nil {
 		return err
 	}
@@ -1569,10 +1701,6 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 	cfgMap.Data["Caddyfile"] = caddyFileTemplate
 	if len(searchIndex) > 0 {
 		cfgMap.Data["search-index.json"] = string(searchIndexJSONData)
-	}
-
-	if len(widgetRegistry) > 0 {
-		cfgMap.Data["widget-registry.json"] = string(widgetRegistryJSONData)
 	}
 
 	if len(serviceCategories) > 0 {
