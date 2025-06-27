@@ -21,6 +21,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+func intPtr(i int) *int {
+	return &i
+}
+
 var _ = ginkgo.Describe("Frontend controller with image", func() {
 	const (
 		FrontendName       = "test-frontend"
@@ -1232,10 +1236,10 @@ var _ = ginkgo.Describe("Widget registry", func() {
 
 	var (
 		WidgetDefaults = crd.WidgetBaseDimensions{
-			Width:     1,
-			Height:    1,
-			MaxHeight: 2,
-			MinHeight: 1,
+			Width:     intPtr(1),
+			Height:    intPtr(1),
+			MaxHeight: intPtr(2),
+			MinHeight: intPtr(1),
 		}
 		Widget1 = &crd.WidgetModuleFederationMetadata{
 			Scope:  "test",
@@ -1303,7 +1307,7 @@ var _ = ginkgo.Describe("Widget registry", func() {
 
 			for _, widgetCase := range widgetCases {
 				ctx := context.Background()
-				configMapLookupKey := types.NamespacedName{Name: widgetCase.Environment, Namespace: widgetCase.Namespace}
+				configMapLookupKey := types.NamespacedName{Name: widgetCase.Environment + "-widget-registry", Namespace: widgetCase.Namespace}
 				for _, wf := range widgetCase.WidgetsFrontend {
 					frontend := frontendFromWidget(widgetCase, wf)
 					gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
@@ -1317,7 +1321,7 @@ var _ = ginkgo.Describe("Widget registry", func() {
 					if err != nil {
 						return err == nil
 					}
-					if len(createdConfigMap.Data) != 3 {
+					if len(createdConfigMap.Data) != 1 {
 						return false
 					}
 					return true
@@ -1328,7 +1332,7 @@ var _ = ginkgo.Describe("Widget registry", func() {
 				err := json.Unmarshal([]byte(widgetRegistryMap), &widgetRegistry)
 				gomega.Expect(err).Should(gomega.BeNil())
 
-				gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(widgetCase.Environment))
+				gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(widgetCase.Environment + "-widget-registry"))
 				for _, w := range expectedResult {
 					gomega.Expect(widgetRegistry).Should(gomega.ContainElement(w))
 				}
