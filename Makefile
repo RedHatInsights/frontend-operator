@@ -265,3 +265,8 @@ clean:
 
 lint:
 	golangci-lint run
+
+e2e:
+	./scripts/kind_lite_setup.sh
+
+

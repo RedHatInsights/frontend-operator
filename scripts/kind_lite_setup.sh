@@ -43,25 +43,16 @@ done
 echo "Installing Clowder to kind cluster"
 ${KUBECTL_CMD} apply -f $(curl https://api.github.com/repos/RedHatInsights/clowder/releases/latest | jq '.assets[0].browser_download_url' -r) --validate=false
 
-until ${KUBECTL_CMD} get pod -n clowder-system | grep clowder-system; do
-  echo "Waiting for clowder-system availability ... "
+until ${KUBECTL_CMD} get pod -n clowder-system | grep clowder-controller; do
+  echo "Waiting for clowder-controller availability ... "
   sleep 5
 done 
 
 echo "Creating the boot namespace"
 ${KUBECTL_CMD} create namespace boot
 
-echo "Installing FEO resources"
-${KUBECTL_CMD} apply -f config/crd/bases/cloud.redhat.com_frontends.yaml
-${KUBECTL_CMD} apply -f config/crd/bases/cloud.redhat.com_frontendenvironments.yaml
-${KUBECTL_CMD} apply -f config/crd/bases/cloud.redhat.com_bundles.yaml
-${KUBECTL_CMD} apply -f examples/clowdenvironment.yaml
-${KUBECTL_CMD} apply -f examples/feenvironment.yaml -n boot
-${KUBECTL_CMD} apply -f examples/inventory.yaml -n boot
-${KUBECTL_CMD} apply -f examples/bundle.yaml -n boot 
-
-# TODO: Figure out what is required next to install the FEO
-# TODO: Figure out the command to confirm the success of FEO install
+echo "Applying FEO manifest"
+${KUBECTL_CMD} apply -f manifest.yaml
 
 
 
