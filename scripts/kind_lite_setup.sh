@@ -4,8 +4,21 @@
 
 set -e
 
-# TODO: check for kind command
-# TODO: check for cmctl command
+CERT_MGR_VERSION='v1.18.2'
+
+if command -v "kind" >/dev/null 2>&1; then
+   echo "Found kind!"
+else 
+    echo "Script requires kind command; install and try again"
+    exit 1
+fi
+
+if command -v "cmctl" > /dev/null 2>&1; then 
+    echo "Found cmctl!"
+else
+    echo "Script requires cmctl command; install and try again"
+    exit 1
+fi
 
 # Default context established by kind upon cluster creation is 'kind-kind'
 KUBECTL_CMD='kubectl --context kind-kind'
@@ -20,11 +33,6 @@ else
     exit 1
 fi
 
-python3 -m venv "build/.build_venv"
-source build/.build_venv/bin/activate
-pip install --upgrade pip setuptools wheel
-pip install pyyaml
-
 echo "Setting up the kind cluster"
 kind delete cluster
 kind create cluster
@@ -32,7 +40,7 @@ kubectl config set-context kind-kind
 
 echo "Installing cert manager with kubectl"
 # TODO: Make the version configurable?
-${KUBECTL_CMD} apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.18.2/cert-manager.yaml
+${KUBECTL_CMD} apply -f "https://github.com/cert-manager/cert-manager/releases/download/${CERT_MGR_VERSION}/cert-manager.yaml"
 
 # Wait for the cert manager api to be available before proceeding
 until cmctl check api; do
@@ -40,19 +48,17 @@ until cmctl check api; do
   sleep 5
 done
 
-echo "Installing Clowder to kind cluster"
-${KUBECTL_CMD} apply -f $(curl https://api.github.com/repos/RedHatInsights/clowder/releases/latest | jq '.assets[0].browser_download_url' -r) --validate=false
-
-until ${KUBECTL_CMD} get pod -n clowder-system | grep clowder-controller; do
-  echo "Waiting for clowder-controller availability ... "
-  sleep 5
-done 
-
 echo "Creating the boot namespace"
 ${KUBECTL_CMD} create namespace boot
+
+echo "Podman build and save the image, then load into cluster (local testing only)"
+# See https://github.com/kubernetes-sigs/kind/issues/2027 for more info on why this is needed
+# podman save
+# kind load image-archive
+
 
 echo "Applying FEO manifest"
 ${KUBECTL_CMD} apply -f manifest.yaml
 
-
-
+echo "If the FEO is ready, this should show 1/1"
+${KUBECTL_CMD}  get pods -n frontend-operator-system
