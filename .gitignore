@@ -45,3 +45,6 @@ artifacts/
 build/.build_venv
 
 kuttl-report.json
+
+# compressed image archive
+*.tar
