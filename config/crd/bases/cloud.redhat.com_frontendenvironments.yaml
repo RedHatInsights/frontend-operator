@@ -91,6 +91,9 @@ spec:
               enableAkamaiCacheBust:
                 description: Enable Akamai Cache Bust
                 type: boolean
+              enablePushCache:
+                description: Enable Push Cache Container
+                type: boolean
               generateNavJSON:
                 description: |-
                   GenerateNavJSON determines if the nav json configmap
@@ -148,6 +151,12 @@ spec:
                   OverwriteCaddyConfig determines if the operator should overwrite
                   frontend container Caddyfiles with a common core Caddyfile
                 type: boolean
+              pushCacheBucket:
+                description: S3 Push Cache Bucket
+                type: string
+              pushCacheImage:
+                description: Set Push Cache Image
+                type: string
               requests:
                 additionalProperties:
                   anyOf:
