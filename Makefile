@@ -265,3 +265,21 @@ clean:
 
 lint:
 	golangci-lint run
+
+
+PR_IMG = quay.io/cloudservices/frontend-operator:f3791eb
+
+insights-chrome:
+	./scripts/install_insights_chrome.sh
+	
+# Creates kind cluster, namespace, loads the operator image, applys a modified FEO manifest
+kind-lite:
+	./scripts/kind_lite_setup.sh ${PR_IMG}
+
+podman-save:
+	rm -f image.tar
+	podman pull ${PR_IMG}
+	podman image save ${PR_IMG} -o image.tar
+
+e2e: podman-save kind-lite insights-chrome
+	echo "Run the tests here"
