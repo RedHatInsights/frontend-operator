@@ -48,3 +48,4 @@ kuttl-report.json
 
 # compressed image archive
 *.tar
+frontend.yml
