@@ -1814,5 +1814,5 @@ parameters:
 - name: IMAGE_TAG
   required: true
 - name: IMAGE
-  value: quay.io/redhat-services-prod/hcm-eng-prod-tenant/frontend-operator
+  value: quay.io/cloudservices/frontend-operator
 
