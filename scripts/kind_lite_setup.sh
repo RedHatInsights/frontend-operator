@@ -1,11 +1,11 @@
-PR_IMAGE=quay.io\/cloudservices\/frontend-operator:sc-20250630-7c080ae#!/bin/bash
+#!/usr/bin/env bash
+
 # Configures a local kind cluster for testing FEO e2e.
-# Creates the cluster, installs required dependencies, installs Clowder, installs FEO
+# Creates the cluster, installs required dependencies, installs FEO
 
 set -e
 
-PR_IMAGE=quay.io\/cloudservices\/frontend-operator:sc-20250630-7c080ae
-CERT_MGR_VERSION='v1.18.2'
+#CERT_MGR_VERSION='v1.18.2'
 
 if command -v "kind" >/dev/null 2>&1; then
    echo "Found kind!"
@@ -24,6 +24,17 @@ fi
 # Default context established by kind upon cluster creation is 'kind-kind'
 KUBECTL_CMD='kubectl --context kind-kind'
 
+# There is some weird business to resolve with remote images versus
+# locally-built ones with podman. For now, let's expect IMG to be the
+# fully-qualified quay image path, e.g. https://quay.io/cloudservices/frontend-operator:12345
+IMG=$1
+if [ -z "${IMG}" ]; then
+   echo "Need an image to build, try again..."
+   exit 1
+else
+   echo "IMG is ${IMG}"
+fi
+
 # kubectl is required for interactions with the cluster.
 if [ -n "${KUBECTL_CMD}" ]; then
     :  # already set via env var
@@ -39,31 +50,45 @@ kind delete cluster
 kind create cluster
 kubectl config set-context kind-kind
 
-echo "Installing cert manager with kubectl"
-${KUBECTL_CMD} apply -f "https://github.com/cert-manager/cert-manager/releases/download/${CERT_MGR_VERSION}/cert-manager.yaml"
+#echo "Installing cert manager with kubectl"
+#${KUBECTL_CMD} apply -f "https://github.com/cert-manager/cert-manager/releases/download/${CERT_MGR_VERSION}/cert-manager.yaml"
 
 # Wait for the cert manager api to be available before proceeding
-until cmctl check api; do
-  echo "Waiting for cert manager..."
-  sleep 5
-done
+#until cmctl check api; do
+#  echo "Waiting for cert manager..."
+#  sleep 5
+#done
 
 echo "Creating the boot namespace"
 ${KUBECTL_CMD} create namespace boot
 
 # echo "Podman build and save the image, then load into cluster (local testing only)"
 # See https://github.com/kubernetes-sigs/kind/issues/2027 for more info on why this is needed
-# podman build -f Dockerfile -t controller:latest
-# podman image save localhost/controller -o image.tar
-# kind load image-archive image.tar
+# -- podman build -f Dockerfile -t controller:latest
+# -- podman pull "${IMG}"
+# -- podman image save "${IMG}" -o image.tar
+echo "Loading ${IMG} from image.tar"
+kind load image-archive image.tar
 
-#echo "Injecting PR_IMAGE ${PR_IMAGE} into the manifest"
-#cat manifest.yaml | sed -e "s/image\: controller\:latest/image\: ${PR_IMAGE}cat manifest.yaml | sed -e "s/image\: controller\:latest/image\: ${PR_IMAGE}/" > /tmp/manifest.tmp/" > /tmp/manifest.tmp
-
-# TODO: Define an overlay with the PR_IMAGE, then apply it with kustomize?
+# hacky, but better than spending hours messing around with various kube tools
+echo "Doing an in-place update of the manifest (loading ${IMG})"
+MANIFEST_IMG="${IMG#https://}"
+echo "MANIFEST_IMG ${MANIFEST_IMG}"
+sed -i -e "1108s#controller:latest#${MANIFEST_IMG}#" manifest.yaml
 
 echo "Applying FEO manifest"
-${KUBECTL_CMD} apply -f /tmp/manifest.tmp
+${KUBECTL_CMD} apply -f manifest.yaml
 
-echo "If the FEO is ready, this should show 1/1"
-${KUBECTL_CMD}  get pods -n frontend-operator-system
+# This did not go well and wasted a lot of time.
+#echo "Patching manifest to modify controller image ..."
+#${KUBECTL_CMD} patch -n frontend-operator-system ${KUBECTL_CMD} patch -n frontend-operator-system deployment frontend-operator-controller-manager --patch "{\"spec\": {\"template\": {\"spec\": { \"image\": \"${IMG}\" }}}}"
+
+echo "If the FEO is ready, this should show Running"
+until ${KUBECTL_CMD} get pods -n frontend-operator-system | grep "Running"; do
+    echo "Waiting for frontend-operator-system"
+    sleep 5
+done
+
+echo "Firing up Chrome example frontend"
+${KUBECTL_CMD} apply -f examples/chrome.yaml
+${KUBECTL_CMD} get frontend | grep chrome
