@@ -5,8 +5,6 @@
 
 set -e
 
-#CERT_MGR_VERSION='v1.18.2'
-
 if command -v "kind" >/dev/null 2>&1; then
    echo "Found kind!"
 else 
@@ -50,15 +48,6 @@ kind delete cluster
 kind create cluster
 kubectl config set-context kind-kind
 
-#echo "Installing cert manager with kubectl"
-#${KUBECTL_CMD} apply -f "https://github.com/cert-manager/cert-manager/releases/download/${CERT_MGR_VERSION}/cert-manager.yaml"
-
-# Wait for the cert manager api to be available before proceeding
-#until cmctl check api; do
-#  echo "Waiting for cert manager..."
-#  sleep 5
-#done
-
 echo "Creating the boot namespace"
 ${KUBECTL_CMD} create namespace boot
 
@@ -78,10 +67,6 @@ sed -i -e "1108s#controller:latest#${MANIFEST_IMG}#" manifest.yaml
 
 echo "Applying FEO manifest"
 ${KUBECTL_CMD} apply -f manifest.yaml
-
-# This did not go well and wasted a lot of time.
-#echo "Patching manifest to modify controller image ..."
-#${KUBECTL_CMD} patch -n frontend-operator-system ${KUBECTL_CMD} patch -n frontend-operator-system deployment frontend-operator-controller-manager --patch "{\"spec\": {\"template\": {\"spec\": { \"image\": \"${IMG}\" }}}}"
 
 echo "If the FEO is ready, this should show Running"
 until ${KUBECTL_CMD} get pods -n frontend-operator-system | grep "Running"; do
