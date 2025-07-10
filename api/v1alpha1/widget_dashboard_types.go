@@ -18,8 +18,8 @@ type TemplateConfig struct {
 
 // WidgetTemplateConfigItem represents a single widget's configuration within the grid.
 type WidgetTemplateConfigItem struct {
-	W    *int `json:"w" yaml:"w"`                           // The width of the widget in the grid
-	H    *int `json:"h" yaml:"h"`                           // The height of the widget in the grid
+	W    int  `json:"w" yaml:"w"`                           // The width of the widget in the grid
+	H    int  `json:"h" yaml:"h"`                           // The height of the widget in the grid
 	MaxH *int `json:"maxH,omitempty" yaml:"maxH,omitempty"` // The maximum height of the widget in the grid
 	MinH *int `json:"minH,omitempty" yaml:"minH,omitempty"` // The minimum height of the widget in the grid
 	// The original coordinates of the widget are x and y, we have to use CX/CY because in some YAML parsers y is a reserved keyword and translates to a boolean value.
