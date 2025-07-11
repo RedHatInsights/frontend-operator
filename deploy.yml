@@ -536,6 +536,23 @@ objects:
               properties:
                 API:
                   properties:
+                    specs:
+                      items:
+                        properties:
+                          bundleLabels:
+                            items:
+                              type: string
+                            type: array
+                          serviceRef:
+                            type: string
+                          url:
+                            type: string
+                        required:
+                        - bundleLabels
+                        - serviceRef
+                        - url
+                        type: object
+                      type: array
                     versions:
                       items:
                         type: string

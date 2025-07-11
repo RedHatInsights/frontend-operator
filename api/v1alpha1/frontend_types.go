@@ -27,8 +27,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type APISpecInfo struct {
+	URL          string   `json:"url" yaml:"url"`                   // openapi spec url i.e. console.redhat.com/api/name/v1/openapi.json
+	BundleLabels []string `json:"bundleLabels" yaml:"bundleLabels"` // insights; ansible; etc.
+	ServiceRef   string   `json:"serviceRef" yaml:"serviceRef"`     // internal
+}
+
 type APIInfo struct {
-	Versions []string `json:"versions" yaml:"versions"`
+	Versions []string      `json:"versions" yaml:"versions"`
+	Specs    []APISpecInfo `json:"specs,omitempty" yaml:"specs,omitempty"`
 }
 
 type FrontendInfo struct {
