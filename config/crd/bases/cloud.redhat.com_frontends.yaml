@@ -69,7 +69,6 @@ spec:
                           type: string
                       required:
                       - bundleLabels
-                      - serviceRef
                       - url
                       type: object
                     type: array
