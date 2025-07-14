@@ -64,6 +64,13 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 					DeploymentRepo: "",
 					API: &crd.APIInfo{
 						Versions: []string{"v1"},
+						Specs: []crd.APISpecInfo{
+							{
+								URL:          "https://console.redhat.com/api/inventory/v1/openapi.json",
+								BundleLabels: []string{"insights"},
+								ServiceRef:   "inventory-deployment-abcdefg",
+							},
+						},
 					},
 					Frontend: crd.FrontendInfo{
 						Paths: []string{"/things/test"},
@@ -106,6 +113,13 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 					DeploymentRepo: "",
 					API: &crd.APIInfo{
 						Versions: []string{"v1"},
+						Specs: []crd.APISpecInfo{
+							{
+								URL:          "https://console.redhat.com/api/inventory/v1/openapi.json",
+								BundleLabels: []string{"insights"},
+								ServiceRef:   "inventory-deployment-abcdefg",
+							},
+						},
 					},
 					Frontend: crd.FrontendInfo{
 						Paths: []string{"/things/test"},
@@ -304,6 +318,13 @@ var _ = ginkgo.Describe("Frontend controller with service", func() {
 					DeploymentRepo: "",
 					API: &crd.APIInfo{
 						Versions: []string{"v1"},
+						Specs: []crd.APISpecInfo{
+							{
+								URL:          "https://console.redhat.com/api/inventory/v1/openapi.json",
+								BundleLabels: []string{"insights"},
+								ServiceRef:   "inventory-deployment-abcdefg",
+							},
+						},
 					},
 					Frontend: crd.FrontendInfo{
 						Paths: []string{"/things/test"},
@@ -690,6 +711,13 @@ var _ = ginkgo.Describe("ServiceMonitor Creation", func() {
 					DeploymentRepo: "",
 					API: &crd.APIInfo{
 						Versions: []string{"v1"},
+						Specs: []crd.APISpecInfo{
+							{
+								URL:          "https://console.redhat.com/api/inventory/v1/openapi.json",
+								BundleLabels: []string{"insights"},
+								ServiceRef:   "inventory-deployment-abcdefg",
+							},
+						},
 					},
 					Frontend: crd.FrontendInfo{
 						Paths: []string{"/things/test"},
@@ -1847,4 +1875,319 @@ var _ = ginkgo.Describe("CDN Path", func() {
 			gomega.Expect(fedModulesMap[fn].CDNPath).Should(gomega.Equal(cdnTestCase.ExpectedPath))
 		})
 	}
+})
+
+var _ = ginkgo.Describe("APIInfo Schema Validation", func() {
+	const (
+		SchemaTestFrontendName      = "schema-test-frontend"
+		SchemaTestFrontendNamespace = "default"
+		SchemaTestEnvName           = "schema-test-env"
+
+		timeout  = time.Second * 10
+		duration = time.Second * 10
+		interval = time.Millisecond * 250
+	)
+
+	ginkgo.Context("When using the new Specs field", func() {
+		ginkgo.It("Should correctly populate the Specs field with single spec", func() {
+			ginkgo.By("Creating a Frontend with single API spec")
+			ctx := context.Background()
+
+			frontend := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1alpha1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      SchemaTestFrontendName,
+					Namespace: SchemaTestFrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName: SchemaTestEnvName,
+					API: &crd.APIInfo{
+						Versions: []string{"v1"},
+						Specs: []crd.APISpecInfo{
+							{
+								URL:          "https://console.redhat.com/api/test/v1/openapi.json",
+								BundleLabels: []string{"insights"},
+								ServiceRef:   "test-service-deployment",
+							},
+						},
+					},
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/test/single-spec"},
+					},
+					Image: "test-image:latest",
+				},
+			}
+
+			gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
+
+			ginkgo.By("Verifying the API spec is correctly stored")
+			frontendLookupKey := types.NamespacedName{Name: SchemaTestFrontendName, Namespace: SchemaTestFrontendNamespace}
+			createdFrontend := &crd.Frontend{}
+
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, frontendLookupKey, createdFrontend)
+				return err == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			gomega.Expect(createdFrontend.Spec.API).ShouldNot(gomega.BeNil())
+			gomega.Expect(createdFrontend.Spec.API.Specs).Should(gomega.HaveLen(1))
+			gomega.Expect(createdFrontend.Spec.API.Specs[0].URL).Should(gomega.Equal("https://console.redhat.com/api/test/v1/openapi.json"))
+			gomega.Expect(createdFrontend.Spec.API.Specs[0].BundleLabels).Should(gomega.Equal([]string{"insights"}))
+			gomega.Expect(createdFrontend.Spec.API.Specs[0].ServiceRef).Should(gomega.Equal("test-service-deployment"))
+
+			ginkgo.By("Cleaning up")
+			gomega.Expect(k8sClient.Delete(ctx, frontend)).Should(gomega.Succeed())
+		})
+
+		ginkgo.It("Should handle multiple API specs in the Specs array", func() {
+			ginkgo.By("Creating a Frontend with multiple API specs")
+			ctx := context.Background()
+
+			multiSpecFrontend := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1alpha1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      SchemaTestFrontendName + "-multi",
+					Namespace: SchemaTestFrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName: SchemaTestEnvName,
+					API: &crd.APIInfo{
+						Versions: []string{"v1", "v2"},
+						Specs: []crd.APISpecInfo{
+							{
+								URL:          "https://console.redhat.com/api/inventory/v1/openapi.json",
+								BundleLabels: []string{"insights"},
+								ServiceRef:   "inventory-service",
+							},
+							{
+								URL:          "https://console.redhat.com/api/compliance/v1/openapi.json",
+								BundleLabels: []string{"insights", "compliance"},
+								ServiceRef:   "compliance-service",
+							},
+							{
+								URL:          "https://console.redhat.com/api/automation/v1/openapi.json",
+								BundleLabels: []string{"ansible"},
+								ServiceRef:   "automation-service",
+							},
+						},
+					},
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/test/multi-spec"},
+					},
+					Image: "test-image:latest",
+				},
+			}
+
+			gomega.Expect(k8sClient.Create(ctx, multiSpecFrontend)).Should(gomega.Succeed())
+
+			ginkgo.By("Verifying all API specs are correctly stored")
+			frontendLookupKey := types.NamespacedName{Name: SchemaTestFrontendName + "-multi", Namespace: SchemaTestFrontendNamespace}
+			createdFrontend := &crd.Frontend{}
+
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, frontendLookupKey, createdFrontend)
+				return err == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			gomega.Expect(createdFrontend.Spec.API).ShouldNot(gomega.BeNil())
+			gomega.Expect(createdFrontend.Spec.API.Versions).Should(gomega.Equal([]string{"v1", "v2"}))
+			gomega.Expect(createdFrontend.Spec.API.Specs).Should(gomega.HaveLen(3))
+
+			// Verify first spec
+			gomega.Expect(createdFrontend.Spec.API.Specs[0].URL).Should(gomega.Equal("https://console.redhat.com/api/inventory/v1/openapi.json"))
+			gomega.Expect(createdFrontend.Spec.API.Specs[0].BundleLabels).Should(gomega.Equal([]string{"insights"}))
+			gomega.Expect(createdFrontend.Spec.API.Specs[0].ServiceRef).Should(gomega.Equal("inventory-service"))
+
+			// Verify second spec
+			gomega.Expect(createdFrontend.Spec.API.Specs[1].URL).Should(gomega.Equal("https://console.redhat.com/api/compliance/v1/openapi.json"))
+			gomega.Expect(createdFrontend.Spec.API.Specs[1].BundleLabels).Should(gomega.Equal([]string{"insights", "compliance"}))
+			gomega.Expect(createdFrontend.Spec.API.Specs[1].ServiceRef).Should(gomega.Equal("compliance-service"))
+
+			// Verify third spec
+			gomega.Expect(createdFrontend.Spec.API.Specs[2].URL).Should(gomega.Equal("https://console.redhat.com/api/automation/v1/openapi.json"))
+			gomega.Expect(createdFrontend.Spec.API.Specs[2].BundleLabels).Should(gomega.Equal([]string{"ansible"}))
+			gomega.Expect(createdFrontend.Spec.API.Specs[2].ServiceRef).Should(gomega.Equal("automation-service"))
+
+			ginkgo.By("Cleaning up")
+			gomega.Expect(k8sClient.Delete(ctx, multiSpecFrontend)).Should(gomega.Succeed())
+		})
+
+		ginkgo.It("Should handle empty Specs array", func() {
+			ginkgo.By("Creating a Frontend with empty API specs")
+			ctx := context.Background()
+
+			emptySpecFrontend := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1alpha1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      SchemaTestFrontendName + "-empty",
+					Namespace: SchemaTestFrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName: SchemaTestEnvName,
+					API: &crd.APIInfo{
+						Versions: []string{"v1"},
+						Specs:    []crd.APISpecInfo{}, // Empty specs array
+					},
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/test/empty-spec"},
+					},
+					Image: "test-image:latest",
+				},
+			}
+
+			gomega.Expect(k8sClient.Create(ctx, emptySpecFrontend)).Should(gomega.Succeed())
+
+			ginkgo.By("Verifying the empty API specs array is handled correctly")
+			frontendLookupKey := types.NamespacedName{Name: SchemaTestFrontendName + "-empty", Namespace: SchemaTestFrontendNamespace}
+			createdFrontend := &crd.Frontend{}
+
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, frontendLookupKey, createdFrontend)
+				return err == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			gomega.Expect(createdFrontend.Spec.API).ShouldNot(gomega.BeNil())
+			gomega.Expect(createdFrontend.Spec.API.Specs).Should(gomega.HaveLen(0))
+
+			ginkgo.By("Cleaning up")
+			gomega.Expect(k8sClient.Delete(ctx, emptySpecFrontend)).Should(gomega.Succeed())
+		})
+
+		ginkgo.It("Should handle nil API field gracefully", func() {
+			ginkgo.By("Creating a Frontend with nil API field")
+			ctx := context.Background()
+
+			nilAPIFrontend := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1alpha1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      SchemaTestFrontendName + "-nil-api",
+					Namespace: SchemaTestFrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName: SchemaTestEnvName,
+					API:     nil, // Nil API field
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/test/nil-api"},
+					},
+					Image: "test-image:latest",
+				},
+			}
+
+			gomega.Expect(k8sClient.Create(ctx, nilAPIFrontend)).Should(gomega.Succeed())
+
+			ginkgo.By("Verifying the nil API field is handled correctly")
+			frontendLookupKey := types.NamespacedName{Name: SchemaTestFrontendName + "-nil-api", Namespace: SchemaTestFrontendNamespace}
+			createdFrontend := &crd.Frontend{}
+
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, frontendLookupKey, createdFrontend)
+				return err == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			gomega.Expect(createdFrontend.Spec.API).Should(gomega.BeNil())
+
+			ginkgo.By("Cleaning up")
+			gomega.Expect(k8sClient.Delete(ctx, nilAPIFrontend)).Should(gomega.Succeed())
+		})
+	})
+
+	ginkgo.Context("When validating APISpecInfo fields", func() {
+		ginkgo.It("Should properly validate all APISpecInfo fields", func() {
+			ginkgo.By("Creating a Frontend with comprehensive APISpecInfo")
+			ctx := context.Background()
+
+			validationFrontend := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1alpha1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      SchemaTestFrontendName + "-validation",
+					Namespace: SchemaTestFrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName: SchemaTestEnvName,
+					API: &crd.APIInfo{
+						Versions: []string{"v1", "v2", "v3"},
+						Specs: []crd.APISpecInfo{
+							{
+								URL:          "https://console.redhat.com/api/detailed-test/v1/openapi.json",
+								BundleLabels: []string{"insights", "testing", "validation"},
+								ServiceRef:   "detailed-test-service-deployment-12345",
+							},
+						},
+					},
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/test/validation"},
+					},
+					Image: "test-image:validation",
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, validationFrontend)).Should(gomega.Succeed())
+
+			ginkgo.By("Verifying all APISpecInfo fields are correctly preserved")
+			frontendLookupKey := types.NamespacedName{Name: SchemaTestFrontendName + "-validation", Namespace: SchemaTestFrontendNamespace}
+			createdFrontend := &crd.Frontend{}
+
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, frontendLookupKey, createdFrontend)
+				return err == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			gomega.Expect(createdFrontend.Spec.API).ShouldNot(gomega.BeNil())
+			gomega.Expect(createdFrontend.Spec.API.Versions).Should(gomega.Equal([]string{"v1", "v2", "v3"}))
+			gomega.Expect(createdFrontend.Spec.API.Specs).Should(gomega.HaveLen(1))
+			spec := createdFrontend.Spec.API.Specs[0]
+			gomega.Expect(spec.URL).Should(gomega.Equal("https://console.redhat.com/api/detailed-test/v1/openapi.json"))
+			gomega.Expect(spec.BundleLabels).Should(gomega.HaveLen(3))
+			gomega.Expect(spec.BundleLabels).Should(gomega.ContainElements("insights", "testing", "validation"))
+			gomega.Expect(spec.ServiceRef).Should(gomega.Equal("detailed-test-service-deployment-12345"))
+
+			ginkgo.By("Cleaning up")
+			gomega.Expect(k8sClient.Delete(ctx, validationFrontend)).Should(gomega.Succeed())
+		})
+
+		ginkgo.It("Should allow API with empty specs array", func() {
+			ginkgo.By("Creating a Frontend with versions and empty specs should succeed")
+			ctx := context.Background()
+
+			validFrontend := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1alpha1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      SchemaTestFrontendName + "-empty-specs",
+					Namespace: SchemaTestFrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName: SchemaTestEnvName,
+					API: &crd.APIInfo{
+						Versions: []string{"v1"},
+						Specs:    []crd.APISpecInfo{}, // Empty specs array
+					},
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/test/empty-specs"},
+					},
+					Image: "test-image:latest",
+				},
+			}
+
+			ginkgo.By("API validation is handled by Kubernetes CRD validation")
+
+			gomega.Expect(k8sClient.Create(ctx, validFrontend)).Should(gomega.Succeed())
+		})
+	})
 })
