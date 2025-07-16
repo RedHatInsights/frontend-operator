@@ -10,7 +10,7 @@ spec:
   sso: https://sso.foo.redhat.com
   overwriteCaddyConfig: true
   enablePushCache: true
-  pushCacheImage: "quay.io/repository/redhat-user-workloads/hcc-platex-services-tenant/valpop"
+  pushCacheImage: "quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop"
   pushCacheBucket: "stage-hcm-frontend-pushcache-bucket"
 ---
 apiVersion: cloud.redhat.com/v1alpha1

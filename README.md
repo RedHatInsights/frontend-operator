@@ -84,6 +84,26 @@ If you want to access the app from your computer, you have to update /etc/hosts 
 
 Once you update it you can access the app from `https://env-boot/insights/inventory`
 
+### Pushcache (valpop) job
+
+The pushcache job or [valpop](https://github.com/RedHatInsights/valpop), including minio, will be enabled by default when you run `make run-local`.
+To disable the pushcache job, you will need to set `enablePushCache` to `false` under the `examples/feenvironment.yaml` file. You can also update other information such as `pushCacheImage` and `pushCacheBucket` in this file as well.
+
+To disable the pushcache job for a certain frontend, you should set `pushCacheDisable: true` in the CRD spec.
+
+For example:
+```
+spec:
+  envName: env-boot
+  title: Inventory
+  pushCacheDisable: true
+  deploymentRepo: https://github.com/RedHatInsights/insights-inventory-frontend
+  API:
+    versions:
+    - v1
+```
+
+The minio or AWS bucket secrets are stored under `examples/minio-bucket-secret.yaml`.
 
 ## E2E testing with kuttl
 

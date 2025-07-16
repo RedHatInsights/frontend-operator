@@ -145,6 +145,8 @@ install-resources:
 	oc apply -f config/crd/bases/cloud.redhat.com_bundles.yaml
 	oc apply -f examples/clowdenvironment.yaml
 	oc apply -f examples/feenvironment.yaml -n boot
+	oc apply -f examples/minio.yaml
+	oc apply -f examples/minio-bucket-secret.yaml -n boot
 	oc apply -f examples/inventory.yaml -n boot
 	oc apply -f examples/bundle.yaml -n boot
 	oc apply -f examples/chrome.yaml -n boot
