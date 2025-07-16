@@ -85,7 +85,7 @@ spec:
             defaultMode: 420
       containers:
         - name: valpop-pushcache
-          image: quay.io/repository/redhat-user-workloads/hcc-platex-services-tenant/valpop
+          image: quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop
           command:
             - /bin/bash
             - '-c'
