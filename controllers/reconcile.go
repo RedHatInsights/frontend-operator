@@ -450,11 +450,11 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 	}
 
 	pushCacheVolume := v1.Volume{
-		Name: "pushcache",
+		Name: "config",
 		VolumeSource: v1.VolumeSource{
 			ConfigMap: &v1.ConfigMapVolumeSource{
 				LocalObjectReference: v1.LocalObjectReference{
-					Name: "pushcache",
+					Name: r.Frontend.Spec.EnvName,
 				},
 			},
 		},
@@ -478,19 +478,19 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 	hostname := objectStoreInfo.Endpoint
 
 	// Construct the pushcache startup command
-	command := fmt.Sprintf("sleep 120; valpop populate -r data/${ROUTE_PATH} -s ${DIST_FOLDER} --hostname %s --username %s --password %s", *hostname, *awsUsername, *awsPassword)
+	command := fmt.Sprintf("sleep 10; ls /opt/app-root/; valpop populate -r /opt/app-root/src -s dist --hostname %s --port 9000 --username %s --password %s", *hostname, *awsUsername, *awsPassword)
 
-	// Modify the obejct to set the things we care about
+	volumeMounts := []v1.VolumeMount{}
+	volumeMounts = append(volumeMounts, v1.VolumeMount{
+		Name:      "config",
+		MountPath: "/opt/app-root/pushcache",
+	})
+
+	// Modify the object to set the things we care about
 	pushCacheContainer := v1.Container{
-		Name:  "valpop-pushcache",
-		Image: r.FrontendEnvironment.Spec.PushCacheImage,
-		VolumeMounts: []v1.VolumeMount{
-			{
-				Name:      "pushcache",
-				MountPath: "/opt/app-root/pushcache",
-				SubPath:   "valpop",
-			},
-		},
+		Name:         "valpop-pushcache",
+		Image:        r.FrontendEnvironment.Spec.PushCacheImage,
+		VolumeMounts: volumeMounts,
 		// Run the pushcache startup command
 		Command: []string{"/bin/bash", "-c", command},
 	}
