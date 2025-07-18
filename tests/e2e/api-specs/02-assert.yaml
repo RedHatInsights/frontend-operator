@@ -1,0 +1,96 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-basic-app-environment
+  namespace: test-basic-app
+  labels:
+    frontendenvironment: test-basic-app-environment
+data:
+  # Test that api-specs.json contains properly sorted API specs:
+  # 1. service-a specs first (sorted by URL)
+  # 2. service-b specs next (sorted by URL) 
+  # 3. empty serviceRef specs last (sorted by URL)
+  api-specs.json: '[{"url":"https://console.redhat.com/api/frontend-a/v1/openapi.json","bundleLabels":["ansible"],"serviceRef":"service-a"},{"url":"https://console.redhat.com/api/frontend-a/v2/openapi.json","bundleLabels":["ansible"],"serviceRef":"service-a"},{"url":"https://console.redhat.com/api/frontend-b/v1/openapi.json","bundleLabels":["insights"],"serviceRef":"service-b"},{"url":"https://console.redhat.com/api/frontend-b/v2/openapi.json","bundleLabels":["insights"],"serviceRef":"service-b"},{"url":"https://console.redhat.com/api/no-service/v1/openapi.json","bundleLabels":["insights"],"serviceRef":""},{"url":"https://console.redhat.com/api/no-service/v3/openapi.json","bundleLabels":["insights"],"serviceRef":""}]'
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: frontend-service-a-frontend
+  namespace: test-basic-app
+  labels:
+    frontend: frontend-service-a
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: frontend-service-a
+spec:
+  selector:
+    matchLabels:
+      frontend: frontend-service-a
+  template:
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name: test-basic-app-environment
+            defaultMode: 420
+        - name: caddy
+          configMap:
+            name: test-basic-app-environment
+            defaultMode: 420
+            items:
+            - key: Caddyfile
+              path: Caddyfile
+        - name: config-chrome
+          configMap:
+            defaultMode: 420
+            items:
+            - key: fed-modules.json
+              path: fed-modules.json
+            name: test-basic-app-environment
+      containers:
+        - name: fe-image
+          image: 'quay.io/cloudservices/test-frontend:latest'
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9000
+              protocol: TCP
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: frontend-service-b-frontend
+  namespace: test-basic-app
+  labels:
+    frontend: frontend-service-b
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: frontend-service-b
+spec:
+  selector:
+    matchLabels:
+      frontend: frontend-service-b
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: frontend-no-service-frontend
+  namespace: test-basic-app
+  labels:
+    frontend: frontend-no-service
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: frontend-no-service
+spec:
+  selector:
+    matchLabels:
+      frontend: frontend-no-service
+            - mountPath: /srv/dist/operator-generated/fed-modules.json
+              name: config-chrome
+              subPath: fed-modules.json

@@ -1,0 +1,75 @@
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: test-api-specs-environment
+  namespace: test-api-specs
+spec:
+  generateNavJSON: false
+  ssl: false
+  hostname: foo.redhat.com
+  sso: https://sso.foo.redhat.com
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: frontend-service-b
+  namespace: test-api-specs
+spec:
+  API:
+    specs:
+      - url: https://console.redhat.com/api/frontend-b/v1/openapi.json
+        bundleLabels: ["insights"]
+        serviceRef: service-b
+      - url: https://console.redhat.com/api/frontend-b/v2/openapi.json
+        bundleLabels: ["insights"]
+        serviceRef: service-b
+  frontend:
+    paths:
+      - /apps/frontend-b
+  envName: test-api-specs-environment
+  image: quay.io/cloudservices/test-frontend:latest
+  title: Frontend B
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: frontend-service-a
+  namespace: test-api-specs
+spec:
+  API:
+    specs:
+      - url: https://console.redhat.com/api/frontend-a/v2/openapi.json
+        bundleLabels: ["ansible"]
+        serviceRef: service-a
+      - url: https://console.redhat.com/api/frontend-a/v1/openapi.json
+        bundleLabels: ["ansible"]
+        serviceRef: service-a
+  frontend:
+    paths:
+      - /apps/frontend-a
+  envName: test-api-specs-environment
+  image: quay.io/cloudservices/test-frontend:latest
+  title: Frontend A
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: frontend-no-service
+  namespace: test-api-specs
+spec:
+  API:
+    specs:
+      - url: https://console.redhat.com/api/no-service/v3/openapi.json
+        bundleLabels: ["insights"]
+        serviceRef: ""
+      - url: https://console.redhat.com/api/no-service/v1/openapi.json
+        bundleLabels: ["insights"]
+        serviceRef: ""
+  frontend:
+    paths:
+      - /apps/no-service
+  envName: test-api-specs-environment
+  image: quay.io/cloudservices/test-frontend:latest
+  title: Frontend No Service
+
