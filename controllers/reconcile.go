@@ -81,7 +81,7 @@ func (r *FrontendReconciliation) run() error {
 			}
 		}
 		// If push cache is enabled for the environment, add the push cache container
-		if r.FrontendEnvironment.Spec.EnablePushCache && r.FrontendEnvironment.Spec.PushCacheImage != "" && !r.Frontend.Spec.PushCacheDisable {
+		if r.FrontendEnvironment.Spec.EnablePushCache && contains(r.FrontendEnvironment.Spec.PushCacheAllowlist, r.Frontend.Name) && r.Frontend.Spec.Image != "" {
 			if err := r.createOrUpdateJob(r.generatePushCacheJobName, r.populatePushCacheContainer); err != nil {
 				return err
 			}
@@ -98,6 +98,15 @@ func (r *FrontendReconciliation) run() error {
 		}
 	}
 	return nil
+}
+
+func contains(arr []string, target string) bool {
+	for _, s := range arr {
+		if s == target {
+			return true
+		}
+	}
+	return false
 }
 
 func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment, frontend *crd.Frontend) []v1.VolumeMount {
@@ -450,7 +459,7 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 	}
 
 	pushCacheVolume := v1.Volume{
-		Name: "config",
+		Name: "pushcache-volume",
 		VolumeSource: v1.VolumeSource{
 			ConfigMap: &v1.ConfigMapVolumeSource{
 				LocalObjectReference: v1.LocalObjectReference{
@@ -473,23 +482,25 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 		return err
 	}
 
+	bucketName := objectStoreInfo.Name
 	awsUsername := objectStoreInfo.AccessKey
 	awsPassword := objectStoreInfo.SecretKey
 	hostname := objectStoreInfo.Endpoint
+	port := objectStoreInfo.Port
 
 	// Construct the pushcache startup command
-	command := fmt.Sprintf("sleep 10; ls /opt/app-root/; valpop populate -r /opt/app-root/src -s dist --hostname %s --port 9000 --username %s --password %s", *hostname, *awsUsername, *awsPassword)
+	command := fmt.Sprintf("sleep 10; valpop populate -r %s -s /srv/dist --bucket %s --hostname %s --port %s --username %s --password %s", r.Frontend.Name, bucketName, *hostname, *port, *awsUsername, *awsPassword)
 
 	volumeMounts := []v1.VolumeMount{}
 	volumeMounts = append(volumeMounts, v1.VolumeMount{
-		Name:      "config",
-		MountPath: "/opt/app-root/pushcache",
+		Name:      "pushcache-volume",
+		MountPath: "/opt/pushcache-volume",
 	})
 
 	// Modify the object to set the things we care about
 	pushCacheContainer := v1.Container{
 		Name:         "valpop-pushcache",
-		Image:        r.FrontendEnvironment.Spec.PushCacheImage,
+		Image:        r.Frontend.Spec.Image,
 		VolumeMounts: volumeMounts,
 		// Run the pushcache startup command
 		Command: []string{"/bin/bash", "-c", command},
@@ -573,6 +584,7 @@ type ObjectStoreBucket struct {
 	Name      string
 	Region    *string
 	Endpoint  *string
+	Port      *string
 	TLS       *bool
 }
 
@@ -646,6 +658,12 @@ func ExtractBucketConfigFromSecret(secrets []v1.Secret, targetBucketName string)
 			}
 			if endpointData, ok := currentSecret.Data["endpoint"]; ok {
 				bucketConfig.Endpoint = utils.StringPtr(string(endpointData))
+			}
+
+			// Default Objectstore Port to 443
+			bucketConfig.Port = utils.StringPtr(string("443"))
+			if portData, ok := currentSecret.Data["port"]; ok {
+				bucketConfig.Port = utils.StringPtr(string(portData))
 			}
 
 			return bucketConfig, nil
@@ -873,11 +891,6 @@ func (r *FrontendReconciliation) manageExistingJob(jobName string) (bool, error)
 // If it does exist and is from the current frontend image it will return
 // If it does exist and is not from the current frontend image it will delete it and create a new one
 func (r *FrontendReconciliation) createOrUpdateJob(generateJobName func() string, populateContainer func(*batchv1.Job) error) error {
-	// Guard on frontend opting out of cache busting
-	if r.Frontend.Spec.PushCacheDisable {
-		return nil
-	}
-
 	jobName := generateJobName()
 
 	// If the job exists and is from the current frontend image we can return

@@ -5,8 +5,9 @@ metadata:
 spec:
   sso: https://env-boot-auth/auth/
   enablePushCache: true
-  pushCacheImage: "quay.io/tahmidefaz/valpop:latest"
-  pushCacheBucket: "stage-hcm-frontend-pushcache-bucket"
+  pushCacheBucket: "frontend"
+  pushCacheAllowlist:
+    - inventory
   targetNamespaces:
     - feo-testing
   monitoring:

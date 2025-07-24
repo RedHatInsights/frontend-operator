@@ -22,7 +22,7 @@ metadata:
   labels:
     type: local
 spec:
-  storageClassName: manual
+  storageClassName: standard
   capacity:
     storage: 100Mi # Adjust storage capacity as needed
   accessModes:
@@ -34,10 +34,10 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: minio-pvc-2
+  name: minio-pvc
   namespace: minio-env
 spec:
-  storageClassName: manual
+  storageClassName: standard
   accessModes:
     - ReadWriteOnce
   resources:
@@ -63,10 +63,10 @@ spec:
       volumes:
         - name: storage
           persistentVolumeClaim:
-            claimName: minio-pvc-2
+            claimName: minio-pvc
       containers:
         - name: minio
-          image: minio/minio:latest # You can specify a specific version, e.g., minio/minio:RELEASE.2024-07-09T03-24-42Z
+          image: quay.io/minio/minio:latest
           args:
             - server
             - /storage
@@ -102,3 +102,29 @@ spec:
       port: 9001 # Service port for MinIO Console
       targetPort: 9001 # Container port for MinIO Console
       name: console
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-minio-bucket-job
+  namespace: minio-env # Ensure it's in the same namespace
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-minio
+          image: busybox
+          command: ["sh", "-c", "until nc -vz minio-service.minio-env.svc.cluster.local 9000; do echo waiting for minio; sleep 2; done;"]
+      containers:
+        - name: mc-cli
+          image: quay.io/minio/mc:latest
+          envFrom:
+            - secretRef:
+                name: minio-secret
+          command: ["sh", "-c"]
+          args:
+            - |
+              mc alias set minio http://minio-service.minio-env.svc.cluster.local:9000 $MINIO_ACCESS_KEY $MINIO_SECRET_KEY
+              mc mb frontend # 'frontend' is the s3 bucket name
+  backoffLimit: 4
