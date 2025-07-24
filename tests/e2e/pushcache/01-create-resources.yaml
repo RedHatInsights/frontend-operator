@@ -10,8 +10,9 @@ spec:
   sso: https://sso.foo.redhat.com
   overwriteCaddyConfig: true
   enablePushCache: true
-  pushCacheImage: "quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop"
   pushCacheBucket: "stage-hcm-frontend-pushcache-bucket"
+  pushCacheAllowlist:
+    - chrome-test-defaults
 ---
 apiVersion: cloud.redhat.com/v1alpha1
 kind: Frontend
@@ -40,7 +41,6 @@ metadata:
   name: chrome-test-optout
   namespace: test-pushcache
 spec:
-  pushCacheDisable: true
   API:
     versions:
       - v1

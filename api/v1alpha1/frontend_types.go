@@ -141,8 +141,6 @@ type FrontendSpec struct {
 	AkamaiCacheBustDisable bool `json:"akamaiCacheBustDisable,omitempty" yaml:"akamaiCacheBustDisable,omitempty"`
 	// Files to cache bust
 	AkamaiCacheBustPaths []string `json:"akamaiCacheBustPaths,omitempty" yaml:"akamaiCacheBustPaths,omitempty"`
-	// Push cache job opt-out
-	PushCacheDisable bool `json:"pushCacheDisable,omitempty" yaml:"pushCacheDisable,omitempty"`
 	// The search index partials for the resource
 	SearchEntries []*SearchEntry `json:"searchEntries,omitempty" yaml:"searchEntries,omitempty"`
 	// Data for the all services dropdown
