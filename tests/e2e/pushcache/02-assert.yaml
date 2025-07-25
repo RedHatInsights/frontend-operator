@@ -79,22 +79,21 @@ spec:
         frontend-image: quay.io/cloudservices/insights-chrome-frontend:720317c
     spec:
       volumes:
-        - name: pushcache
+        - name: pushcache-volume
           configMap:
-            name: pushcache
+            name: test-pushcache-environment
             defaultMode: 420
       containers:
         - name: valpop-pushcache
-          image: quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop
+          image: quay.io/cloudservices/insights-chrome-frontend:720317c
           command:
             - /bin/bash
             - '-c'
-            - 'sleep 120; valpop populate -r data/${ROUTE_PATH} -s ${DIST_FOLDER} --hostname https://s3.us-west-2.amazonaws.com --username access_key --password secret_access_key'
+            - 'sleep 120; valpop populate -r chrome-test-defaults -s /srv/dist --bucket stage-hcm-frontend-pushcache-bucket --hostname https://s3.us-west-2.amazonaws.com --port 443 --username access_key --password secret_access_key'
           resources: {}
           volumeMounts:
-            - name: pushcache
-              mountPath: /opt/app-root/pushcache
-              subPath: valpop
+            - name: pushcache-volume
+              mountPath: /opt/pushcache-volume
       restartPolicy: Never
 ---
 kind: Deployment
