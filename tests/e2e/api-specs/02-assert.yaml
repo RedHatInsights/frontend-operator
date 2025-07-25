@@ -2,22 +2,24 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: test-basic-app-environment
-  namespace: test-basic-app
+  name: test-api-specs-environment
+  namespace: test-api-specs
   labels:
-    frontendenvironment: test-basic-app-environment
+    frontendenv: test-api-specs-environment
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      controller: true
+      kind: FrontendEnvironment
+      name: test-api-specs-environment
 data:
-  # Test that api-specs.json contains properly sorted API specs:
-  # 1. service-a specs first (sorted by URL)
-  # 2. service-b specs next (sorted by URL) 
-  # 3. empty serviceRef specs last (sorted by URL)
-  api-specs.json: '[{"url":"https://console.redhat.com/api/frontend-a/v1/openapi.json","bundleLabels":["ansible"],"serviceRef":"service-a"},{"url":"https://console.redhat.com/api/frontend-a/v2/openapi.json","bundleLabels":["ansible"],"serviceRef":"service-a"},{"url":"https://console.redhat.com/api/frontend-b/v1/openapi.json","bundleLabels":["insights"],"serviceRef":"service-b"},{"url":"https://console.redhat.com/api/frontend-b/v2/openapi.json","bundleLabels":["insights"],"serviceRef":"service-b"},{"url":"https://console.redhat.com/api/no-service/v1/openapi.json","bundleLabels":["insights"],"serviceRef":""},{"url":"https://console.redhat.com/api/no-service/v3/openapi.json","bundleLabels":["insights"],"serviceRef":""}]'
+  # Test that api-specs.json contains properly sorted API specs
+  api-specs.json: "[{\"url\":\"https://console.redhat.com/api/frontend-a/v1/openapi.json\",\"bundleLabels\":[\"ansible\"],\"serviceRef\":\"service-a\"},{\"url\":\"https://console.redhat.com/api/frontend-a/v2/openapi.json\",\"bundleLabels\":[\"ansible\"],\"serviceRef\":\"service-a\"},{\"url\":\"https://console.redhat.com/api/frontend-b/v1/openapi.json\",\"bundleLabels\":[\"insights\"],\"serviceRef\":\"service-b\"},{\"url\":\"https://console.redhat.com/api/frontend-b/v2/openapi.json\",\"bundleLabels\":[\"insights\"],\"serviceRef\":\"service-b\"}]"
 ---
 kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: frontend-service-a-frontend
-  namespace: test-basic-app
+  namespace: test-api-specs
   labels:
     frontend: frontend-service-a
   ownerReferences:
@@ -29,15 +31,18 @@ spec:
     matchLabels:
       frontend: frontend-service-a
   template:
+    metadata:
+      labels:
+        frontend: frontend-service-a
     spec:
       volumes:
         - name: config
           configMap:
-            name: test-basic-app-environment
+            name:  test-api-specs-environment
             defaultMode: 420
         - name: caddy
           configMap:
-            name: test-basic-app-environment
+            name: test-api-specs-environment
             defaultMode: 420
             items:
             - key: Caddyfile
@@ -48,10 +53,10 @@ spec:
             items:
             - key: fed-modules.json
               path: fed-modules.json
-            name: test-basic-app-environment
+            name: test-api-specs-environment
       containers:
         - name: fe-image
-          image: 'quay.io/cloudservices/test-frontend:latest'
+          image: 'quay.io/cloudservices/insights-chrome-frontend:720317c'
           ports:
             - name: web
               containerPort: 80
@@ -59,12 +64,18 @@ spec:
             - name: metrics
               containerPort: 9000
               protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /opt/app-root/src/build/stable/operator-generated
+            - mountPath: /srv/dist/operator-generated/fed-modules.json
+              name: config-chrome
+              subPath: fed-modules.json
 ---
 kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: frontend-service-b-frontend
-  namespace: test-basic-app
+  namespace: test-api-specs
   labels:
     frontend: frontend-service-b
   ownerReferences:
@@ -75,12 +86,52 @@ spec:
   selector:
     matchLabels:
       frontend: frontend-service-b
+  template:
+    metadata:
+      labels:
+        frontend: frontend-service-b
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name:  test-api-specs-environment
+            defaultMode: 420
+        - name: caddy
+          configMap:
+            name: test-api-specs-environment
+            defaultMode: 420
+            items:
+            - key: Caddyfile
+              path: Caddyfile
+        - name: config-chrome
+          configMap:
+            defaultMode: 420
+            items:
+            - key: fed-modules.json
+              path: fed-modules.json
+            name: test-api-specs-environment
+      containers:
+        - name: fe-image
+          image: 'quay.io/cloudservices/insights-chrome-frontend:720317c'
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9000
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /opt/app-root/src/build/stable/operator-generated
+            - mountPath: /srv/dist/operator-generated/fed-modules.json
+              name: config-chrome
+              subPath: fed-modules.json
 ---
 kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: frontend-no-service-frontend
-  namespace: test-basic-app
+  namespace: test-api-specs
   labels:
     frontend: frontend-no-service
   ownerReferences:
@@ -91,6 +142,43 @@ spec:
   selector:
     matchLabels:
       frontend: frontend-no-service
+  template:
+    metadata:
+      labels:
+        frontend: frontend-no-service
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name:  test-api-specs-environment
+            defaultMode: 420
+        - name: caddy
+          configMap:
+            name: test-api-specs-environment
+            defaultMode: 420
+            items:
+            - key: Caddyfile
+              path: Caddyfile
+        - name: config-chrome
+          configMap:
+            defaultMode: 420
+            items:
+            - key: fed-modules.json
+              path: fed-modules.json
+            name: test-api-specs-environment
+      containers:
+        - name: fe-image
+          image: 'quay.io/cloudservices/insights-chrome-frontend:720317c'
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9000
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /opt/app-root/src/build/stable/operator-generated
             - mountPath: /srv/dist/operator-generated/fed-modules.json
               name: config-chrome
               subPath: fed-modules.json
