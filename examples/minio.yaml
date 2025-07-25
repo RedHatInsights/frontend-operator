@@ -18,7 +18,7 @@ data:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: minio-pv-2
+  name: minio-pv
   labels:
     type: local
 spec:
@@ -126,5 +126,5 @@ spec:
           args:
             - |
               mc alias set minio http://minio-service.minio-env.svc.cluster.local:9000 $MINIO_ACCESS_KEY $MINIO_SECRET_KEY
-              mc mb frontend # 'frontend' is the s3 bucket name
+              mc mb minio/frontend # 'frontend' is the s3 bucket name
   backoffLimit: 4
