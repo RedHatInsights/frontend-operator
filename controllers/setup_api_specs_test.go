@@ -22,12 +22,10 @@ func TestSetupAPISpecs(t *testing.T) {
 							{
 								URL:          "https://console.redhat.com/api/test1/v2/openapi.json",
 								BundleLabels: []string{"insights"},
-								FrontendName: "service-b",
 							},
 							{
 								URL:          "https://console.redhat.com/api/test1/v1/openapi.json",
 								BundleLabels: []string{"insights"},
-								FrontendName: "service-a",
 							},
 						},
 					},
@@ -42,18 +40,15 @@ func TestSetupAPISpecs(t *testing.T) {
 						Specs: []crd.APISpecInfo{
 							{
 								URL:          "https://console.redhat.com/api/test2/v3/openapi.json",
-								BundleLabels: []string{"ansible"},
-								FrontendName: "", // Empty frontendName - should be sorted last
-							},
+								BundleLabels: []string{"ansible"}},
 							{
 								URL:          "https://console.redhat.com/api/test2/v1/openapi.json",
 								BundleLabels: []string{"ansible"},
-								FrontendName: "", // Empty frontendName - should be sorted last
 							},
 							{
 								URL:          "https://console.redhat.com/api/test2/v2/openapi.json",
 								BundleLabels: []string{"ansible"},
-								FrontendName: "service-a",
+								FrontendName: "service-a", // gets overridden
 							},
 						},
 					},
@@ -91,16 +86,16 @@ func TestSetupAPISpecs(t *testing.T) {
 		t.Errorf("Expected %d API specs, got %d", expectedSpecs, len(apiSpecs))
 	}
 
-	// Test sorting: should be sorted by FrontendName (empty last), then by URL
+	// Test sorting: should be sorted by FrontendName (none should be empty), then by URL
 	expectedOrder := []struct {
 		FrontendName string
 		URL          string
 	}{
-		{"service-a", "https://console.redhat.com/api/test1/v1/openapi.json"},
-		{"service-a", "https://console.redhat.com/api/test2/v2/openapi.json"},
-		{"service-b", "https://console.redhat.com/api/test1/v2/openapi.json"},
-		{"", "https://console.redhat.com/api/test2/v1/openapi.json"},
-		{"", "https://console.redhat.com/api/test2/v3/openapi.json"},
+		{"test-frontend-1", "https://console.redhat.com/api/test1/v1/openapi.json"},
+		{"test-frontend-1", "https://console.redhat.com/api/test1/v2/openapi.json"},
+		{"test-frontend-2", "https://console.redhat.com/api/test2/v1/openapi.json"},
+		{"test-frontend-2", "https://console.redhat.com/api/test2/v2/openapi.json"},
+		{"test-frontend-2", "https://console.redhat.com/api/test2/v3/openapi.json"},
 	}
 
 	if len(apiSpecs) != len(expectedOrder) {
