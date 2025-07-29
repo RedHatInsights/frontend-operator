@@ -13,7 +13,7 @@ metadata:
       name: test-api-specs-environment
 data:
   # Test that api-specs.json contains properly sorted API specs
-  api-specs.json: "[{\"url\":\"https://console.redhat.com/api/frontend-a/v1/openapi.json\",\"bundleLabels\":[\"ansible\"],\"frontendName\":\"service-a\"},{\"url\":\"https://console.redhat.com/api/frontend-a/v2/openapi.json\",\"bundleLabels\":[\"ansible\"],\"frontendName\":\"service-a\"},{\"url\":\"https://console.redhat.com/api/frontend-b/v1/openapi.json\",\"bundleLabels\":[\"insights\"],\"frontendName\":\"service-b\"},{\"url\":\"https://console.redhat.com/api/frontend-b/v2/openapi.json\",\"bundleLabels\":[\"insights\"],\"frontendName\":\"service-b\"}]"
+  api-specs.json: "[{\"url\":\"https://console.redhat.com/api/frontend-a/v1/openapi.json\",\"bundleLabels\":[\"ansible\"],\"frontendName\":\"frontend-service-a\"},{\"url\":\"https://console.redhat.com/api/frontend-a/v2/openapi.json\",\"bundleLabels\":[\"ansible\"],\"frontendName\":\"frontend-service-a\"},{\"url\":\"https://console.redhat.com/api/frontend-b/v1/openapi.json\",\"bundleLabels\":[\"insights\"],\"frontendName\":\"frontend-service-b\"},{\"url\":\"https://console.redhat.com/api/frontend-b/v2/openapi.json\",\"bundleLabels\":[\"insights\"],\"frontendName\":\"frontend-service-b\"}]"
 ---
 kind: Deployment
 apiVersion: apps/v1

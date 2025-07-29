@@ -68,7 +68,7 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 							{
 								URL:          "https://console.redhat.com/api/inventory/v1/openapi.json",
 								BundleLabels: []string{"insights"},
-								FrontendName:   "inventory-deployment-abcdefg",
+								FrontendName: "inventory-deployment-abcdefg",
 							},
 						},
 					},
@@ -117,7 +117,7 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 							{
 								URL:          "https://console.redhat.com/api/inventory/v1/openapi.json",
 								BundleLabels: []string{"insights"},
-								FrontendName:   "inventory-deployment-abcdefg",
+								FrontendName: "inventory-deployment-abcdefg",
 							},
 						},
 					},
@@ -323,7 +323,7 @@ var _ = ginkgo.Describe("Frontend controller with service", func() {
 							{
 								URL:          "https://console.redhat.com/api/inventory/v1/openapi.json",
 								BundleLabels: []string{"insights"},
-								FrontendName:   "inventory-deployment-abcdefg",
+								FrontendName: "inventory-deployment-abcdefg",
 							},
 						},
 					},
@@ -717,7 +717,7 @@ var _ = ginkgo.Describe("ServiceMonitor Creation", func() {
 							{
 								URL:          "https://console.redhat.com/api/inventory/v1/openapi.json",
 								BundleLabels: []string{"insights"},
-								FrontendName:   "inventory-deployment-abcdefg",
+								FrontendName: "inventory-deployment-abcdefg",
 							},
 						},
 					},
@@ -1912,7 +1912,7 @@ var _ = ginkgo.Describe("APIInfo Schema Validation", func() {
 							{
 								URL:          "https://console.redhat.com/api/test/v1/openapi.json",
 								BundleLabels: []string{"insights"},
-								FrontendName:   "test-service-deployment",
+								FrontendName: "test-service-deployment",
 							},
 						},
 					},
@@ -1965,17 +1965,17 @@ var _ = ginkgo.Describe("APIInfo Schema Validation", func() {
 							{
 								URL:          "https://console.redhat.com/api/inventory/v1/openapi.json",
 								BundleLabels: []string{"insights"},
-								FrontendName:   "inventory-service",
+								FrontendName: "inventory-service",
 							},
 							{
 								URL:          "https://console.redhat.com/api/compliance/v1/openapi.json",
 								BundleLabels: []string{"insights", "compliance"},
-								FrontendName:   "compliance-service",
+								FrontendName: "compliance-service",
 							},
 							{
 								URL:          "https://console.redhat.com/api/automation/v1/openapi.json",
 								BundleLabels: []string{"ansible"},
-								FrontendName:   "automation-service",
+								FrontendName: "automation-service",
 							},
 						},
 					},
@@ -2127,7 +2127,7 @@ var _ = ginkgo.Describe("APIInfo Schema Validation", func() {
 							{
 								URL:          "https://console.redhat.com/api/detailed-test/v1/openapi.json",
 								BundleLabels: []string{"insights", "testing", "validation"},
-								FrontendName:   "detailed-test-service-deployment-12345",
+								FrontendName: "detailed-test-service-deployment-12345",
 							},
 						},
 					},

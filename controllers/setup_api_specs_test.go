@@ -22,12 +22,12 @@ func TestSetupAPISpecs(t *testing.T) {
 							{
 								URL:          "https://console.redhat.com/api/test1/v2/openapi.json",
 								BundleLabels: []string{"insights"},
-								FrontendName:   "service-b",
+								FrontendName: "service-b",
 							},
 							{
 								URL:          "https://console.redhat.com/api/test1/v1/openapi.json",
 								BundleLabels: []string{"insights"},
-								FrontendName:   "service-a",
+								FrontendName: "service-a",
 							},
 						},
 					},
@@ -43,17 +43,17 @@ func TestSetupAPISpecs(t *testing.T) {
 							{
 								URL:          "https://console.redhat.com/api/test2/v3/openapi.json",
 								BundleLabels: []string{"ansible"},
-								FrontendName:   "", // Empty frontendName - should be sorted last
+								FrontendName: "", // Empty frontendName - should be sorted last
 							},
 							{
 								URL:          "https://console.redhat.com/api/test2/v1/openapi.json",
 								BundleLabels: []string{"ansible"},
-								FrontendName:   "", // Empty frontendName - should be sorted last
+								FrontendName: "", // Empty frontendName - should be sorted last
 							},
 							{
 								URL:          "https://console.redhat.com/api/test2/v2/openapi.json",
 								BundleLabels: []string{"ansible"},
-								FrontendName:   "service-a",
+								FrontendName: "service-a",
 							},
 						},
 					},
@@ -94,7 +94,7 @@ func TestSetupAPISpecs(t *testing.T) {
 	// Test sorting: should be sorted by FrontendName (empty last), then by URL
 	expectedOrder := []struct {
 		FrontendName string
-		URL        string
+		URL          string
 	}{
 		{"service-a", "https://console.redhat.com/api/test1/v1/openapi.json"},
 		{"service-a", "https://console.redhat.com/api/test2/v2/openapi.json"},

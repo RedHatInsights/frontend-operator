@@ -1364,6 +1364,10 @@ func setupAPISpecs(feList *crd.FrontendList) []crd.APISpecInfo {
 
 	for _, frontend := range feList.Items {
 		if frontend.Spec.API != nil && len(frontend.Spec.API.Specs) > 0 {
+			// Override FrontendName in each spec
+			for i := range frontend.Spec.API.Specs {
+				frontend.Spec.API.Specs[i].FrontendName = frontend.Name
+			}
 			allSpecs = append(allSpecs, frontend.Spec.API.Specs...)
 		}
 	}
