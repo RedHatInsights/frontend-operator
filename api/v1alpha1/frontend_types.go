@@ -30,7 +30,7 @@ import (
 type APISpecInfo struct {
 	URL          string   `json:"url" yaml:"url"`                                   // openapi spec url i.e. console.redhat.com/api/name/v1/openapi.json
 	BundleLabels []string `json:"bundleLabels" yaml:"bundleLabels"`                 // insights; ansible; etc.
-	ServiceRef   string   `json:"serviceRef,omitempty" yaml:"serviceRef,omitempty"` // internal
+	FrontendName   string   `json:"frontendName,omitempty" yaml:"frontendName,omitempty"` // internal
 }
 
 type APIInfo struct {

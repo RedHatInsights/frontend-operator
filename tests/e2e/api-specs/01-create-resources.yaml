@@ -23,10 +23,10 @@ spec:
     specs:
       - url: https://console.redhat.com/api/frontend-b/v1/openapi.json
         bundleLabels: ["insights"]
-        serviceRef: service-b
+        frontendName: service-b
       - url: https://console.redhat.com/api/frontend-b/v2/openapi.json
         bundleLabels: ["insights"]
-        serviceRef: service-b
+        frontendName: service-b
   deploymentRepo: https://github.com/RedHatInsights/insights-chrome
   frontend:
     paths:
@@ -48,10 +48,10 @@ spec:
     specs:
       - url: https://console.redhat.com/api/frontend-a/v2/openapi.json
         bundleLabels: ["ansible"]
-        serviceRef: service-a
+        frontendName: service-a
       - url: https://console.redhat.com/api/frontend-a/v1/openapi.json
         bundleLabels: ["ansible"]
-        serviceRef: service-a
+        frontendName: service-a
   deploymentRepo: https://github.com/RedHatInsights/insights-chrome
   frontend:
     paths:

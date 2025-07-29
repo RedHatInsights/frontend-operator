@@ -22,12 +22,12 @@ func TestSetupAPISpecs(t *testing.T) {
 							{
 								URL:          "https://console.redhat.com/api/test1/v2/openapi.json",
 								BundleLabels: []string{"insights"},
-								ServiceRef:   "service-b",
+								FrontendName:   "service-b",
 							},
 							{
 								URL:          "https://console.redhat.com/api/test1/v1/openapi.json",
 								BundleLabels: []string{"insights"},
-								ServiceRef:   "service-a",
+								FrontendName:   "service-a",
 							},
 						},
 					},
@@ -43,17 +43,17 @@ func TestSetupAPISpecs(t *testing.T) {
 							{
 								URL:          "https://console.redhat.com/api/test2/v3/openapi.json",
 								BundleLabels: []string{"ansible"},
-								ServiceRef:   "", // Empty serviceRef - should be sorted last
+								FrontendName:   "", // Empty frontendName - should be sorted last
 							},
 							{
 								URL:          "https://console.redhat.com/api/test2/v1/openapi.json",
 								BundleLabels: []string{"ansible"},
-								ServiceRef:   "", // Empty serviceRef - should be sorted last
+								FrontendName:   "", // Empty frontendName - should be sorted last
 							},
 							{
 								URL:          "https://console.redhat.com/api/test2/v2/openapi.json",
 								BundleLabels: []string{"ansible"},
-								ServiceRef:   "service-a",
+								FrontendName:   "service-a",
 							},
 						},
 					},
@@ -91,9 +91,9 @@ func TestSetupAPISpecs(t *testing.T) {
 		t.Errorf("Expected %d API specs, got %d", expectedSpecs, len(apiSpecs))
 	}
 
-	// Test sorting: should be sorted by ServiceRef (empty last), then by URL
+	// Test sorting: should be sorted by FrontendName (empty last), then by URL
 	expectedOrder := []struct {
-		ServiceRef string
+		FrontendName string
 		URL        string
 	}{
 		{"service-a", "https://console.redhat.com/api/test1/v1/openapi.json"},
@@ -108,8 +108,8 @@ func TestSetupAPISpecs(t *testing.T) {
 	}
 
 	for i, expected := range expectedOrder {
-		if apiSpecs[i].ServiceRef != expected.ServiceRef {
-			t.Errorf("Position %d: expected ServiceRef '%s', got '%s'", i, expected.ServiceRef, apiSpecs[i].ServiceRef)
+		if apiSpecs[i].FrontendName != expected.FrontendName {
+			t.Errorf("Position %d: expected FrontendName '%s', got '%s'", i, expected.FrontendName, apiSpecs[i].FrontendName)
 		}
 		if apiSpecs[i].URL != expected.URL {
 			t.Errorf("Position %d: expected URL '%s', got '%s'", i, expected.URL, apiSpecs[i].URL)

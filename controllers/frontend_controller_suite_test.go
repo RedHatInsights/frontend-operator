@@ -68,7 +68,7 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 							{
 								URL:          "https://console.redhat.com/api/inventory/v1/openapi.json",
 								BundleLabels: []string{"insights"},
-								ServiceRef:   "inventory-deployment-abcdefg",
+								FrontendName:   "inventory-deployment-abcdefg",
 							},
 						},
 					},
@@ -117,7 +117,7 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 							{
 								URL:          "https://console.redhat.com/api/inventory/v1/openapi.json",
 								BundleLabels: []string{"insights"},
-								ServiceRef:   "inventory-deployment-abcdefg",
+								FrontendName:   "inventory-deployment-abcdefg",
 							},
 						},
 					},
@@ -252,7 +252,7 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 			}, timeout, interval).Should(gomega.BeTrue())
 			gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName))
 			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
-				"api-specs.json":   "[{\"url\":\"https://console.redhat.com/api/inventory/v1/openapi.json\",\"bundleLabels\":[\"insights\"],\"serviceRef\":\"inventory-deployment-abcdefg\"},{\"url\":\"https://console.redhat.com/api/inventory/v1/openapi.json\",\"bundleLabels\":[\"insights\"],\"serviceRef\":\"inventory-deployment-abcdefg\"}]",
+				"api-specs.json":   "[{\"url\":\"https://console.redhat.com/api/inventory/v1/openapi.json\",\"bundleLabels\":[\"insights\"],\"frontendName\":\"inventory-deployment-abcdefg\"},{\"url\":\"https://console.redhat.com/api/inventory/v1/openapi.json\",\"bundleLabels\":[\"insights\"],\"frontendName\":\"inventory-deployment-abcdefg\"}]",
 				"Caddyfile":        caddyFileTemplate,
 				"fed-modules.json": "{\"testFrontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"},\"fullProfile\":true,\"cdnPath\":\"/things/test/\"},\"testFrontend2\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"cheese\":\"pasty\"},\"fullProfile\":false,\"cdnPath\":\"/things/test/\"}}",
 			}))
@@ -323,7 +323,7 @@ var _ = ginkgo.Describe("Frontend controller with service", func() {
 							{
 								URL:          "https://console.redhat.com/api/inventory/v1/openapi.json",
 								BundleLabels: []string{"insights"},
-								ServiceRef:   "inventory-deployment-abcdefg",
+								FrontendName:   "inventory-deployment-abcdefg",
 							},
 						},
 					},
@@ -397,7 +397,7 @@ var _ = ginkgo.Describe("Frontend controller with service", func() {
 			gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(FrontendEnvName))
 			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
 				"Caddyfile":        caddyFileTemplate,
-				"api-specs.json":   "[{\"url\":\"https://console.redhat.com/api/inventory/v1/openapi.json\",\"bundleLabels\":[\"insights\"],\"serviceRef\":\"inventory-deployment-abcdefg\"}]",
+				"api-specs.json":   "[{\"url\":\"https://console.redhat.com/api/inventory/v1/openapi.json\",\"bundleLabels\":[\"insights\"],\"frontendName\":\"inventory-deployment-abcdefg\"}]",
 				"fed-modules.json": "{\"testFrontendService\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"fullProfile\":false,\"cdnPath\":\"/things/test/\"}}",
 			}))
 
@@ -717,7 +717,7 @@ var _ = ginkgo.Describe("ServiceMonitor Creation", func() {
 							{
 								URL:          "https://console.redhat.com/api/inventory/v1/openapi.json",
 								BundleLabels: []string{"insights"},
-								ServiceRef:   "inventory-deployment-abcdefg",
+								FrontendName:   "inventory-deployment-abcdefg",
 							},
 						},
 					},
@@ -1912,7 +1912,7 @@ var _ = ginkgo.Describe("APIInfo Schema Validation", func() {
 							{
 								URL:          "https://console.redhat.com/api/test/v1/openapi.json",
 								BundleLabels: []string{"insights"},
-								ServiceRef:   "test-service-deployment",
+								FrontendName:   "test-service-deployment",
 							},
 						},
 					},
@@ -1938,7 +1938,7 @@ var _ = ginkgo.Describe("APIInfo Schema Validation", func() {
 			gomega.Expect(createdFrontend.Spec.API.Specs).Should(gomega.HaveLen(1))
 			gomega.Expect(createdFrontend.Spec.API.Specs[0].URL).Should(gomega.Equal("https://console.redhat.com/api/test/v1/openapi.json"))
 			gomega.Expect(createdFrontend.Spec.API.Specs[0].BundleLabels).Should(gomega.Equal([]string{"insights"}))
-			gomega.Expect(createdFrontend.Spec.API.Specs[0].ServiceRef).Should(gomega.Equal("test-service-deployment"))
+			gomega.Expect(createdFrontend.Spec.API.Specs[0].FrontendName).Should(gomega.Equal("test-service-deployment"))
 
 			ginkgo.By("Cleaning up")
 			gomega.Expect(k8sClient.Delete(ctx, frontend)).Should(gomega.Succeed())
@@ -1965,17 +1965,17 @@ var _ = ginkgo.Describe("APIInfo Schema Validation", func() {
 							{
 								URL:          "https://console.redhat.com/api/inventory/v1/openapi.json",
 								BundleLabels: []string{"insights"},
-								ServiceRef:   "inventory-service",
+								FrontendName:   "inventory-service",
 							},
 							{
 								URL:          "https://console.redhat.com/api/compliance/v1/openapi.json",
 								BundleLabels: []string{"insights", "compliance"},
-								ServiceRef:   "compliance-service",
+								FrontendName:   "compliance-service",
 							},
 							{
 								URL:          "https://console.redhat.com/api/automation/v1/openapi.json",
 								BundleLabels: []string{"ansible"},
-								ServiceRef:   "automation-service",
+								FrontendName:   "automation-service",
 							},
 						},
 					},
@@ -2004,17 +2004,17 @@ var _ = ginkgo.Describe("APIInfo Schema Validation", func() {
 			// Verify first spec
 			gomega.Expect(createdFrontend.Spec.API.Specs[0].URL).Should(gomega.Equal("https://console.redhat.com/api/inventory/v1/openapi.json"))
 			gomega.Expect(createdFrontend.Spec.API.Specs[0].BundleLabels).Should(gomega.Equal([]string{"insights"}))
-			gomega.Expect(createdFrontend.Spec.API.Specs[0].ServiceRef).Should(gomega.Equal("inventory-service"))
+			gomega.Expect(createdFrontend.Spec.API.Specs[0].FrontendName).Should(gomega.Equal("inventory-service"))
 
 			// Verify second spec
 			gomega.Expect(createdFrontend.Spec.API.Specs[1].URL).Should(gomega.Equal("https://console.redhat.com/api/compliance/v1/openapi.json"))
 			gomega.Expect(createdFrontend.Spec.API.Specs[1].BundleLabels).Should(gomega.Equal([]string{"insights", "compliance"}))
-			gomega.Expect(createdFrontend.Spec.API.Specs[1].ServiceRef).Should(gomega.Equal("compliance-service"))
+			gomega.Expect(createdFrontend.Spec.API.Specs[1].FrontendName).Should(gomega.Equal("compliance-service"))
 
 			// Verify third spec
 			gomega.Expect(createdFrontend.Spec.API.Specs[2].URL).Should(gomega.Equal("https://console.redhat.com/api/automation/v1/openapi.json"))
 			gomega.Expect(createdFrontend.Spec.API.Specs[2].BundleLabels).Should(gomega.Equal([]string{"ansible"}))
-			gomega.Expect(createdFrontend.Spec.API.Specs[2].ServiceRef).Should(gomega.Equal("automation-service"))
+			gomega.Expect(createdFrontend.Spec.API.Specs[2].FrontendName).Should(gomega.Equal("automation-service"))
 
 			ginkgo.By("Cleaning up")
 			gomega.Expect(k8sClient.Delete(ctx, multiSpecFrontend)).Should(gomega.Succeed())
@@ -2127,7 +2127,7 @@ var _ = ginkgo.Describe("APIInfo Schema Validation", func() {
 							{
 								URL:          "https://console.redhat.com/api/detailed-test/v1/openapi.json",
 								BundleLabels: []string{"insights", "testing", "validation"},
-								ServiceRef:   "detailed-test-service-deployment-12345",
+								FrontendName:   "detailed-test-service-deployment-12345",
 							},
 						},
 					},
@@ -2155,7 +2155,7 @@ var _ = ginkgo.Describe("APIInfo Schema Validation", func() {
 			gomega.Expect(spec.URL).Should(gomega.Equal("https://console.redhat.com/api/detailed-test/v1/openapi.json"))
 			gomega.Expect(spec.BundleLabels).Should(gomega.HaveLen(3))
 			gomega.Expect(spec.BundleLabels).Should(gomega.ContainElements("insights", "testing", "validation"))
-			gomega.Expect(spec.ServiceRef).Should(gomega.Equal("detailed-test-service-deployment-12345"))
+			gomega.Expect(spec.FrontendName).Should(gomega.Equal("detailed-test-service-deployment-12345"))
 
 			ginkgo.By("Cleaning up")
 			gomega.Expect(k8sClient.Delete(ctx, validationFrontend)).Should(gomega.Succeed())
