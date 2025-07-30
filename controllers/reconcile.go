@@ -1364,32 +1364,36 @@ func setupAPISpecs(feList *crd.FrontendList) []crd.APISpecInfo {
 
 	for _, frontend := range feList.Items {
 		if frontend.Spec.API != nil && len(frontend.Spec.API.Specs) > 0 {
+			// Override FrontendName in each spec
+			for i := range frontend.Spec.API.Specs {
+				frontend.Spec.API.Specs[i].FrontendName = frontend.Name
+			}
 			allSpecs = append(allSpecs, frontend.Spec.API.Specs...)
 		}
 	}
 
-	// Sort deterministically by ServiceRef then URL
+	// Sort deterministically by FrontendName then URL
 	sort.Slice(allSpecs, func(i, j int) bool {
-		serviceRefI := allSpecs[i].ServiceRef
-		serviceRefJ := allSpecs[j].ServiceRef
+		frontendNameI := allSpecs[i].FrontendName
+		frontendNameJ := allSpecs[j].FrontendName
 
 		// If both are empty, sort by URL
-		if serviceRefI == "" && serviceRefJ == "" {
+		if frontendNameI == "" && frontendNameJ == "" {
 			return allSpecs[i].URL < allSpecs[j].URL
 		}
 		// If only i is empty, j comes first
-		if serviceRefI == "" {
+		if frontendNameI == "" {
 			return false
 		}
 		// If only j is empty, i comes first
-		if serviceRefJ == "" {
+		if frontendNameJ == "" {
 			return true
 		}
-		// If both have values, sort by ServiceRef then URL
-		if serviceRefI == serviceRefJ {
+		// If both have values, sort by FrontendName then URL
+		if frontendNameI == frontendNameJ {
 			return allSpecs[i].URL < allSpecs[j].URL
 		}
-		return serviceRefI < serviceRefJ
+		return frontendNameI < frontendNameJ
 	})
 
 	return allSpecs
