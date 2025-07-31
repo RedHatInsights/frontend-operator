@@ -1359,6 +1359,46 @@ func createConfigmapHash(cfgMap *v1.ConfigMap) (string, error) {
 	return hash, nil
 }
 
+func setupAPISpecs(feList *crd.FrontendList) []crd.APISpecInfo {
+	var allSpecs []crd.APISpecInfo
+
+	for _, frontend := range feList.Items {
+		if frontend.Spec.API != nil && len(frontend.Spec.API.Specs) > 0 {
+			// Override FrontendName in each spec
+			for i := range frontend.Spec.API.Specs {
+				frontend.Spec.API.Specs[i].FrontendName = frontend.Name
+			}
+			allSpecs = append(allSpecs, frontend.Spec.API.Specs...)
+		}
+	}
+
+	// Sort deterministically by FrontendName then URL
+	sort.Slice(allSpecs, func(i, j int) bool {
+		frontendNameI := allSpecs[i].FrontendName
+		frontendNameJ := allSpecs[j].FrontendName
+
+		// If both are empty, sort by URL
+		if frontendNameI == "" && frontendNameJ == "" {
+			return allSpecs[i].URL < allSpecs[j].URL
+		}
+		// If only i is empty, j comes first
+		if frontendNameI == "" {
+			return false
+		}
+		// If only j is empty, i comes first
+		if frontendNameJ == "" {
+			return true
+		}
+		// If both have values, sort by FrontendName then URL
+		if frontendNameI == frontendNameJ {
+			return allSpecs[i].URL < allSpecs[j].URL
+		}
+		return frontendNameI < frontendNameJ
+	})
+
+	return allSpecs
+}
+
 // setupConfigMaps will create configmaps for the various config json
 // files, including fed-modules.json and the various bundle json files
 func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
@@ -1477,6 +1517,14 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 		return err
 	}
 
+	// Collect API specs from all frontends
+	apiSpecs := setupAPISpecs(feList)
+
+	// Log information about collected API specs for debugging
+	if len(apiSpecs) > 0 {
+		r.Log.Info("Collected API specs for config map", "specCount", len(apiSpecs))
+	}
+
 	fedModulesJSONData, err := json.Marshal(fedModules)
 	if err != nil {
 		return err
@@ -1500,6 +1548,11 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 	}
 
 	bundlesJSONData, err := json.Marshal(bundles)
+	if err != nil {
+		return err
+	}
+
+	apiSpecsJSONData, err := json.Marshal(apiSpecs)
 	if err != nil {
 		return err
 	}
@@ -1528,6 +1581,10 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 
 	if len(bundles) > 0 {
 		cfgMap.Data["bundles.json"] = string(bundlesJSONData)
+	}
+
+	if len(apiSpecs) > 0 {
+		cfgMap.Data["api-specs.json"] = string(apiSpecsJSONData)
 	}
 
 	return nil

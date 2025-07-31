@@ -543,7 +543,7 @@ objects:
                             items:
                               type: string
                             type: array
-                          serviceRef:
+                          frontendName:
                             type: string
                           url:
                             type: string
