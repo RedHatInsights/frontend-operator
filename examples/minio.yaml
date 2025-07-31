@@ -1,0 +1,130 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: minio-env
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-secret
+  namespace: minio-env
+type: Opaque
+data:
+  # keys: minioadmin
+  MINIO_ACCESS_KEY: bWluaW9hZG1pbg==
+  MINIO_SECRET_KEY: bWluaW9hZG1pbg==
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: minio-pv
+  labels:
+    type: local
+spec:
+  storageClassName: standard
+  capacity:
+    storage: 100Mi # Adjust storage capacity as needed
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data/minio" # This path will be created inside the Minikube VM
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-pvc
+  namespace: minio-env
+spec:
+  storageClassName: standard
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi # Must match or be less than the PV capacity
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio-deployment
+  namespace: minio-env
+spec:
+  selector:
+    matchLabels:
+      app: minio
+  strategy:
+    type: Recreate # Ensures old pod is terminated before new one is created for single-pod with hostPath
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: minio-pvc
+      containers:
+        - name: minio
+          image: quay.io/minio/minio:latest
+          args:
+            - server
+            - /storage
+            - --console-address
+            - ":9001" # MinIO console port
+          envFrom:
+            - secretRef:
+                name: minio-secret # References the secret defined above
+          ports:
+            - containerPort: 9000 # S3 API port
+              name: minio-api
+            - containerPort: 9001 # Console port
+              name: minio-console
+          volumeMounts:
+            - name: storage
+              mountPath: "/storage"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-service
+  namespace: minio-env
+spec:
+  type: LoadBalancer # Requires 'minikube tunnel' for host access
+  selector:
+    app: minio
+  ports:
+    - protocol: TCP
+      port: 9000 # Service port for S3 API
+      targetPort: 9000 # Container port for S3 API
+      name: api
+    - protocol: TCP
+      port: 9001 # Service port for MinIO Console
+      targetPort: 9001 # Container port for MinIO Console
+      name: console
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-minio-bucket-job
+  namespace: minio-env # Ensure it's in the same namespace
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      initContainers:
+        - name: wait-for-minio
+          image: busybox
+          command: ["sh", "-c", "until nc -vz minio-service.minio-env.svc.cluster.local 9000; do echo waiting for minio; sleep 2; done;"]
+      containers:
+        - name: mc-cli
+          image: quay.io/minio/mc:latest
+          envFrom:
+            - secretRef:
+                name: minio-secret
+          command: ["sh", "-c"]
+          args:
+            - |
+              mc alias set minio http://minio-service.minio-env.svc.cluster.local:9000 $MINIO_ACCESS_KEY $MINIO_SECRET_KEY
+              mc mb minio/frontend # 'frontend' is the s3 bucket name
+  backoffLimit: 4
