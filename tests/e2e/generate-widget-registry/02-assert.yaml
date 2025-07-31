@@ -68,7 +68,32 @@ metadata:
 data:
   fed-modules.json: >-
     {"widgets":{"manifestLocation":"/apps/widgets/fed-mods.json","moduleID":"widgets","fullProfile":false,"cdnPath":"/apps/widgets/"}}
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: test-widget-registry-environment-widget-registry
+  namespace: test-widget-registry
+  labels:
+    frontendenv: test-widget-registry-environment
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      name: test-widget-registry-environment
+data:
   widget-registry.json: >-
-    [{"scope":"widgets","module":"./RandomWidget","config":{"icon":"CogIcon","title":"Random Widget","headerLink":{"title":"","href":""}},"defaults":{"sm":{"w":1,"h":1,"maxH":1,"minH":1},"md":{"w":1,"h":1,"maxH":1,"minH":1},"lg":{"w":1,"h":1,"maxH":1,"minH":1},"xl":{"w":1,"h":1,"maxH":1,"minH":1}},"frontendRef":"widgets"}]
-
-
+    [{"scope":"widgets","module":"./RandomWidget","defaults":{"w":1,"h":1,"maxH":1,"minH":1},"config":{"title":"Random Widget","icon":"CogIcon","headerLink":{"title":"","href":""}},"frontendRef":"widgets"}]
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: test-widget-registry-environment-base-widget-dashboard-templates
+  namespace: test-widget-registry
+  labels:
+    frontendenv: test-widget-registry-environment
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      name: test-widget-registry-environment
+data:
+  base-widget-dashboard-templates.json: >-
+    [{"name":"widgets-landing","displayName":"landing","templateConfig":{"sm":[{"w":2,"h":2,"cx":0,"cy":1,"i":"widget-id-sm","static":true}],"md":[{"w":2,"h":2,"cx":0,"cy":1,"i":"widget-id-md","static":true}],"lg":[{"w":2,"h":2,"cx":0,"cy":1,"i":"widget-id-lg","static":true}],"xl":[{"w":2,"h":2,"cx":0,"cy":1,"i":"widget-id-xl","static":true}]},"frontendRef":"widgets"}]
