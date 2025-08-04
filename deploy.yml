@@ -330,16 +330,8 @@ objects:
                   description: Enable Akamai Cache Bust
                   type: boolean
                 enablePushCache:
-                  description: Enable Push Cache container
+                  description: Enable Push Cache Container
                   type: boolean
-                pushCacheBucket:
-                  description: The AWS S3 bucket for Push Cache
-                  type: string
-                pushCacheAllowlist:
-                  discription: Frontends where the pushcache job is allowed to run
-                  type: array
-                  items:
-                    type: string
                 generateNavJSON:
                   description: 'GenerateNavJSON determines if the nav json configmap
 
@@ -404,6 +396,15 @@ objects:
 
                     frontend container Caddyfiles with a common core Caddyfile'
                   type: boolean
+                pushCacheAllowlist:
+                  description: List of frontends where the push cache job is allowed
+                    to run
+                  items:
+                    type: string
+                  type: array
+                pushCacheBucket:
+                  description: S3 Push Cache Bucket
+                  type: string
                 requests:
                   additionalProperties:
                     anyOf:
