@@ -42,26 +42,42 @@ spec:
         icon: "CogIcon"
         title: "Random Widget"
       defaults:
-        sm: 
-          w: 1
-          h: 1
-          maxH: 1
-          minH: 1
-        md: 
-          w: 1
-          h: 1
-          maxH: 1
-          minH: 1
-        lg: 
-          w: 1
-          h: 1
-          maxH: 1
-          minH: 1
-        xl: 
-          w: 1
-          h: 1
-          maxH: 1
-          minH: 1
+        w: 1
+        h: 1
+        maxH: 2
+        minH: 1
+  baseWidgetLayouts:
+    - name: "landing"
+      displayName: "Landing"
+      templateConfig:
+        sm:
+          - w: 2
+            h: 2
+            cx: 0
+            cy: 1
+            i: "widget-id-sm"
+            static: true
+        md:
+          - w: 2
+            h: 2
+            cx: 0
+            cy: 1
+            i: "widget-id-md"
+            static: true
+        lg:
+          - w: 2
+            h: 2
+            cx: 0
+            cy: 1
+            i: "widget-id-lg"
+            static: true
+        xl:
+          - w: 2
+            h: 2
+            cx: 0
+            cy: 1
+            i: "widget-id-xl"
+            static: true
   serviceTiles:
     - section: automation
       group: ansible
@@ -146,3 +162,5 @@ spec:
         - id: link-three
           title: Link three injected
           href: /link-three
+
+# "spec.baseWidgetLayouts[0].templateConfig.xl[0].true"
