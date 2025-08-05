@@ -127,8 +127,6 @@ type FrontendEnvironmentSpec struct {
 	EnablePushCache bool `json:"enablePushCache,omitempty"`
 	// S3 Push Cache Bucket
 	PushCacheBucket string `json:"pushCacheBucket,omitempty"`
-	// List of frontends where the push cache job is allowed to run
-	PushCacheAllowlist []string `json:"pushCacheAllowlist,omitempty"`
 
 	DefaultReplicas *int32 `json:"defaultReplicas,omitempty" yaml:"defaultReplicas,omitempty"`
 	// For the ChromeUI to render navigation bundles

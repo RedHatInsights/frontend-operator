@@ -150,6 +150,8 @@ type FrontendSpec struct {
 	Replicas       *int32         `json:"replicas,omitempty" yaml:"replicas,omitempty"`
 	// Injects configuration from application when enabled
 	FeoConfigEnabled bool `json:"feoConfigEnabled,omitempty" yaml:"feoConfigEnabled,omitempty"`
+	// Push cache job enabled
+	PushCacheEnabled bool `json:"pushCacheEnabled,omitempty" yaml:"pushCacheEnabled,omitempty"`
 }
 
 var ReconciliationSuccessful = "ReconciliationSuccessful"

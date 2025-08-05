@@ -86,17 +86,19 @@ Once you update it you can access the app from `https://env-boot/insights/invent
 
 ### Pushcache (valpop) job
 
-The pushcache job or [valpop](https://github.com/RedHatInsights/valpop), will be disabled by default for a particular frontend when you run `make run-local`.
-To enable the pushcache job for a particular frontend, you will need to include the frontend name (`metadata.name`) to `pushCacheAllowlist` in `examples/feenvironment.yaml`. For example:
+The pushcache job or [valpop](https://github.com/RedHatInsights/valpop) will be disabled by default for all frontends.
+To enable the pushcache job for a particular frontend, you will need to set `puschCacheEnabled` to `true` in the frontend CRD (frontend.yaml) file. For example:
 
 ```yaml
-pushCacheAllowlist:
-  - inventory
+spec:
+  image: quay.io/...
+  pushCacheEnabled: true
 ```
 
-To disable the pushcache job altogether, irregardless of `pushCacheAllowlist`, set `enablePushCache` to `false` in the frontend enviornment file mentioned above. In that file, you can also update the `pushCacheBucket` to specify a particular s3 bucket for valpop.
+To disable the pushcache job altogether through the Frontend Operator, irregardless of `pushCacheEnabled: true` in the frontend resources, set `enablePushCache` to `false` in the frontend enviornment of the FEO.
+You can also update the `pushCacheBucket` to specify a particular s3 bucket for valpop in the FEO frontend environment.
 
-The minio or AWS bucket secrets are stored under `examples/minio-bucket-secret.yaml`.
+For local development purposes, the minio or AWS bucket secrets are stored under `examples/minio-bucket-secret.yaml`.
 
 ## E2E testing with kuttl
 

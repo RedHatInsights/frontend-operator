@@ -81,7 +81,7 @@ func (r *FrontendReconciliation) run() error {
 			}
 		}
 		// If push cache is enabled for the environment, add the push cache container
-		if r.FrontendEnvironment.Spec.EnablePushCache && contains(r.FrontendEnvironment.Spec.PushCacheAllowlist, r.Frontend.Name) && r.Frontend.Spec.Image != "" {
+		if r.FrontendEnvironment.Spec.EnablePushCache && r.Frontend.Spec.Image != "" && r.Frontend.Spec.PushCacheEnabled {
 			if err := r.createOrUpdateJob(r.generatePushCacheJobName, r.populatePushCacheContainer); err != nil {
 				return err
 			}
@@ -98,15 +98,6 @@ func (r *FrontendReconciliation) run() error {
 		}
 	}
 	return nil
-}
-
-func contains(arr []string, target string) bool {
-	for _, s := range arr {
-		if s == target {
-			return true
-		}
-	}
-	return false
 }
 
 func populateContainerVolumeMounts(frontendEnvironment *crd.FrontendEnvironment, frontend *crd.Frontend) []v1.VolumeMount {
@@ -635,12 +626,10 @@ func ExtractBucketConfigFromSecret(secrets []v1.Secret, targetBucketName string)
 		if !bucketNameFoundInThisSecret {
 			if annoValue, ok := currentSecret.Annotations[clowderBucketNamesAnnotation]; ok {
 				annotatedBucketNames := strings.Split(annoValue, ",")
-				for _, name := range annotatedBucketNames {
-					if strings.TrimSpace(name) == targetBucketName {
-						bucketNameFoundInThisSecret = true
-						break // Found the bucket name in the annotation
-					}
-				}
+
+				bucketNameFoundInThisSecret = slices.ContainsFunc(annotatedBucketNames, func(name string) bool {
+					return strings.TrimSpace(name) == targetBucketName
+				})
 			}
 		}
 

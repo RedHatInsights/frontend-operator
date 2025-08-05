@@ -609,11 +609,6 @@ func (in *FrontendEnvironmentSpec) DeepCopyInto(out *FrontendEnvironmentSpec) {
 			(*out)[key] = val
 		}
 	}
-	if in.PushCacheAllowlist != nil {
-		in, out := &in.PushCacheAllowlist, &out.PushCacheAllowlist
-		*out = make([]string, len(*in))
-		copy(*out, *in)
-	}
 	if in.DefaultReplicas != nil {
 		in, out := &in.DefaultReplicas, &out.DefaultReplicas
 		*out = new(int32)

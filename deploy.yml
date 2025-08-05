@@ -396,12 +396,6 @@ objects:
 
                     frontend container Caddyfiles with a common core Caddyfile'
                   type: boolean
-                pushCacheAllowlist:
-                  description: List of frontends where the push cache job is allowed
-                    to run
-                  items:
-                    type: string
-                  type: array
                 pushCacheBucket:
                   description: S3 Push Cache Bucket
                   type: string
@@ -997,6 +991,9 @@ objects:
                     - segmentId
                     type: object
                   type: array
+                pushCacheEnabled:
+                  description: Push cache job enabled
+                  type: boolean
                 replicas:
                   format: int32
                   type: integer

@@ -151,12 +151,6 @@ spec:
                   OverwriteCaddyConfig determines if the operator should overwrite
                   frontend container Caddyfiles with a common core Caddyfile
                 type: boolean
-              pushCacheAllowlist:
-                description: List of frontends where the push cache job is allowed
-                  to run
-                items:
-                  type: string
-                type: array
               pushCacheBucket:
                 description: S3 Push Cache Bucket
                 type: string

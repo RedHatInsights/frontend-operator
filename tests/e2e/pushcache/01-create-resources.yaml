@@ -11,8 +11,6 @@ spec:
   overwriteCaddyConfig: true
   enablePushCache: true
   pushCacheBucket: "stage-hcm-frontend-pushcache-bucket"
-  pushCacheAllowlist:
-    - chrome-test-defaults
 ---
 apiVersion: cloud.redhat.com/v1alpha1
 kind: Frontend
@@ -34,6 +32,7 @@ spec:
       ssoUrl: 'https://'
     manifestLocation: /apps/chrome/js/fed-mods.json
   title: Chrome
+  pushCacheEnabled: true
 ---
 apiVersion: cloud.redhat.com/v1alpha1
 kind: Frontend

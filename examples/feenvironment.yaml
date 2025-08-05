@@ -6,8 +6,6 @@ spec:
   sso: https://env-boot-auth/auth/
   enablePushCache: true
   pushCacheBucket: frontend
-  pushCacheAllowlist:
-    - inventory
   targetNamespaces:
     - feo-testing
   monitoring:
