@@ -123,6 +123,10 @@ type FrontendEnvironmentSpec struct {
 	// OverwriteCaddyConfig determines if the operator should overwrite
 	// frontend container Caddyfiles with a common core Caddyfile
 	OverwriteCaddyConfig bool `json:"overwriteCaddyConfig,omitempty"`
+	// Enable Push Cache Container
+	EnablePushCache bool `json:"enablePushCache,omitempty"`
+	// S3 Push Cache Bucket
+	PushCacheBucket string `json:"pushCacheBucket,omitempty"`
 
 	DefaultReplicas *int32 `json:"defaultReplicas,omitempty" yaml:"defaultReplicas,omitempty"`
 	// For the ChromeUI to render navigation bundles

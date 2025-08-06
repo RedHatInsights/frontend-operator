@@ -101,8 +101,14 @@ func (r *FrontendReconciliation) run() error {
 			return err
 		}
 		// If cache busting is enabled for the environment, add the akamai cache bust container
-		if r.FrontendEnvironment.Spec.EnableAkamaiCacheBust && r.FrontendEnvironment.Spec.AkamaiCacheBustImage != "" {
-			if err := r.createOrUpdateCacheBustJob(); err != nil {
+		if r.FrontendEnvironment.Spec.EnableAkamaiCacheBust && r.FrontendEnvironment.Spec.AkamaiCacheBustImage != "" && !r.Frontend.Spec.AkamaiCacheBustDisable {
+			if err := r.createOrUpdateJob(r.generateCacheBustJobName, r.populateCacheBustContainer); err != nil {
+				return err
+			}
+		}
+		// If push cache is enabled for the environment, add the push cache container
+		if r.FrontendEnvironment.Spec.EnablePushCache && r.Frontend.Spec.Image != "" && r.Frontend.Spec.PushCacheEnabled {
+			if err := r.createOrUpdateJob(r.generatePushCacheJobName, r.populatePushCacheContainer); err != nil {
 				return err
 			}
 		}
@@ -446,6 +452,93 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 	return nil
 }
 
+// populatePushCacheContainer adds the push cache container to the deployment
+func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) error {
+	configMap := &v1.ConfigMap{}
+	configMap.SetName("pushcache")
+	configMap.SetNamespace(r.Frontend.Namespace)
+
+	nn := types.NamespacedName{
+		Name:      "pushcache",
+		Namespace: r.Frontend.Namespace,
+	}
+	labels := r.FrontendEnvironment.GetLabels()
+	labler := utils.GetCustomLabeler(labels, nn, r.FrontendEnvironment)
+	labler(configMap)
+
+	configMap.SetOwnerReferences([]metav1.OwnerReference{r.Frontend.MakeOwnerReference()})
+
+	// Create the configmap with the Client if it doesn't already exist
+	if err := r.Client.Create(r.Ctx, configMap); err != nil {
+		if !k8serr.IsAlreadyExists(err) {
+			return err
+		}
+	}
+
+	pushCacheVolume := v1.Volume{
+		Name: "pushcache-volume",
+		VolumeSource: v1.VolumeSource{
+			ConfigMap: &v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: r.Frontend.Spec.EnvName,
+				},
+			},
+		},
+	}
+
+	j.Spec.Template.Spec.Volumes = []v1.Volume{pushCacheVolume}
+
+	secrets := v1.SecretList{}
+	err := r.Client.List(r.Ctx, &secrets, client.InNamespace(r.Frontend.Namespace))
+	if err != nil {
+		return err
+	}
+
+	objectStoreInfo, err := ExtractBucketConfigFromSecret(secrets.Items, r.FrontendEnvironment.Spec.PushCacheBucket)
+	if err != nil {
+		return err
+	}
+
+	bucketName := objectStoreInfo.Name
+	awsUsername := objectStoreInfo.AccessKey
+	awsPassword := objectStoreInfo.SecretKey
+	hostname := objectStoreInfo.Endpoint
+	port := objectStoreInfo.Port
+
+	// Construct the pushcache startup command; removing the sleep command will result in the pushcache job being spin up continously, without delay, and uploading the assets to s3
+	command := fmt.Sprintf("sleep 120; valpop populate -r %s -s /srv/dist --bucket %s --hostname %s --port %s --username %s --password %s", r.Frontend.Name, bucketName, *hostname, *port, *awsUsername, *awsPassword)
+
+	volumeMounts := []v1.VolumeMount{}
+	volumeMounts = append(volumeMounts, v1.VolumeMount{
+		Name:      "pushcache-volume",
+		MountPath: "/opt/pushcache-volume",
+	})
+
+	// Modify the object to set the things we care about
+	pushCacheContainer := v1.Container{
+		Name:         "valpop-pushcache",
+		Image:        r.Frontend.Spec.Image,
+		VolumeMounts: volumeMounts,
+		// Run the pushcache startup command
+		Command: []string{"/bin/bash", "-c", command},
+	}
+	// add the container to the spec containers
+	j.Spec.Template.Spec.Containers = []v1.Container{pushCacheContainer}
+
+	// Add the restart policy
+	j.Spec.Template.Spec.RestartPolicy = v1.RestartPolicyNever
+
+	annotations := j.Spec.Template.ObjectMeta.Annotations
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	annotations["kube-linter.io/ignore-all"] = "we don't need no any checking"
+
+	j.Spec.Template.ObjectMeta.SetAnnotations(annotations)
+
+	return nil
+}
+
 func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
 	// By default we just want the config and caddy volume
 	volumes := []v1.Volume{}
@@ -499,6 +592,101 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 
 	// Set the volumes on the deployment
 	d.Spec.Template.Spec.Volumes = volumes
+}
+
+// ObjectStoreBucket represents the configuration for an object storage bucket.
+type ObjectStoreBucket struct {
+	AccessKey *string
+	SecretKey *string
+	Name      string
+	Region    *string
+	Endpoint  *string
+	Port      *string
+	TLS       *bool
+}
+
+// ExtractBucketConfigFromSecret extracts ObjectStoreBucket configuration for a specific bucket name
+// from a given Kubernetes Secret. It searches for the bucket name either directly
+// in the secret's Data map under the "bucket" key, or within the
+// "clowder/bucket-names" annotation (if it's a comma-separated list).
+//
+// It returns the ObjectStoreBucket configuration and an error if the secret data is
+// invalid or incomplete for the specified bucket, or if the bucket name isn't found.
+func ExtractBucketConfigFromSecret(secrets []v1.Secret, targetBucketName string) (*ObjectStoreBucket, error) {
+	if len(secrets) == 0 {
+		return nil, fmt.Errorf("no secrets provided to search for bucket '%s'", targetBucketName)
+	}
+
+	clowderBucketNamesAnnotation := "clowder/bucket-names"
+
+	for _, secret := range secrets {
+		currentSecret := secret
+
+		// Check if essential credential keys are present in the current secret's Data
+		requiredCredentialKeys := []string{
+			"aws_access_key_id",
+			"aws_secret_access_key",
+		}
+
+		credentialsPresent := true
+		for _, key := range requiredCredentialKeys {
+			if _, ok := currentSecret.Data[key]; !ok {
+				credentialsPresent = false
+				break
+			}
+		}
+		if !credentialsPresent {
+			continue
+		}
+
+		bucketNameFoundInThisSecret := false
+
+		// Check for "bucket" key in secret.Data
+		if secretBucketData, ok := currentSecret.Data["bucket"]; ok {
+			if string(secretBucketData) == targetBucketName {
+				bucketNameFoundInThisSecret = true
+			}
+		}
+
+		// If not found in Data, check "clowder/bucket-names" annotation
+		if !bucketNameFoundInThisSecret {
+			if annoValue, ok := currentSecret.Annotations[clowderBucketNamesAnnotation]; ok {
+				annotatedBucketNames := strings.Split(annoValue, ",")
+
+				bucketNameFoundInThisSecret = slices.ContainsFunc(annotatedBucketNames, func(name string) bool {
+					return strings.TrimSpace(name) == targetBucketName
+				})
+			}
+		}
+
+		// If the target bucket name was found in this specific secret, extract its configuration
+		if bucketNameFoundInThisSecret {
+			bucketConfig := &ObjectStoreBucket{
+				Name:      targetBucketName,
+				AccessKey: utils.StringPtr(string(currentSecret.Data["aws_access_key_id"])),
+				SecretKey: utils.StringPtr(string(currentSecret.Data["aws_secret_access_key"])),
+				TLS:       utils.TruePtr(),
+			}
+
+			if regionData, ok := currentSecret.Data["aws_region"]; ok {
+				bucketConfig.Region = utils.StringPtr(string(regionData))
+			}
+			if endpointData, ok := currentSecret.Data["endpoint"]; ok {
+				bucketConfig.Endpoint = utils.StringPtr(string(endpointData))
+			}
+
+			// Default Objectstore Port to 443
+			bucketConfig.Port = utils.StringPtr(string("443"))
+			if portData, ok := currentSecret.Data["port"]; ok {
+				bucketConfig.Port = utils.StringPtr(string(portData))
+			}
+
+			return bucketConfig, nil
+		}
+	}
+
+	// If the loop completes and no matching secret was found
+	return nil, fmt.Errorf("configuration for bucket '%s' not found in any of the provided secrets", targetBucketName)
 }
 
 // Add the env vars if eny are set
@@ -649,17 +837,19 @@ func createPorts() []v1.ServicePort {
 	}
 }
 
-func (r *FrontendReconciliation) generateJobName() string {
+func (r *FrontendReconciliation) generateCacheBustJobName() string {
 	return r.Frontend.Name + "-frontend-cachebust"
+}
+
+func (r *FrontendReconciliation) generatePushCacheJobName() string {
+	return r.Frontend.Name + "-frontend-pushcache"
 }
 
 // getExistingJob returns the existing job if it exists
 // and a bool indicating if it exists or not
-func (r *FrontendReconciliation) getExistingJob() (*batchv1.Job, bool, error) {
+func (r *FrontendReconciliation) getExistingJob(jobName string) (*batchv1.Job, bool, error) {
 	// Job we'll fill up
 	j := &batchv1.Job{}
-
-	jobName := r.generateJobName()
 
 	// Define name of resource
 	nn := types.NamespacedName{
@@ -689,8 +879,8 @@ func (r *FrontendReconciliation) isJobFromCurrentFrontendImage(j *batchv1.Job) b
 
 // manageExistingJob will delete the existing job if it exists and is not from the current frontend image
 // It will return true if the job exists and is from the current frontend image
-func (r *FrontendReconciliation) manageExistingJob() (bool, error) {
-	j, exists, err := r.getExistingJob()
+func (r *FrontendReconciliation) manageExistingJob(jobName string) (bool, error) {
+	j, exists, err := r.getExistingJob(jobName)
 	if err != nil {
 		return false, err
 	}
@@ -712,19 +902,16 @@ func (r *FrontendReconciliation) manageExistingJob() (bool, error) {
 	return true, nil
 }
 
-// createOrUpdateCacheBustJob will create a new job if it doesn't exist
+// createOrUpdateJob will create a new job if it doesn't exist
 // If it does exist and is from the current frontend image it will return
 // If it does exist and is not from the current frontend image it will delete it and create a new one
-func (r *FrontendReconciliation) createOrUpdateCacheBustJob() error {
-	// Guard on frontend opting out of cache busting
-	if r.Frontend.Spec.AkamaiCacheBustDisable {
-		return nil
-	}
+func (r *FrontendReconciliation) createOrUpdateJob(generateJobName func() string, populateContainer func(*batchv1.Job) error) error {
+	jobName := generateJobName()
 
 	// If the job exists and is from the current frontend image we can return
 	// If the job exists and is not from the current frontend image we delete it
 	// If the job doesn't exist we create it
-	existsAndMatchesCurrentFrontendImage, err := r.manageExistingJob()
+	existsAndMatchesCurrentFrontendImage, err := r.manageExistingJob(jobName)
 	if err != nil {
 		return err
 	}
@@ -734,8 +921,6 @@ func (r *FrontendReconciliation) createOrUpdateCacheBustJob() error {
 
 	// Create job
 	j := &batchv1.Job{}
-
-	jobName := r.generateJobName()
 
 	// Set name
 	j.SetName(jobName)
@@ -770,7 +955,7 @@ func (r *FrontendReconciliation) createOrUpdateCacheBustJob() error {
 
 	j.Spec.Template.ObjectMeta.SetAnnotations(annotations)
 
-	errr := r.populateCacheBustContainer(j)
+	errr := populateContainer(j)
 	if errr != nil {
 		return errr
 	}
