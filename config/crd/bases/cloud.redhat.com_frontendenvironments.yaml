@@ -151,8 +151,8 @@ spec:
                   OverwriteCaddyConfig determines if the operator should overwrite
                   frontend container Caddyfiles with a common core Caddyfile
                 type: boolean
-              pushCacheBucket:
-                description: S3 Push Cache Bucket
+              pushCacheBucketSecretName:
+                description: S3 Push Cache Bucket secret name in Kubernetes
                 type: string
               requests:
                 additionalProperties:

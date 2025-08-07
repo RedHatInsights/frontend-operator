@@ -10,7 +10,7 @@ spec:
   sso: https://sso.foo.redhat.com
   overwriteCaddyConfig: true
   enablePushCache: true
-  pushCacheBucket: "stage-hcm-frontend-pushcache-bucket"
+  pushCacheBucketSecretName: "single-s3-bucket-creds"
 ---
 apiVersion: cloud.redhat.com/v1alpha1
 kind: Frontend

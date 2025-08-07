@@ -494,7 +494,7 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 		return err
 	}
 
-	objectStoreInfo, err := ExtractBucketConfigFromSecret(secrets.Items, r.FrontendEnvironment.Spec.PushCacheBucket)
+	objectStoreInfo, err := ExtractBucketConfigFromSecretByName(secrets.Items, r.FrontendEnvironment.Spec.PushCacheBucketSecretName)
 	if err != nil {
 		return err
 	}
@@ -605,78 +605,45 @@ type ObjectStoreBucket struct {
 	TLS       *bool
 }
 
-// ExtractBucketConfigFromSecret extracts ObjectStoreBucket configuration for a specific bucket name
-// from a given Kubernetes Secret. It searches for the bucket name either directly
-// in the secret's Data map under the "bucket" key, or within the
-// "clowder/bucket-names" annotation (if it's a comma-separated list).
-//
-// It returns the ObjectStoreBucket configuration and an error if the secret data is
-// invalid or incomplete for the specified bucket, or if the bucket name isn't found.
-func ExtractBucketConfigFromSecret(secrets []v1.Secret, targetBucketName string) (*ObjectStoreBucket, error) {
+// ExtractBucketConfigFromSecretByName extracts ObjectStoreBucket configuration from the provided k8 secret name
+func ExtractBucketConfigFromSecretByName(secrets []v1.Secret, targetSecretName string) (*ObjectStoreBucket, error) {
 	if len(secrets) == 0 {
-		return nil, fmt.Errorf("no secrets provided to search for bucket '%s'", targetBucketName)
+		return nil, fmt.Errorf("no secrets provided to search for secret '%s'", targetSecretName)
 	}
 
-	clowderBucketNamesAnnotation := "clowder/bucket-names"
-
 	for _, secret := range secrets {
-		currentSecret := secret
+		// Check if the current secret's metadata name matches the target name.
+		if secret.Name == targetSecretName {
+			// Found the target secret, now validate and extract the data.
+			currentSecret := secret
 
-		// Check if essential credential keys are present in the current secret's Data
-		requiredCredentialKeys := []string{
-			"aws_access_key_id",
-			"aws_secret_access_key",
-		}
-
-		credentialsPresent := true
-		for _, key := range requiredCredentialKeys {
-			if _, ok := currentSecret.Data[key]; !ok {
-				credentialsPresent = false
-				break
+			// Check for essential credential keys.
+			requiredCredentialKeys := []string{
+				"bucket",
+				"aws_region",
+				"endpoint",
+				"aws_access_key_id",
+				"aws_secret_access_key",
 			}
-		}
-		if !credentialsPresent {
-			continue
-		}
 
-		bucketNameFoundInThisSecret := false
-
-		// Check for "bucket" key in secret.Data
-		if secretBucketData, ok := currentSecret.Data["bucket"]; ok {
-			if string(secretBucketData) == targetBucketName {
-				bucketNameFoundInThisSecret = true
+			for _, key := range requiredCredentialKeys {
+				if _, ok := currentSecret.Data[key]; !ok {
+					return nil, fmt.Errorf("secret '%s' is missing the required key: '%s'", targetSecretName, key)
+				}
 			}
-		}
 
-		// If not found in Data, check "clowder/bucket-names" annotation
-		if !bucketNameFoundInThisSecret {
-			if annoValue, ok := currentSecret.Annotations[clowderBucketNamesAnnotation]; ok {
-				annotatedBucketNames := strings.Split(annoValue, ",")
-
-				bucketNameFoundInThisSecret = slices.ContainsFunc(annotatedBucketNames, func(name string) bool {
-					return strings.TrimSpace(name) == targetBucketName
-				})
-			}
-		}
-
-		// If the target bucket name was found in this specific secret, extract its configuration
-		if bucketNameFoundInThisSecret {
+			// Initialize the bucket configuration with the required fields.
 			bucketConfig := &ObjectStoreBucket{
-				Name:      targetBucketName,
+				Name:      string(currentSecret.Data["bucket"]),
 				AccessKey: utils.StringPtr(string(currentSecret.Data["aws_access_key_id"])),
 				SecretKey: utils.StringPtr(string(currentSecret.Data["aws_secret_access_key"])),
-				TLS:       utils.TruePtr(),
+				Region:    utils.StringPtr(string(currentSecret.Data["aws_region"])),
+				Endpoint:  utils.StringPtr(string(currentSecret.Data["endpoint"])),
+				TLS:       utils.TruePtr(), // Assuming TLS is true by default.
 			}
 
-			if regionData, ok := currentSecret.Data["aws_region"]; ok {
-				bucketConfig.Region = utils.StringPtr(string(regionData))
-			}
-			if endpointData, ok := currentSecret.Data["endpoint"]; ok {
-				bucketConfig.Endpoint = utils.StringPtr(string(endpointData))
-			}
-
-			// Default Objectstore Port to 443
-			bucketConfig.Port = utils.StringPtr(string("443"))
+			// Default Objectstore Port to "443" and then override if the data exists.
+			bucketConfig.Port = utils.StringPtr("443")
 			if portData, ok := currentSecret.Data["port"]; ok {
 				bucketConfig.Port = utils.StringPtr(string(portData))
 			}
@@ -685,8 +652,8 @@ func ExtractBucketConfigFromSecret(secrets []v1.Secret, targetBucketName string)
 		}
 	}
 
-	// If the loop completes and no matching secret was found
-	return nil, fmt.Errorf("configuration for bucket '%s' not found in any of the provided secrets", targetBucketName)
+	// If the loop completes without finding the secret.
+	return nil, fmt.Errorf("s3 secret with name '%s' not found", targetSecretName)
 }
 
 // Add the env vars if eny are set

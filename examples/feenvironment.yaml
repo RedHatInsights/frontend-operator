@@ -5,7 +5,7 @@ metadata:
 spec:
   sso: https://env-boot-auth/auth/
   enablePushCache: true
-  pushCacheBucket: frontend
+  pushCacheBucketSecretName: single-s3-creds
   targetNamespaces:
     - feo-testing
   monitoring:
