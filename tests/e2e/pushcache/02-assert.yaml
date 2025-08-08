@@ -89,7 +89,7 @@ spec:
           command:
             - /bin/bash
             - '-c'
-            - 'sleep 120; valpop populate -r chrome-test-defaults -s /srv/dist --bucket stage-hcm-frontend-pushcache-bucket --hostname https://s3.us-west-2.amazonaws.com --port 443 --username access_key --password secret_access_key'
+            - 'sleep 120; valpop populate -r chrome-test-defaults -s /srv/dist --bucket frontend --hostname minio-service.minio-env.svc.cluster.local --port 9000 --username minioadmin --password minioadmin'
           resources: {}
           volumeMounts:
             - name: pushcache-volume
