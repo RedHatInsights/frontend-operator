@@ -96,7 +96,6 @@ spec:
 ```
 
 To disable the pushcache job altogether through the Frontend Operator, irregardless of `pushCacheEnabled: true` in the frontend resources, set `enablePushCache` to `false` in the frontend enviornment of the FEO.
-You can also update the `pushCacheBucketSecretName` to specify a particular kubernetes secret name for the s3 bucket creds for valpop in the FEO frontend environment.
 
 For local development purposes, the minio or AWS bucket secrets are stored under `examples/minio-bucket-secret.yaml`.
 

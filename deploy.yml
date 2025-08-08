@@ -396,9 +396,6 @@ objects:
 
                     frontend container Caddyfiles with a common core Caddyfile'
                   type: boolean
-                pushCacheBucketSecretName:
-                  description: S3 Push Cache Bucket secret name in Kubernetes
-                  type: string
                 requests:
                   additionalProperties:
                     anyOf:
@@ -1935,6 +1932,19 @@ objects:
               port: 8081
             initialDelaySeconds: 5
             periodSeconds: 10
+          env:
+          - name: PUSHCACHE_AWS_ACCESS_KEY_ID
+            value: ${PUSHCACHE_AWS_ACCESS_KEY_ID}
+          - name: PUSHCACHE_AWS_SECRET_ACCESS_KEY
+            value: ${PUSHCACHE_AWS_SECRET_ACCESS_KEY}
+          - name: PUSHCACHE_AWS_BUCKET_NAME
+            value: ${PUSHCACHE_AWS_BUCKET_NAME}
+          - name: PUSHCACHE_AWS_REGION
+            value: ${PUSHCACHE_AWS_REGION}
+          - name: PUSHCACHE_AWS_ENDPOINT
+            value: ${PUSHCACHE_AWS_ENDPOINT}
+          - name: PUSHCACHE_AWS_PORT
+            value: ${PUSHCACHE_AWS_PORT}
           resources:
             limits:
               cpu: 200m
@@ -1953,4 +1963,15 @@ parameters:
   required: true
 - name: IMAGE
   value: quay.io/cloudservices/frontend-operator
-
+- name: PUSHCACHE_AWS_ACCESS_KEY_ID
+  value: ""
+- name: PUSHCACHE_AWS_SECRET_ACCESS_KEY
+  value: ""
+- name: PUSHCACHE_AWS_BUCKET_NAME
+  value: ""
+- name: PUSHCACHE_AWS_REGION
+  value: ""
+- name: PUSHCACHE_AWS_ENDPOINT
+  value: ""
+- name: PUSHCACHE_AWS_PORT
+  value: ""

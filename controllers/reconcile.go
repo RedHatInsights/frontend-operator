@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"os"
 	"slices"
 	"sort"
 	"strings"
@@ -494,7 +495,7 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 		return err
 	}
 
-	objectStoreInfo, err := ExtractBucketConfigFromSecretByName(secrets.Items, r.FrontendEnvironment.Spec.PushCacheBucketSecretName)
+	objectStoreInfo, err := ExtractBucketConfigFromEnv()
 	if err != nil {
 		return err
 	}
@@ -506,7 +507,7 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 	port := objectStoreInfo.Port
 
 	// Construct the pushcache startup command; removing the sleep command will result in the pushcache job being spin up continously, without delay, and uploading the assets to s3
-	command := fmt.Sprintf("sleep 120; valpop populate -r %s -s /srv/dist --bucket %s --hostname %s --port %s --username %s --password %s", r.Frontend.Name, bucketName, *hostname, *port, *awsUsername, *awsPassword)
+	command := fmt.Sprintf("sleep 120; valpop populate -r %s -s /srv/dist --bucket %s --hostname %s --port %s --username %s --password %s", r.Frontend.Name, *bucketName, *hostname, *port, *awsUsername, *awsPassword)
 
 	volumeMounts := []v1.VolumeMount{}
 	volumeMounts = append(volumeMounts, v1.VolumeMount{
@@ -598,62 +599,59 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 type ObjectStoreBucket struct {
 	AccessKey *string
 	SecretKey *string
-	Name      string
+	Name      *string
 	Region    *string
 	Endpoint  *string
 	Port      *string
 	TLS       *bool
 }
 
-// ExtractBucketConfigFromSecretByName extracts ObjectStoreBucket configuration from the provided k8 secret name
-func ExtractBucketConfigFromSecretByName(secrets []v1.Secret, targetSecretName string) (*ObjectStoreBucket, error) {
-	if len(secrets) == 0 {
-		return nil, fmt.Errorf("no secrets provided to search for secret '%s'", targetSecretName)
+// ExtractBucketConfigFromSecretByName extracts ObjectStoreBucket configuration from secrets
+func ExtractBucketConfigFromEnv() (*ObjectStoreBucket, error) {
+	// Required environment variables
+	accessKeyID := os.Getenv("PUSHCACHE_AWS_ACCESS_KEY_ID")
+	if accessKeyID == "" {
+		return nil, fmt.Errorf("required environment variable PUSHCACHE_AWS_ACCESS_KEY_ID is not set")
 	}
 
-	for _, secret := range secrets {
-		// Check if the current secret's metadata name matches the target name.
-		if secret.Name == targetSecretName {
-			// Found the target secret, now validate and extract the data.
-			currentSecret := secret
-
-			// Check for essential credential keys.
-			requiredCredentialKeys := []string{
-				"bucket",
-				"aws_region",
-				"endpoint",
-				"aws_access_key_id",
-				"aws_secret_access_key",
-			}
-
-			for _, key := range requiredCredentialKeys {
-				if _, ok := currentSecret.Data[key]; !ok {
-					return nil, fmt.Errorf("secret '%s' is missing the required key: '%s'", targetSecretName, key)
-				}
-			}
-
-			// Initialize the bucket configuration with the required fields.
-			bucketConfig := &ObjectStoreBucket{
-				Name:      string(currentSecret.Data["bucket"]),
-				AccessKey: utils.StringPtr(string(currentSecret.Data["aws_access_key_id"])),
-				SecretKey: utils.StringPtr(string(currentSecret.Data["aws_secret_access_key"])),
-				Region:    utils.StringPtr(string(currentSecret.Data["aws_region"])),
-				Endpoint:  utils.StringPtr(string(currentSecret.Data["endpoint"])),
-				TLS:       utils.TruePtr(), // Assuming TLS is true by default.
-			}
-
-			// Default Objectstore Port to "443" and then override if the data exists.
-			bucketConfig.Port = utils.StringPtr("443")
-			if portData, ok := currentSecret.Data["port"]; ok {
-				bucketConfig.Port = utils.StringPtr(string(portData))
-			}
-
-			return bucketConfig, nil
-		}
+	secretAccessKey := os.Getenv("PUSHCACHE_AWS_SECRET_ACCESS_KEY")
+	if secretAccessKey == "" {
+		return nil, fmt.Errorf("required environment variable PUSHCACHE_AWS_SECRET_ACCESS_KEY is not set")
 	}
 
-	// If the loop completes without finding the secret.
-	return nil, fmt.Errorf("s3 secret with name '%s' not found", targetSecretName)
+	bucketName := os.Getenv("PUSHCACHE_AWS_BUCKET_NAME")
+	if bucketName == "" {
+		return nil, fmt.Errorf("required environment variable PUSHCACHE_AWS_BUCKET_NAME is not set")
+	}
+
+	region := os.Getenv("PUSHCACHE_AWS_REGION")
+	if region == "" {
+		return nil, fmt.Errorf("required environment variable PUSHCACHE_AWS_REGION is not set")
+	}
+
+	endpoint := os.Getenv("PUSHCACHE_AWS_ENDPOINT")
+	if endpoint == "" {
+		return nil, fmt.Errorf("required environment variable PUSHCACHE_AWS_ENDPOINT is not set")
+	}
+
+	port := os.Getenv("PUSHCACHE_AWS_PORT")
+	// Default Objectstore Port to "443" if not provided
+	if port == "" {
+		port = "443"
+	}
+
+	// Initialize the bucket configuration with required fields
+	bucketConfig := &ObjectStoreBucket{
+		Name:      &bucketName,
+		AccessKey: &accessKeyID,
+		SecretKey: &secretAccessKey,
+		Region:    &region,
+		Endpoint:  &endpoint,
+		Port:      utils.StringPtr(port),
+		TLS:       utils.TruePtr(), // TLS is assumed to be true by default
+	}
+
+	return bucketConfig, nil
 }
 
 // Add the env vars if eny are set
