@@ -1915,6 +1915,19 @@ objects:
           - --leader-elect
           command:
           - /manager
+          env:
+          - name: PUSHCACHE_AWS_ACCESS_KEY_ID
+            value: ${PUSHCACHE_AWS_ACCESS_KEY_ID}
+          - name: PUSHCACHE_AWS_SECRET_ACCESS_KEY
+            value: ${PUSHCACHE_AWS_SECRET_ACCESS_KEY}
+          - name: PUSHCACHE_AWS_BUCKET_NAME
+            value: ${PUSHCACHE_AWS_BUCKET_NAME}
+          - name: PUSHCACHE_AWS_REGION
+            value: ${PUSHCACHE_AWS_REGION}
+          - name: PUSHCACHE_AWS_ENDPOINT
+            value: ${PUSHCACHE_AWS_ENDPOINT}
+          - name: PUSHCACHE_AWS_PORT
+            value: ${PUSHCACHE_AWS_PORT}
           image: ${IMAGE}:${IMAGE_TAG}
           livenessProbe:
             httpGet:
@@ -1932,19 +1945,6 @@ objects:
               port: 8081
             initialDelaySeconds: 5
             periodSeconds: 10
-          env:
-          - name: PUSHCACHE_AWS_ACCESS_KEY_ID
-            value: ${PUSHCACHE_AWS_ACCESS_KEY_ID}
-          - name: PUSHCACHE_AWS_SECRET_ACCESS_KEY
-            value: ${PUSHCACHE_AWS_SECRET_ACCESS_KEY}
-          - name: PUSHCACHE_AWS_BUCKET_NAME
-            value: ${PUSHCACHE_AWS_BUCKET_NAME}
-          - name: PUSHCACHE_AWS_REGION
-            value: ${PUSHCACHE_AWS_REGION}
-          - name: PUSHCACHE_AWS_ENDPOINT
-            value: ${PUSHCACHE_AWS_ENDPOINT}
-          - name: PUSHCACHE_AWS_PORT
-            value: ${PUSHCACHE_AWS_PORT}
           resources:
             limits:
               cpu: 200m
@@ -1964,14 +1964,15 @@ parameters:
 - name: IMAGE
   value: quay.io/cloudservices/frontend-operator
 - name: PUSHCACHE_AWS_ACCESS_KEY_ID
-  value: ""
+  value: ''
 - name: PUSHCACHE_AWS_SECRET_ACCESS_KEY
-  value: ""
+  value: ''
 - name: PUSHCACHE_AWS_BUCKET_NAME
-  value: ""
+  value: ''
 - name: PUSHCACHE_AWS_REGION
-  value: ""
+  value: ''
 - name: PUSHCACHE_AWS_ENDPOINT
-  value: ""
+  value: ''
 - name: PUSHCACHE_AWS_PORT
-  value: ""
+  value: ''
+
