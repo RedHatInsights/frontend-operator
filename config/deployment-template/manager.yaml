@@ -9,3 +9,16 @@ spec:
       containers:
       - image: ${IMAGE}:${IMAGE_TAG}
         name: manager
+        env:
+        - name: PUSHCACHE_AWS_ACCESS_KEY_ID
+          value: ${PUSHCACHE_AWS_ACCESS_KEY_ID}
+        - name: PUSHCACHE_AWS_SECRET_ACCESS_KEY
+          value: ${PUSHCACHE_AWS_SECRET_ACCESS_KEY}
+        - name: PUSHCACHE_AWS_BUCKET_NAME
+          value: ${PUSHCACHE_AWS_BUCKET_NAME}
+        - name: PUSHCACHE_AWS_REGION
+          value: ${PUSHCACHE_AWS_REGION}
+        - name: PUSHCACHE_AWS_ENDPOINT
+          value: ${PUSHCACHE_AWS_ENDPOINT}
+        - name: PUSHCACHE_AWS_PORT
+          value: ${PUSHCACHE_AWS_PORT}

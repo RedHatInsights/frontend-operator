@@ -10,7 +10,7 @@ spec:
 kind: Secret
 apiVersion: v1
 metadata:
-  name: single-s3-creds
+  name: single-s3-bucket-creds
   namespace: test-pushcache
 data:
   aws_access_key_id: YWNjZXNzX2tleQ==

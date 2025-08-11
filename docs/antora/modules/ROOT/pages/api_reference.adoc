@@ -425,7 +425,6 @@ FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
 | *`httpHeaders`* __object (keys:string, values:string)__ | Custom HTTP Headers These populate an ENV var that is then added into the caddy config as a header block
 | *`overwriteCaddyConfig`* __boolean__ | OverwriteCaddyConfig determines if the operator should overwrite frontend container Caddyfiles with a common core Caddyfile
 | *`enablePushCache`* __boolean__ | Enable Valpop Push Cache
-| *`pushCacheBucket`* __string__ | Set Push Cache Bucket name
 | *`defaultReplicas`* __integer__ | 
 | *`bundles`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendbundles[$$FrontendBundles$$]__ | For the ChromeUI to render navigation bundles
 | *`requests`* __object (keys:link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#resourcename-v1-core[$$ResourceName$$], values:Quantity)__ | 
