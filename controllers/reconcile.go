@@ -1254,13 +1254,14 @@ func (r *FrontendReconciliation) createAnnotationsAndPopulate(nn types.Namespace
 
 	// Determine which service to route traffic to
 	var serviceName string
-	if r.Frontend.Spec.ReverseProxyEnabled && r.FrontendEnvironment.Spec.EnableReverseProxy {
+	switch {
+	case r.Frontend.Spec.ReverseProxyEnabled && r.FrontendEnvironment.Spec.EnableReverseProxy:
 		// Route to reverse proxy service
 		serviceName = r.Frontend.Name + "-reverse-proxy"
-	} else if r.Frontend.Spec.Image != "" {
+	case r.Frontend.Spec.Image != "":
 		// Route to frontend service
 		serviceName = nn.Name
-	} else {
+	default:
 		// Route to external service specified in frontend spec
 		serviceName = r.Frontend.Spec.Service
 	}
