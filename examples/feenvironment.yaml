@@ -5,6 +5,11 @@ metadata:
 spec:
   sso: https://env-boot-auth/auth/
   enablePushCache: true
+  pushCacheBucket: frontend
+  enableReverseProxy: true
+  reverseProxyImage: quay.io/redhatinsights/frontend-asset-proxy:latest
+  reverseProxySPAEntrypointPath: /index.html
+  reverseProxyLogLevel: DEBUG
   targetNamespaces:
     - feo-testing
   monitoring:

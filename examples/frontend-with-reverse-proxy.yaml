@@ -1,0 +1,15 @@
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: example-frontend-with-proxy
+spec:
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  envName: env-boot
+  image: quay.io/cloudservices/insights-chrome-frontend:latest
+  title: Example Frontend with Reverse Proxy
+  frontend:
+    paths:
+      - /apps/example-proxy
+  # Enable reverse proxy for this frontend
+  reverseProxyEnabled: true
+  feoConfigEnabled: true

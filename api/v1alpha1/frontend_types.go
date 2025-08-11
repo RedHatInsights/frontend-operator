@@ -118,7 +118,8 @@ type FrontendSpec struct {
 	// Injects configuration from application when enabled
 	FeoConfigEnabled bool `json:"feoConfigEnabled,omitempty" yaml:"feoConfigEnabled,omitempty"`
 	// Push cache job enabled
-	PushCacheEnabled bool `json:"pushCacheEnabled,omitempty" yaml:"pushCacheEnabled,omitempty"`
+	PushCacheEnabled    bool `json:"pushCacheEnabled,omitempty" yaml:"pushCacheEnabled,omitempty"`
+	ReverseProxyEnabled bool `json:"reverseProxyEnabled,omitempty" yaml:"reverseProxyEnabled,omitempty"`
 }
 
 var ReconciliationSuccessful = "ReconciliationSuccessful"

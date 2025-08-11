@@ -332,6 +332,9 @@ objects:
                 enablePushCache:
                   description: Enable Push Cache Container
                   type: boolean
+                enableReverseProxy:
+                  description: Enable Reverse Proxy Container
+                  type: boolean
                 generateNavJSON:
                   description: 'GenerateNavJSON determines if the nav json configmap
 
@@ -396,6 +399,9 @@ objects:
 
                     frontend container Caddyfiles with a common core Caddyfile'
                   type: boolean
+                pushCacheBucket:
+                  description: S3 Push Cache Bucket
+                  type: string
                 requests:
                   additionalProperties:
                     anyOf:
@@ -406,6 +412,15 @@ objects:
                   description: ResourceList is a set of (resource name, quantity)
                     pairs.
                   type: object
+                reverseProxyImage:
+                  description: Reverse Proxy Container Image
+                  type: string
+                reverseProxyLogLevel:
+                  description: Log level for reverse proxy
+                  type: string
+                reverseProxySPAEntrypointPath:
+                  description: SPA entrypoint path for reverse proxy
+                  type: string
                 serviceCategories:
                   description: For the ChromeUI to render additional global components
                   items:
@@ -1161,6 +1176,8 @@ objects:
                 replicas:
                   format: int32
                   type: integer
+                reverseProxyEnabled:
+                  type: boolean
                 searchEntries:
                   description: The search index partials for the resource
                   items:
