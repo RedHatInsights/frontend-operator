@@ -116,8 +116,6 @@ To enable the reverse proxy for a frontend environment, configure the following 
 spec:
   enableReverseProxy: true
   reverseProxyImage: quay.io/redhatinsights/frontend-asset-proxy:latest
-  reverseProxyMinioUpstreamURL: http://minio:9000
-  reverseProxyBucketPathPrefix: /assets
   reverseProxySPAEntrypointPath: /index.html  # optional, defaults to /index.html
   reverseProxyLogLevel: INFO  # optional, defaults to DEBUG
 ```

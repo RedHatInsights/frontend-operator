@@ -131,10 +131,6 @@ type FrontendEnvironmentSpec struct {
 	EnableReverseProxy bool `json:"enableReverseProxy,omitempty"`
 	// Reverse Proxy Container Image
 	ReverseProxyImage string `json:"reverseProxyImage,omitempty"`
-	// Minio/S3 upstream URL for reverse proxy
-	ReverseProxyMinioUpstreamURL string `json:"reverseProxyMinioUpstreamURL,omitempty"`
-	// Bucket path prefix for reverse proxy
-	ReverseProxyBucketPathPrefix string `json:"reverseProxyBucketPathPrefix,omitempty"`
 	// SPA entrypoint path for reverse proxy
 	ReverseProxySPAEntrypointPath string `json:"reverseProxySPAEntrypointPath,omitempty"`
 	// Log level for reverse proxy

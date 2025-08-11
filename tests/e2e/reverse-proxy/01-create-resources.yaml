@@ -11,8 +11,6 @@ spec:
   sso: https://sso.foo.redhat.com
   enableReverseProxy: true
   reverseProxyImage: quay.io/redhatinsights/frontend-asset-proxy:latest
-  reverseProxyMinioUpstreamURL: http://minio:9000
-  reverseProxyBucketPathPrefix: /frontend-assets
   reverseProxySPAEntrypointPath: /index.html
   reverseProxyLogLevel: INFO
 ---

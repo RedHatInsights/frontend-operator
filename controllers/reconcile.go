@@ -653,8 +653,26 @@ func (r *FrontendReconciliation) createReverseProxyService() error {
 
 // populateReverseProxyContainer configures the reverse proxy container
 func (r *FrontendReconciliation) populateReverseProxyContainer(d *apps.Deployment) error {
+	// Get object store configuration from environment variables (same as push cache)
+	objectStoreInfo, err := ExtractBucketConfigFromEnv()
+	if err != nil {
+		return err
+	}
+
 	// Get default values
-	serverPort := "8080"
+	serverPort := *objectStoreInfo.Port           // PUSHCACHE_AWS_PORT
+	minioUpstreamURL := *objectStoreInfo.Endpoint // PUSHCACHE_AWS_ENDPOINT
+	bucketPathPrefix := *objectStoreInfo.Name     // PUSHCACHE_AWS_BUCKET_NAME
+
+	// Add protocol if not present in endpoint
+	if !strings.HasPrefix(minioUpstreamURL, "http://") && !strings.HasPrefix(minioUpstreamURL, "https://") {
+		if *objectStoreInfo.TLS {
+			minioUpstreamURL = "https://" + minioUpstreamURL
+		} else {
+			minioUpstreamURL = "http://" + minioUpstreamURL
+		}
+	}
+
 	logLevel := r.FrontendEnvironment.Spec.ReverseProxyLogLevel
 	if logLevel == "" {
 		logLevel = "DEBUG"
@@ -665,10 +683,7 @@ func (r *FrontendReconciliation) populateReverseProxyContainer(d *apps.Deploymen
 		spaEntrypointPath = "/index.html"
 	}
 
-	// Environment variables for the reverse proxy
-	// Point to the frontend service instead of Minio
-	frontendServiceURL := fmt.Sprintf("http://%s:8000", r.Frontend.Name)
-
+	// Environment variables for the reverse proxy using object store config
 	envVars := []v1.EnvVar{
 		{
 			Name:  "SERVER_PORT",
@@ -676,11 +691,11 @@ func (r *FrontendReconciliation) populateReverseProxyContainer(d *apps.Deploymen
 		},
 		{
 			Name:  "MINIO_UPSTREAM_URL",
-			Value: frontendServiceURL,
+			Value: minioUpstreamURL,
 		},
 		{
 			Name:  "BUCKET_PATH_PREFIX",
-			Value: r.FrontendEnvironment.Spec.ReverseProxyBucketPathPrefix,
+			Value: bucketPathPrefix,
 		},
 		{
 			Name:  "SPA_ENTRYPOINT_PATH",
