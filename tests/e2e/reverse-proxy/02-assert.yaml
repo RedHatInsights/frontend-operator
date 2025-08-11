@@ -1,0 +1,152 @@
+---
+# Verify that the frontend deployment was created
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: test-frontend-with-proxy-frontend
+  namespace: test-reverse-proxy
+  labels:
+    frontend: test-frontend-with-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      frontend: test-frontend-with-proxy
+  template:
+    metadata:
+      labels:
+        frontend: test-frontend-with-proxy
+    spec:
+      containers:
+      - name: fe-image
+        image: quay.io/cloudservices/insights-chrome-frontend:latest
+        ports:
+        - name: web
+          containerPort: 80
+          protocol: TCP
+        - name: metrics
+          containerPort: 9000
+          protocol: TCP
+---
+# Verify that the frontend service was created
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-frontend-with-proxy
+  namespace: test-reverse-proxy
+  labels:
+    frontend: test-frontend-with-proxy
+spec:
+  ports:
+  - name: public
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+    appProtocol: http
+  - name: metrics
+    port: 9000
+    targetPort: 9000
+    protocol: TCP
+    appProtocol: http
+  selector:
+    frontend: test-frontend-with-proxy
+---
+# Verify that the reverse proxy deployment was created
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: test-frontend-with-proxy-reverse-proxy
+  namespace: test-reverse-proxy
+  labels:
+    frontend: test-frontend-with-proxy
+    app: reverse-proxy
+    component: reverse-proxy
+  annotations:
+    kube-linter.io/ignore-all: "we don't need no any checking"
+  ownerReferences:
+  - apiVersion: cloud.redhat.com/v1alpha1
+    controller: true
+    kind: Frontend
+    name: test-frontend-with-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reverse-proxy
+      component: reverse-proxy
+      frontend: test-frontend-with-proxy
+  template:
+    metadata:
+      labels:
+        frontend: test-frontend-with-proxy
+        app: reverse-proxy
+        component: reverse-proxy
+    spec:
+      containers:
+      - name: reverse-proxy
+        image: quay.io/redhatinsights/frontend-asset-proxy:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        env:
+        - name: SERVER_PORT
+          value: "8080"
+        - name: MINIO_UPSTREAM_URL
+          value: http://test-frontend-with-proxy:8000
+        - name: BUCKET_PATH_PREFIX
+          value: /frontend-assets
+        - name: SPA_ENTRYPOINT_PATH
+          value: /index.html
+        - name: LOG_LEVEL
+          value: INFO
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 30m
+            memory: 50Mi
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          failureThreshold: 3
+          successThreshold: 1
+          timeoutSeconds: 1
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+          successThreshold: 1
+          timeoutSeconds: 1
+---
+# Verify that the reverse proxy service was created
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-frontend-with-proxy-reverse-proxy
+  namespace: test-reverse-proxy
+  labels:
+    frontend: test-frontend-with-proxy
+    app: reverse-proxy
+    component: reverse-proxy
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+    appProtocol: http
+  selector:
+    frontend: test-frontend-with-proxy
+    app: reverse-proxy
+    component: reverse-proxy

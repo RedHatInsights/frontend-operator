@@ -662,6 +662,8 @@ spec:
               replicas:
                 format: int32
                 type: integer
+              reverseProxyEnabled:
+                type: boolean
               searchEntries:
                 description: The search index partials for the resource
                 items:

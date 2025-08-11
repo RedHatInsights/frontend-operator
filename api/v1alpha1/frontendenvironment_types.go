@@ -127,6 +127,18 @@ type FrontendEnvironmentSpec struct {
 	EnablePushCache bool `json:"enablePushCache,omitempty"`
 	// S3 Push Cache Bucket
 	PushCacheBucket string `json:"pushCacheBucket,omitempty"`
+	// Enable Reverse Proxy Container
+	EnableReverseProxy bool `json:"enableReverseProxy,omitempty"`
+	// Reverse Proxy Container Image
+	ReverseProxyImage string `json:"reverseProxyImage,omitempty"`
+	// Minio/S3 upstream URL for reverse proxy
+	ReverseProxyMinioUpstreamURL string `json:"reverseProxyMinioUpstreamURL,omitempty"`
+	// Bucket path prefix for reverse proxy
+	ReverseProxyBucketPathPrefix string `json:"reverseProxyBucketPathPrefix,omitempty"`
+	// SPA entrypoint path for reverse proxy
+	ReverseProxySPAEntrypointPath string `json:"reverseProxySPAEntrypointPath,omitempty"`
+	// Log level for reverse proxy
+	ReverseProxyLogLevel string `json:"reverseProxyLogLevel,omitempty"`
 
 	DefaultReplicas *int32 `json:"defaultReplicas,omitempty" yaml:"defaultReplicas,omitempty"`
 	// For the ChromeUI to render navigation bundles
