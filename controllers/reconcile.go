@@ -1313,11 +1313,32 @@ func setupServiceTilesData(feList *crd.FrontendList, feEnvironment crd.FrontendE
 	for _, category := range categories {
 		for _, group := range category.Groups {
 			sort.Slice(*group.Tiles, func(i, j int) bool {
-				pos := strings.Compare((*group.Tiles)[i].Title, (*group.Tiles)[j].Title)
-				if pos == 0 {
-					return (*group.Tiles)[i].Description < (*group.Tiles)[j].Description
+				tileA := (*group.Tiles)[i]
+				tileB := (*group.Tiles)[j]
+
+				// Sort by all string attributes in order: Section, Group, ID, Href, Title, Description, Icon, FrontendRef
+				if pos := strings.Compare(tileA.Section, tileB.Section); pos != 0 {
+					return pos == -1
 				}
-				return pos == -1
+				if pos := strings.Compare(tileA.Group, tileB.Group); pos != 0 {
+					return pos == -1
+				}
+				if pos := strings.Compare(tileA.ID, tileB.ID); pos != 0 {
+					return pos == -1
+				}
+				if pos := strings.Compare(tileA.Href, tileB.Href); pos != 0 {
+					return pos == -1
+				}
+				if pos := strings.Compare(tileA.Title, tileB.Title); pos != 0 {
+					return pos == -1
+				}
+				if pos := strings.Compare(tileA.Description, tileB.Description); pos != 0 {
+					return pos == -1
+				}
+				if pos := strings.Compare(tileA.Icon, tileB.Icon); pos != 0 {
+					return pos == -1
+				}
+				return strings.Compare(tileA.FrontendRef, tileB.FrontendRef) == -1
 			})
 		}
 	}
