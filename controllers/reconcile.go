@@ -540,6 +540,217 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 	return nil
 }
 
+// createReverseProxyDeployment creates a reverse proxy deployment for frontend assets
+func (r *FrontendReconciliation) createReverseProxyDeployment() error {
+	// Create new empty deployment struct
+	d := &apps.Deployment{}
+
+	deploymentName := "reverse-proxy"
+
+	// Define name of resource
+	nn := types.NamespacedName{
+		Name:      deploymentName,
+		Namespace: r.Frontend.Namespace,
+	}
+
+	// Create object in cache (will populate cache if exists)
+	if err := r.Cache.Create(CoreDeployment, nn, d); err != nil {
+		return err
+	}
+
+	// Label with the right labels
+	labels := r.Frontend.GetLabels()
+	labels["app"] = "reverse-proxy"
+	labels["component"] = "reverse-proxy"
+
+	labeler := utils.GetCustomLabeler(labels, nn, r.Frontend)
+	labeler(d)
+
+	// Set owner reference
+	d.SetOwnerReferences([]metav1.OwnerReference{r.Frontend.MakeOwnerReference()})
+
+	// Set replicas to 1
+	d.Spec.Replicas = utils.Int32Ptr(1)
+
+	// Configure the reverse proxy container
+	if err := r.populateReverseProxyContainer(d); err != nil {
+		return err
+	}
+
+	d.Spec.Template.ObjectMeta.Labels = labels
+	d.Spec.Selector = &metav1.LabelSelector{MatchLabels: labels}
+
+	// Add annotations to silence linter
+	deploymentAnnotation := d.ObjectMeta.GetAnnotations()
+	if deploymentAnnotation == nil {
+		deploymentAnnotation = make(map[string]string)
+	}
+	deploymentAnnotation["kube-linter.io/ignore-all"] = "we don't need no any checking"
+	d.ObjectMeta.SetAnnotations(deploymentAnnotation)
+
+	// Inform the cache that our updates are complete
+	err := r.Cache.Update(CoreDeployment, d)
+	return err
+}
+
+// createReverseProxyService creates a service for the reverse proxy deployment
+func (r *FrontendReconciliation) createReverseProxyService() error {
+	// Create empty service
+	s := &v1.Service{}
+
+	serviceName := "reverse-proxy"
+
+	// Define name of resource
+	nn := types.NamespacedName{
+		Name:      serviceName,
+		Namespace: r.Frontend.Namespace,
+	}
+
+	// Create object in cache (will populate cache if exists)
+	if err := r.Cache.Create(CoreService, nn, s); err != nil {
+		return err
+	}
+
+	// Set labels
+	labels := r.Frontend.GetLabels()
+	labels["app"] = "reverse-proxy"
+	labels["component"] = "reverse-proxy"
+
+	labeler := utils.GetCustomLabeler(labels, nn, r.Frontend)
+	labeler(s)
+
+	// Set owner reference
+	s.SetOwnerReferences([]metav1.OwnerReference{r.Frontend.MakeOwnerReference()})
+
+	// Create ports for the reverse proxy service
+	appProtocol := "http"
+	ports := []v1.ServicePort{
+		{
+			Name:        "http",
+			Port:        8080,
+			TargetPort:  intstr.FromInt(8080),
+			Protocol:    "TCP",
+			AppProtocol: &appProtocol,
+		},
+	}
+
+	s.Spec.Selector = labels
+	utils.MakeService(s, nn, labels, ports, r.Frontend, false)
+
+	// Inform the cache that our updates are complete
+	err := r.Cache.Update(CoreService, s)
+	return err
+}
+
+// populateReverseProxyContainer configures the reverse proxy container
+func (r *FrontendReconciliation) populateReverseProxyContainer(d *apps.Deployment) error {
+	// Get object store configuration from environment variables (same as push cache)
+	objectStoreInfo, err := ExtractBucketConfigFromEnv()
+	if err != nil {
+		return err
+	}
+
+	// Get default values
+	serverPort := *objectStoreInfo.Port           // PUSHCACHE_AWS_PORT
+	minioUpstreamURL := *objectStoreInfo.Endpoint // PUSHCACHE_AWS_ENDPOINT
+	bucketPathPrefix := *objectStoreInfo.Name     // PUSHCACHE_AWS_BUCKET_NAME
+
+	// Add protocol if not present in endpoint
+	if !strings.HasPrefix(minioUpstreamURL, "http://") && !strings.HasPrefix(minioUpstreamURL, "https://") {
+		if *objectStoreInfo.TLS {
+			minioUpstreamURL = "https://" + minioUpstreamURL
+		} else {
+			minioUpstreamURL = "http://" + minioUpstreamURL
+		}
+	}
+
+	logLevel := r.FrontendEnvironment.Spec.ReverseProxyLogLevel
+	if logLevel == "" {
+		logLevel = "DEBUG"
+	}
+
+	spaEntrypointPath := r.FrontendEnvironment.Spec.ReverseProxySPAEntrypointPath
+	if spaEntrypointPath == "" {
+		spaEntrypointPath = "/index.html"
+	}
+
+	// Environment variables for the reverse proxy using object store config
+	envVars := []v1.EnvVar{
+		{
+			Name:  "SERVER_PORT",
+			Value: serverPort,
+		},
+		{
+			Name:  "MINIO_UPSTREAM_URL",
+			Value: minioUpstreamURL,
+		},
+		{
+			Name:  "BUCKET_PATH_PREFIX",
+			Value: bucketPathPrefix,
+		},
+		{
+			Name:  "SPA_ENTRYPOINT_PATH",
+			Value: spaEntrypointPath,
+		},
+		{
+			Name:  "LOG_LEVEL",
+			Value: logLevel,
+		},
+	}
+
+	// Configure the container
+	container := v1.Container{
+		Name:  "reverse-proxy",
+		Image: r.FrontendEnvironment.Spec.ReverseProxyImage,
+		Ports: []v1.ContainerPort{
+			{
+				Name:          "http",
+				ContainerPort: 8080,
+				Protocol:      "TCP",
+			},
+		},
+		Env: envVars,
+		Resources: v1.ResourceRequirements{
+			Requests: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("30m"),
+				v1.ResourceMemory: resource.MustParse("50Mi"),
+			},
+			Limits: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("100m"),
+				v1.ResourceMemory: resource.MustParse("128Mi"),
+			},
+		},
+		LivenessProbe: &v1.Probe{
+			ProbeHandler: v1.ProbeHandler{
+				HTTPGet: &v1.HTTPGetAction{
+					Path:   "/healthz",
+					Port:   intstr.FromInt(8080),
+					Scheme: v1.URISchemeHTTP,
+				},
+			},
+			InitialDelaySeconds: 10,
+			PeriodSeconds:       30,
+			FailureThreshold:    3,
+		},
+		ReadinessProbe: &v1.Probe{
+			ProbeHandler: v1.ProbeHandler{
+				HTTPGet: &v1.HTTPGetAction{
+					Path:   "/healthz",
+					Port:   intstr.FromInt(8080),
+					Scheme: v1.URISchemeHTTP,
+				},
+			},
+			InitialDelaySeconds: 5,
+			PeriodSeconds:       10,
+		},
+	}
+
+	// Set the container on the deployment
+	d.Spec.Template.Spec.Containers = []v1.Container{container}
+
+	return nil
+}
+
 func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
 	// By default we just want the config and caddy volume
 	volumes := []v1.Volume{}
@@ -1032,11 +1243,21 @@ func (r *FrontendReconciliation) createAnnotationsAndPopulate(nn types.Namespace
 		netobj.SetAnnotations(annotations)
 	}
 
-	if r.Frontend.Spec.Image != "" {
-		r.populateConsoleDotIngress(netobj, ingressClass, nn.Name)
-	} else {
-		r.populateConsoleDotIngress(netobj, ingressClass, r.Frontend.Spec.Service)
+	// Determine which service to route traffic to
+	var serviceName string
+	switch {
+	case r.Frontend.Spec.ReverseProxyEnabled && r.FrontendEnvironment.Spec.EnableReverseProxy:
+		// Route to reverse proxy service
+		serviceName = r.Frontend.Name + "-reverse-proxy"
+	case r.Frontend.Spec.Image != "":
+		// Route to frontend service
+		serviceName = nn.Name
+	default:
+		// Route to external service specified in frontend spec
+		serviceName = r.Frontend.Spec.Service
 	}
+
+	r.populateConsoleDotIngress(netobj, ingressClass, serviceName)
 }
 
 func (r *FrontendReconciliation) getFrontendPaths() []string {
@@ -1057,9 +1278,15 @@ func (r *FrontendReconciliation) getFrontendPaths() []string {
 func (r *FrontendReconciliation) populateConsoleDotIngress(netobj *networking.Ingress, ingressClass, serviceName string) {
 	frontendPaths := r.getFrontendPaths()
 
+	// Determine the port based on whether reverse proxy is enabled
+	var port int32 = 8000 // Default frontend port
+	if r.Frontend.Spec.ReverseProxyEnabled && r.FrontendEnvironment.Spec.EnableReverseProxy {
+		port = 8080 // Reverse proxy port
+	}
+
 	var ingressPaths []networking.HTTPIngressPath
 	for _, a := range frontendPaths {
-		newPath := createNewIngressPath(a, serviceName)
+		newPath := createNewIngressPath(a, serviceName, port)
 		ingressPaths = append(ingressPaths, newPath)
 	}
 
@@ -1072,7 +1299,7 @@ func (r *FrontendReconciliation) populateConsoleDotIngress(netobj *networking.In
 	netobj.Spec = defaultNetSpec(ingressClass, host, ingressPaths)
 }
 
-func createNewIngressPath(a, serviceName string) networking.HTTPIngressPath {
+func createNewIngressPath(a, serviceName string, port int32) networking.HTTPIngressPath {
 	prefixType := "Prefix"
 	return networking.HTTPIngressPath{
 		Path:     a,
@@ -1081,7 +1308,7 @@ func createNewIngressPath(a, serviceName string) networking.HTTPIngressPath {
 			Service: &networking.IngressServiceBackend{
 				Name: serviceName,
 				Port: networking.ServiceBackendPort{
-					Number: 8000,
+					Number: port,
 				},
 			},
 		},
@@ -1313,32 +1540,11 @@ func setupServiceTilesData(feList *crd.FrontendList, feEnvironment crd.FrontendE
 	for _, category := range categories {
 		for _, group := range category.Groups {
 			sort.Slice(*group.Tiles, func(i, j int) bool {
-				tileA := (*group.Tiles)[i]
-				tileB := (*group.Tiles)[j]
-
-				// Sort by all string attributes in order: Section, Group, ID, Href, Title, Description, Icon, FrontendRef
-				if pos := strings.Compare(tileA.Section, tileB.Section); pos != 0 {
-					return pos == -1
+				pos := strings.Compare((*group.Tiles)[i].Title, (*group.Tiles)[j].Title)
+				if pos == 0 {
+					return (*group.Tiles)[i].Description < (*group.Tiles)[j].Description
 				}
-				if pos := strings.Compare(tileA.Group, tileB.Group); pos != 0 {
-					return pos == -1
-				}
-				if pos := strings.Compare(tileA.ID, tileB.ID); pos != 0 {
-					return pos == -1
-				}
-				if pos := strings.Compare(tileA.Href, tileB.Href); pos != 0 {
-					return pos == -1
-				}
-				if pos := strings.Compare(tileA.Title, tileB.Title); pos != 0 {
-					return pos == -1
-				}
-				if pos := strings.Compare(tileA.Description, tileB.Description); pos != 0 {
-					return pos == -1
-				}
-				if pos := strings.Compare(tileA.Icon, tileB.Icon); pos != 0 {
-					return pos == -1
-				}
-				return strings.Compare(tileA.FrontendRef, tileB.FrontendRef) == -1
+				return pos == -1
 			})
 		}
 	}
