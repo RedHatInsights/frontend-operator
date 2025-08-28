@@ -396,9 +396,6 @@ objects:
 
                     frontend container Caddyfiles with a common core Caddyfile'
                   type: boolean
-                pushCacheBucket:
-                  description: S3 Push Cache Bucket
-                  type: string
                 requests:
                   additionalProperties:
                     anyOf:

@@ -125,8 +125,6 @@ type FrontendEnvironmentSpec struct {
 	OverwriteCaddyConfig bool `json:"overwriteCaddyConfig,omitempty"`
 	// Enable Push Cache Container
 	EnablePushCache bool `json:"enablePushCache,omitempty"`
-	// S3 Push Cache Bucket
-	PushCacheBucket string `json:"pushCacheBucket,omitempty"`
 	// Reverse Proxy Container Image
 	ReverseProxyImage string `json:"reverseProxyImage,omitempty"`
 	// SPA entrypoint path for reverse proxy
