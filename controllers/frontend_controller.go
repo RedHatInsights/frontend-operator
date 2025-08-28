@@ -214,6 +214,16 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{Requeue: true}, err
 	}
 
+	// Deploy reverse proxy if push cache is enabled
+	if fe.Spec.EnablePushCache && fe.Spec.ReverseProxyImage != "" {
+		if err := reconciliation.createReverseProxyDeployment(); err != nil {
+			log.Error(err, "Failed to create reverse proxy deployment")
+		}
+		if err := reconciliation.createReverseProxyService(); err != nil {
+			log.Error(err, "Failed to create reverse proxy service")
+		}
+	}
+
 	cacheErr := cache.ApplyAll()
 
 	if cacheErr != nil {

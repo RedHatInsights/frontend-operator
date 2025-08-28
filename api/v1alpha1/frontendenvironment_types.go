@@ -125,6 +125,14 @@ type FrontendEnvironmentSpec struct {
 	OverwriteCaddyConfig bool `json:"overwriteCaddyConfig,omitempty"`
 	// Enable Push Cache Container
 	EnablePushCache bool `json:"enablePushCache,omitempty"`
+	// S3 Push Cache Bucket
+	PushCacheBucket string `json:"pushCacheBucket,omitempty"`
+	// Reverse Proxy Container Image
+	ReverseProxyImage string `json:"reverseProxyImage,omitempty"`
+	// SPA entrypoint path for reverse proxy
+	ReverseProxySPAEntrypointPath string `json:"reverseProxySPAEntrypointPath,omitempty"`
+	// Log level for reverse proxy
+	ReverseProxyLogLevel string `json:"reverseProxyLogLevel,omitempty"`
 
 	DefaultReplicas *int32 `json:"defaultReplicas,omitempty" yaml:"defaultReplicas,omitempty"`
 	// For the ChromeUI to render navigation bundles
