@@ -237,33 +237,32 @@ spec:
         - description: The Trusted Artifact URI pointing to the artifact with the application source code.
           name: SOURCE_ARTIFACT
           type: string
-        spec:
-          stepTemplate:
-            computeResources: {}
-            volumeMounts:
-            - mountPath: /var/workdir
-              name: workdir
-          steps:
-          - args:
-            - use
-            - $(params.SOURCE_ARTIFACT)=/var/workdir/source
-            computeResources: {}
-            image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:9b180776a41d9a22a1c51539f1647c60defbbd55b44bbebdd4130e33512d8b0d
-            name: use-trusted-artifact
-          - computeResources:
-              requests:
-                cpu: 100m
-                memory: 256Mi
-            image: registry.access.redhat.com/ubi8/ubi:latest
-            name: template-check
-            script: |
-              set -xe
-              dnf install -y go make python3 python3-pip git
-              source build/template_check.sh
-            workingDir: /var/workdir/source
-          volumes:
-          - emptyDir: {}
+        stepTemplate:
+          computeResources: {}
+          volumeMounts:
+          - mountPath: /var/workdir
             name: workdir
+        steps:
+        - args:
+          - use
+          - $(params.SOURCE_ARTIFACT)=/var/workdir/source
+          computeResources: {}
+          image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:9b180776a41d9a22a1c51539f1647c60defbbd55b44bbebdd4130e33512d8b0d
+          name: use-trusted-artifact
+        - computeResources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          image: registry.access.redhat.com/ubi8/ubi:latest
+          name: template-check
+          script: |
+            set -xe
+            dnf install -y go make python3 python3-pip git
+            source build/template_check.sh
+          workingDir: /var/workdir/source
+        volumes:
+        - emptyDir: {}
+          name: workdir
     - name: run-unit-tests
       params:
       - name: SOURCE_ARTIFACT
