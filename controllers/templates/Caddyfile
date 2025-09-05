@@ -13,11 +13,46 @@
 :8000 {
     {$CADDY_TLS_CERT}
     header -Vary
+    {$CADDY_HTTP_HEADERS}
     log
+
+    # Handle manifest files specifically
+    @manifest_match {
+        path */fed-mods.json
+    }
+    handle @manifest_match {
+        # Set appropriate headers for manifest files
+        header Content-Type application/json
+        header Cache-Control "no-cache, no-store, must-revalidate"
+        header Pragma no-cache
+        header Expires 0
+        
+        # Try to serve from operator-generated location first, then fallback to static locations
+        try_files /srv/dist/operator-generated/fed-modules.json /opt/app-root/src/build/stable/operator-generated/fed-modules.json {path} /opt/app-root/src/dist/stable{path} /opt/app-root/src/dist/preview{path}
+        file_server * {
+            root /opt/app-root/src/dist/stable
+        }
+    }
+
+    # Handle operator-generated fed-modules.json specifically
+    @operator_fed_modules {
+        path /srv/dist/operator-generated/fed-modules.json
+    }
+    handle @operator_fed_modules {
+        header Content-Type application/json
+        header Cache-Control "no-cache, no-store, must-revalidate"
+        header Pragma no-cache
+        header Expires 0
+        
+        file_server * {
+            root /
+        }
+    }
 
     # Handle main app route
     @app_match {
         path {$ROUTE_PATH}*
+        not path */fed-mods.json
     }
     handle @app_match {
         uri strip_prefix {$ROUTE_PATH}
@@ -30,6 +65,7 @@
     # Handle beta app route
     @beta_match {
         path {$BETA_ROUTE_PATH}*
+        not path */fed-mods.json
     }
     handle @beta_match {
         uri strip_prefix {$BETA_ROUTE_PATH}
@@ -42,6 +78,7 @@
     # Handle preview app route
     @preview_match {
         path {$PREVIEW_ROUTE_PATH}*
+        not path */fed-mods.json
     }
     handle @preview_match {
         uri strip_prefix {$PREVIEW_ROUTE_PATH}

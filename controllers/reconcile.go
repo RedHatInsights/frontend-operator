@@ -697,6 +697,14 @@ func (r *FrontendReconciliation) populateEnvVars(d *apps.Deployment, frontendEnv
 		Value: "/preview$(ROUTE_PATH)",
 	})
 
+	// Add manifest location if module is defined
+	if r.Frontend.Spec.Module != nil && r.Frontend.Spec.Module.ManifestLocation != "" {
+		envVars = append(envVars, v1.EnvVar{
+			Name:  "MANIFEST_LOCATION",
+			Value: r.Frontend.Spec.Module.ManifestLocation,
+		})
+	}
+
 	d.Spec.Template.Spec.Containers[0].Env = envVars
 }
 
