@@ -15,5 +15,8 @@ cp /root/go/* bin/
 
 mkdir -p artifacts
 
+# Clear Go module cache to force fresh package downloads
+go clean -modcache
+
 source build/template_check.sh
 make junit
