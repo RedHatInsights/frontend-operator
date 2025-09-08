@@ -558,16 +558,14 @@ func (r *FrontendReconciliation) createReverseProxyDeployment() error {
 		return err
 	}
 
-	// Label with the right labels
-	labels := r.Frontend.GetLabels()
-	labels["app"] = "reverse-proxy"
-	labels["component"] = "reverse-proxy"
+	// Get consistent labels that won't conflict between frontends
+	labels := r.GetReverseProxyLabels()
 
 	labeler := utils.GetCustomLabeler(labels, nn, r.Frontend)
 	labeler(d)
 
-	// Set owner reference
-	d.SetOwnerReferences([]metav1.OwnerReference{r.Frontend.MakeOwnerReference()})
+	// Set owner reference to the environment instead of the frontend
+	d.SetOwnerReferences([]metav1.OwnerReference{r.GetReverseProxyOwnerRef()})
 
 	// Set replicas to 1
 	d.Spec.Replicas = utils.Int32Ptr(1)
@@ -611,24 +609,23 @@ func (r *FrontendReconciliation) createReverseProxyService() error {
 		return err
 	}
 
-	// Set labels
-	labels := r.Frontend.GetLabels()
-	labels["app"] = "reverse-proxy"
-	labels["component"] = "reverse-proxy"
+	// Get consistent labels that won't conflict between frontends
+	labels := r.GetReverseProxyLabels()
 
 	labeler := utils.GetCustomLabeler(labels, nn, r.Frontend)
 	labeler(s)
 
-	// Set owner reference
-	s.SetOwnerReferences([]metav1.OwnerReference{r.Frontend.MakeOwnerReference()})
+	// Set owner reference to the environment instead of the frontend
+	s.SetOwnerReferences([]metav1.OwnerReference{r.GetReverseProxyOwnerRef()})
 
 	// Create ports for the reverse proxy service
 	appProtocol := "http"
+	serverPortInt := 8080
 	ports := []v1.ServicePort{
 		{
 			Name:        "http",
 			Port:        8080,
-			TargetPort:  intstr.FromInt(8080),
+			TargetPort:  intstr.FromInt(serverPortInt),
 			Protocol:    "TCP",
 			AppProtocol: &appProtocol,
 		},
@@ -698,6 +695,9 @@ func (r *FrontendReconciliation) populateReverseProxyContainer(d *apps.Deploymen
 		},
 	}
 
+	// Parse server port for probes
+	serverPortInt := 8080
+
 	// Configure the container
 	container := v1.Container{
 		Name:  "reverse-proxy",
@@ -705,7 +705,7 @@ func (r *FrontendReconciliation) populateReverseProxyContainer(d *apps.Deploymen
 		Ports: []v1.ContainerPort{
 			{
 				Name:          "http",
-				ContainerPort: 8080,
+				ContainerPort: int32(serverPortInt),
 				Protocol:      "TCP",
 			},
 		},
@@ -724,7 +724,7 @@ func (r *FrontendReconciliation) populateReverseProxyContainer(d *apps.Deploymen
 			ProbeHandler: v1.ProbeHandler{
 				HTTPGet: &v1.HTTPGetAction{
 					Path:   "/healthz",
-					Port:   intstr.FromInt(8080),
+					Port:   intstr.FromInt(serverPortInt),
 					Scheme: v1.URISchemeHTTP,
 				},
 			},
@@ -736,7 +736,7 @@ func (r *FrontendReconciliation) populateReverseProxyContainer(d *apps.Deploymen
 			ProbeHandler: v1.ProbeHandler{
 				HTTPGet: &v1.HTTPGetAction{
 					Path:   "/healthz",
-					Port:   intstr.FromInt(8080),
+					Port:   intstr.FromInt(serverPortInt),
 					Scheme: v1.URISchemeHTTP,
 				},
 			},

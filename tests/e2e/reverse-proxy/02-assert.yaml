@@ -61,24 +61,24 @@ metadata:
     frontend: test-frontend-with-proxy
     app: reverse-proxy
     component: reverse-proxy
+    environment: test-reverse-proxy-environment
   annotations:
     kube-linter.io/ignore-all: "we don't need no any checking"
   ownerReferences:
   - apiVersion: cloud.redhat.com/v1alpha1
-    controller: true
-    kind: Frontend
-    name: test-frontend-with-proxy
+    kind: FrontendEnvironment
+    name: test-reverse-proxy-environment
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: reverse-proxy
       component: reverse-proxy
-      frontend: test-frontend-with-proxy
+      environment: test-reverse-proxy-environment
   template:
     metadata:
       labels:
-        frontend: test-frontend-with-proxy
+        environment: test-reverse-proxy-environment
         app: reverse-proxy
         component: reverse-proxy
     spec:
@@ -137,6 +137,7 @@ metadata:
   namespace: test-reverse-proxy
   labels:
     frontend: test-frontend-with-proxy
+    environment: test-reverse-proxy-environment
     app: reverse-proxy
     component: reverse-proxy
 spec:
@@ -147,6 +148,6 @@ spec:
     protocol: TCP
     appProtocol: http
   selector:
-    frontend: test-frontend-with-proxy
+    environment: test-reverse-proxy-environment
     app: reverse-proxy
     component: reverse-proxy

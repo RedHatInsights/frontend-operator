@@ -5,11 +5,11 @@ metadata:
 spec:
   sso: https://env-boot-auth/auth/
   enablePushCache: true
-  reverseProxyImage: quay.io/redhatinsights/frontend-asset-proxy:latest
+  reverseProxyImage: quay.io/redhat-services-prod/hcc-platex-services-tenant/frontend-asset-proxy:latest
   reverseProxySPAEntrypointPath: /index.html
   reverseProxyLogLevel: DEBUG
   targetNamespaces:
-    - feo-testing
+    - boot
   monitoring:
     mode: "local"
     disabled: false
