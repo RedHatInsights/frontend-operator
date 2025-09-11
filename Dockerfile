@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM registry.access.redhat.com/ubi9/go-toolset:latest as base
+FROM registry.access.redhat.com/ubi9/go-toolset:latest AS base
 
 WORKDIR /workspace
 
@@ -21,7 +21,7 @@ RUN rm -rf api
 RUN rm -rf controllers
 
 # Build the manager binary
-FROM base as builder
+FROM base AS builder
 
 WORKDIR /workspace
 
