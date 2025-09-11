@@ -73,8 +73,12 @@ type FrontendEnvironmentSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of FrontendEnvironment. Edit FrontendEnvironment_types.go to remove/update
+	// SSO URL for authentication
 	SSO string `json:"sso"`
+
+	// SSO URL mapping for special cases (e.g. console.dev using different SSO than stage)
+	// Maps hostname patterns to SSO URLs
+	SSOMapping map[string]string `json:"ssoMapping,omitempty"`
 
 	// Ingress class
 	IngressClass string `json:"ingressClass,omitempty"`
