@@ -4,6 +4,7 @@ metadata:
   name: env-boot
 spec:
   sso: https://env-boot-auth/auth/
+  enablePushCache: true
   targetNamespaces:
     - feo-testing
   monitoring:

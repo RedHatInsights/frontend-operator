@@ -329,6 +329,9 @@ objects:
                 enableAkamaiCacheBust:
                   description: Enable Akamai Cache Bust
                   type: boolean
+                enablePushCache:
+                  description: Enable Push Cache Container
+                  type: boolean
                 generateNavJSON:
                   description: 'GenerateNavJSON determines if the nav json configmap
 
@@ -536,6 +539,22 @@ objects:
               properties:
                 API:
                   properties:
+                    specs:
+                      items:
+                        properties:
+                          bundleLabels:
+                            items:
+                              type: string
+                            type: array
+                          frontendName:
+                            type: string
+                          url:
+                            type: string
+                        required:
+                        - bundleLabels
+                        - url
+                        type: object
+                      type: array
                     versions:
                       items:
                         type: string
@@ -553,6 +572,173 @@ objects:
                   type: array
                 assetsPrefix:
                   type: string
+                baseWidgetLayouts:
+                  items:
+                    description: A base template which users can "fork" and customize
+                      for their own dashboards.
+                    properties:
+                      displayName:
+                        type: string
+                      frontendRef:
+                        type: string
+                      name:
+                        type: string
+                      templateConfig:
+                        description: TemplateConfig defines the configuration for
+                          different screen sizes.
+                        properties:
+                          lg:
+                            items:
+                              description: WidgetTemplateConfigItem represents a single
+                                widget's configuration within the grid.
+                              properties:
+                                cx:
+                                  description: 'The original coordinates of the widget
+                                    are x and y, we have to use CX/CY because in some
+                                    YAML parsers y is a reserved keyword and translates
+                                    to a boolean value.
+
+                                    CX and CY are used to avoid this issue.'
+                                  type: integer
+                                cy:
+                                  type: integer
+                                h:
+                                  type: integer
+                                i:
+                                  type: string
+                                maxH:
+                                  type: integer
+                                minH:
+                                  type: integer
+                                static:
+                                  type: boolean
+                                w:
+                                  type: integer
+                              required:
+                              - cx
+                              - cy
+                              - h
+                              - i
+                              - w
+                              type: object
+                            type: array
+                          md:
+                            items:
+                              description: WidgetTemplateConfigItem represents a single
+                                widget's configuration within the grid.
+                              properties:
+                                cx:
+                                  description: 'The original coordinates of the widget
+                                    are x and y, we have to use CX/CY because in some
+                                    YAML parsers y is a reserved keyword and translates
+                                    to a boolean value.
+
+                                    CX and CY are used to avoid this issue.'
+                                  type: integer
+                                cy:
+                                  type: integer
+                                h:
+                                  type: integer
+                                i:
+                                  type: string
+                                maxH:
+                                  type: integer
+                                minH:
+                                  type: integer
+                                static:
+                                  type: boolean
+                                w:
+                                  type: integer
+                              required:
+                              - cx
+                              - cy
+                              - h
+                              - i
+                              - w
+                              type: object
+                            type: array
+                          sm:
+                            items:
+                              description: WidgetTemplateConfigItem represents a single
+                                widget's configuration within the grid.
+                              properties:
+                                cx:
+                                  description: 'The original coordinates of the widget
+                                    are x and y, we have to use CX/CY because in some
+                                    YAML parsers y is a reserved keyword and translates
+                                    to a boolean value.
+
+                                    CX and CY are used to avoid this issue.'
+                                  type: integer
+                                cy:
+                                  type: integer
+                                h:
+                                  type: integer
+                                i:
+                                  type: string
+                                maxH:
+                                  type: integer
+                                minH:
+                                  type: integer
+                                static:
+                                  type: boolean
+                                w:
+                                  type: integer
+                              required:
+                              - cx
+                              - cy
+                              - h
+                              - i
+                              - w
+                              type: object
+                            type: array
+                          xl:
+                            items:
+                              description: WidgetTemplateConfigItem represents a single
+                                widget's configuration within the grid.
+                              properties:
+                                cx:
+                                  description: 'The original coordinates of the widget
+                                    are x and y, we have to use CX/CY because in some
+                                    YAML parsers y is a reserved keyword and translates
+                                    to a boolean value.
+
+                                    CX and CY are used to avoid this issue.'
+                                  type: integer
+                                cy:
+                                  type: integer
+                                h:
+                                  type: integer
+                                i:
+                                  type: string
+                                maxH:
+                                  type: integer
+                                minH:
+                                  type: integer
+                                static:
+                                  type: boolean
+                                w:
+                                  type: integer
+                              required:
+                              - cx
+                              - cy
+                              - h
+                              - i
+                              - w
+                              type: object
+                            type: array
+                        required:
+                        - lg
+                        - md
+                        - sm
+                        - xl
+                        type: object
+                    required:
+                    - displayName
+                    - name
+                    - templateConfig
+                    type: object
+                  type: array
                 bundleSegments:
                   description: navigation segments for the frontend
                   items:
@@ -969,6 +1155,9 @@ objects:
                     - segmentId
                     type: object
                   type: array
+                pushCacheEnabled:
+                  description: Push cache job enabled
+                  type: boolean
                 replicas:
                   format: int32
                   type: integer
@@ -1071,7 +1260,8 @@ objects:
                 title:
                   type: string
                 widgetRegistry:
-                  description: Data for the available widgets for the resource
+                  description: Data for the available widgets for the resource and
+                    the base widget layouts
                   items:
                     properties:
                       config:
@@ -1106,82 +1296,27 @@ objects:
                           title:
                             type: string
                         required:
-                        - icon
                         - title
                         type: object
                       defaults:
                         properties:
-                          lg:
-                            properties:
-                              h:
-                                type: integer
-                              maxH:
-                                type: integer
-                              minH:
-                                type: integer
-                              w:
-                                type: integer
-                            required:
-                            - h
-                            - maxH
-                            - minH
-                            - w
-                            type: object
-                          md:
-                            properties:
-                              h:
-                                type: integer
-                              maxH:
-                                type: integer
-                              minH:
-                                type: integer
-                              w:
-                                type: integer
-                            required:
-                            - h
-                            - maxH
-                            - minH
-                            - w
-                            type: object
-                          sm:
-                            properties:
-                              h:
-                                type: integer
-                              maxH:
-                                type: integer
-                              minH:
-                                type: integer
-                              w:
-                                type: integer
-                            required:
-                            - h
-                            - maxH
-                            - minH
-                            - w
-                            type: object
-                          xl:
-                            properties:
-                              h:
-                                type: integer
-                              maxH:
-                                type: integer
-                              minH:
-                                type: integer
-                              w:
-                                type: integer
-                            required:
-                            - h
-                            - maxH
-                            - minH
-                            - w
-                            type: object
+                          h:
+                            type: integer
+                          maxH:
+                            type: integer
+                          minH:
+                            type: integer
+                          w:
+                            type: integer
                         required:
-                        - lg
-                        - md
-                        - sm
-                        - xl
+                        - h
+                        - w
                         type: object
+                      featureFlag:
+                        type: string
                       frontendRef:
+                        type: string
+                      importName:
                         type: string
                       module:
                         type: string
@@ -1780,6 +1915,19 @@ objects:
           - --leader-elect
           command:
           - /manager
+          env:
+          - name: PUSHCACHE_AWS_ACCESS_KEY_ID
+            value: ${PUSHCACHE_AWS_ACCESS_KEY_ID}
+          - name: PUSHCACHE_AWS_SECRET_ACCESS_KEY
+            value: ${PUSHCACHE_AWS_SECRET_ACCESS_KEY}
+          - name: PUSHCACHE_AWS_BUCKET_NAME
+            value: ${PUSHCACHE_AWS_BUCKET_NAME}
+          - name: PUSHCACHE_AWS_REGION
+            value: ${PUSHCACHE_AWS_REGION}
+          - name: PUSHCACHE_AWS_ENDPOINT
+            value: ${PUSHCACHE_AWS_ENDPOINT}
+          - name: PUSHCACHE_AWS_PORT
+            value: ${PUSHCACHE_AWS_PORT}
           image: ${IMAGE}:${IMAGE_TAG}
           livenessProbe:
             httpGet:
@@ -1815,4 +1963,16 @@ parameters:
   required: true
 - name: IMAGE
   value: quay.io/cloudservices/frontend-operator
+- name: PUSHCACHE_AWS_ACCESS_KEY_ID
+  value: ''
+- name: PUSHCACHE_AWS_SECRET_ACCESS_KEY
+  value: ''
+- name: PUSHCACHE_AWS_BUCKET_NAME
+  value: ''
+- name: PUSHCACHE_AWS_REGION
+  value: ''
+- name: PUSHCACHE_AWS_ENDPOINT
+  value: ''
+- name: PUSHCACHE_AWS_PORT
+  value: ''
 

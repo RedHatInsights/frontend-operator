@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"os"
 	"slices"
 	"sort"
 	"strings"
@@ -49,17 +50,43 @@ type FrontendReconciliation struct {
 	Client              client.Client
 }
 
+// setupConfigMapWithLabels creates a ConfigMap with the specified name and namespace,
+// applies labels, and optionally sets the recycle annotation for pod restart
+func (r *FrontendReconciliation) setupConfigMapWithLabels(nn types.NamespacedName, markForRestart bool) *v1.ConfigMap {
+	cfgMap := &v1.ConfigMap{}
+	if markForRestart {
+		if cfgMap.Annotations == nil {
+			cfgMap.Annotations = map[string]string{}
+		}
+		// Flag to trigger pod restart if config map changes
+		cfgMap.Annotations["qontract.recycle"] = "true"
+	}
+
+	labels := r.FrontendEnvironment.GetLabels()
+	labler := utils.GetCustomLabeler(labels, nn, r.FrontendEnvironment)
+	labler(cfgMap)
+
+	return cfgMap
+}
+
 //go:embed templates/Caddyfile
 var caddyFileTemplate string
 
 func (r *FrontendReconciliation) run() error {
 
-	configMap, err := r.setupConfigMaps()
+	configMaps, err := r.setupConfigMaps()
 	if err != nil {
 		return err
 	}
 
-	configHash, err := createConfigmapHash(configMap)
+	var configHashBase []map[string]string
+	var configHash string
+
+	for _, cm := range configMaps {
+		configHashBase = append(configHashBase, cm.Data)
+	}
+
+	configHash, err = createConfigmapHash(configHashBase)
 	if err != nil {
 		return err
 	}
@@ -75,8 +102,14 @@ func (r *FrontendReconciliation) run() error {
 			return err
 		}
 		// If cache busting is enabled for the environment, add the akamai cache bust container
-		if r.FrontendEnvironment.Spec.EnableAkamaiCacheBust && r.FrontendEnvironment.Spec.AkamaiCacheBustImage != "" {
-			if err := r.createOrUpdateCacheBustJob(); err != nil {
+		if r.FrontendEnvironment.Spec.EnableAkamaiCacheBust && r.FrontendEnvironment.Spec.AkamaiCacheBustImage != "" && !r.Frontend.Spec.AkamaiCacheBustDisable {
+			if err := r.createOrUpdateJob(r.generateCacheBustJobName, r.populateCacheBustContainer); err != nil {
+				return err
+			}
+		}
+		// If push cache is enabled for the environment, add the push cache container
+		if r.FrontendEnvironment.Spec.EnablePushCache && r.Frontend.Spec.Image != "" && r.Frontend.Spec.PushCacheEnabled {
+			if err := r.createOrUpdateJob(r.generatePushCacheJobName, r.populatePushCacheContainer); err != nil {
 				return err
 			}
 		}
@@ -420,6 +453,93 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 	return nil
 }
 
+// populatePushCacheContainer adds the push cache container to the deployment
+func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) error {
+	configMap := &v1.ConfigMap{}
+	configMap.SetName("pushcache")
+	configMap.SetNamespace(r.Frontend.Namespace)
+
+	nn := types.NamespacedName{
+		Name:      "pushcache",
+		Namespace: r.Frontend.Namespace,
+	}
+	labels := r.FrontendEnvironment.GetLabels()
+	labler := utils.GetCustomLabeler(labels, nn, r.FrontendEnvironment)
+	labler(configMap)
+
+	configMap.SetOwnerReferences([]metav1.OwnerReference{r.Frontend.MakeOwnerReference()})
+
+	// Create the configmap with the Client if it doesn't already exist
+	if err := r.Client.Create(r.Ctx, configMap); err != nil {
+		if !k8serr.IsAlreadyExists(err) {
+			return err
+		}
+	}
+
+	pushCacheVolume := v1.Volume{
+		Name: "pushcache-volume",
+		VolumeSource: v1.VolumeSource{
+			ConfigMap: &v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{
+					Name: r.Frontend.Spec.EnvName,
+				},
+			},
+		},
+	}
+
+	j.Spec.Template.Spec.Volumes = []v1.Volume{pushCacheVolume}
+
+	secrets := v1.SecretList{}
+	err := r.Client.List(r.Ctx, &secrets, client.InNamespace(r.Frontend.Namespace))
+	if err != nil {
+		return err
+	}
+
+	objectStoreInfo, err := ExtractBucketConfigFromEnv()
+	if err != nil {
+		return err
+	}
+
+	bucketName := objectStoreInfo.Name
+	awsUsername := objectStoreInfo.AccessKey
+	awsPassword := objectStoreInfo.SecretKey
+	hostname := objectStoreInfo.Endpoint
+	port := objectStoreInfo.Port
+
+	// Construct the pushcache startup command; removing the sleep command will result in the pushcache job being spin up continously, without delay, and uploading the assets to s3
+	command := fmt.Sprintf("sleep 120; valpop populate -r %s -s /srv/dist --bucket %s --hostname %s --port %s --username %s --password %s", r.Frontend.Name, *bucketName, *hostname, *port, *awsUsername, *awsPassword)
+
+	volumeMounts := []v1.VolumeMount{}
+	volumeMounts = append(volumeMounts, v1.VolumeMount{
+		Name:      "pushcache-volume",
+		MountPath: "/opt/pushcache-volume",
+	})
+
+	// Modify the object to set the things we care about
+	pushCacheContainer := v1.Container{
+		Name:         "valpop-pushcache",
+		Image:        r.Frontend.Spec.Image,
+		VolumeMounts: volumeMounts,
+		// Run the pushcache startup command
+		Command: []string{"/bin/bash", "-c", command},
+	}
+	// add the container to the spec containers
+	j.Spec.Template.Spec.Containers = []v1.Container{pushCacheContainer}
+
+	// Add the restart policy
+	j.Spec.Template.Spec.RestartPolicy = v1.RestartPolicyNever
+
+	annotations := j.Spec.Template.ObjectMeta.Annotations
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	annotations["kube-linter.io/ignore-all"] = "we don't need no any checking"
+
+	j.Spec.Template.ObjectMeta.SetAnnotations(annotations)
+
+	return nil
+}
+
 func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) {
 	// By default we just want the config and caddy volume
 	volumes := []v1.Volume{}
@@ -473,6 +593,65 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 
 	// Set the volumes on the deployment
 	d.Spec.Template.Spec.Volumes = volumes
+}
+
+// ObjectStoreBucket represents the configuration for an object storage bucket.
+type ObjectStoreBucket struct {
+	AccessKey *string
+	SecretKey *string
+	Name      *string
+	Region    *string
+	Endpoint  *string
+	Port      *string
+	TLS       *bool
+}
+
+// ExtractBucketConfigFromSecretByName extracts ObjectStoreBucket configuration from secrets
+func ExtractBucketConfigFromEnv() (*ObjectStoreBucket, error) {
+	// Required environment variables
+	accessKeyID := os.Getenv("PUSHCACHE_AWS_ACCESS_KEY_ID")
+	if accessKeyID == "" {
+		return nil, fmt.Errorf("required environment variable PUSHCACHE_AWS_ACCESS_KEY_ID is not set")
+	}
+
+	secretAccessKey := os.Getenv("PUSHCACHE_AWS_SECRET_ACCESS_KEY")
+	if secretAccessKey == "" {
+		return nil, fmt.Errorf("required environment variable PUSHCACHE_AWS_SECRET_ACCESS_KEY is not set")
+	}
+
+	bucketName := os.Getenv("PUSHCACHE_AWS_BUCKET_NAME")
+	if bucketName == "" {
+		return nil, fmt.Errorf("required environment variable PUSHCACHE_AWS_BUCKET_NAME is not set")
+	}
+
+	region := os.Getenv("PUSHCACHE_AWS_REGION")
+	if region == "" {
+		return nil, fmt.Errorf("required environment variable PUSHCACHE_AWS_REGION is not set")
+	}
+
+	endpoint := os.Getenv("PUSHCACHE_AWS_ENDPOINT")
+	if endpoint == "" {
+		return nil, fmt.Errorf("required environment variable PUSHCACHE_AWS_ENDPOINT is not set")
+	}
+
+	port := os.Getenv("PUSHCACHE_AWS_PORT")
+	// Default Objectstore Port to "443" if not provided
+	if port == "" {
+		port = "443"
+	}
+
+	// Initialize the bucket configuration with required fields
+	bucketConfig := &ObjectStoreBucket{
+		Name:      &bucketName,
+		AccessKey: &accessKeyID,
+		SecretKey: &secretAccessKey,
+		Region:    &region,
+		Endpoint:  &endpoint,
+		Port:      utils.StringPtr(port),
+		TLS:       utils.TruePtr(), // TLS is assumed to be true by default
+	}
+
+	return bucketConfig, nil
 }
 
 // Add the env vars if eny are set
@@ -623,17 +802,19 @@ func createPorts() []v1.ServicePort {
 	}
 }
 
-func (r *FrontendReconciliation) generateJobName() string {
+func (r *FrontendReconciliation) generateCacheBustJobName() string {
 	return r.Frontend.Name + "-frontend-cachebust"
+}
+
+func (r *FrontendReconciliation) generatePushCacheJobName() string {
+	return r.Frontend.Name + "-frontend-pushcache"
 }
 
 // getExistingJob returns the existing job if it exists
 // and a bool indicating if it exists or not
-func (r *FrontendReconciliation) getExistingJob() (*batchv1.Job, bool, error) {
+func (r *FrontendReconciliation) getExistingJob(jobName string) (*batchv1.Job, bool, error) {
 	// Job we'll fill up
 	j := &batchv1.Job{}
-
-	jobName := r.generateJobName()
 
 	// Define name of resource
 	nn := types.NamespacedName{
@@ -663,8 +844,8 @@ func (r *FrontendReconciliation) isJobFromCurrentFrontendImage(j *batchv1.Job) b
 
 // manageExistingJob will delete the existing job if it exists and is not from the current frontend image
 // It will return true if the job exists and is from the current frontend image
-func (r *FrontendReconciliation) manageExistingJob() (bool, error) {
-	j, exists, err := r.getExistingJob()
+func (r *FrontendReconciliation) manageExistingJob(jobName string) (bool, error) {
+	j, exists, err := r.getExistingJob(jobName)
 	if err != nil {
 		return false, err
 	}
@@ -686,19 +867,16 @@ func (r *FrontendReconciliation) manageExistingJob() (bool, error) {
 	return true, nil
 }
 
-// createOrUpdateCacheBustJob will create a new job if it doesn't exist
+// createOrUpdateJob will create a new job if it doesn't exist
 // If it does exist and is from the current frontend image it will return
 // If it does exist and is not from the current frontend image it will delete it and create a new one
-func (r *FrontendReconciliation) createOrUpdateCacheBustJob() error {
-	// Guard on frontend opting out of cache busting
-	if r.Frontend.Spec.AkamaiCacheBustDisable {
-		return nil
-	}
+func (r *FrontendReconciliation) createOrUpdateJob(generateJobName func() string, populateContainer func(*batchv1.Job) error) error {
+	jobName := generateJobName()
 
 	// If the job exists and is from the current frontend image we can return
 	// If the job exists and is not from the current frontend image we delete it
 	// If the job doesn't exist we create it
-	existsAndMatchesCurrentFrontendImage, err := r.manageExistingJob()
+	existsAndMatchesCurrentFrontendImage, err := r.manageExistingJob(jobName)
 	if err != nil {
 		return err
 	}
@@ -708,8 +886,6 @@ func (r *FrontendReconciliation) createOrUpdateCacheBustJob() error {
 
 	// Create job
 	j := &batchv1.Job{}
-
-	jobName := r.generateJobName()
 
 	// Set name
 	j.SetName(jobName)
@@ -744,7 +920,7 @@ func (r *FrontendReconciliation) createOrUpdateCacheBustJob() error {
 
 	j.Spec.Template.ObjectMeta.SetAnnotations(annotations)
 
-	errr := r.populateCacheBustContainer(j)
+	errr := populateContainer(j)
 	if errr != nil {
 		return errr
 	}
@@ -1039,8 +1215,8 @@ func setupSearchIndex(feList *crd.FrontendList) []crd.SearchEntry {
 	return searchIndex
 }
 
-func setupWidgetRegistry(feList *crd.FrontendList) []crd.WidgetEntry {
-	widgetRegistry := []crd.WidgetEntry{}
+func setupWidgetRegistry(feList *crd.FrontendList) []crd.WidgetModuleFederationMetadata {
+	widgetRegistry := []crd.WidgetModuleFederationMetadata{}
 
 	for _, frontend := range feList.Items {
 		if frontend.Spec.FeoConfigEnabled {
@@ -1051,12 +1227,34 @@ func setupWidgetRegistry(feList *crd.FrontendList) []crd.WidgetEntry {
 		}
 	}
 
-	// Sort widgetRegistry alphabetically by .FrontendRef
+	// Sort widgetRegistry alphabetically
 	sort.Slice(widgetRegistry, func(i, j int) bool {
-		return widgetRegistry[i].FrontendRef < widgetRegistry[j].FrontendRef
+		return widgetRegistry[i].FrontendRef+widgetRegistry[i].Scope+widgetRegistry[i].Module+widgetRegistry[i].ImportName < widgetRegistry[j].FrontendRef+widgetRegistry[j].Scope+widgetRegistry[j].Module+widgetRegistry[j].ImportName
 	})
 
 	return widgetRegistry
+}
+
+func setupBaseWidgetDashboardTemplates(feList *crd.FrontendList) []crd.BaseWidgetDashboardTemplate {
+	baseWidgetDashboardTemplates := []crd.BaseWidgetDashboardTemplate{}
+
+	for _, frontend := range feList.Items {
+		if frontend.Spec.FeoConfigEnabled && frontend.Spec.BaseWidgetLayouts != nil {
+			for _, template := range frontend.Spec.BaseWidgetLayouts {
+				template.FrontendRef = frontend.Name
+				// ensure bases are unique
+				template.Name = frontend.Name + "-" + template.Name
+				baseWidgetDashboardTemplates = append(baseWidgetDashboardTemplates, *template)
+			}
+		}
+	}
+
+	// Sort baseWidgetDashboardTemplates alphabetically
+	sort.Slice(baseWidgetDashboardTemplates, func(i, j int) bool {
+		return baseWidgetDashboardTemplates[i].FrontendRef+baseWidgetDashboardTemplates[i].Name+baseWidgetDashboardTemplates[i].DisplayName < baseWidgetDashboardTemplates[j].FrontendRef+baseWidgetDashboardTemplates[j].Name+baseWidgetDashboardTemplates[j].DisplayName
+	})
+
+	return baseWidgetDashboardTemplates
 }
 
 func getServiceTilePath(section string, group string) string {
@@ -1115,11 +1313,32 @@ func setupServiceTilesData(feList *crd.FrontendList, feEnvironment crd.FrontendE
 	for _, category := range categories {
 		for _, group := range category.Groups {
 			sort.Slice(*group.Tiles, func(i, j int) bool {
-				pos := strings.Compare((*group.Tiles)[i].Title, (*group.Tiles)[j].Title)
-				if pos == 0 {
-					return (*group.Tiles)[i].Description < (*group.Tiles)[j].Description
+				tileA := (*group.Tiles)[i]
+				tileB := (*group.Tiles)[j]
+
+				// Sort by all string attributes in order: Section, Group, ID, Href, Title, Description, Icon, FrontendRef
+				if pos := strings.Compare(tileA.Section, tileB.Section); pos != 0 {
+					return pos == -1
 				}
-				return pos == -1
+				if pos := strings.Compare(tileA.Group, tileB.Group); pos != 0 {
+					return pos == -1
+				}
+				if pos := strings.Compare(tileA.ID, tileB.ID); pos != 0 {
+					return pos == -1
+				}
+				if pos := strings.Compare(tileA.Href, tileB.Href); pos != 0 {
+					return pos == -1
+				}
+				if pos := strings.Compare(tileA.Title, tileB.Title); pos != 0 {
+					return pos == -1
+				}
+				if pos := strings.Compare(tileA.Description, tileB.Description); pos != 0 {
+					return pos == -1
+				}
+				if pos := strings.Compare(tileA.Icon, tileB.Icon); pos != 0 {
+					return pos == -1
+				}
+				return strings.Compare(tileA.FrontendRef, tileB.FrontendRef) == -1
 			})
 		}
 	}
@@ -1347,8 +1566,8 @@ func (r *FrontendReconciliation) setupBundleData(_ *v1.ConfigMap, _ map[string]c
 	return nil
 }
 
-func createConfigmapHash(cfgMap *v1.ConfigMap) (string, error) {
-	hashData, err := json.Marshal(cfgMap.Data)
+func createConfigmapHash(hashBase []map[string]string) (string, error) {
+	hashData, err := json.Marshal(hashBase)
 	if err != nil {
 		return "", err
 	}
@@ -1359,9 +1578,49 @@ func createConfigmapHash(cfgMap *v1.ConfigMap) (string, error) {
 	return hash, nil
 }
 
+func setupAPISpecs(feList *crd.FrontendList) []crd.APISpecInfo {
+	var allSpecs []crd.APISpecInfo
+
+	for _, frontend := range feList.Items {
+		if frontend.Spec.API != nil && len(frontend.Spec.API.Specs) > 0 {
+			// Override FrontendName in each spec
+			for i := range frontend.Spec.API.Specs {
+				frontend.Spec.API.Specs[i].FrontendName = frontend.Name
+			}
+			allSpecs = append(allSpecs, frontend.Spec.API.Specs...)
+		}
+	}
+
+	// Sort deterministically by FrontendName then URL
+	sort.Slice(allSpecs, func(i, j int) bool {
+		frontendNameI := allSpecs[i].FrontendName
+		frontendNameJ := allSpecs[j].FrontendName
+
+		// If both are empty, sort by URL
+		if frontendNameI == "" && frontendNameJ == "" {
+			return allSpecs[i].URL < allSpecs[j].URL
+		}
+		// If only i is empty, j comes first
+		if frontendNameI == "" {
+			return false
+		}
+		// If only j is empty, i comes first
+		if frontendNameJ == "" {
+			return true
+		}
+		// If both have values, sort by FrontendName then URL
+		if frontendNameI == frontendNameJ {
+			return allSpecs[i].URL < allSpecs[j].URL
+		}
+		return frontendNameI < frontendNameJ
+	})
+
+	return allSpecs
+}
+
 // setupConfigMaps will create configmaps for the various config json
 // files, including fed-modules.json and the various bundle json files
-func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
+func (r *FrontendReconciliation) setupConfigMaps() ([]*v1.ConfigMap, error) {
 	// Will need to interact directly with the client here, and not the cache because
 	// we need to read ALL the Frontend CRDs in the Env that we care about
 
@@ -1370,8 +1629,10 @@ func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
 
 	// Populate the frontendlist by looking for all frontends in our env
 	if err := r.FRE.Client.List(r.Ctx, frontendList, client.MatchingFields{"spec.envName": r.Frontend.Spec.EnvName}); err != nil {
-		return &v1.ConfigMap{}, err
+		return []*v1.ConfigMap{}, err
 	}
+
+	configMaps := []*v1.ConfigMap{}
 
 	// default config map, should be always created
 	defaultNN := types.NamespacedName{
@@ -1379,8 +1640,20 @@ func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
 		Namespace: r.Frontend.Namespace,
 	}
 
+	defaultWidgetNN := types.NamespacedName{
+		Name:      r.Frontend.Spec.EnvName + "-widget-registry",
+		Namespace: r.Frontend.Namespace,
+	}
+
+	defaultBaseLayoutNN := types.NamespacedName{
+		Name:      r.Frontend.Spec.EnvName + "-base-widget-dashboard-templates",
+		Namespace: r.Frontend.Namespace,
+	}
+
 	// TODO: The conntext map should be configured via env variable from app interface
 	frontendCFGContextName := "feo-context-cfg"
+	widgetsCFGContextName := "widget-registry-cfg"
+	baseLayoutsCFGContextName := "base-widget-dashboard-templates-cfg"
 	if strings.Contains(r.Frontend.Namespace, "beta") {
 		// separate stable and beta config map names
 		// quick patch to see if we can separate the configurations
@@ -1395,51 +1668,128 @@ func (r *FrontendReconciliation) setupConfigMaps() (*v1.ConfigMap, error) {
 	}
 
 	defaultCfgMap, err := r.createConfigMap(defaultNN, frontendList, true)
+	if err != nil {
+		return []*v1.ConfigMap{}, err
+	}
+	configMaps = append(configMaps, defaultCfgMap)
+	widgetCfgMap, err := r.createWidgetRegistryConfigMap(defaultWidgetNN, frontendList, true)
+	if err != nil {
+		return []*v1.ConfigMap{}, err
+	}
+	configMaps = append(configMaps, widgetCfgMap)
+
+	baseWidgetDashboardTemplatesConfigMap, err := r.createBaseWidgetDashboardTemplatesConfigMap(defaultBaseLayoutNN, frontendList, true)
+	if err != nil {
+		return configMaps, err
+	}
+	configMaps = append(configMaps, baseWidgetDashboardTemplatesConfigMap)
 
 	for _, nn := range additionalNN {
+		widgetsNN := types.NamespacedName{
+			Name:      widgetsCFGContextName,
+			Namespace: nn.Namespace,
+		}
+		baseLayoutsNN := types.NamespacedName{
+			Name:      baseLayoutsCFGContextName,
+			Namespace: nn.Namespace,
+		}
 		_, err = r.createConfigMap(nn, frontendList, true)
 		if err != nil {
-			return defaultCfgMap, err
+			return configMaps, err
+		}
+		_, err = r.createWidgetRegistryConfigMap(widgetsNN, frontendList, true)
+		if err != nil {
+			return configMaps, err
+		}
+
+		_, err = r.createBaseWidgetDashboardTemplatesConfigMap(baseLayoutsNN, frontendList, true)
+		if err != nil {
+			return configMaps, err
 		}
 	}
 
-	return defaultCfgMap, err
+	return configMaps, err
+}
+
+func (r *FrontendReconciliation) createBaseWidgetDashboardTemplatesConfigMap(nn types.NamespacedName, frontendList *crd.FrontendList, markForRestart bool) (*v1.ConfigMap, error) {
+	cfgMap := &v1.ConfigMap{}
+	if err := r.Cache.Create(CoreConfig, nn, cfgMap); err != nil {
+		return cfgMap, err
+	}
+
+	cacheMap := make(map[string]crd.Frontend)
+	for _, frontend := range frontendList.Items {
+		cacheMap[frontend.Name] = frontend
+	}
+
+	cfgMap = r.setupConfigMapWithLabels(nn, markForRestart)
+
+	baseWidgetDashboardTemplates := setupBaseWidgetDashboardTemplates(frontendList)
+
+	baseWidgetDashboardTemplatesJSONData, err := json.Marshal(baseWidgetDashboardTemplates)
+	if err != nil {
+		return cfgMap, err
+	}
+
+	cfgMap.Data = map[string]string{}
+	if len(baseWidgetDashboardTemplates) > 0 {
+		cfgMap.Data["base-widget-dashboard-templates.json"] = string(baseWidgetDashboardTemplatesJSONData)
+	}
+
+	if err := r.Cache.Update(CoreConfig, cfgMap); err != nil {
+		return cfgMap, err
+	}
+
+	return cfgMap, nil
+}
+
+func (r *FrontendReconciliation) createWidgetRegistryConfigMap(nn types.NamespacedName, frontendList *crd.FrontendList, markForRestart bool) (*v1.ConfigMap, error) {
+	cfgMap := &v1.ConfigMap{}
+	if err := r.Cache.Create(CoreConfig, nn, cfgMap); err != nil {
+		return cfgMap, err
+	}
+
+	// Apply the common setup (annotations and labels)
+	cfgMap = r.setupConfigMapWithLabels(nn, markForRestart)
+
+	cacheMap := make(map[string]crd.Frontend)
+	for _, frontend := range frontendList.Items {
+		cacheMap[frontend.Name] = frontend
+	}
+
+	widgetRegistry := setupWidgetRegistry(frontendList)
+
+	widgetRegistryJSONData, err := json.Marshal(widgetRegistry)
+	if err != nil {
+		return cfgMap, err
+	}
+
+	cfgMap.Data = map[string]string{}
+	if len(widgetRegistry) > 0 {
+		cfgMap.Data["widget-registry.json"] = string(widgetRegistryJSONData)
+	}
+
+	if err := r.Cache.Update(CoreConfig, cfgMap); err != nil {
+		return cfgMap, err
+	}
+
+	return cfgMap, nil
 }
 
 func (r *FrontendReconciliation) createConfigMap(nn types.NamespacedName, frontendList *crd.FrontendList, markForRestart bool) (*v1.ConfigMap, error) {
 	cfgMap := &v1.ConfigMap{}
-	if markForRestart {
-		if cfgMap.Annotations == nil {
-			cfgMap.Annotations = map[string]string{}
-		}
-		// Flag to trigger pod restart if config map changes
-		cfgMap.Annotations["qontract.recycle"] = "true"
-		/**
-			* to use config map in a pod as an env variable use following config:
-		* podSpec:
-		*   env:
-		*    - name: FEO_SEARCH_INDEX
-		*      valueFrom:
-		*        configMapKeyRef:
-		*          key: search-index.json # or other key from config map
-		*          name: feo-context-cfg # based on the constant in the setupConfigMaps function
-		  *					 optional: true # because keys in configmap can be empty
-		*/
+	if err := r.Cache.Create(CoreConfig, nn, cfgMap); err != nil {
+		return cfgMap, err
 	}
+
+	// Apply the common setup (annotations and labels)
+	cfgMap = r.setupConfigMapWithLabels(nn, markForRestart)
 
 	// Create a map of frontend names to frontend objects
 	cacheMap := make(map[string]crd.Frontend)
 	for _, frontend := range frontendList.Items {
 		cacheMap[frontend.Name] = frontend
 	}
-
-	if err := r.Cache.Create(CoreConfig, nn, cfgMap); err != nil {
-		return cfgMap, err
-	}
-
-	labels := r.FrontendEnvironment.GetLabels()
-	labler := utils.GetCustomLabeler(labels, nn, r.FrontendEnvironment)
-	labler(cfgMap)
 
 	if err := r.populateConfigMap(cfgMap, cacheMap, frontendList); err != nil {
 		return cfgMap, err
@@ -1468,13 +1818,19 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 
 	searchIndex := setupSearchIndex(feList)
 
-	widgetRegistry := setupWidgetRegistry(feList)
-
 	serviceCategories, skippedTiles := setupServiceTilesData(feList, *r.FrontendEnvironment)
 
 	bundles, skippedBundles, err := setupBundlesData(feList, *r.FrontendEnvironment)
 	if err != nil {
 		return err
+	}
+
+	// Collect API specs from all frontends
+	apiSpecs := setupAPISpecs(feList)
+
+	// Log information about collected API specs for debugging
+	if len(apiSpecs) > 0 {
+		r.Log.Info("Collected API specs for config map", "specCount", len(apiSpecs))
 	}
 
 	fedModulesJSONData, err := json.Marshal(fedModules)
@@ -1488,11 +1844,6 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 		return err
 	}
 
-	widgetRegistryJSONData, err := json.Marshal(widgetRegistry)
-	if err != nil {
-		return err
-	}
-
 	serviceCategoriesJSONData, err := json.Marshal(serviceCategories)
 
 	if err != nil {
@@ -1500,6 +1851,11 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 	}
 
 	bundlesJSONData, err := json.Marshal(bundles)
+	if err != nil {
+		return err
+	}
+
+	apiSpecsJSONData, err := json.Marshal(apiSpecs)
 	if err != nil {
 		return err
 	}
@@ -1518,16 +1874,16 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 		cfgMap.Data["search-index.json"] = string(searchIndexJSONData)
 	}
 
-	if len(widgetRegistry) > 0 {
-		cfgMap.Data["widget-registry.json"] = string(widgetRegistryJSONData)
-	}
-
 	if len(serviceCategories) > 0 {
 		cfgMap.Data["service-tiles.json"] = string(serviceCategoriesJSONData)
 	}
 
 	if len(bundles) > 0 {
 		cfgMap.Data["bundles.json"] = string(bundlesJSONData)
+	}
+
+	if len(apiSpecs) > 0 {
+		cfgMap.Data["api-specs.json"] = string(apiSpecsJSONData)
 	}
 
 	return nil

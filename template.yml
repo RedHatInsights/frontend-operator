@@ -7,4 +7,16 @@ parameters:
   required: true
 - name: IMAGE
   value: quay.io/cloudservices/frontend-operator
+- name: PUSHCACHE_AWS_ACCESS_KEY_ID
+  value: ""
+- name: PUSHCACHE_AWS_SECRET_ACCESS_KEY
+  value: ""
+- name: PUSHCACHE_AWS_BUCKET_NAME
+  value: ""
+- name: PUSHCACHE_AWS_REGION
+  value: ""
+- name: PUSHCACHE_AWS_ENDPOINT
+  value: ""
+- name: PUSHCACHE_AWS_PORT
+  value: ""
 objects: []

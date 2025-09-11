@@ -84,6 +84,20 @@ If you want to access the app from your computer, you have to update /etc/hosts 
 
 Once you update it you can access the app from `https://env-boot/insights/inventory`
 
+### Pushcache (valpop) job
+
+The pushcache job or [valpop](https://github.com/RedHatInsights/valpop) will be disabled by default for all frontends.
+To enable the pushcache job for a particular frontend, you will need to set `puschCacheEnabled` to `true` in the frontend CRD (frontend.yaml) file. For example:
+
+```yaml
+spec:
+  image: quay.io/...
+  pushCacheEnabled: true
+```
+
+To disable the pushcache job altogether through the Frontend Operator, irregardless of `pushCacheEnabled: true` in the frontend resources, set `enablePushCache` to `false` in the frontend enviornment of the FEO.
+
+For local development purposes, the minio or AWS bucket secrets are stored under `examples/minio-bucket-secret.yaml`.
 
 ## E2E testing with kuttl
 

@@ -1,0 +1,20 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-pushcache
+spec:
+  finalizers:
+  - kubernetes
+---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: single-s3-bucket-creds
+  namespace: test-pushcache
+data:
+  aws_access_key_id: YWNjZXNzX2tleQ==
+  aws_secret_access_key: c2VjcmV0X2FjY2Vzc19rZXk=
+  aws_region: dXMtZWFzdC0x
+  endpoint: aHR0cHM6Ly9zMy51cy13ZXN0LTIuYW1hem9uYXdzLmNvbQ==
+  bucket: c3RhZ2UtaGNtLWZyb250ZW5kLXB1c2hjYWNoZS1idWNrZXQ=
