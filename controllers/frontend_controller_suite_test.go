@@ -249,7 +249,7 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 				if err != nil {
 					return err == nil
 				}
-				if len(createdConfigMap.Data) != 3 {
+				if len(createdConfigMap.Data) != 4 {
 					return false
 				}
 				return true
@@ -259,6 +259,7 @@ var _ = ginkgo.Describe("Frontend controller with image", func() {
 				"api-specs.json":   "[{\"url\":\"https://console.redhat.com/api/inventory/v1/openapi.json\",\"bundleLabels\":[\"insights\"],\"frontendName\":\"test-frontend\"},{\"url\":\"https://console.redhat.com/api/inventory/v1/openapi.json\",\"bundleLabels\":[\"insights\"],\"frontendName\":\"test-frontend2\"}]",
 				"Caddyfile":        caddyFileTemplate,
 				"fed-modules.json": "{\"testFrontend\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"},\"fullProfile\":true,\"cdnPath\":\"/things/test/\"},\"testFrontend2\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"cheese\":\"pasty\"},\"fullProfile\":false,\"cdnPath\":\"/things/test/\"}}",
+				"sso-config.json":  "{\"environment\":\"test-env\",\"ssoUrl\":\"https://something-auth\"}",
 			}))
 			gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(FrontendEnvName))
 
@@ -403,6 +404,7 @@ var _ = ginkgo.Describe("Frontend controller with service", func() {
 				"Caddyfile":        caddyFileTemplate,
 				"api-specs.json":   "[{\"url\":\"https://console.redhat.com/api/inventory/v1/openapi.json\",\"bundleLabels\":[\"insights\"],\"frontendName\":\"test-frontend-service\"}]",
 				"fed-modules.json": "{\"testFrontendService\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"fullProfile\":false,\"cdnPath\":\"/things/test/\"}}",
+				"sso-config.json":  "{\"environment\":\"test-env-service\",\"ssoUrl\":\"https://something-auth\"}",
 			}))
 
 			gomega.Eventually(func() bool {
@@ -669,7 +671,7 @@ var _ = ginkgo.Describe("Frontend controller with chrome", func() {
 				if err != nil {
 					return err == nil
 				}
-				if len(createdConfigMap.Data) != 2 {
+				if len(createdConfigMap.Data) != 3 {
 					return false
 				}
 				return true
@@ -678,6 +680,7 @@ var _ = ginkgo.Describe("Frontend controller with chrome", func() {
 			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
 				"Caddyfile":        caddyFileTemplate,
 				"fed-modules.json": "{\"chrome\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\",\"ssoUrl\":\"https://something-auth\"},\"fullProfile\":false,\"cdnPath\":\"/things/test/\"},\"noConfig\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"fullProfile\":false,\"cdnPath\":\"/things/test/\"},\"nonChrome\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"config\":{\"apple\":\"pie\"},\"fullProfile\":false,\"cdnPath\":\"/things/test/\"}}",
+				"sso-config.json":  "{\"environment\":\"test-chrome-env\",\"ssoUrl\":\"https://something-auth\"}",
 			}))
 			gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(FrontendEnvName))
 
@@ -999,7 +1002,7 @@ var _ = ginkgo.Describe("Dependencies", func() {
 				if err != nil {
 					return err == nil
 				}
-				if len(createdConfigMap.Data) != 2 {
+				if len(createdConfigMap.Data) != 3 {
 					return false
 				}
 				return true
@@ -1008,6 +1011,7 @@ var _ = ginkgo.Describe("Dependencies", func() {
 			gomega.Expect(createdConfigMap.Data).Should(gomega.Equal(map[string]string{
 				"Caddyfile":        caddyFileTemplate,
 				"fed-modules.json": "{\"testDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}],\"dependencies\":[\"depstring\"]}],\"fullProfile\":false,\"cdnPath\":\"/things/test/\"},\"testNoDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}]}],\"fullProfile\":false,\"cdnPath\":\"/things/test/\"},\"testOptionalDependencies\":{\"manifestLocation\":\"/apps/inventory/fed-mods.json\",\"modules\":[{\"id\":\"test\",\"module\":\"./RootApp\",\"routes\":[{\"pathname\":\"/test/href\"}],\"optionalDependencies\":[\"depstring-op\"]}],\"fullProfile\":false,\"cdnPath\":\"/things/test/\"}}",
+				"sso-config.json":  "{\"environment\":\"test-dependencies-env\",\"ssoUrl\":\"https://something-auth\"}",
 			}))
 			gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(FrontendEnvName))
 
@@ -1130,7 +1134,7 @@ var _ = ginkgo.Describe("Search index", func() {
 					if err != nil {
 						return err == nil
 					}
-					if len(createdConfigMap.Data) != 3 {
+					if len(createdConfigMap.Data) != 4 {
 						return false
 					}
 					return true
@@ -1183,13 +1187,18 @@ var _ = ginkgo.Describe("Search index", func() {
 					if err != nil {
 						return err == nil
 					}
-					if len(createdConfigMap.Data) != 3 {
+					if len(createdConfigMap.Data) != 4 {
 						return false
 					}
 					return true
 				}, timeout, interval).Should(gomega.BeTrue())
 				searchIndexMap, ok := createdConfigMap.Data["search-index.json"]
 				gomega.Expect(ok).Should(gomega.BeTrue())
+
+				ssoConfigMap, ok := createdConfigMap.Data["sso-config.json"]
+				gomega.Expect(ok).Should(gomega.BeTrue())
+				gomega.Expect(ssoConfigMap).Should(gomega.Equal(`{"environment":"test-search-index-env2","ssoUrl":"https://something-auth"}`))
+
 				// Make sure the order does not break the tests
 				var sortedSearchIndex []crd.SearchEntry
 				err := json.Unmarshal([]byte(searchIndexMap), &sortedSearchIndex)
@@ -1536,12 +1545,12 @@ var _ = ginkgo.Describe("Service tiles", func() {
 					Title: "Service Section Group 2",
 					Tiles: &[]crd.ServiceTile{
 						{
-							Section:     ServiceTile6.Section,
-							Group:       ServiceTile6.Group,
-							ID:          ServiceTile6.ID,
-							Href:        ServiceTile6.Href,
-							Title:       ServiceTile6.Title,
-							Description: ServiceTile6.Description,
+							Section:     ServiceTile4.Section,
+							Group:       ServiceTile4.Group,
+							ID:          ServiceTile4.ID,
+							Href:        ServiceTile4.Href,
+							Title:       ServiceTile4.Title,
+							Description: ServiceTile4.Description,
 							FrontendRef: FrontendName2,
 						},
 						{
@@ -1554,12 +1563,12 @@ var _ = ginkgo.Describe("Service tiles", func() {
 							FrontendRef: FrontendName2,
 						},
 						{
-							Section:     ServiceTile4.Section,
-							Group:       ServiceTile4.Group,
-							ID:          ServiceTile4.ID,
-							Href:        ServiceTile4.Href,
-							Title:       ServiceTile4.Title,
-							Description: ServiceTile4.Description,
+							Section:     ServiceTile6.Section,
+							Group:       ServiceTile6.Group,
+							ID:          ServiceTile6.ID,
+							Href:        ServiceTile6.Href,
+							Title:       ServiceTile6.Title,
+							Description: ServiceTile6.Description,
 							FrontendRef: FrontendName2,
 						},
 					},
@@ -1625,13 +1634,18 @@ var _ = ginkgo.Describe("Service tiles", func() {
 					if err != nil {
 						return err == nil
 					}
-					if len(createdConfigMap.Data) != 3 {
+					if len(createdConfigMap.Data) != 4 {
 						return false
 					}
 					return true
 				}, timeout, interval).Should(gomega.BeTrue())
 
 				serviceTileRegistryMap := createdConfigMap.Data["service-tiles.json"]
+
+				ssoConfigMap, ok := createdConfigMap.Data["sso-config.json"]
+				gomega.Expect(ok).Should(gomega.BeTrue())
+				expectedSSO := fmt.Sprintf(`{"environment":"%s","ssoUrl":"https://something-auth"}`, serviceCase.Environment)
+				gomega.Expect(ssoConfigMap).Should(gomega.Equal(expectedSSO))
 
 				gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(serviceCase.Environment))
 				gomega.Expect(serviceTileRegistryMap).Should(gomega.Equal(serviceCase.ExpectedConfigMapEntry))

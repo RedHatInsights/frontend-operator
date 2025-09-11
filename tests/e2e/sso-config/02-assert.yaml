@@ -1,0 +1,15 @@
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: test-sso-config-environment
+  namespace: test-sso-config
+  labels:
+    frontendenv: test-sso-config-environment
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: FrontendEnvironment
+      name: test-sso-config-environment
+data:
+  sso-config.json: >-
+    {"environment":"test-sso-config-environment","ssoMapping":{"console.dev.redhat.com":"https://sso.redhat.com/auth","console.stage.openshiftusgov.com":"https://sso.stage.openshiftusgov.com"},"ssoUrl":"https://sso.stage.redhat.com/auth"}

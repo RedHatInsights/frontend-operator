@@ -10,13 +10,13 @@ jobs:
     steps:
       - name: Set up skopeo
         run: sudo apt-get install -y skopeo    
-      - name: Check ubi8-minimal change
+      - name: Check ubi9-minimal change
         run: |
-          UBIVERSION=$(skopeo inspect docker://registry.access.redhat.com/ubi8/ubi-minimal:latest |jq '.Labels.url' |sed 's/"//g' |awk -F/ '{print $NF}')
+          UBIVERSION=$(skopeo inspect docker://registry.access.redhat.com/ubi9/ubi-minimal:latest |jq '.Labels.url' |sed 's/"//g' |awk -F/ '{print $NF}')
           echo "ubiversion=$UBIVERSION" >> "$GITHUB_ENV"
       - name: Check go-toolset change
         run: |
-          GOTOOLSETVER=$(skopeo inspect docker://registry.access.redhat.com/ubi8/go-toolset:latest |jq '.Labels.url' |sed 's/"//g' |awk -F/ '{print $NF}')
+          GOTOOLSETVER=$(skopeo inspect docker://registry.access.redhat.com/ubi9/go-toolset:latest |jq '.Labels.url' |sed 's/"//g' |awk -F/ '{print $NF}')
           echo "gotoolsetver=$GOTOOLSETVER" >> "$GITHUB_ENV"
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -32,8 +32,8 @@ jobs:
           git config user.name 'DevProdBot'
           git config user.email 'platform-developerproductivity@redhat.com>'
           git checkout -b update
-          sed -i "s/registry.access.redhat.com\/ubi8\/ubi-minimal:[0-9.-]*/registry.access.redhat.com\/ubi8\/ubi-minimal:$ubiversion/" Dockerfile
-          sed -i "s/registry.access.redhat.com\/ubi8\/go-toolset:[0-9.-]*/registry.access.redhat.com\/ubi8\/go-toolset:$gotoolsetver/" Dockerfile
+          sed -i "s/registry.access.redhat.com\/ubi9\/ubi-minimal:[0-9.-]*/registry.access.redhat.com\/ubi9\/ubi-minimal:$ubiversion/" Dockerfile
+          sed -i "s/registry.access.redhat.com\/ubi9\/go-toolset:[0-9.-]*/registry.access.redhat.com\/ubi9\/go-toolset:$gotoolsetver/" Dockerfile
           git add -A
           git commit -S -m "Update to ubi-minimal or go-toolset image" || echo "No changes to commit"
           git push -u origin update || git push -f origin update

@@ -6,6 +6,8 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"maps"
+	"os"
 	"slices"
 	"sort"
 	"strings"
@@ -494,7 +496,7 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 		return err
 	}
 
-	objectStoreInfo, err := ExtractBucketConfigFromSecret(secrets.Items, r.FrontendEnvironment.Spec.PushCacheBucket)
+	objectStoreInfo, err := ExtractBucketConfigFromEnv()
 	if err != nil {
 		return err
 	}
@@ -506,7 +508,7 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 	port := objectStoreInfo.Port
 
 	// Construct the pushcache startup command; removing the sleep command will result in the pushcache job being spin up continously, without delay, and uploading the assets to s3
-	command := fmt.Sprintf("sleep 120; valpop populate -r %s -s /srv/dist --bucket %s --hostname %s --port %s --username %s --password %s", r.Frontend.Name, bucketName, *hostname, *port, *awsUsername, *awsPassword)
+	command := fmt.Sprintf("sleep 120; valpop populate -r %s -s /srv/dist --bucket %s --hostname %s --port %s --username %s --password %s", r.Frontend.Name, *bucketName, *hostname, *port, *awsUsername, *awsPassword)
 
 	volumeMounts := []v1.VolumeMount{}
 	volumeMounts = append(volumeMounts, v1.VolumeMount{
@@ -598,95 +600,59 @@ func populateVolumes(d *apps.Deployment, frontend *crd.Frontend, frontendEnviron
 type ObjectStoreBucket struct {
 	AccessKey *string
 	SecretKey *string
-	Name      string
+	Name      *string
 	Region    *string
 	Endpoint  *string
 	Port      *string
 	TLS       *bool
 }
 
-// ExtractBucketConfigFromSecret extracts ObjectStoreBucket configuration for a specific bucket name
-// from a given Kubernetes Secret. It searches for the bucket name either directly
-// in the secret's Data map under the "bucket" key, or within the
-// "clowder/bucket-names" annotation (if it's a comma-separated list).
-//
-// It returns the ObjectStoreBucket configuration and an error if the secret data is
-// invalid or incomplete for the specified bucket, or if the bucket name isn't found.
-func ExtractBucketConfigFromSecret(secrets []v1.Secret, targetBucketName string) (*ObjectStoreBucket, error) {
-	if len(secrets) == 0 {
-		return nil, fmt.Errorf("no secrets provided to search for bucket '%s'", targetBucketName)
+// ExtractBucketConfigFromSecretByName extracts ObjectStoreBucket configuration from secrets
+func ExtractBucketConfigFromEnv() (*ObjectStoreBucket, error) {
+	// Required environment variables
+	accessKeyID := os.Getenv("PUSHCACHE_AWS_ACCESS_KEY_ID")
+	if accessKeyID == "" {
+		return nil, fmt.Errorf("required environment variable PUSHCACHE_AWS_ACCESS_KEY_ID is not set")
 	}
 
-	clowderBucketNamesAnnotation := "clowder/bucket-names"
-
-	for _, secret := range secrets {
-		currentSecret := secret
-
-		// Check if essential credential keys are present in the current secret's Data
-		requiredCredentialKeys := []string{
-			"aws_access_key_id",
-			"aws_secret_access_key",
-		}
-
-		credentialsPresent := true
-		for _, key := range requiredCredentialKeys {
-			if _, ok := currentSecret.Data[key]; !ok {
-				credentialsPresent = false
-				break
-			}
-		}
-		if !credentialsPresent {
-			continue
-		}
-
-		bucketNameFoundInThisSecret := false
-
-		// Check for "bucket" key in secret.Data
-		if secretBucketData, ok := currentSecret.Data["bucket"]; ok {
-			if string(secretBucketData) == targetBucketName {
-				bucketNameFoundInThisSecret = true
-			}
-		}
-
-		// If not found in Data, check "clowder/bucket-names" annotation
-		if !bucketNameFoundInThisSecret {
-			if annoValue, ok := currentSecret.Annotations[clowderBucketNamesAnnotation]; ok {
-				annotatedBucketNames := strings.Split(annoValue, ",")
-
-				bucketNameFoundInThisSecret = slices.ContainsFunc(annotatedBucketNames, func(name string) bool {
-					return strings.TrimSpace(name) == targetBucketName
-				})
-			}
-		}
-
-		// If the target bucket name was found in this specific secret, extract its configuration
-		if bucketNameFoundInThisSecret {
-			bucketConfig := &ObjectStoreBucket{
-				Name:      targetBucketName,
-				AccessKey: utils.StringPtr(string(currentSecret.Data["aws_access_key_id"])),
-				SecretKey: utils.StringPtr(string(currentSecret.Data["aws_secret_access_key"])),
-				TLS:       utils.TruePtr(),
-			}
-
-			if regionData, ok := currentSecret.Data["aws_region"]; ok {
-				bucketConfig.Region = utils.StringPtr(string(regionData))
-			}
-			if endpointData, ok := currentSecret.Data["endpoint"]; ok {
-				bucketConfig.Endpoint = utils.StringPtr(string(endpointData))
-			}
-
-			// Default Objectstore Port to 443
-			bucketConfig.Port = utils.StringPtr(string("443"))
-			if portData, ok := currentSecret.Data["port"]; ok {
-				bucketConfig.Port = utils.StringPtr(string(portData))
-			}
-
-			return bucketConfig, nil
-		}
+	secretAccessKey := os.Getenv("PUSHCACHE_AWS_SECRET_ACCESS_KEY")
+	if secretAccessKey == "" {
+		return nil, fmt.Errorf("required environment variable PUSHCACHE_AWS_SECRET_ACCESS_KEY is not set")
 	}
 
-	// If the loop completes and no matching secret was found
-	return nil, fmt.Errorf("configuration for bucket '%s' not found in any of the provided secrets", targetBucketName)
+	bucketName := os.Getenv("PUSHCACHE_AWS_BUCKET_NAME")
+	if bucketName == "" {
+		return nil, fmt.Errorf("required environment variable PUSHCACHE_AWS_BUCKET_NAME is not set")
+	}
+
+	region := os.Getenv("PUSHCACHE_AWS_REGION")
+	if region == "" {
+		return nil, fmt.Errorf("required environment variable PUSHCACHE_AWS_REGION is not set")
+	}
+
+	endpoint := os.Getenv("PUSHCACHE_AWS_ENDPOINT")
+	if endpoint == "" {
+		return nil, fmt.Errorf("required environment variable PUSHCACHE_AWS_ENDPOINT is not set")
+	}
+
+	port := os.Getenv("PUSHCACHE_AWS_PORT")
+	// Default Objectstore Port to "443" if not provided
+	if port == "" {
+		port = "443"
+	}
+
+	// Initialize the bucket configuration with required fields
+	bucketConfig := &ObjectStoreBucket{
+		Name:      &bucketName,
+		AccessKey: &accessKeyID,
+		SecretKey: &secretAccessKey,
+		Region:    &region,
+		Endpoint:  &endpoint,
+		Port:      utils.StringPtr(port),
+		TLS:       utils.TruePtr(), // TLS is assumed to be true by default
+	}
+
+	return bucketConfig, nil
 }
 
 // Add the env vars if eny are set
@@ -1211,6 +1177,27 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 	return nil
 }
 
+func setupSSOConfig(feEnv *crd.FrontendEnvironment) map[string]interface{} {
+	ssoConfig := make(map[string]interface{})
+
+	// Set the primary SSO URL
+	ssoConfig["ssoUrl"] = feEnv.Spec.SSO
+
+	// Add mapping for special cases (like console.dev) - sort keys for predictable output
+	if len(feEnv.Spec.SSOMapping) > 0 {
+		// Get sorted keys and create sorted mapping
+		hostnames := slices.Sorted(maps.Keys(feEnv.Spec.SSOMapping))
+		sortedMapping := make(map[string]string)
+		for _, hostname := range hostnames {
+			sortedMapping[hostname] = feEnv.Spec.SSOMapping[hostname]
+		}
+		ssoConfig["ssoMapping"] = sortedMapping
+	}
+	ssoConfig["environment"] = feEnv.Name
+
+	return ssoConfig
+}
+
 func adjustSearchEntry(searchEntry *crd.SearchEntry, frontend crd.Frontend) crd.SearchEntry {
 	altTitleCopy := make([]string, len(searchEntry.AltTitle))
 	copy(altTitleCopy, searchEntry.AltTitle)
@@ -1348,11 +1335,32 @@ func setupServiceTilesData(feList *crd.FrontendList, feEnvironment crd.FrontendE
 	for _, category := range categories {
 		for _, group := range category.Groups {
 			sort.Slice(*group.Tiles, func(i, j int) bool {
-				pos := strings.Compare((*group.Tiles)[i].Title, (*group.Tiles)[j].Title)
-				if pos == 0 {
-					return (*group.Tiles)[i].Description < (*group.Tiles)[j].Description
+				tileA := (*group.Tiles)[i]
+				tileB := (*group.Tiles)[j]
+
+				// Sort by all string attributes in order: Section, Group, ID, Href, Title, Description, Icon, FrontendRef
+				if pos := strings.Compare(tileA.Section, tileB.Section); pos != 0 {
+					return pos == -1
 				}
-				return pos == -1
+				if pos := strings.Compare(tileA.Group, tileB.Group); pos != 0 {
+					return pos == -1
+				}
+				if pos := strings.Compare(tileA.ID, tileB.ID); pos != 0 {
+					return pos == -1
+				}
+				if pos := strings.Compare(tileA.Href, tileB.Href); pos != 0 {
+					return pos == -1
+				}
+				if pos := strings.Compare(tileA.Title, tileB.Title); pos != 0 {
+					return pos == -1
+				}
+				if pos := strings.Compare(tileA.Description, tileB.Description); pos != 0 {
+					return pos == -1
+				}
+				if pos := strings.Compare(tileA.Icon, tileB.Icon); pos != 0 {
+					return pos == -1
+				}
+				return strings.Compare(tileA.FrontendRef, tileB.FrontendRef) == -1
 			})
 		}
 	}
@@ -1899,6 +1907,14 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 	if len(apiSpecs) > 0 {
 		cfgMap.Data["api-specs.json"] = string(apiSpecsJSONData)
 	}
+
+	// Generate SSO configuration
+	ssoConfig := setupSSOConfig(r.FrontendEnvironment)
+	ssoConfigJSONData, err := json.Marshal(ssoConfig)
+	if err != nil {
+		return err
+	}
+	cfgMap.Data["sso-config.json"] = string(ssoConfigJSONData)
 
 	return nil
 }

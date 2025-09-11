@@ -396,9 +396,6 @@ objects:
 
                     frontend container Caddyfiles with a common core Caddyfile'
                   type: boolean
-                pushCacheBucket:
-                  description: S3 Push Cache Bucket
-                  type: string
                 requests:
                   additionalProperties:
                     anyOf:
@@ -447,9 +444,16 @@ objects:
                     pod, the route is also set to reencrypt in the case of OpenShift'
                   type: boolean
                 sso:
-                  description: Foo is an example field of FrontendEnvironment. Edit
-                    FrontendEnvironment_types.go to remove/update
+                  description: SSO URL for authentication
                   type: string
+                ssoMapping:
+                  additionalProperties:
+                    type: string
+                  description: 'SSO URL mapping for special cases (e.g. console.dev
+                    using different SSO than stage)
+
+                    Maps hostname patterns to SSO URLs'
+                  type: object
                 targetNamespaces:
                   description: 'List of namespaces that should receive a copy of the
                     frontend configuration as a config map
@@ -1918,6 +1922,19 @@ objects:
           - --leader-elect
           command:
           - /manager
+          env:
+          - name: PUSHCACHE_AWS_ACCESS_KEY_ID
+            value: ${PUSHCACHE_AWS_ACCESS_KEY_ID}
+          - name: PUSHCACHE_AWS_SECRET_ACCESS_KEY
+            value: ${PUSHCACHE_AWS_SECRET_ACCESS_KEY}
+          - name: PUSHCACHE_AWS_BUCKET_NAME
+            value: ${PUSHCACHE_AWS_BUCKET_NAME}
+          - name: PUSHCACHE_AWS_REGION
+            value: ${PUSHCACHE_AWS_REGION}
+          - name: PUSHCACHE_AWS_ENDPOINT
+            value: ${PUSHCACHE_AWS_ENDPOINT}
+          - name: PUSHCACHE_AWS_PORT
+            value: ${PUSHCACHE_AWS_PORT}
           image: ${IMAGE}:${IMAGE_TAG}
           livenessProbe:
             httpGet:
@@ -1953,4 +1970,16 @@ parameters:
   required: true
 - name: IMAGE
   value: quay.io/cloudservices/frontend-operator
+- name: PUSHCACHE_AWS_ACCESS_KEY_ID
+  value: ''
+- name: PUSHCACHE_AWS_SECRET_ACCESS_KEY
+  value: ''
+- name: PUSHCACHE_AWS_BUCKET_NAME
+  value: ''
+- name: PUSHCACHE_AWS_REGION
+  value: ''
+- name: PUSHCACHE_AWS_ENDPOINT
+  value: ''
+- name: PUSHCACHE_AWS_PORT
+  value: ''
 

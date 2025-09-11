@@ -73,8 +73,12 @@ type FrontendEnvironmentSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of FrontendEnvironment. Edit FrontendEnvironment_types.go to remove/update
+	// SSO URL for authentication
 	SSO string `json:"sso"`
+
+	// SSO URL mapping for special cases (e.g. console.dev using different SSO than stage)
+	// Maps hostname patterns to SSO URLs
+	SSOMapping map[string]string `json:"ssoMapping,omitempty"`
 
 	// Ingress class
 	IngressClass string `json:"ingressClass,omitempty"`
@@ -125,8 +129,6 @@ type FrontendEnvironmentSpec struct {
 	OverwriteCaddyConfig bool `json:"overwriteCaddyConfig,omitempty"`
 	// Enable Push Cache Container
 	EnablePushCache bool `json:"enablePushCache,omitempty"`
-	// S3 Push Cache Bucket
-	PushCacheBucket string `json:"pushCacheBucket,omitempty"`
 
 	DefaultReplicas *int32 `json:"defaultReplicas,omitempty" yaml:"defaultReplicas,omitempty"`
 	// For the ChromeUI to render navigation bundles
