@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM registry.access.redhat.com/ubi9/go-toolset:search?searchType=containerslatest as base
+FROM registry.access.redhat.com/ubi9/go-toolset:latest as base
 
 WORKDIR /workspace
 
