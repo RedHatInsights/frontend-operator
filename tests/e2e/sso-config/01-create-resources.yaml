@@ -1,0 +1,37 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-sso-config
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: test-sso-config-environment
+spec:
+  generateNavJSON: false
+  ssl: false
+  hostname: console.dev.redhat.com
+  sso: https://sso.stage.redhat.com/auth
+  ssoMapping:
+    "console.dev.redhat.com": "https://sso.redhat.com/auth"
+    "console.stage.openshiftusgov.com": "https://sso.stage.openshiftusgov.com"
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: chrome
+  namespace: test-sso-config
+spec:
+  API:
+    versions:
+      - v1
+  frontend:
+    paths:
+      - /
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  envName: test-sso-config-environment
+  image: quay.io/cloudservices/insights-chrome-frontend:720317c
+  module:
+    manifestLocation: /apps/chrome/js/fed-mods.json
+  title: Chrome
