@@ -648,16 +648,16 @@ func (r *FrontendReconciliation) populateReverseProxyContainer(d *apps.Deploymen
 	}
 
 	// Get default values
-	serverPort := *objectStoreInfo.Port           // PUSHCACHE_AWS_PORT
+	minioPort := *objectStoreInfo.Port            // PUSHCACHE_AWS_PORT (for MinIO connection)
 	minioUpstreamURL := *objectStoreInfo.Endpoint // PUSHCACHE_AWS_ENDPOINT
 	bucketPathPrefix := *objectStoreInfo.Name     // PUSHCACHE_AWS_BUCKET_NAME
 
-	// Add protocol if not present in endpoint
+	// Add protocol and port to MinIO endpoint if not present
 	if !strings.HasPrefix(minioUpstreamURL, "http://") && !strings.HasPrefix(minioUpstreamURL, "https://") {
 		if *objectStoreInfo.TLS {
-			minioUpstreamURL = "https://" + minioUpstreamURL
+			minioUpstreamURL = "https://" + minioUpstreamURL + ":" + minioPort
 		} else {
-			minioUpstreamURL = "http://" + minioUpstreamURL
+			minioUpstreamURL = "http://" + minioUpstreamURL + ":" + minioPort
 		}
 	}
 
@@ -675,7 +675,7 @@ func (r *FrontendReconciliation) populateReverseProxyContainer(d *apps.Deploymen
 	envVars := []v1.EnvVar{
 		{
 			Name:  "SERVER_PORT",
-			Value: serverPort,
+			Value: "8080", // Reverse proxy should listen on 8080, not MinIO port
 		},
 		{
 			Name:  "MINIO_UPSTREAM_URL",
