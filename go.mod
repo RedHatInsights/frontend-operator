@@ -95,6 +95,5 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-// Fix kube-openapi version that requires structured-merge-diff/v6 
+// Fix kube-openapi version that requires structured-merge-diff/v6
 replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20240521193020-835d969ad83a
-
