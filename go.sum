@@ -2,8 +2,8 @@ github.com/RedHatInsights/clowder v0.100.0 h1:TeIlQCOExW6BsT/o6Jv6J1IUY+vfi01d+s
 github.com/RedHatInsights/clowder v0.100.0/go.mod h1:1+IbEa+/NYum1RKnBm1UqKlvBZ8FhO20UhP295Y9ChM=
 github.com/RedHatInsights/go-difflib v1.0.0 h1:BoruyjZfxO81sEynhkG6c4SMAQOjuBWezcJxtGK8dyw=
 github.com/RedHatInsights/go-difflib v1.0.0/go.mod h1:UMKOFdypYfrKT1B1nbGodM09nhOiAmcjes8qWP7Myrs=
-github.com/RedHatInsights/rhc-osdk-utils v0.12.0 h1:hjJ+U7a+/BCXQb7Y/CIpERv5Cm9wIY1VaPkQkBATWW8=
-github.com/RedHatInsights/rhc-osdk-utils v0.12.0/go.mod h1:5UYiKYXToQB1KN2Pxr27p6Y10w+XrJYzCoMcIOhQBl8=
+github.com/RedHatInsights/rhc-osdk-utils v0.13.0 h1:K1245gkBF4sbHzW3JphC3Rr4B1Wav9FgZLOFjpSg2f0=
+github.com/RedHatInsights/rhc-osdk-utils v0.13.0/go.mod h1:RnCyA/gKtSlDy4Aie/2snMLxKS8qI0+FJcZYFXSwkrc=
 github.com/aws/aws-sdk-go v1.49.13/go.mod h1:LF8svs817+Nz+DmiMQKTO3ubZ/6IaTpq3TjupRn3Eqk=
 github.com/aws/aws-sdk-go v1.55.8 h1:JRmEUbU52aJQZ2AjX4q4Wu7t4uZjOu71uyNmaWlUkJQ=
 github.com/aws/aws-sdk-go v1.55.8/go.mod h1:ZkViS9AqA6otK+JBBNH2++sx1sgxrPKcSzPPvQkUtXk=

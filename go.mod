@@ -6,7 +6,7 @@ toolchain go1.24.6
 
 require (
 	github.com/RedHatInsights/clowder v0.100.0
-	github.com/RedHatInsights/rhc-osdk-utils v0.12.0
+	github.com/RedHatInsights/rhc-osdk-utils v0.13.0
 	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zapr v1.3.0
 	github.com/gobeam/stringy v0.0.7
@@ -95,6 +95,5 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-// Fix kube-openapi version that requires structured-merge-diff/v6 
+// Fix kube-openapi version that requires structured-merge-diff/v6
 replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20240521193020-835d969ad83a
-
