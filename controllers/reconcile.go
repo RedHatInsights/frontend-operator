@@ -508,7 +508,7 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 	port := objectStoreInfo.Port
 
 	// Construct the pushcache startup command; removing the sleep command will result in the pushcache job being spin up continously, without delay, and uploading the assets to s3
-	command := fmt.Sprintf("sleep 120; valpop populate -r %s -s /srv/dist --bucket %s --hostname %s --port %s --username %s --password %s", r.Frontend.Name, *bucketName, *hostname, *port, *awsUsername, *awsPassword)
+	command := fmt.Sprintf("sleep 120; valpop populate -r %s -s /srv/dist --timeout 172800 --bucket %s --hostname %s --port %s --username %s --password %s", r.Frontend.Name, *bucketName, *hostname, *port, *awsUsername, *awsPassword)
 
 	volumeMounts := []v1.VolumeMount{}
 	volumeMounts = append(volumeMounts, v1.VolumeMount{
