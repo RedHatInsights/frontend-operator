@@ -9,6 +9,7 @@ import (
 	"os"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
@@ -648,18 +649,9 @@ func (r *FrontendReconciliation) populateReverseProxyContainer(d *apps.Deploymen
 	}
 
 	// Get default values
-	minioPort := *objectStoreInfo.Port            // PUSHCACHE_AWS_PORT (for MinIO connection)
+	serverPort := 8080
 	minioUpstreamURL := *objectStoreInfo.Endpoint // PUSHCACHE_AWS_ENDPOINT
 	bucketPathPrefix := *objectStoreInfo.Name     // PUSHCACHE_AWS_BUCKET_NAME
-
-	// Add protocol and port to MinIO endpoint if not present
-	if !strings.HasPrefix(minioUpstreamURL, "http://") && !strings.HasPrefix(minioUpstreamURL, "https://") {
-		if *objectStoreInfo.TLS {
-			minioUpstreamURL = "https://" + minioUpstreamURL + ":" + minioPort
-		} else {
-			minioUpstreamURL = "http://" + minioUpstreamURL + ":" + minioPort
-		}
-	}
 
 	logLevel := r.FrontendEnvironment.Spec.ReverseProxyLogLevel
 	if logLevel == "" {
@@ -675,7 +667,7 @@ func (r *FrontendReconciliation) populateReverseProxyContainer(d *apps.Deploymen
 	envVars := []v1.EnvVar{
 		{
 			Name:  "SERVER_PORT",
-			Value: "8080", // Reverse proxy should listen on 8080, not MinIO port
+			Value: strconv.Itoa(serverPort),
 		},
 		{
 			Name:  "MINIO_UPSTREAM_URL",
@@ -695,9 +687,6 @@ func (r *FrontendReconciliation) populateReverseProxyContainer(d *apps.Deploymen
 		},
 	}
 
-	// Parse server port for probes
-	serverPortInt := 8080
-
 	// Configure the container
 	container := v1.Container{
 		Name:  "reverse-proxy",
@@ -705,7 +694,7 @@ func (r *FrontendReconciliation) populateReverseProxyContainer(d *apps.Deploymen
 		Ports: []v1.ContainerPort{
 			{
 				Name:          "http",
-				ContainerPort: int32(serverPortInt),
+				ContainerPort: int32(serverPort),
 				Protocol:      "TCP",
 			},
 		},
@@ -724,7 +713,7 @@ func (r *FrontendReconciliation) populateReverseProxyContainer(d *apps.Deploymen
 			ProbeHandler: v1.ProbeHandler{
 				HTTPGet: &v1.HTTPGetAction{
 					Path:   "/healthz",
-					Port:   intstr.FromInt(serverPortInt),
+					Port:   intstr.FromInt(serverPort),
 					Scheme: v1.URISchemeHTTP,
 				},
 			},
@@ -736,7 +725,7 @@ func (r *FrontendReconciliation) populateReverseProxyContainer(d *apps.Deploymen
 			ProbeHandler: v1.ProbeHandler{
 				HTTPGet: &v1.HTTPGetAction{
 					Path:   "/healthz",
-					Port:   intstr.FromInt(serverPortInt),
+					Port:   intstr.FromInt(serverPort),
 					Scheme: v1.URISchemeHTTP,
 				},
 			},
