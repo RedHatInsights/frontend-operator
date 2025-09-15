@@ -2,7 +2,7 @@ module github.com/RedHatInsights/frontend-operator
 
 go 1.24.0
 
-toolchain go1.25.1
+toolchain go1.24.6
 
 require (
 	github.com/RedHatInsights/clowder v0.100.0
