@@ -226,13 +226,11 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 		err := r.Client.Get(ctx, deploymentKey, existingDeployment)
 		if err != nil && k8serr.IsNotFound(err) {
-			// Deployment doesn't exist, create it
 			if err := reconciliation.createReverseProxyDeployment(); err != nil {
 				log.Error(err, "Failed to create reverse proxy deployment")
 			}
 		}
 
-		// Check if reverse proxy service already exists
 		existingService := &v1.Service{}
 		serviceKey := types.NamespacedName{
 			Name:      "reverse-proxy",
@@ -241,7 +239,6 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 		err = r.Client.Get(ctx, serviceKey, existingService)
 		if err != nil && k8serr.IsNotFound(err) {
-			// Service doesn't exist, create it
 			if err := reconciliation.createReverseProxyService(); err != nil {
 				log.Error(err, "Failed to create reverse proxy service")
 			}

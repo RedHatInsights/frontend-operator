@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: reverse-proxy
+  namespace: boot
+  labels:
+    app: reverse-proxy
+    component: reverse-proxy
+    environment: env-boot
+spec:
+  selector:
+    app: reverse-proxy
+    component: reverse-proxy
+    environment: env-boot
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+    protocol: TCP
+  type: ClusterIP

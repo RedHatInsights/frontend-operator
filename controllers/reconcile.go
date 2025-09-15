@@ -650,8 +650,10 @@ func (r *FrontendReconciliation) populateReverseProxyContainer(d *apps.Deploymen
 
 	// Get default values
 	serverPort := 8080
+	minioPort := *objectStoreInfo.Port
 	minioUpstreamURL := *objectStoreInfo.Endpoint // PUSHCACHE_AWS_ENDPOINT
 	bucketPathPrefix := *objectStoreInfo.Name     // PUSHCACHE_AWS_BUCKET_NAME
+	minioUpstreamURL = "http://" + minioUpstreamURL + ":" + minioPort
 
 	logLevel := r.FrontendEnvironment.Spec.ReverseProxyLogLevel
 	if logLevel == "" {
