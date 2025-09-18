@@ -34,8 +34,6 @@ kind: Service
 metadata:
   name: test-frontend-with-proxy
   namespace: test-reverse-proxy
-  labels:
-    frontend: test-frontend-with-proxy
 spec:
   ports:
   - name: public
@@ -58,7 +56,6 @@ metadata:
   name: reverse-proxy
   namespace: test-reverse-proxy
   labels:
-    frontend: test-frontend-with-proxy
     app: reverse-proxy
     component: reverse-proxy
     environment: test-reverse-proxy-environment
@@ -136,7 +133,6 @@ metadata:
   name: reverse-proxy
   namespace: test-reverse-proxy
   labels:
-    frontend: test-frontend-with-proxy
     environment: test-reverse-proxy-environment
     app: reverse-proxy
     component: reverse-proxy
