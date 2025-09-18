@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"slices"
 	"sort"
@@ -507,7 +508,7 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 	port := objectStoreInfo.Port
 
 	// Construct the pushcache startup command; removing the sleep command will result in the pushcache job being spin up continously, without delay, and uploading the assets to s3
-	command := fmt.Sprintf("sleep 120; valpop populate -r %s -s /srv/dist --bucket %s --hostname %s --port %s --username %s --password %s", r.Frontend.Name, *bucketName, *hostname, *port, *awsUsername, *awsPassword)
+	command := fmt.Sprintf("sleep 120; valpop populate -r %s -s /srv/dist --timeout 172800 --bucket %s --hostname %s --port %s --username %s --password %s", r.Frontend.Name, *bucketName, *hostname, *port, *awsUsername, *awsPassword)
 
 	volumeMounts := []v1.VolumeMount{}
 	volumeMounts = append(volumeMounts, v1.VolumeMount{
@@ -1174,6 +1175,27 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 		}
 	}
 	return nil
+}
+
+func setupSSOConfig(feEnv *crd.FrontendEnvironment) map[string]interface{} {
+	ssoConfig := make(map[string]interface{})
+
+	// Set the primary SSO URL
+	ssoConfig["ssoUrl"] = feEnv.Spec.SSO
+
+	// Add mapping for special cases (like console.dev) - sort keys for predictable output
+	if len(feEnv.Spec.SSOMapping) > 0 {
+		// Get sorted keys and create sorted mapping
+		hostnames := slices.Sorted(maps.Keys(feEnv.Spec.SSOMapping))
+		sortedMapping := make(map[string]string)
+		for _, hostname := range hostnames {
+			sortedMapping[hostname] = feEnv.Spec.SSOMapping[hostname]
+		}
+		ssoConfig["ssoMapping"] = sortedMapping
+	}
+	ssoConfig["environment"] = feEnv.Name
+
+	return ssoConfig
 }
 
 func adjustSearchEntry(searchEntry *crd.SearchEntry, frontend crd.Frontend) crd.SearchEntry {
@@ -1885,6 +1907,14 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 	if len(apiSpecs) > 0 {
 		cfgMap.Data["api-specs.json"] = string(apiSpecsJSONData)
 	}
+
+	// Generate SSO configuration
+	ssoConfig := setupSSOConfig(r.FrontendEnvironment)
+	ssoConfigJSONData, err := json.Marshal(ssoConfig)
+	if err != nil {
+		return err
+	}
+	cfgMap.Data["sso-config.json"] = string(ssoConfigJSONData)
 
 	return nil
 }

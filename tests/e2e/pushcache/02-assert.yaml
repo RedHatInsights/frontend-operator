@@ -89,7 +89,7 @@ spec:
           command:
             - /bin/bash
             - '-c'
-            - 'sleep 120; valpop populate -r chrome-test-defaults -s /srv/dist --bucket frontend --hostname minio-service.minio-env.svc.cluster.local --port 9000 --username minioadmin --password minioadmin'
+            - 'sleep 120; valpop populate -r chrome-test-defaults -s /srv/dist --timeout 172800 --bucket frontend --hostname minio-service.minio-env.svc.cluster.local --port 9000 --username minioadmin --password minioadmin'
           resources: {}
           volumeMounts:
             - name: pushcache-volume

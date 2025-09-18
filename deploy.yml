@@ -453,9 +453,16 @@ objects:
                     pod, the route is also set to reencrypt in the case of OpenShift'
                   type: boolean
                 sso:
-                  description: Foo is an example field of FrontendEnvironment. Edit
-                    FrontendEnvironment_types.go to remove/update
+                  description: SSO URL for authentication
                   type: string
+                ssoMapping:
+                  additionalProperties:
+                    type: string
+                  description: 'SSO URL mapping for special cases (e.g. console.dev
+                    using different SSO than stage)
+
+                    Maps hostname patterns to SSO URLs'
+                  type: object
                 targetNamespaces:
                   description: 'List of namespaces that should receive a copy of the
                     frontend configuration as a config map

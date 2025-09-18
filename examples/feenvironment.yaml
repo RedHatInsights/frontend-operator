@@ -3,7 +3,14 @@ kind: FrontendEnvironment
 metadata:
   name: env-boot
 spec:
-  sso: https://env-boot-auth/auth/
+  sso: https://sso.stage.redhat.com/auth
+  # SSO URL mapping for special cases
+  # Maps hostname patterns to specific SSO URLs
+  ssoMapping:
+    "console.dev.redhat.com": "https://sso.redhat.com/auth"
+    "us.console.dev.redhat.com": "https://sso.redhat.com/auth"
+    "console.stage.openshiftusgov.com": "https://sso.stage.openshiftusgov.com"
+    "console.openshiftusgov.com": "https://sso.openshiftusgov.com"
   enablePushCache: true
   reverseProxyImage: quay.io/redhat-services-prod/hcc-platex-services-tenant/frontend-asset-proxy:latest
   reverseProxySPAEntrypointPath: /index.html
