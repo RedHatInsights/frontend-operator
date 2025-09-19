@@ -195,6 +195,20 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		MetricsServiceMonitor,
 	)
 
+	// Deploy reverse proxy if push cache is enabled and reverse proxy image is configured
+	// Only create it once per environment (not per frontend)
+	reverseProxyReconciler := &ReverseProxyReconciler{
+		Client:   r.Client,
+		Log:      r.Log,
+		Scheme:   r.Scheme,
+		Recorder: r.Recorder,
+	}
+
+	if reverseProxyErr := reverseProxyReconciler.ReconcileReverseProxy(ctx, &frontend, fe); reverseProxyErr != nil {
+		log.Error(reverseProxyErr, "Failed to reconcile reverse proxy")
+		return ctrl.Result{Requeue: true}, reverseProxyErr
+	}
+
 	reconciliation := FrontendReconciliation{
 		Log:                 log,
 		Recorder:            r.Recorder,
@@ -236,12 +250,10 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{Requeue: true}, err
 	}
 
-	if err == nil {
-		if _, ok := managedFrontends[frontend.GetIdent()]; !ok {
-			managedFrontends[frontend.GetIdent()] = true
-		}
-		managedFrontendsMetric.Set(float64(len(managedFrontends)))
+	if _, ok := managedFrontends[frontend.GetIdent()]; !ok {
+		managedFrontends[frontend.GetIdent()] = true
 	}
+	managedFrontendsMetric.Set(float64(len(managedFrontends)))
 
 	log.Info("Reconciliation successful", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
 	if err = SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil); err != nil {

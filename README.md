@@ -99,6 +99,28 @@ To disable the pushcache job altogether through the Frontend Operator, irregardl
 
 For local development purposes, the minio or AWS bucket secrets are stored under `examples/minio-bucket-secret.yaml`.
 
+### Reverse Proxy
+
+The reverse proxy functionality allows you to deploy a Caddy-based reverse proxy that serves frontend assets from an S3-compatible object storage backend. This is part of an initiative to implement an object storage-based push cache for historical and current frontend assets.
+
+The reverse proxy uses the [frontend-asset-proxy](https://github.com/RedHatInsights/frontend-asset-proxy) container image and supports:
+
+- Reverse proxying requests to S3/Minio
+- SPA routing support by serving the main application entrypoint for non-existent asset paths
+- Configurable runtime behavior via environment variables
+- Health checks via `/healthz` endpoint
+
+To enable the reverse proxy for a frontend environment, configure the following in your FrontendEnvironment:
+
+```yaml
+spec:
+  reverseProxyImage: quay.io/redhatinsights/frontend-asset-proxy:latest
+  reverseProxySPAEntrypointPath: /index.html  # optional, defaults to /index.html
+  reverseProxyLogLevel: INFO  # optional, defaults to DEBUG
+```
+
+This will create a deployment and service for the reverse proxy, making it accessible within the cluster.
+
 ## E2E testing with kuttl
 
 [Kuttl](https://kuttl.dev/) is an end to end testing framework for Kubernetes operators. We hope to provide full test coverage for the Frontend Operator with kuttl.

@@ -406,6 +406,15 @@ objects:
                   description: ResourceList is a set of (resource name, quantity)
                     pairs.
                   type: object
+                reverseProxyImage:
+                  description: Reverse Proxy Container Image
+                  type: string
+                reverseProxyLogLevel:
+                  description: Log level for reverse proxy
+                  type: string
+                reverseProxySPAEntrypointPath:
+                  description: SPA entrypoint path for reverse proxy
+                  type: string
                 serviceCategories:
                   description: For the ChromeUI to render additional global components
                   items:

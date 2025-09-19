@@ -12,8 +12,11 @@ spec:
     "console.stage.openshiftusgov.com": "https://sso.stage.openshiftusgov.com"
     "console.openshiftusgov.com": "https://sso.openshiftusgov.com"
   enablePushCache: true
+  reverseProxyImage: quay.io/redhat-services-prod/hcc-platex-services-tenant/frontend-asset-proxy:latest
+  reverseProxySPAEntrypointPath: /index.html
+  reverseProxyLogLevel: DEBUG
   targetNamespaces:
-    - feo-testing
+    - boot
   monitoring:
     mode: "local"
     disabled: false
