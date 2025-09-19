@@ -204,9 +204,9 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		Recorder: r.Recorder,
 	}
 
-	if err := reverseProxyReconciler.ReconcileReverseProxy(ctx, &frontend, fe); err != nil {
-		log.Error(err, "Failed to reconcile reverse proxy")
-		return ctrl.Result{Requeue: true}, err
+	if reverse_proxy_err := reverseProxyReconciler.ReconcileReverseProxy(ctx, &frontend, fe); reverse_proxy_err != nil {
+		log.Error(reverse_proxy_err, "Failed to reconcile reverse proxy")
+		return ctrl.Result{Requeue: true}, reverse_proxy_err
 	}
 
 	reconciliation := FrontendReconciliation{
@@ -248,12 +248,12 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			return ctrl.Result{Requeue: true}, fmt.Errorf("error setting status after reconcile delete error: %w", sErr)
 		}
 		return ctrl.Result{Requeue: true}, err
+	} else {
+		if _, ok := managedFrontends[frontend.GetIdent()]; !ok {
+			managedFrontends[frontend.GetIdent()] = true
+		}
+		managedFrontendsMetric.Set(float64(len(managedFrontends)))
 	}
-
-	if _, ok := managedFrontends[frontend.GetIdent()]; !ok {
-		managedFrontends[frontend.GetIdent()] = true
-	}
-	managedFrontendsMetric.Set(float64(len(managedFrontends)))
 
 	log.Info("Reconciliation successful", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
 	if err = SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil); err != nil {
