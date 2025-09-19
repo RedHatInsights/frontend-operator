@@ -204,9 +204,9 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		Recorder: r.Recorder,
 	}
 
-	if reverse_proxy_err := reverseProxyReconciler.ReconcileReverseProxy(ctx, &frontend, fe); reverse_proxy_err != nil {
-		log.Error(reverse_proxy_err, "Failed to reconcile reverse proxy")
-		return ctrl.Result{Requeue: true}, reverse_proxy_err
+	if reverseProxyErr := reverseProxyReconciler.ReconcileReverseProxy(ctx, &frontend, fe); reverseProxyErr != nil {
+		log.Error(reverseProxyErr, "Failed to reconcile reverse proxy")
+		return ctrl.Result{Requeue: true}, reverseProxyErr
 	}
 
 	reconciliation := FrontendReconciliation{
