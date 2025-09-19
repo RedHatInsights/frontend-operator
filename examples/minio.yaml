@@ -127,4 +127,5 @@ spec:
             - |
               mc alias set minio http://minio-service.minio-env.svc.cluster.local:9000 $MINIO_ACCESS_KEY $MINIO_SECRET_KEY
               mc mb minio/frontend # 'frontend' is the s3 bucket name
+              mc anonymous set download minio/frontend
   backoffLimit: 4
