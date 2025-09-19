@@ -66,7 +66,7 @@ type ReverseProxyReconciliation struct {
 
 // ReconcileReverseProxy handles the reverse proxy reconciliation for a frontend
 func (r *ReverseProxyReconciler) ReconcileReverseProxy(ctx context.Context, frontend *crd.Frontend, fe *crd.FrontendEnvironment) error {
-	log := r.Log.WithValues("frontend", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
+	log := r.Log.WithValues("reverse-proxy reconcile: triggered by", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
 
 	// Only deploy reverse proxy if push cache is enabled and reverse proxy image is configured
 	if !fe.Spec.EnablePushCache || fe.Spec.ReverseProxyImage == "" {
