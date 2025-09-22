@@ -1216,6 +1216,151 @@ var _ = ginkgo.Describe("Search index", func() {
 				}
 				gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(testCase.Env))
 			})
+
+			ginkgo.By("with identical content but different IDs to test sorting", func() {
+				ctx := context.Background()
+
+				testCase := SearchIndexCase{
+					Env:            "test-search-index-env-sorting",
+					Namespace:      FrontendNamespace,
+					ExpectedResult: fmt.Sprintf("[{\"id\":\"entry-a\",\"href\":\"/identical/href\",\"title\":\"Identical Title\",\"description\":\"Identical description\",\"frontendRef\":\"%s\"},{\"id\":\"entry-z\",\"href\":\"/identical/href\",\"title\":\"Identical Title\",\"description\":\"Identical description\",\"frontendRef\":\"%s\"}]", "test-frontend-id", "test-frontend-id"),
+					SearchFrontendEntries: []SearchFrontendEntry{{
+						Name: "test-frontend-id",
+						SearchEntries: []*crd.SearchEntry{{
+							ID:          "entry-z", // Later alphabetically
+							Href:        "/identical/href",
+							Title:       "Identical Title",
+							Description: "Identical description",
+						}, {
+							ID:          "entry-a", // Earlier alphabetically
+							Href:        "/identical/href",
+							Title:       "Identical Title",
+							Description: "Identical description",
+						}},
+					}},
+				}
+				configMapLookupKey := types.NamespacedName{Name: testCase.Env, Namespace: testCase.Namespace}
+				for _, tc := range testCase.SearchFrontendEntries {
+					frontend := frontendFromSearchEntry(testCase, tc)
+					fmt.Println("frontend", frontend)
+					gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
+				}
+				frontendEnvironment := mockFrontendEnv(testCase.Env, testCase.Namespace)
+				gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
+				createdConfigMap := &v1.ConfigMap{}
+				gomega.Eventually(func() bool {
+					err := k8sClient.Get(ctx, configMapLookupKey, createdConfigMap)
+					if err != nil {
+						return err == nil
+					}
+					if len(createdConfigMap.Data) != 4 {
+						return false
+					}
+					return true
+				}, timeout, interval).Should(gomega.BeTrue())
+				gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(testCase.Env))
+
+				searchIndexMap, ok := createdConfigMap.Data["search-index.json"]
+				gomega.Expect(ok).Should(gomega.BeTrue())
+
+				// Parse the actual result and verify it's sorted correctly by ID
+				var actualSearchIndex []crd.SearchEntry
+				err := json.Unmarshal([]byte(searchIndexMap), &actualSearchIndex)
+				gomega.Expect(err).Should(gomega.BeNil())
+
+				// Should have exactly 2 entries
+				gomega.Expect(len(actualSearchIndex)).Should(gomega.Equal(2))
+
+				// Verify that entries are sorted by ID (entry-a should come before entry-z)
+				gomega.Expect(actualSearchIndex[0].ID).Should(gomega.ContainSubstring("entry-a"))
+				gomega.Expect(actualSearchIndex[1].ID).Should(gomega.ContainSubstring("entry-z"))
+
+				// Verify both have identical non-ID fields
+				gomega.Expect(actualSearchIndex[0].Title).Should(gomega.Equal("Identical Title"))
+				gomega.Expect(actualSearchIndex[0].Href).Should(gomega.Equal("/identical/href"))
+				gomega.Expect(actualSearchIndex[0].Description).Should(gomega.Equal("Identical description"))
+				gomega.Expect(actualSearchIndex[0].FrontendRef).Should(gomega.Equal("test-frontend-id"))
+				gomega.Expect(actualSearchIndex[1].Title).Should(gomega.Equal("Identical Title"))
+				gomega.Expect(actualSearchIndex[1].Href).Should(gomega.Equal("/identical/href"))
+				gomega.Expect(actualSearchIndex[1].Description).Should(gomega.Equal("Identical description"))
+				gomega.Expect(actualSearchIndex[1].FrontendRef).Should(gomega.Equal("test-frontend-id"))
+
+				gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(testCase.Env))
+			})
+
+			ginkgo.By("with identical content but different FrontendRefs to test sorting", func() {
+				ctx := context.Background()
+
+				testCase := SearchIndexCase{
+					Env:            "test-search-index-env-sorting-2",
+					Namespace:      FrontendNamespace,
+					ExpectedResult: fmt.Sprintf("[{\"id\":\"entry-a\",\"href\":\"/identical/href\",\"title\":\"Identical Title\",\"description\":\"Identical description\",\"frontendRef\":\"%s\"},{\"id\":\"entry-z\",\"href\":\"/identical/href\",\"title\":\"Identical Title\",\"description\":\"Identical description\",\"frontendRef\":\"%s\"}]", "test-frontend-ref-1", "test-frontend-ref-2"),
+					SearchFrontendEntries: []SearchFrontendEntry{{
+						Name: "test-frontend-ref-1",
+						SearchEntries: []*crd.SearchEntry{{
+							ID:          "entry-a",
+							Href:        "/identical/href",
+							Title:       "Identical Title",
+							Description: "Identical description",
+							FrontendRef: "test-frontend-ref-1",
+						}},
+					}, {
+						Name: "test-frontend-ref-2",
+						SearchEntries: []*crd.SearchEntry{{
+							ID:          "entry-a",
+							Href:        "/identical/href",
+							Title:       "Identical Title",
+							Description: "Identical description",
+							FrontendRef: "test-frontend-ref-2",
+						}},
+					}},
+				}
+				configMapLookupKey := types.NamespacedName{Name: testCase.Env, Namespace: testCase.Namespace}
+				for _, tc := range testCase.SearchFrontendEntries {
+					frontend := frontendFromSearchEntry(testCase, tc)
+					gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
+				}
+				frontendEnvironment := mockFrontendEnv(testCase.Env, testCase.Namespace)
+				gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
+				createdConfigMap := &v1.ConfigMap{}
+				gomega.Eventually(func() bool {
+					err := k8sClient.Get(ctx, configMapLookupKey, createdConfigMap)
+					if err != nil {
+						return err == nil
+					}
+					if len(createdConfigMap.Data) != 4 {
+						return false
+					}
+					return true
+				}, timeout, interval).Should(gomega.BeTrue())
+				gomega.Expect(createdConfigMap.Name).Should(gomega.Equal(testCase.Env))
+
+				searchIndexMap, ok := createdConfigMap.Data["search-index.json"]
+				gomega.Expect(ok).Should(gomega.BeTrue())
+
+				// Parse the actual result and verify it's sorted correctly by ID
+				var actualSearchIndex []crd.SearchEntry
+				err := json.Unmarshal([]byte(searchIndexMap), &actualSearchIndex)
+				gomega.Expect(err).Should(gomega.BeNil())
+
+				// Should have exactly 2 entries
+				gomega.Expect(len(actualSearchIndex)).Should(gomega.Equal(2))
+
+				gomega.Expect(actualSearchIndex[0].FrontendRef).Should(gomega.Equal("test-frontend-ref-1"))
+				gomega.Expect(actualSearchIndex[1].FrontendRef).Should(gomega.Equal("test-frontend-ref-2"))
+
+				// Verify both have identical non-FrontendRef fields
+				gomega.Expect(actualSearchIndex[0].ID).Should(gomega.ContainSubstring("entry-a"))
+				gomega.Expect(actualSearchIndex[1].ID).Should(gomega.ContainSubstring("entry-a"))
+				gomega.Expect(actualSearchIndex[0].Title).Should(gomega.Equal("Identical Title"))
+				gomega.Expect(actualSearchIndex[0].Href).Should(gomega.Equal("/identical/href"))
+				gomega.Expect(actualSearchIndex[0].Description).Should(gomega.Equal("Identical description"))
+				gomega.Expect(actualSearchIndex[1].Title).Should(gomega.Equal("Identical Title"))
+				gomega.Expect(actualSearchIndex[1].Href).Should(gomega.Equal("/identical/href"))
+				gomega.Expect(actualSearchIndex[1].Description).Should(gomega.Equal("Identical description"))
+
+				gomega.Expect(createdConfigMap.ObjectMeta.OwnerReferences[0].Name).Should(gomega.Equal(testCase.Env))
+			})
 		})
 	})
 })

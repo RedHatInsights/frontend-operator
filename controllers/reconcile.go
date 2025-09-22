@@ -1229,9 +1229,23 @@ func setupSearchIndex(feList *crd.FrontendList) []crd.SearchEntry {
 
 	// Sort searchIndex alphabetically
 	sort.Slice(searchIndex, func(i, j int) bool {
-		as := searchIndex[i].Title + searchIndex[i].Description + searchIndex[i].Href
-		bs := searchIndex[j].Title + searchIndex[j].Description + searchIndex[j].Href
-		return as > bs
+		searchA := searchIndex[i]
+		searchB := searchIndex[j]
+
+		// Sort by all string attributes in order: ID, Title, Description, Href, FrontendRef
+		if pos := strings.Compare(searchA.ID, searchB.ID); pos != 0 {
+			return pos == -1
+		}
+		if pos := strings.Compare(searchA.Title, searchB.Title); pos != 0 {
+			return pos == -1
+		}
+		if pos := strings.Compare(searchA.Description, searchB.Description); pos != 0 {
+			return pos == -1
+		}
+		if pos := strings.Compare(searchA.Href, searchB.Href); pos != 0 {
+			return pos == -1
+		}
+		return strings.Compare(searchA.FrontendRef, searchB.FrontendRef) == -1
 	})
 
 	return searchIndex
