@@ -228,9 +228,19 @@ func (r *ReverseProxyReconciliation) createReverseProxyContainer() (v1.Container
 
 	// Get default values
 	minioPort := *objectStoreInfo.Port
-	minioUpstreamURL := *objectStoreInfo.Endpoint // PUSHCACHE_AWS_ENDPOINT
-	bucketPathPrefix := *objectStoreInfo.Name     // PUSHCACHE_AWS_BUCKET_NAME
-	minioUpstreamURL = "http://" + minioUpstreamURL + ":" + minioPort
+	minioEndpoint := *objectStoreInfo.Endpoint // PUSHCACHE_AWS_ENDPOINT
+	bucketPathPrefix := *objectStoreInfo.Name  // PUSHCACHE_AWS_BUCKET_NAME
+	var minioUpstreamURL string
+	var protocol string
+	// Construct upstream URL with appropriate scheme based on port
+	switch minioPort {
+	case "443":
+		protocol = "https://"
+	default:
+		// For non-standard ports, use http by default (local development)
+		protocol = "http://"
+	}
+	minioUpstreamURL = protocol + minioEndpoint + ":" + minioPort
 
 	logLevel := r.FrontendEnvironment.Spec.ReverseProxyLogLevel
 	if logLevel == "" {
