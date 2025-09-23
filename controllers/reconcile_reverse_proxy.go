@@ -87,41 +87,229 @@ func (r *ReverseProxyReconciler) ReconcileReverseProxy(ctx context.Context, fron
 
 // run executes the reverse proxy reconciliation logic
 func (r *ReverseProxyReconciliation) run() error {
-	// Check if reverse proxy deployment already exists
-	existingDeployment := &apps.Deployment{}
+	// Reconcile deployment
+	if err := r.reconcileDeployment(); err != nil {
+		return err
+	}
+
+	// Reconcile service
+	if err := r.reconcileService(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// reconcileDeployment ensures the reverse proxy deployment exists and is up to date
+func (r *ReverseProxyReconciliation) reconcileDeployment() error {
+	deployment := &apps.Deployment{}
 	deploymentKey := types.NamespacedName{
 		Name:      "reverse-proxy",
 		Namespace: r.Frontend.Namespace,
 	}
 
-	err := r.Client.Get(r.Ctx, deploymentKey, existingDeployment)
+	err := r.Client.Get(r.Ctx, deploymentKey, deployment)
 	if err != nil && k8serr.IsNotFound(err) {
-		if err := r.createReverseProxyDeployment(); err != nil {
-			r.Log.Error(err, "Failed to create reverse proxy deployment")
-			return err
-		}
+		// Deployment doesn't exist, create it
+		return r.createReverseProxyDeployment()
 	} else if err != nil {
 		return err
 	}
 
-	// Check if reverse proxy service already exists
-	existingService := &v1.Service{}
+	// Deployment exists, ensure it's up to date
+	return r.updateReverseProxyDeployment(deployment)
+}
+
+// reconcileService ensures the reverse proxy service exists and is up to date
+func (r *ReverseProxyReconciliation) reconcileService() error {
+	service := &v1.Service{}
 	serviceKey := types.NamespacedName{
 		Name:      "reverse-proxy",
 		Namespace: r.Frontend.Namespace,
 	}
 
-	err = r.Client.Get(r.Ctx, serviceKey, existingService)
+	err := r.Client.Get(r.Ctx, serviceKey, service)
 	if err != nil && k8serr.IsNotFound(err) {
-		if err := r.createReverseProxyService(); err != nil {
-			r.Log.Error(err, "Failed to create reverse proxy service")
-			return err
-		}
+		// Service doesn't exist, create it
+		return r.createReverseProxyService()
 	} else if err != nil {
 		return err
 	}
 
+	// Service exists, ensure it's up to date
+	return r.updateReverseProxyService(service)
+}
+
+// updateReverseProxyDeployment ensures the deployment matches the desired state
+func (r *ReverseProxyReconciliation) updateReverseProxyDeployment(deployment *apps.Deployment) error {
+	// Get the desired container configuration
+	desiredContainer, err := r.createReverseProxyContainer()
+	if err != nil {
+		return err
+	}
+
+	// Compare and update if needed
+	currentEnvVars := deployment.Spec.Template.Spec.Containers[0].Env
+	if !r.compareEnvVars(currentEnvVars, desiredContainer.Env) {
+		r.Log.Info("Updating reverse proxy deployment with new environment variables")
+
+		// Update the container environment variables
+		deployment.Spec.Template.Spec.Containers[0].Env = desiredContainer.Env
+
+		// Add restart annotation
+		if deployment.Spec.Template.Annotations == nil {
+			deployment.Spec.Template.Annotations = make(map[string]string)
+		}
+		deployment.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"] = metav1.Now().Format("2006-01-02T15:04:05Z")
+
+		// Update the deployment
+		return r.Client.Update(r.Ctx, deployment)
+	}
+
 	return nil
+}
+
+// compareEnvVars compares two environment variable slices for equality
+func (r *ReverseProxyReconciliation) compareEnvVars(existing, desired []v1.EnvVar) bool {
+	if len(existing) != len(desired) {
+		return false
+	}
+
+	existingMap := make(map[string]string)
+	for _, env := range existing {
+		existingMap[env.Name] = env.Value
+	}
+
+	for _, env := range desired {
+		if value, exists := existingMap[env.Name]; !exists || value != env.Value {
+			return false
+		}
+	}
+
+	return true
+}
+
+// updateReverseProxyService ensures the service matches the desired state
+func (r *ReverseProxyReconciliation) updateReverseProxyService(service *v1.Service) error {
+	// Get the desired service configuration
+	desiredService, err := r.createReverseProxyServiceConfig()
+	if err != nil {
+		return err
+	}
+
+	// Compare and update if needed
+	serviceChanged := r.compareService(service, desiredService)
+
+	if serviceChanged {
+		r.Log.Info("Updating reverse proxy service with new configuration")
+
+		// Update the service spec
+		service.Spec.Ports = desiredService.Spec.Ports
+		service.Spec.Selector = desiredService.Spec.Selector
+		service.Labels = desiredService.Labels
+
+		// Update the service
+		return r.Client.Update(r.Ctx, service)
+	}
+
+	return nil
+}
+
+// compareService compares current vs desired service configuration
+func (r *ReverseProxyReconciliation) compareService(current, desired *v1.Service) bool {
+	// Compare ports
+	if len(current.Spec.Ports) != len(desired.Spec.Ports) {
+		return true
+	}
+
+	for i, currentPort := range current.Spec.Ports {
+		if i >= len(desired.Spec.Ports) {
+			return true
+		}
+		desiredPort := desired.Spec.Ports[i]
+
+		if currentPort.Name != desiredPort.Name ||
+			currentPort.Port != desiredPort.Port ||
+			currentPort.TargetPort != desiredPort.TargetPort ||
+			currentPort.Protocol != desiredPort.Protocol {
+			return true
+		}
+
+		// Compare AppProtocol (handle nil pointers)
+		if (currentPort.AppProtocol == nil) != (desiredPort.AppProtocol == nil) {
+			return true
+		}
+		if currentPort.AppProtocol != nil && desiredPort.AppProtocol != nil &&
+			*currentPort.AppProtocol != *desiredPort.AppProtocol {
+			return true
+		}
+	}
+
+	// Compare selectors
+	if len(current.Spec.Selector) != len(desired.Spec.Selector) {
+		return true
+	}
+
+	for key, currentValue := range current.Spec.Selector {
+		if desiredValue, exists := desired.Spec.Selector[key]; !exists || currentValue != desiredValue {
+			return true
+		}
+	}
+
+	// Compare important labels
+	importantLabels := []string{"app", "component", "environment"}
+	for _, label := range importantLabels {
+		currentValue := current.Labels[label]
+		desiredValue := desired.Labels[label]
+		if currentValue != desiredValue {
+			return true
+		}
+	}
+
+	return false
+}
+
+// createReverseProxyServiceConfig creates the desired service configuration
+func (r *ReverseProxyReconciliation) createReverseProxyServiceConfig() (*v1.Service, error) {
+	serviceName := "reverse-proxy"
+
+	// Define name of resource
+	nn := types.NamespacedName{
+		Name:      serviceName,
+		Namespace: r.Frontend.Namespace,
+	}
+
+	// Get consistent labels that won't conflict between frontends
+	labels := r.getReverseProxyLabels()
+
+	// Create ports for the reverse proxy service
+	appProtocol := "http"
+	ports := []v1.ServicePort{
+		{
+			Name:        "http",
+			Port:        ReverseProxyPort,
+			TargetPort:  intstr.FromInt(ReverseProxyPort),
+			Protocol:    "TCP",
+			AppProtocol: &appProtocol,
+		},
+	}
+
+	service := &v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nn.Name,
+			Namespace: nn.Namespace,
+			Labels:    labels,
+		},
+		Spec: v1.ServiceSpec{
+			Selector: labels,
+			Ports:    ports,
+		},
+	}
+
+	// Set owner reference to the environment instead of the frontend
+	service.SetOwnerReferences([]metav1.OwnerReference{r.getReverseProxyOwnerRef()})
+
+	return service, nil
 }
 
 // createReverseProxyDeployment creates a reverse proxy deployment for frontend assets
@@ -177,43 +365,10 @@ func (r *ReverseProxyReconciliation) createReverseProxyDeployment() error {
 
 // createReverseProxyService creates a service for the reverse proxy deployment
 func (r *ReverseProxyReconciliation) createReverseProxyService() error {
-	serviceName := "reverse-proxy"
-
-	// Define name of resource
-	nn := types.NamespacedName{
-		Name:      serviceName,
-		Namespace: r.Frontend.Namespace,
+	service, err := r.createReverseProxyServiceConfig()
+	if err != nil {
+		return err
 	}
-
-	// Get consistent labels that won't conflict between frontends
-	labels := r.getReverseProxyLabels()
-
-	// Create ports for the reverse proxy service
-	appProtocol := "http"
-	ports := []v1.ServicePort{
-		{
-			Name:        "http",
-			Port:        ReverseProxyPort,
-			TargetPort:  intstr.FromInt(ReverseProxyPort),
-			Protocol:    "TCP",
-			AppProtocol: &appProtocol,
-		},
-	}
-
-	service := &v1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      nn.Name,
-			Namespace: nn.Namespace,
-			Labels:    labels,
-		},
-		Spec: v1.ServiceSpec{
-			Selector: labels,
-			Ports:    ports,
-		},
-	}
-
-	// Set owner reference to the environment instead of the frontend
-	service.SetOwnerReferences([]metav1.OwnerReference{r.getReverseProxyOwnerRef()})
 
 	return r.Client.Create(r.Ctx, service)
 }
