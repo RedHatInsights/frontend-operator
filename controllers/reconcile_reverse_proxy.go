@@ -148,15 +148,19 @@ func (r *ReverseProxyReconciliation) updateReverseProxyDeployment(deployment *ap
 		return err
 	}
 
-	// Compare and update if needed
-	currentEnvVars := deployment.Spec.Template.Spec.Containers[0].Env
-	if !r.compareEnvVars(currentEnvVars, desiredContainer.Env) {
-		r.Log.Info("Updating reverse proxy deployment with new environment variables")
+	// Get current container
+	currentContainer := &deployment.Spec.Template.Spec.Containers[0]
 
-		// Update the container environment variables
-		deployment.Spec.Template.Spec.Containers[0].Env = desiredContainer.Env
+	// Check if container needs update
+	needsUpdate, updateReason := r.compareContainer(currentContainer, &desiredContainer)
 
-		// Add restart annotation
+	if needsUpdate {
+		r.Log.Info("Updating reverse proxy deployment", "reason", updateReason)
+
+		// Update the entire container specification
+		deployment.Spec.Template.Spec.Containers[0] = desiredContainer
+
+		// Add restart annotation to force pod restart
 		if deployment.Spec.Template.Annotations == nil {
 			deployment.Spec.Template.Annotations = make(map[string]string)
 		}
@@ -186,6 +190,128 @@ func (r *ReverseProxyReconciliation) compareEnvVars(existing, desired []v1.EnvVa
 		}
 	}
 
+	return true
+}
+
+// compareContainer compares current and desired container specifications
+func (r *ReverseProxyReconciliation) compareContainer(current, desired *v1.Container) (bool, string) {
+	// Check image
+	if current.Image != desired.Image {
+		return true, fmt.Sprintf("image changed from %s to %s", current.Image, desired.Image)
+	}
+
+	// Check environment variables
+	if !r.compareEnvVars(current.Env, desired.Env) {
+		return true, "environment variables changed"
+	}
+
+	// Check ports
+	if !r.compareContainerPorts(current.Ports, desired.Ports) {
+		return true, "container ports changed"
+	}
+
+	// Check resource requirements
+	if !r.compareResourceRequirements(current.Resources, desired.Resources) {
+		return true, "resource requirements changed"
+	}
+
+	// Check probes
+	if !r.compareProbes(current.LivenessProbe, desired.LivenessProbe) {
+		return true, "liveness probe changed"
+	}
+
+	if !r.compareProbes(current.ReadinessProbe, desired.ReadinessProbe) {
+		return true, "readiness probe changed"
+	}
+
+	return false, ""
+}
+
+// compareContainerPorts compares two container port slices for equality
+func (r *ReverseProxyReconciliation) compareContainerPorts(current, desired []v1.ContainerPort) bool {
+	if len(current) != len(desired) {
+		return false
+	}
+
+	currentMap := make(map[string]v1.ContainerPort)
+	for _, port := range current {
+		currentMap[port.Name] = port
+	}
+
+	for _, port := range desired {
+		if currentPort, exists := currentMap[port.Name]; !exists ||
+			currentPort.ContainerPort != port.ContainerPort ||
+			currentPort.Protocol != port.Protocol {
+			return false
+		}
+	}
+
+	return true
+}
+
+// compareResourceRequirements compares resource requirements for equality
+func (r *ReverseProxyReconciliation) compareResourceRequirements(current, desired v1.ResourceRequirements) bool {
+	// Compare requests
+	if !r.compareResourceList(current.Requests, desired.Requests) {
+		return false
+	}
+
+	// Compare limits
+	if !r.compareResourceList(current.Limits, desired.Limits) {
+		return false
+	}
+
+	return true
+}
+
+// compareResourceList compares resource lists for equality
+func (r *ReverseProxyReconciliation) compareResourceList(current, desired v1.ResourceList) bool {
+	if len(current) != len(desired) {
+		return false
+	}
+
+	for resource, desiredQuantity := range desired {
+		if currentQuantity, exists := current[resource]; !exists || !currentQuantity.Equal(desiredQuantity) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// compareProbes compares two probes for equality
+func (r *ReverseProxyReconciliation) compareProbes(current, desired *v1.Probe) bool {
+	// Both nil
+	if current == nil && desired == nil {
+		return true
+	}
+
+	// One nil, one not
+	if current == nil || desired == nil {
+		return false
+	}
+
+	// Compare basic settings
+	if current.InitialDelaySeconds != desired.InitialDelaySeconds ||
+		current.PeriodSeconds != desired.PeriodSeconds ||
+		current.FailureThreshold != desired.FailureThreshold {
+		return false
+	}
+
+	// Compare HTTP probe handlers
+	if current.HTTPGet != nil && desired.HTTPGet != nil {
+		return current.HTTPGet.Path == desired.HTTPGet.Path &&
+			current.HTTPGet.Port == desired.HTTPGet.Port &&
+			current.HTTPGet.Scheme == desired.HTTPGet.Scheme
+	}
+
+	// If one has HTTPGet and the other doesn't, they're different
+	if (current.HTTPGet == nil) != (desired.HTTPGet == nil) {
+		return false
+	}
+
+	// For other probe types, we'd need additional comparisons
+	// but for now we only use HTTPGet probes
 	return true
 }
 

@@ -652,3 +652,97 @@ func TestServiceNeedsUpdate(t *testing.T) {
 		})
 	}
 }
+
+// TestContainerNeedsUpdate tests the container comparison function
+func TestContainerNeedsUpdate(t *testing.T) {
+	reconciliation := &ReverseProxyReconciliation{}
+
+	baseContainer := &v1.Container{
+		Name:  "reverse-proxy",
+		Image: "quay.io/cloudservices/frontend-asset-proxy:old-tag",
+		Ports: []v1.ContainerPort{
+			{Name: "http", ContainerPort: 8080, Protocol: "TCP"},
+		},
+		Env: []v1.EnvVar{
+			{Name: "VAR1", Value: "value1"},
+		},
+	}
+
+	tests := []struct {
+		name           string
+		current        *v1.Container
+		desired        *v1.Container
+		expectUpdate   bool
+		expectedReason string
+	}{
+		{
+			name:           "Identical containers - no update needed",
+			current:        baseContainer,
+			desired:        baseContainer,
+			expectUpdate:   false,
+			expectedReason: "",
+		},
+		{
+			name:    "Image changed - update needed",
+			current: baseContainer,
+			desired: &v1.Container{
+				Name:  "reverse-proxy",
+				Image: "quay.io/cloudservices/frontend-asset-proxy:new-tag",
+				Ports: []v1.ContainerPort{
+					{Name: "http", ContainerPort: 8080, Protocol: "TCP"},
+				},
+				Env: []v1.EnvVar{
+					{Name: "VAR1", Value: "value1"},
+				},
+			},
+			expectUpdate:   true,
+			expectedReason: "image changed from quay.io/cloudservices/frontend-asset-proxy:old-tag to quay.io/cloudservices/frontend-asset-proxy:new-tag",
+		},
+		{
+			name:    "Environment variables changed - update needed",
+			current: baseContainer,
+			desired: &v1.Container{
+				Name:  "reverse-proxy",
+				Image: "quay.io/cloudservices/frontend-asset-proxy:old-tag",
+				Ports: []v1.ContainerPort{
+					{Name: "http", ContainerPort: 8080, Protocol: "TCP"},
+				},
+				Env: []v1.EnvVar{
+					{Name: "VAR1", Value: "new-value"},
+				},
+			},
+			expectUpdate:   true,
+			expectedReason: "environment variables changed",
+		},
+		{
+			name:    "Port changed - update needed",
+			current: baseContainer,
+			desired: &v1.Container{
+				Name:  "reverse-proxy",
+				Image: "quay.io/cloudservices/frontend-asset-proxy:old-tag",
+				Ports: []v1.ContainerPort{
+					{Name: "http", ContainerPort: 9090, Protocol: "TCP"},
+				},
+				Env: []v1.EnvVar{
+					{Name: "VAR1", Value: "value1"},
+				},
+			},
+			expectUpdate:   true,
+			expectedReason: "container ports changed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			needsUpdate, reason := reconciliation.compareContainer(tt.current, tt.desired)
+
+			if needsUpdate != tt.expectUpdate {
+				t.Errorf("Expected update=%v, got update=%v", tt.expectUpdate, needsUpdate)
+			}
+
+			if tt.expectUpdate && reason != tt.expectedReason {
+				t.Errorf("Expected reason=%s, got reason=%s", tt.expectedReason, reason)
+			}
+		})
+	}
+}
