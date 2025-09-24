@@ -280,7 +280,12 @@ spec:
           name: SOURCE_ARTIFACT
           type: string
         stepTemplate:
-          computeResources: {}
+          computeResources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 250m
+              memory: 500Mi
           volumeMounts:
           - mountPath: /var/workdir
             name: workdir
@@ -315,7 +320,12 @@ spec:
           name: SOURCE_ARTIFACT
           type: string
         stepTemplate:
-          computeResources: {}
+          computeResources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 250m
+              memory: 500Mi
           volumeMounts:
           - mountPath: /var/workdir
             name: workdir
