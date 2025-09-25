@@ -142,6 +142,12 @@ type FrontendEnvironmentSpec struct {
 
 	Requests v1.ResourceList `json:"requests,omitempty" yaml:"requests,omitempty"`
 	Limits   v1.ResourceList `json:"limits,omitempty" yaml:"limits,omitempty"`
+
+	// GlobalEnv defines environment variables that will be injected into every Caddy pod
+	// created for frontends in this environment. These variables are applied to all frontend
+	// deployments and can be used for configuration that needs to be shared across all
+	// frontends within the same environment.
+	GlobalEnv []v1.EnvVar `json:"globalEnv,omitempty" yaml:"globalEnv,omitempty"`
 }
 
 type MonitoringConfig struct {

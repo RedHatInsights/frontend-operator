@@ -659,6 +659,9 @@ func ExtractBucketConfigFromEnv() (*ObjectStoreBucket, error) {
 func (r *FrontendReconciliation) populateEnvVars(d *apps.Deployment, frontendEnvironment *crd.FrontendEnvironment) {
 	envVars := []v1.EnvVar{}
 
+	// pull from the GlobalEnv first in case that exists
+	envVars = append(envVars, frontendEnvironment.Spec.GlobalEnv...)
+
 	if frontendEnvironment.Spec.SSL {
 		envVars = append(envVars, v1.EnvVar{
 			Name:  "CADDY_TLS_MODE",

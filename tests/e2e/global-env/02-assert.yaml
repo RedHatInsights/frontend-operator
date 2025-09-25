@@ -1,0 +1,66 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: chrome-frontend
+  namespace: test-global-env-app
+  labels:
+    frontend: chrome
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: chrome
+spec:
+  selector:
+    matchLabels:
+      frontend: chrome
+  template:
+    spec:
+      volumes:
+        - name: config
+          configMap:
+            name:  test-global-env-app-environment
+            defaultMode: 420
+        - name: caddy
+          configMap:
+            name: test-global-env-app-environment
+            defaultMode: 420
+            items:
+            - key: Caddyfile
+              path: Caddyfile
+        - name: config-chrome
+          configMap:
+            defaultMode: 420
+            items:
+            - key: fed-modules.json
+              path: fed-modules.json
+            name: test-global-env-app-environment
+      containers:
+        - name: fe-image
+          image: 'quay.io/cloudservices/insights-chrome-frontend:720317c'
+          ports:
+            - name: web
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9000
+              protocol: TCP
+          env:
+            - name: TEST_GLOBAL_ENV_VAR
+              value: "global-value-123"
+            - name: ANOTHER_GLOBAL_VAR
+              value: "another-global-value"
+            - name: APP_NAME
+              value: chrome
+            - name: ROUTE_PATH
+              value: "/apps/chrome"
+            - name: BETA_ROUTE_PATH
+              value: "/beta/apps/chrome"
+            - name: PREVIEW_ROUTE_PATH
+              value: "/preview/apps/chrome"
+          volumeMounts:
+            - name: config
+              mountPath: /opt/app-root/src/build/stable/operator-generated
+            - mountPath: /srv/dist/operator-generated/fed-modules.json
+              name: config-chrome
+              subPath: fed-modules.json
