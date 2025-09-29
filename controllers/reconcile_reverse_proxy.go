@@ -808,7 +808,6 @@ func (r *ReverseProxyReconciliation) createReverseProxyIngress() error {
 	return r.Client.Create(r.Ctx, ingress)
 }
 
-
 // compareIngressFields compares the important fields of the current ingress against desired values
 func (r *ReverseProxyReconciliation) compareIngressFields(current *networkingv1.Ingress, desiredHost string, desiredLabels map[string]string) (bool, string) {
 	if len(current.Spec.Rules) != 1 {
