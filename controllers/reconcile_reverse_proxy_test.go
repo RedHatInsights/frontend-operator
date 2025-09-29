@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 
 	apps "k8s.io/api/apps/v1"
@@ -1090,6 +1091,88 @@ func TestReverseProxyReconciliation_CompareIngressFields(t *testing.T) {
 			different, _ := reconciliation.compareIngressFields(tt.current, tt.desiredHost, tt.desiredLabels)
 			if different != tt.expectDifferent {
 				t.Errorf("Expected different=%v, got different=%v", tt.expectDifferent, different)
+			}
+		})
+	}
+}
+
+// TestReverseProxyReconciliation_Whitelist tests whitelist annotation functionality
+func TestReverseProxyReconciliation_Whitelist(t *testing.T) {
+	tests := []struct {
+		name                   string
+		whitelist              []string
+		expectWhitelistPresent bool
+	}{
+		{
+			name:                   "No whitelist",
+			whitelist:              []string{},
+			expectWhitelistPresent: false,
+		},
+		{
+			name:                   "Single IP whitelist",
+			whitelist:              []string{"192.168.1.1/32"},
+			expectWhitelistPresent: true,
+		},
+		{
+			name:                   "Multiple CIDR whitelist",
+			whitelist:              []string{"192.168.1.0/24", "10.0.0.0/8"},
+			expectWhitelistPresent: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reconciliation := &ReverseProxyReconciliation{
+				Frontend: &crd.Frontend{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-frontend",
+						Namespace: "test-namespace",
+					},
+				},
+				FrontendEnvironment: &crd.FrontendEnvironment{
+					Spec: crd.FrontendEnvironmentSpec{
+						SSL:                  false,
+						ReverseProxyHostname: "reverse-proxy.cluster.local",
+						Whitelist:            tt.whitelist,
+					},
+				},
+			}
+
+			ingress, err := reconciliation.buildReverseProxyIngress()
+			if err != nil {
+				t.Fatalf("Failed to build ingress: %v", err)
+			}
+
+			// Check if whitelist annotations are present
+			annotations := ingress.GetAnnotations()
+			haproxyWhitelist := annotations["haproxy.router.openshift.io/ip_whitelist"]
+			nginxWhitelist := annotations["nginx.ingress.kubernetes.io/whitelist-source-range"]
+
+			if tt.expectWhitelistPresent {
+				if haproxyWhitelist == "" {
+					t.Errorf("Expected haproxy whitelist annotation, but it was empty")
+				}
+				if nginxWhitelist == "" {
+					t.Errorf("Expected nginx whitelist annotation, but it was empty")
+				}
+
+				// Check the format: haproxy uses space-separated, nginx uses comma-separated
+				expectedHaproxy := strings.Join(tt.whitelist, " ")
+				expectedNginx := strings.Join(tt.whitelist, ",")
+
+				if haproxyWhitelist != expectedHaproxy {
+					t.Errorf("Haproxy whitelist annotation mismatch. Expected: %s, Got: %s", expectedHaproxy, haproxyWhitelist)
+				}
+				if nginxWhitelist != expectedNginx {
+					t.Errorf("Nginx whitelist annotation mismatch. Expected: %s, Got: %s", expectedNginx, nginxWhitelist)
+				}
+			} else {
+				if haproxyWhitelist != "" {
+					t.Errorf("Expected no haproxy whitelist annotation, but got: %s", haproxyWhitelist)
+				}
+				if nginxWhitelist != "" {
+					t.Errorf("Expected no nginx whitelist annotation, but got: %s", nginxWhitelist)
+				}
 			}
 		})
 	}

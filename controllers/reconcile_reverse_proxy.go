@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -668,8 +669,36 @@ func (r *ReverseProxyReconciliation) reconcileIngress() error {
 		return err
 	}
 
-	// Ingress exists, ensure it's up to date
-	return r.updateReverseProxyIngress(ingress)
+	// Ingress exists, check if it needs update
+	host := r.FrontendEnvironment.Spec.ReverseProxyHostname
+	if host == "" {
+		return fmt.Errorf("reverseProxyHostname must be specified in FrontendEnvironment spec when reverse proxy is enabled")
+	}
+
+	// Get consistent labels
+	labels := r.getReverseProxyLabels()
+
+	// Check if ingress needs update
+	needsUpdate, updateReason := r.compareIngressFields(ingress, host, labels)
+
+	if needsUpdate {
+		r.Log.Info("Updating reverse proxy ingress", "reason", updateReason)
+
+		// Build the desired configuration
+		desiredIngress, err := r.buildReverseProxyIngress()
+		if err != nil {
+			return err
+		}
+
+		// Update only the mutable fields, preserving metadata that Kubernetes manages
+		ingress.Labels = desiredIngress.Labels
+		ingress.Annotations = desiredIngress.Annotations
+		ingress.Spec = desiredIngress.Spec
+
+		return r.Client.Update(r.Ctx, ingress)
+	}
+
+	return nil
 }
 
 // buildReverseProxyIngress builds the desired ingress configuration
@@ -739,6 +768,17 @@ func (r *ReverseProxyReconciliation) buildReverseProxyIngress() (*networkingv1.I
 		},
 	}
 
+	// Add whitelist annotations if configured (using ingress pattern from reconcile.go)
+	if len(r.FrontendEnvironment.Spec.Whitelist) != 0 {
+		annotations := ingress.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+		annotations["haproxy.router.openshift.io/ip_whitelist"] = strings.Join(r.FrontendEnvironment.Spec.Whitelist, " ")
+		annotations["nginx.ingress.kubernetes.io/whitelist-source-range"] = strings.Join(r.FrontendEnvironment.Spec.Whitelist, ",")
+		ingress.SetAnnotations(annotations)
+	}
+
 	// Add TLS configuration if SSL is enabled
 	if r.FrontendEnvironment.Spec.SSL {
 		ingress.Spec.TLS = []networkingv1.IngressTLS{
@@ -768,68 +808,60 @@ func (r *ReverseProxyReconciliation) createReverseProxyIngress() error {
 	return r.Client.Create(r.Ctx, ingress)
 }
 
-// updateReverseProxyIngress ensures the ingress matches the desired state
-func (r *ReverseProxyReconciliation) updateReverseProxyIngress(ingress *networkingv1.Ingress) error {
-	// Get hostname for reverse proxy
-	host := r.FrontendEnvironment.Spec.ReverseProxyHostname
-	if host == "" {
-		return fmt.Errorf("reverseProxyHostname must be specified in FrontendEnvironment spec when reverse proxy is enabled")
-	}
-
-	// Get consistent labels
-	labels := r.getReverseProxyLabels()
-
-	// Check if ingress needs update
-	needsUpdate, updateReason := r.compareIngressFields(ingress, host, labels)
-
-	if needsUpdate {
-		r.Log.Info("Updating reverse proxy ingress", "reason", updateReason)
-
-		// Build the desired configuration
-		desiredIngress, err := r.buildReverseProxyIngress()
-		if err != nil {
-			return err
-		}
-
-		// Update only the mutable fields, preserving metadata that Kubernetes manages
-		ingress.Labels = desiredIngress.Labels
-		ingress.Annotations = desiredIngress.Annotations
-		ingress.Spec = desiredIngress.Spec
-
-		return r.Client.Update(r.Ctx, ingress)
-	}
-
-	return nil
-}
 
 // compareIngressFields compares the important fields of the current ingress against desired values
 func (r *ReverseProxyReconciliation) compareIngressFields(current *networkingv1.Ingress, desiredHost string, desiredLabels map[string]string) (bool, string) {
+	if len(current.Spec.Rules) != 1 {
+		return true, fmt.Sprintf("expected 1 rule, found %d", len(current.Spec.Rules))
+	}
+	rule := current.Spec.Rules[0] // defines the / path above
+
 	// Check hostname
-	if len(current.Spec.Rules) == 0 || current.Spec.Rules[0].Host != desiredHost {
-		return true, fmt.Sprintf("hostname changed from %s to %s",
-			func() string {
-				if len(current.Spec.Rules) == 0 {
-					return "<none>"
-				}
-				return current.Spec.Rules[0].Host
-			}(), desiredHost)
+	if rule.Host != desiredHost {
+		return true, fmt.Sprintf("hostname changed from %s to %s", rule.Host, desiredHost)
+	}
+
+	// Check HTTP configuration
+	if rule.HTTP == nil {
+		return true, "missing HTTP configuration in rule"
+	}
+
+	// Check paths
+	if len(rule.HTTP.Paths) != 1 {
+		return true, fmt.Sprintf("expected 1 path, found %d", len(rule.HTTP.Paths))
+	}
+
+	path := rule.HTTP.Paths[0]
+
+	// Check path value
+	if path.Path != "/" {
+		return true, fmt.Sprintf("path changed from %s to /", path.Path)
+	}
+
+	// Check path type
+	expectedPathType := networkingv1.PathTypePrefix
+	if path.PathType == nil || *path.PathType != expectedPathType {
+		currentPathType := "<none>"
+		if path.PathType != nil {
+			currentPathType = string(*path.PathType)
+		}
+		return true, fmt.Sprintf("path type changed from %s to %s", currentPathType, expectedPathType)
 	}
 
 	// Check service backend
-	if len(current.Spec.Rules) == 0 || current.Spec.Rules[0].HTTP == nil ||
-		len(current.Spec.Rules[0].HTTP.Paths) == 0 {
-		return true, "missing ingress paths"
+	if path.Backend.Service == nil {
+		return true, "missing service backend"
+	}
+	backend := path.Backend.Service
+
+	// Check service name
+	if backend.Name != "reverse-proxy" {
+		return true, fmt.Sprintf("service name changed from %s to reverse-proxy", backend.Name)
 	}
 
-	currentBackend := current.Spec.Rules[0].HTTP.Paths[0].Backend
-	if currentBackend.Service == nil || currentBackend.Service.Name != "reverse-proxy" ||
-		currentBackend.Service.Port.Number != ReverseProxyPort {
-		return true, "service backend configuration changed"
-	}
-
-	// Check path
-	if current.Spec.Rules[0].HTTP.Paths[0].Path != "/" {
-		return true, "path changed"
+	// Check service port
+	if backend.Port.Number != ReverseProxyPort {
+		return true, fmt.Sprintf("service port changed from %d to %d", backend.Port.Number, ReverseProxyPort)
 	}
 
 	// Check important annotations
@@ -838,9 +870,35 @@ func (r *ReverseProxyReconciliation) compareIngressFields(current *networkingv1.
 		"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
 	}
 
+	// Add whitelist annotations if configured
+	if len(r.FrontendEnvironment.Spec.Whitelist) > 0 {
+		whitelist := strings.Join(r.FrontendEnvironment.Spec.Whitelist, ",")
+		requiredAnnotations["haproxy.router.openshift.io/ip_whitelist"] = whitelist
+		requiredAnnotations["nginx.ingress.kubernetes.io/whitelist-source-range"] = whitelist
+	}
+
 	for key, expectedValue := range requiredAnnotations {
 		if current.Annotations == nil || current.Annotations[key] != expectedValue {
-			return true, fmt.Sprintf("annotation %s changed", key)
+			return true, fmt.Sprintf("annotation %s changed from %s to %s", key,
+				func() string {
+					if current.Annotations == nil {
+						return "<none>"
+					}
+					return current.Annotations[key]
+				}(), expectedValue)
+		}
+	}
+
+	// Check if whitelist annotations should be removed when not configured
+	if len(r.FrontendEnvironment.Spec.Whitelist) == 0 {
+		whitelistAnnotations := []string{
+			"haproxy.router.openshift.io/ip_whitelist",
+			"nginx.ingress.kubernetes.io/whitelist-source-range",
+		}
+		for _, annotation := range whitelistAnnotations {
+			if current.Annotations != nil && current.Annotations[annotation] != "" {
+				return true, fmt.Sprintf("whitelist annotation %s should be removed", annotation)
+			}
 		}
 	}
 
