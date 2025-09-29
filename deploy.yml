@@ -406,6 +406,9 @@ objects:
                   description: ResourceList is a set of (resource name, quantity)
                     pairs.
                   type: object
+                reverseProxyHostname:
+                  description: Hostname for reverse proxy ingress
+                  type: string
                 reverseProxyImage:
                   description: Reverse Proxy Container Image
                   type: string
