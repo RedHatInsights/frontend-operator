@@ -672,8 +672,8 @@ func (r *ReverseProxyReconciliation) reconcileIngress() error {
 	return r.updateReverseProxyIngress(ingress)
 }
 
-// createReverseProxyIngress creates an ingress for the reverse proxy
-func (r *ReverseProxyReconciliation) createReverseProxyIngress() error {
+// buildReverseProxyIngress builds the desired ingress configuration
+func (r *ReverseProxyReconciliation) buildReverseProxyIngress() (*networkingv1.Ingress, error) {
 	ingressName := "reverse-proxy"
 
 	// Define name of resource
@@ -694,7 +694,7 @@ func (r *ReverseProxyReconciliation) createReverseProxyIngress() error {
 	// Get hostname for reverse proxy
 	host := r.FrontendEnvironment.Spec.ReverseProxyHostname
 	if host == "" {
-		return fmt.Errorf("reverseProxyHostname must be specified in FrontendEnvironment spec when reverse proxy is enabled")
+		return nil, fmt.Errorf("reverseProxyHostname must be specified in FrontendEnvironment spec when reverse proxy is enabled")
 	}
 
 	// Create ingress path
@@ -753,209 +753,133 @@ func (r *ReverseProxyReconciliation) createReverseProxyIngress() error {
 	ownerRef := r.getReverseProxyOwnerRef()
 	ingress.SetOwnerReferences([]metav1.OwnerReference{ownerRef})
 
-	r.Log.Info("Creating Ingress for reverse proxy", "name", nn.Name, "namespace", nn.Namespace, "host", host)
+	return ingress, nil
+}
+
+// createReverseProxyIngress creates an ingress for the reverse proxy
+func (r *ReverseProxyReconciliation) createReverseProxyIngress() error {
+	ingress, err := r.buildReverseProxyIngress()
+	if err != nil {
+		return err
+	}
+
+	r.Log.Info("Creating Ingress for reverse proxy", "name", ingress.Name, "namespace", ingress.Namespace, "host", ingress.Spec.Rules[0].Host)
 
 	return r.Client.Create(r.Ctx, ingress)
 }
 
 // updateReverseProxyIngress ensures the ingress matches the desired state
 func (r *ReverseProxyReconciliation) updateReverseProxyIngress(ingress *networkingv1.Ingress) error {
-	// Get the desired ingress configuration
-	desiredIngress, err := r.createReverseProxyIngressConfig()
-	if err != nil {
-		return err
+	// Get hostname for reverse proxy
+	host := r.FrontendEnvironment.Spec.ReverseProxyHostname
+	if host == "" {
+		return fmt.Errorf("reverseProxyHostname must be specified in FrontendEnvironment spec when reverse proxy is enabled")
 	}
 
-	// Compare and update if needed
-	ingressChanged := r.compareIngress(ingress, desiredIngress)
+	// Get consistent labels
+	labels := r.getReverseProxyLabels()
 
-	if ingressChanged {
-		r.Log.Info("Updating reverse proxy ingress with new configuration")
+	// Check if ingress needs update
+	needsUpdate, updateReason := r.compareIngressFields(ingress, host, labels)
 
-		// Update the ingress spec
-		ingress.Spec.Rules = desiredIngress.Spec.Rules
-		ingress.Spec.TLS = desiredIngress.Spec.TLS
+	if needsUpdate {
+		r.Log.Info("Updating reverse proxy ingress", "reason", updateReason)
+
+		// Build the desired configuration
+		desiredIngress, err := r.buildReverseProxyIngress()
+		if err != nil {
+			return err
+		}
+
+		// Update only the mutable fields, preserving metadata that Kubernetes manages
 		ingress.Labels = desiredIngress.Labels
 		ingress.Annotations = desiredIngress.Annotations
+		ingress.Spec = desiredIngress.Spec
 
-		// Update the ingress
 		return r.Client.Update(r.Ctx, ingress)
 	}
 
 	return nil
 }
 
-// createReverseProxyIngressConfig creates the desired ingress configuration
-func (r *ReverseProxyReconciliation) createReverseProxyIngressConfig() (*networkingv1.Ingress, error) {
-	ingressName := "reverse-proxy"
-
-	// Define name of resource
-	nn := types.NamespacedName{
-		Name:      ingressName,
-		Namespace: r.Frontend.Namespace,
+// compareIngressFields compares the important fields of the current ingress against desired values
+func (r *ReverseProxyReconciliation) compareIngressFields(current *networkingv1.Ingress, desiredHost string, desiredLabels map[string]string) (bool, string) {
+	// Check hostname
+	if len(current.Spec.Rules) == 0 || current.Spec.Rules[0].Host != desiredHost {
+		return true, fmt.Sprintf("hostname changed from %s to %s",
+			func() string {
+				if len(current.Spec.Rules) == 0 {
+					return "<none>"
+				}
+				return current.Spec.Rules[0].Host
+			}(), desiredHost)
 	}
 
-	// Get consistent labels that won't conflict between frontends
-	labels := r.getReverseProxyLabels()
+	// Check service backend
+	if len(current.Spec.Rules) == 0 || current.Spec.Rules[0].HTTP == nil ||
+		len(current.Spec.Rules[0].HTTP.Paths) == 0 {
+		return true, "missing ingress paths"
+	}
 
-	// Set up annotations
-	annotations := map[string]string{
+	currentBackend := current.Spec.Rules[0].HTTP.Paths[0].Backend
+	if currentBackend.Service == nil || currentBackend.Service.Name != "reverse-proxy" ||
+		currentBackend.Service.Port.Number != ReverseProxyPort {
+		return true, "service backend configuration changed"
+	}
+
+	// Check path
+	if current.Spec.Rules[0].HTTP.Paths[0].Path != "/" {
+		return true, "path changed"
+	}
+
+	// Check important annotations
+	requiredAnnotations := map[string]string{
 		"nginx.ingress.kubernetes.io/rewrite-target": "/",
 		"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
 	}
 
-	// Get hostname for reverse proxy
-	host := r.FrontendEnvironment.Spec.ReverseProxyHostname
-	if host == "" {
-		return nil, fmt.Errorf("reverseProxyHostname must be specified in FrontendEnvironment spec when reverse proxy is enabled")
-	}
-
-	// Create ingress path
-	pathType := networkingv1.PathTypePrefix
-	paths := []networkingv1.HTTPIngressPath{
-		{
-			Path:     "/",
-			PathType: &pathType,
-			Backend: networkingv1.IngressBackend{
-				Service: &networkingv1.IngressServiceBackend{
-					Name: "reverse-proxy",
-					Port: networkingv1.ServiceBackendPort{
-						Number: ReverseProxyPort,
-					},
-				},
-			},
-		},
-	}
-
-	// Create ingress rules
-	rules := []networkingv1.IngressRule{
-		{
-			Host: host,
-			IngressRuleValue: networkingv1.IngressRuleValue{
-				HTTP: &networkingv1.HTTPIngressRuleValue{
-					Paths: paths,
-				},
-			},
-		},
-	}
-
-	ingress := &networkingv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        nn.Name,
-			Namespace:   nn.Namespace,
-			Labels:      labels,
-			Annotations: annotations,
-		},
-		Spec: networkingv1.IngressSpec{
-			Rules: rules,
-		},
-	}
-
-	// Add TLS configuration if SSL is enabled
-	if r.FrontendEnvironment.Spec.SSL {
-		ingress.Spec.TLS = []networkingv1.IngressTLS{
-			{
-				Hosts:      []string{host},
-				SecretName: "reverse-proxy-tls",
-			},
+	for key, expectedValue := range requiredAnnotations {
+		if current.Annotations == nil || current.Annotations[key] != expectedValue {
+			return true, fmt.Sprintf("annotation %s changed", key)
 		}
 	}
 
-	// Set owner reference to the environment instead of the frontend
-	ingress.SetOwnerReferences([]metav1.OwnerReference{r.getReverseProxyOwnerRef()})
-
-	return ingress, nil
-}
-
-// compareIngress compares current vs desired ingress configuration
-func (r *ReverseProxyReconciliation) compareIngress(current, desired *networkingv1.Ingress) bool {
-	// Compare rules
-	if len(current.Spec.Rules) != len(desired.Spec.Rules) {
-		return true
-	}
-
-	for i, currentRule := range current.Spec.Rules {
-		if i >= len(desired.Spec.Rules) {
-			return true
+	// Check labels
+	importantLabels := []string{"app", "component", "environment"}
+	for _, label := range importantLabels {
+		currentValue := ""
+		if current.Labels != nil {
+			currentValue = current.Labels[label]
 		}
-		desiredRule := desired.Spec.Rules[i]
-
-		if currentRule.Host != desiredRule.Host {
-			return true
+		desiredValue := ""
+		if desiredLabels != nil {
+			desiredValue = desiredLabels[label]
 		}
-
-		// Compare HTTP paths
-		if currentRule.HTTP == nil && desiredRule.HTTP != nil {
-			return true
-		}
-		if currentRule.HTTP != nil && desiredRule.HTTP == nil {
-			return true
-		}
-		if currentRule.HTTP != nil && desiredRule.HTTP != nil {
-			currentPaths := currentRule.HTTP.Paths
-			desiredPaths := desiredRule.HTTP.Paths
-
-			if len(currentPaths) != len(desiredPaths) {
-				return true
-			}
-
-			for j, currentPath := range currentPaths {
-				if j >= len(desiredPaths) {
-					return true
-				}
-				desiredPath := desiredPaths[j]
-
-				if currentPath.Path != desiredPath.Path {
-					return true
-				}
-				if currentPath.Backend.Service.Name != desiredPath.Backend.Service.Name {
-					return true
-				}
-				if currentPath.Backend.Service.Port.Number != desiredPath.Backend.Service.Port.Number {
-					return true
-				}
-			}
-		}
-	}
-
-	// Compare TLS configuration
-	if len(current.Spec.TLS) != len(desired.Spec.TLS) {
-		return true
-	}
-
-	for i, currentTLS := range current.Spec.TLS {
-		if i >= len(desired.Spec.TLS) {
-			return true
-		}
-		desiredTLS := desired.Spec.TLS[i]
-
-		if currentTLS.SecretName != desiredTLS.SecretName {
-			return true
-		}
-
-		if len(currentTLS.Hosts) != len(desiredTLS.Hosts) {
-			return true
-		}
-
-		for j, currentHost := range currentTLS.Hosts {
-			if j >= len(desiredTLS.Hosts) || currentHost != desiredTLS.Hosts[j] {
-				return true
-			}
-		}
-	}
-
-	// Compare important annotations
-	importantAnnotations := []string{
-		"nginx.ingress.kubernetes.io/rewrite-target",
-		"nginx.ingress.kubernetes.io/ssl-redirect",
-	}
-	for _, annotation := range importantAnnotations {
-		currentValue := current.Annotations[annotation]
-		desiredValue := desired.Annotations[annotation]
 		if currentValue != desiredValue {
-			return true
+			return true, fmt.Sprintf("label %s changed from %s to %s", label, currentValue, desiredValue)
 		}
 	}
 
-	return false
+	// Check TLS configuration
+	sslEnabled := r.FrontendEnvironment.Spec.SSL
+	hasTLS := len(current.Spec.TLS) > 0
+
+	if sslEnabled && !hasTLS {
+		return true, "SSL enabled but TLS configuration missing"
+	}
+
+	if !sslEnabled && hasTLS {
+		return true, "SSL disabled but TLS configuration present"
+	}
+
+	if sslEnabled && hasTLS {
+		if len(current.Spec.TLS[0].Hosts) == 0 || current.Spec.TLS[0].Hosts[0] != desiredHost {
+			return true, "TLS hostname mismatch"
+		}
+		if current.Spec.TLS[0].SecretName != "reverse-proxy-tls" {
+			return true, "TLS secret name mismatch"
+		}
+	}
+
+	return false, ""
 }

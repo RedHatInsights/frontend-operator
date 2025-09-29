@@ -864,23 +864,34 @@ func TestReverseProxyReconciliation_Ingress(t *testing.T) {
 			FrontendEnvironment: frontendEnvSSL,
 		}
 
-		// Create new ingress config
-		ingressConfig, err := reconciliationSSL.createReverseProxyIngressConfig()
+		// Create an ingress and test the SSL configuration through reconciliation
+		err := reconciliationSSL.reconcileIngress()
 		if err != nil {
-			t.Fatalf("Failed to create ingress config: %v", err)
+			t.Fatalf("Failed to reconcile ingress: %v", err)
+		}
+
+		// Get the created ingress
+		ingress := &networkingv1.Ingress{}
+		ingressKey := types.NamespacedName{
+			Name:      "reverse-proxy",
+			Namespace: "test-namespace",
+		}
+		err = client.Get(context.Background(), ingressKey, ingress)
+		if err != nil {
+			t.Fatalf("Failed to get ingress: %v", err)
 		}
 
 		// Verify TLS configuration is added
-		if len(ingressConfig.Spec.TLS) != 1 {
-			t.Errorf("Expected 1 TLS entry, got %d", len(ingressConfig.Spec.TLS))
+		if len(ingress.Spec.TLS) != 1 {
+			t.Errorf("Expected 1 TLS entry, got %d", len(ingress.Spec.TLS))
 		}
 
-		if ingressConfig.Spec.TLS[0].SecretName != "reverse-proxy-tls" {
-			t.Errorf("Expected TLS secret=reverse-proxy-tls, got secret=%s", ingressConfig.Spec.TLS[0].SecretName)
+		if ingress.Spec.TLS[0].SecretName != "reverse-proxy-tls" {
+			t.Errorf("Expected TLS secret=reverse-proxy-tls, got secret=%s", ingress.Spec.TLS[0].SecretName)
 		}
 
-		if len(ingressConfig.Spec.TLS[0].Hosts) != 1 || ingressConfig.Spec.TLS[0].Hosts[0] != "reverse-proxy.cluster.local" {
-			t.Errorf("Expected TLS host=reverse-proxy.cluster.local, got hosts=%v", ingressConfig.Spec.TLS[0].Hosts)
+		if len(ingress.Spec.TLS[0].Hosts) != 1 || ingress.Spec.TLS[0].Hosts[0] != "reverse-proxy.cluster.local" {
+			t.Errorf("Expected TLS host=reverse-proxy.cluster.local, got hosts=%v", ingress.Spec.TLS[0].Hosts)
 		}
 	})
 
@@ -945,8 +956,14 @@ func TestReverseProxyReconciliation_Ingress(t *testing.T) {
 }
 
 // TestReverseProxyReconciliation_CompareIngress tests the ingress comparison logic
-func TestReverseProxyReconciliation_CompareIngress(t *testing.T) {
-	reconciliation := &ReverseProxyReconciliation{}
+func TestReverseProxyReconciliation_CompareIngressFields(t *testing.T) {
+	reconciliation := &ReverseProxyReconciliation{
+		FrontendEnvironment: &crd.FrontendEnvironment{
+			Spec: crd.FrontendEnvironmentSpec{
+				SSL: false, // Default to false for most tests
+			},
+		},
+	}
 
 	pathType := networkingv1.PathTypePrefix
 	baseIngress := &networkingv1.Ingress{
@@ -986,85 +1003,91 @@ func TestReverseProxyReconciliation_CompareIngress(t *testing.T) {
 	tests := []struct {
 		name            string
 		current         *networkingv1.Ingress
-		desired         *networkingv1.Ingress
+		desiredHost     string
+		desiredLabels   map[string]string
 		expectDifferent bool
 	}{
 		{
-			name:            "Identical ingresses",
+			name:            "Correct configuration - no update needed",
 			current:         baseIngress.DeepCopy(),
-			desired:         baseIngress.DeepCopy(),
+			desiredHost:     "reverse-proxy.cluster.local",
+			desiredLabels:   map[string]string{},
 			expectDifferent: false,
 		},
 		{
-			name:    "Different host",
-			current: baseIngress.DeepCopy(),
-			desired: func() *networkingv1.Ingress {
-				ing := baseIngress.DeepCopy()
-				ing.Spec.Rules[0].Host = "different.example.com"
-				return ing
-			}(),
+			name:            "Different hostname",
+			current:         baseIngress.DeepCopy(),
+			desiredHost:     "different.example.com",
+			desiredLabels:   map[string]string{},
 			expectDifferent: true,
 		},
 		{
-			name:    "Different path",
-			current: baseIngress.DeepCopy(),
-			desired: func() *networkingv1.Ingress {
+			name: "Wrong service name",
+			current: func() *networkingv1.Ingress {
 				ing := baseIngress.DeepCopy()
-				ing.Spec.Rules[0].HTTP.Paths[0].Path = "/different-path"
+				ing.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name = "wrong-service"
 				return ing
 			}(),
+			desiredHost:     "reverse-proxy.cluster.local",
+			desiredLabels:   map[string]string{},
 			expectDifferent: true,
 		},
 		{
-			name:    "Different service name",
-			current: baseIngress.DeepCopy(),
-			desired: func() *networkingv1.Ingress {
-				ing := baseIngress.DeepCopy()
-				ing.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name = "different-service"
-				return ing
-			}(),
-			expectDifferent: true,
-		},
-		{
-			name:    "Different port",
-			current: baseIngress.DeepCopy(),
-			desired: func() *networkingv1.Ingress {
+			name: "Wrong port",
+			current: func() *networkingv1.Ingress {
 				ing := baseIngress.DeepCopy()
 				ing.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Number = 9090
 				return ing
 			}(),
+			desiredHost:     "reverse-proxy.cluster.local",
+			desiredLabels:   map[string]string{},
 			expectDifferent: true,
 		},
 		{
-			name:    "TLS added",
-			current: baseIngress.DeepCopy(),
-			desired: func() *networkingv1.Ingress {
+			name: "Wrong path",
+			current: func() *networkingv1.Ingress {
 				ing := baseIngress.DeepCopy()
-				ing.Spec.TLS = []networkingv1.IngressTLS{
-					{
-						Hosts:      []string{"reverse-proxy.cluster.local"},
-						SecretName: "test-tls",
-					},
-				}
+				ing.Spec.Rules[0].HTTP.Paths[0].Path = "/wrong-path"
 				return ing
 			}(),
+			desiredHost:     "reverse-proxy.cluster.local",
+			desiredLabels:   map[string]string{},
 			expectDifferent: true,
 		},
 		{
-			name:    "Different annotation",
-			current: baseIngress.DeepCopy(),
-			desired: func() *networkingv1.Ingress {
+			name: "Missing required annotation",
+			current: func() *networkingv1.Ingress {
+				ing := baseIngress.DeepCopy()
+				delete(ing.Annotations, "nginx.ingress.kubernetes.io/rewrite-target")
+				return ing
+			}(),
+			desiredHost:     "reverse-proxy.cluster.local",
+			desiredLabels:   map[string]string{},
+			expectDifferent: true,
+		},
+		{
+			name: "Wrong annotation value",
+			current: func() *networkingv1.Ingress {
 				ing := baseIngress.DeepCopy()
 				ing.Annotations["nginx.ingress.kubernetes.io/ssl-redirect"] = "true"
 				return ing
 			}(),
+			desiredHost:     "reverse-proxy.cluster.local",
+			desiredLabels:   map[string]string{},
+			expectDifferent: true,
+		},
+		{
+			name:            "Missing expected label",
+			current:         baseIngress.DeepCopy(),
+			desiredHost:     "reverse-proxy.cluster.local",
+			desiredLabels:   map[string]string{"app": "test-app"},
 			expectDifferent: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			different := reconciliation.compareIngress(tt.current, tt.desired)
+			different, _ := reconciliation.compareIngressFields(tt.current, tt.desiredHost, tt.desiredLabels)
 			if different != tt.expectDifferent {
 				t.Errorf("Expected different=%v, got different=%v", tt.expectDifferent, different)
 			}
