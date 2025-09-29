@@ -135,6 +135,8 @@ type FrontendEnvironmentSpec struct {
 	ReverseProxySPAEntrypointPath string `json:"reverseProxySPAEntrypointPath,omitempty"`
 	// Log level for reverse proxy
 	ReverseProxyLogLevel string `json:"reverseProxyLogLevel,omitempty"`
+	// Hostname for reverse proxy ingress
+	ReverseProxyHostname string `json:"reverseProxyHostname,omitempty"`
 
 	DefaultReplicas *int32 `json:"defaultReplicas,omitempty" yaml:"defaultReplicas,omitempty"`
 	// For the ChromeUI to render navigation bundles

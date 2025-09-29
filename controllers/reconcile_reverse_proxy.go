@@ -691,10 +691,10 @@ func (r *ReverseProxyReconciliation) createReverseProxyIngress() error {
 		"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
 	}
 
-	// Get hostname
-	host := r.FrontendEnvironment.Spec.Hostname
+	// Get hostname for reverse proxy
+	host := r.FrontendEnvironment.Spec.ReverseProxyHostname
 	if host == "" {
-		host = r.Frontend.Spec.EnvName + ".local"
+		return fmt.Errorf("reverseProxyHostname must be specified in FrontendEnvironment spec when reverse proxy is enabled")
 	}
 
 	// Create ingress path
@@ -804,10 +804,10 @@ func (r *ReverseProxyReconciliation) createReverseProxyIngressConfig() (*network
 		"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
 	}
 
-	// Get hostname
-	host := r.FrontendEnvironment.Spec.Hostname
+	// Get hostname for reverse proxy
+	host := r.FrontendEnvironment.Spec.ReverseProxyHostname
 	if host == "" {
-		host = r.Frontend.Spec.EnvName + ".local"
+		return nil, fmt.Errorf("reverseProxyHostname must be specified in FrontendEnvironment spec when reverse proxy is enabled")
 	}
 
 	// Create ingress path

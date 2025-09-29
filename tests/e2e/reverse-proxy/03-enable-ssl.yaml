@@ -10,6 +10,7 @@ spec:
   hostname: reverse-proxy-test.example.com
   sso: https://sso.foo.redhat.com
   enablePushCache: true
+  reverseProxyHostname: reverse-proxy.cluster.local
   reverseProxyImage: quay.io/redhatinsights/frontend-asset-proxy:latest
   reverseProxySPAEntrypointPath: /index.html
   reverseProxyLogLevel: INFO

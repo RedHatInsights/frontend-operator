@@ -782,10 +782,11 @@ func TestReverseProxyReconciliation_Ingress(t *testing.T) {
 			Name: "test-env",
 		},
 		Spec: crd.FrontendEnvironmentSpec{
-			EnablePushCache:   true,
-			ReverseProxyImage: "quay.io/test/reverse-proxy:latest",
-			Hostname:          "test.example.com",
-			SSL:               false,
+			EnablePushCache:      true,
+			ReverseProxyImage:    "quay.io/test/reverse-proxy:latest",
+			Hostname:             "test.example.com",
+			ReverseProxyHostname: "reverse-proxy.cluster.local",
+			SSL:                  false,
 		},
 	}
 
@@ -827,8 +828,8 @@ func TestReverseProxyReconciliation_Ingress(t *testing.T) {
 		}
 
 		// Verify ingress properties
-		if ingress.Spec.Rules[0].Host != "test.example.com" {
-			t.Errorf("Expected host=test.example.com, got host=%s", ingress.Spec.Rules[0].Host)
+		if ingress.Spec.Rules[0].Host != "reverse-proxy.cluster.local" {
+			t.Errorf("Expected host=reverse-proxy.cluster.local, got host=%s", ingress.Spec.Rules[0].Host)
 		}
 
 		if ingress.Spec.Rules[0].HTTP.Paths[0].Path != "/" {
@@ -878,8 +879,8 @@ func TestReverseProxyReconciliation_Ingress(t *testing.T) {
 			t.Errorf("Expected TLS secret=reverse-proxy-tls, got secret=%s", ingressConfig.Spec.TLS[0].SecretName)
 		}
 
-		if len(ingressConfig.Spec.TLS[0].Hosts) != 1 || ingressConfig.Spec.TLS[0].Hosts[0] != "test.example.com" {
-			t.Errorf("Expected TLS host=test.example.com, got hosts=%v", ingressConfig.Spec.TLS[0].Hosts)
+		if len(ingressConfig.Spec.TLS[0].Hosts) != 1 || ingressConfig.Spec.TLS[0].Hosts[0] != "reverse-proxy.cluster.local" {
+			t.Errorf("Expected TLS host=reverse-proxy.cluster.local, got hosts=%v", ingressConfig.Spec.TLS[0].Hosts)
 		}
 	})
 
@@ -937,8 +938,8 @@ func TestReverseProxyReconciliation_Ingress(t *testing.T) {
 		}
 
 		// Verify the host was updated
-		if updatedIngress.Spec.Rules[0].Host != "test.example.com" {
-			t.Errorf("Expected updated host=test.example.com, got host=%s", updatedIngress.Spec.Rules[0].Host)
+		if updatedIngress.Spec.Rules[0].Host != "reverse-proxy.cluster.local" {
+			t.Errorf("Expected updated host=reverse-proxy.cluster.local, got host=%s", updatedIngress.Spec.Rules[0].Host)
 		}
 	})
 }
@@ -958,7 +959,7 @@ func TestReverseProxyReconciliation_CompareIngress(t *testing.T) {
 		Spec: networkingv1.IngressSpec{
 			Rules: []networkingv1.IngressRule{
 				{
-					Host: "test.example.com",
+					Host: "reverse-proxy.cluster.local",
 					IngressRuleValue: networkingv1.IngressRuleValue{
 						HTTP: &networkingv1.HTTPIngressRuleValue{
 							Paths: []networkingv1.HTTPIngressPath{
@@ -1041,7 +1042,7 @@ func TestReverseProxyReconciliation_CompareIngress(t *testing.T) {
 				ing := baseIngress.DeepCopy()
 				ing.Spec.TLS = []networkingv1.IngressTLS{
 					{
-						Hosts:      []string{"test.example.com"},
+						Hosts:      []string{"reverse-proxy.cluster.local"},
 						SecretName: "test-tls",
 					},
 				}
@@ -1105,10 +1106,11 @@ func TestReverseProxyReconciliation_FullReconciliation(t *testing.T) {
 			Name: "test-env",
 		},
 		Spec: crd.FrontendEnvironmentSpec{
-			EnablePushCache:   true,
-			ReverseProxyImage: "quay.io/test/reverse-proxy:latest",
-			Hostname:          "test.example.com",
-			SSL:               false,
+			EnablePushCache:      true,
+			ReverseProxyImage:    "quay.io/test/reverse-proxy:latest",
+			Hostname:             "test.example.com",
+			ReverseProxyHostname: "reverse-proxy.cluster.local",
+			SSL:                  false,
 		},
 	}
 

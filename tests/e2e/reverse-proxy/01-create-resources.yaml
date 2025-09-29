@@ -8,6 +8,7 @@ spec:
   generateNavJSON: false
   ssl: false
   hostname: reverse-proxy-test.example.com
+  reverseProxyHostname: reverse-proxy.cluster.local
   sso: https://sso.foo.redhat.com
   enablePushCache: true
   reverseProxyImage: quay.io/redhatinsights/frontend-asset-proxy:latest

@@ -13,6 +13,7 @@ spec:
     "console.openshiftusgov.com": "https://sso.openshiftusgov.com"
   enablePushCache: true
   reverseProxyImage: quay.io/redhat-services-prod/hcc-platex-services-tenant/frontend-asset-proxy:latest
+  reverseProxyHostname: reverse-proxy.cluster.local
   reverseProxySPAEntrypointPath: /index.html
   reverseProxyLogLevel: DEBUG
   targetNamespaces:

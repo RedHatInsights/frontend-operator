@@ -15,10 +15,10 @@ metadata:
 spec:
   tls:
   - hosts:
-    - reverse-proxy-test.example.com
+    - reverse-proxy.cluster.local
     secretName: reverse-proxy-tls
   rules:
-  - host: reverse-proxy-test.example.com
+  - host: reverse-proxy.cluster.local
     http:
       paths:
       - path: /

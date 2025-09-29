@@ -163,7 +163,7 @@ metadata:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
   rules:
-  - host: reverse-proxy-test.example.com
+  - host: reverse-proxy.cluster.local
     http:
       paths:
       - path: /
