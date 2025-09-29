@@ -7,7 +7,7 @@ metadata:
 spec:
   generateNavJSON: false
   ssl: false
-  hostname: foo.redhat.com
+  hostname: reverse-proxy-test.example.com
   sso: https://sso.foo.redhat.com
   enablePushCache: true
   reverseProxyImage: quay.io/redhatinsights/frontend-asset-proxy:latest

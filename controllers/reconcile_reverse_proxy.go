@@ -23,6 +23,7 @@ import (
 
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,6 +64,7 @@ type ReverseProxyReconciliation struct {
 //+kubebuilder:rbac:groups=cloud.redhat.com,resources=frontendenvironments,verbs=get;list;watch
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 
 // ReconcileReverseProxy handles the reverse proxy reconciliation for a frontend
 func (r *ReverseProxyReconciler) ReconcileReverseProxy(ctx context.Context, frontend *crd.Frontend, fe *crd.FrontendEnvironment) error {
@@ -94,6 +96,11 @@ func (r *ReverseProxyReconciliation) run() error {
 
 	// Reconcile service
 	if err := r.reconcileService(); err != nil {
+		return err
+	}
+
+	// Reconcile ingress
+	if err := r.reconcileIngress(); err != nil {
 		return err
 	}
 
@@ -643,4 +650,312 @@ func (r *ReverseProxyReconciliation) getReverseProxyLabels() map[string]string {
 	labels["component"] = "reverse-proxy"
 
 	return labels
+}
+
+// reconcileIngress ensures the reverse proxy ingress exists and is up to date
+func (r *ReverseProxyReconciliation) reconcileIngress() error {
+	ingress := &networkingv1.Ingress{}
+	ingressKey := types.NamespacedName{
+		Name:      "reverse-proxy",
+		Namespace: r.Frontend.Namespace,
+	}
+
+	err := r.Client.Get(r.Ctx, ingressKey, ingress)
+	if err != nil && k8serr.IsNotFound(err) {
+		// Ingress doesn't exist, create it
+		return r.createReverseProxyIngress()
+	} else if err != nil {
+		return err
+	}
+
+	// Ingress exists, ensure it's up to date
+	return r.updateReverseProxyIngress(ingress)
+}
+
+// createReverseProxyIngress creates an ingress for the reverse proxy
+func (r *ReverseProxyReconciliation) createReverseProxyIngress() error {
+	ingressName := "reverse-proxy"
+
+	// Define name of resource
+	nn := types.NamespacedName{
+		Name:      ingressName,
+		Namespace: r.Frontend.Namespace,
+	}
+
+	// Get consistent labels that won't conflict between frontends
+	labels := r.getReverseProxyLabels()
+
+	// Set up annotations
+	annotations := map[string]string{
+		"nginx.ingress.kubernetes.io/rewrite-target": "/",
+		"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
+	}
+
+	// Get hostname
+	host := r.FrontendEnvironment.Spec.Hostname
+	if host == "" {
+		host = r.Frontend.Spec.EnvName + ".local"
+	}
+
+	// Create ingress path
+	pathType := networkingv1.PathTypePrefix
+	paths := []networkingv1.HTTPIngressPath{
+		{
+			Path:     "/",
+			PathType: &pathType,
+			Backend: networkingv1.IngressBackend{
+				Service: &networkingv1.IngressServiceBackend{
+					Name: "reverse-proxy",
+					Port: networkingv1.ServiceBackendPort{
+						Number: ReverseProxyPort,
+					},
+				},
+			},
+		},
+	}
+
+	// Create ingress rules
+	rules := []networkingv1.IngressRule{
+		{
+			Host: host,
+			IngressRuleValue: networkingv1.IngressRuleValue{
+				HTTP: &networkingv1.HTTPIngressRuleValue{
+					Paths: paths,
+				},
+			},
+		},
+	}
+
+	// Create the ingress
+	ingress := &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        nn.Name,
+			Namespace:   nn.Namespace,
+			Labels:      labels,
+			Annotations: annotations,
+		},
+		Spec: networkingv1.IngressSpec{
+			Rules: rules,
+		},
+	}
+
+	// Add TLS configuration if SSL is enabled
+	if r.FrontendEnvironment.Spec.SSL {
+		ingress.Spec.TLS = []networkingv1.IngressTLS{
+			{
+				Hosts:      []string{host},
+				SecretName: "reverse-proxy-tls",
+			},
+		}
+	}
+
+	// Set owner reference to the environment instead of the frontend
+	ownerRef := r.getReverseProxyOwnerRef()
+	ingress.SetOwnerReferences([]metav1.OwnerReference{ownerRef})
+
+	r.Log.Info("Creating Ingress for reverse proxy", "name", nn.Name, "namespace", nn.Namespace, "host", host)
+
+	return r.Client.Create(r.Ctx, ingress)
+}
+
+// updateReverseProxyIngress ensures the ingress matches the desired state
+func (r *ReverseProxyReconciliation) updateReverseProxyIngress(ingress *networkingv1.Ingress) error {
+	// Get the desired ingress configuration
+	desiredIngress, err := r.createReverseProxyIngressConfig()
+	if err != nil {
+		return err
+	}
+
+	// Compare and update if needed
+	ingressChanged := r.compareIngress(ingress, desiredIngress)
+
+	if ingressChanged {
+		r.Log.Info("Updating reverse proxy ingress with new configuration")
+
+		// Update the ingress spec
+		ingress.Spec.Rules = desiredIngress.Spec.Rules
+		ingress.Spec.TLS = desiredIngress.Spec.TLS
+		ingress.Labels = desiredIngress.Labels
+		ingress.Annotations = desiredIngress.Annotations
+
+		// Update the ingress
+		return r.Client.Update(r.Ctx, ingress)
+	}
+
+	return nil
+}
+
+// createReverseProxyIngressConfig creates the desired ingress configuration
+func (r *ReverseProxyReconciliation) createReverseProxyIngressConfig() (*networkingv1.Ingress, error) {
+	ingressName := "reverse-proxy"
+
+	// Define name of resource
+	nn := types.NamespacedName{
+		Name:      ingressName,
+		Namespace: r.Frontend.Namespace,
+	}
+
+	// Get consistent labels that won't conflict between frontends
+	labels := r.getReverseProxyLabels()
+
+	// Set up annotations
+	annotations := map[string]string{
+		"nginx.ingress.kubernetes.io/rewrite-target": "/",
+		"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
+	}
+
+	// Get hostname
+	host := r.FrontendEnvironment.Spec.Hostname
+	if host == "" {
+		host = r.Frontend.Spec.EnvName + ".local"
+	}
+
+	// Create ingress path
+	pathType := networkingv1.PathTypePrefix
+	paths := []networkingv1.HTTPIngressPath{
+		{
+			Path:     "/",
+			PathType: &pathType,
+			Backend: networkingv1.IngressBackend{
+				Service: &networkingv1.IngressServiceBackend{
+					Name: "reverse-proxy",
+					Port: networkingv1.ServiceBackendPort{
+						Number: ReverseProxyPort,
+					},
+				},
+			},
+		},
+	}
+
+	// Create ingress rules
+	rules := []networkingv1.IngressRule{
+		{
+			Host: host,
+			IngressRuleValue: networkingv1.IngressRuleValue{
+				HTTP: &networkingv1.HTTPIngressRuleValue{
+					Paths: paths,
+				},
+			},
+		},
+	}
+
+	ingress := &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        nn.Name,
+			Namespace:   nn.Namespace,
+			Labels:      labels,
+			Annotations: annotations,
+		},
+		Spec: networkingv1.IngressSpec{
+			Rules: rules,
+		},
+	}
+
+	// Add TLS configuration if SSL is enabled
+	if r.FrontendEnvironment.Spec.SSL {
+		ingress.Spec.TLS = []networkingv1.IngressTLS{
+			{
+				Hosts:      []string{host},
+				SecretName: "reverse-proxy-tls",
+			},
+		}
+	}
+
+	// Set owner reference to the environment instead of the frontend
+	ingress.SetOwnerReferences([]metav1.OwnerReference{r.getReverseProxyOwnerRef()})
+
+	return ingress, nil
+}
+
+// compareIngress compares current vs desired ingress configuration
+func (r *ReverseProxyReconciliation) compareIngress(current, desired *networkingv1.Ingress) bool {
+	// Compare rules
+	if len(current.Spec.Rules) != len(desired.Spec.Rules) {
+		return true
+	}
+
+	for i, currentRule := range current.Spec.Rules {
+		if i >= len(desired.Spec.Rules) {
+			return true
+		}
+		desiredRule := desired.Spec.Rules[i]
+
+		if currentRule.Host != desiredRule.Host {
+			return true
+		}
+
+		// Compare HTTP paths
+		if currentRule.HTTP == nil && desiredRule.HTTP != nil {
+			return true
+		}
+		if currentRule.HTTP != nil && desiredRule.HTTP == nil {
+			return true
+		}
+		if currentRule.HTTP != nil && desiredRule.HTTP != nil {
+			currentPaths := currentRule.HTTP.Paths
+			desiredPaths := desiredRule.HTTP.Paths
+
+			if len(currentPaths) != len(desiredPaths) {
+				return true
+			}
+
+			for j, currentPath := range currentPaths {
+				if j >= len(desiredPaths) {
+					return true
+				}
+				desiredPath := desiredPaths[j]
+
+				if currentPath.Path != desiredPath.Path {
+					return true
+				}
+				if currentPath.Backend.Service.Name != desiredPath.Backend.Service.Name {
+					return true
+				}
+				if currentPath.Backend.Service.Port.Number != desiredPath.Backend.Service.Port.Number {
+					return true
+				}
+			}
+		}
+	}
+
+	// Compare TLS configuration
+	if len(current.Spec.TLS) != len(desired.Spec.TLS) {
+		return true
+	}
+
+	for i, currentTLS := range current.Spec.TLS {
+		if i >= len(desired.Spec.TLS) {
+			return true
+		}
+		desiredTLS := desired.Spec.TLS[i]
+
+		if currentTLS.SecretName != desiredTLS.SecretName {
+			return true
+		}
+
+		if len(currentTLS.Hosts) != len(desiredTLS.Hosts) {
+			return true
+		}
+
+		for j, currentHost := range currentTLS.Hosts {
+			if j >= len(desiredTLS.Hosts) || currentHost != desiredTLS.Hosts[j] {
+				return true
+			}
+		}
+	}
+
+	// Compare important annotations
+	importantAnnotations := []string{
+		"nginx.ingress.kubernetes.io/rewrite-target",
+		"nginx.ingress.kubernetes.io/ssl-redirect",
+	}
+	for _, annotation := range importantAnnotations {
+		currentValue := current.Annotations[annotation]
+		desiredValue := desired.Annotations[annotation]
+		if currentValue != desiredValue {
+			return true
+		}
+	}
+
+	return false
 }

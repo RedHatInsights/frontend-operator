@@ -1,0 +1,30 @@
+---
+# Verify that the ingress was updated with TLS configuration
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: reverse-proxy
+  namespace: test-reverse-proxy
+  labels:
+    app: reverse-proxy
+    component: reverse-proxy
+    environment: test-reverse-proxy-environment
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  tls:
+  - hosts:
+    - reverse-proxy-test.example.com
+    secretName: reverse-proxy-tls
+  rules:
+  - host: reverse-proxy-test.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: reverse-proxy
+            port:
+              number: 8080

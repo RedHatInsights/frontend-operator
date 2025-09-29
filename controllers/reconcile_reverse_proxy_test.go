@@ -7,6 +7,7 @@ import (
 
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -744,5 +745,470 @@ func TestContainerNeedsUpdate(t *testing.T) {
 				t.Errorf("Expected reason=%s, got reason=%s", tt.expectedReason, reason)
 			}
 		})
+	}
+}
+
+// TestReverseProxyReconciliation_Ingress tests the ingress reconciliation logic
+func TestReverseProxyReconciliation_Ingress(t *testing.T) {
+	// Set up environment variables for bucket config
+	os.Setenv("PUSHCACHE_AWS_ENDPOINT", "minio-service.default.svc.cluster.local")
+	os.Setenv("PUSHCACHE_AWS_PORT", "9000")
+	os.Setenv("PUSHCACHE_AWS_BUCKET_NAME", "frontend-assets")
+	os.Setenv("PUSHCACHE_AWS_ACCESS_KEY_ID", "test-access-key")
+	os.Setenv("PUSHCACHE_AWS_SECRET_ACCESS_KEY", "test-secret-key")
+	os.Setenv("PUSHCACHE_AWS_REGION", "us-east-1")
+	defer func() {
+		os.Unsetenv("PUSHCACHE_AWS_ENDPOINT")
+		os.Unsetenv("PUSHCACHE_AWS_PORT")
+		os.Unsetenv("PUSHCACHE_AWS_BUCKET_NAME")
+		os.Unsetenv("PUSHCACHE_AWS_ACCESS_KEY_ID")
+		os.Unsetenv("PUSHCACHE_AWS_SECRET_ACCESS_KEY")
+		os.Unsetenv("PUSHCACHE_AWS_REGION")
+	}()
+
+	// Create test objects
+	frontend := &crd.Frontend{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-frontend",
+			Namespace: "test-namespace",
+		},
+		Spec: crd.FrontendSpec{
+			EnvName: "test-env",
+		},
+	}
+
+	frontendEnv := &crd.FrontendEnvironment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-env",
+		},
+		Spec: crd.FrontendEnvironmentSpec{
+			EnablePushCache:   true,
+			ReverseProxyImage: "quay.io/test/reverse-proxy:latest",
+			Hostname:          "test.example.com",
+			SSL:               false,
+		},
+	}
+
+	// Create scheme and add our types
+	scheme := runtime.NewScheme()
+	_ = v1.AddToScheme(scheme)
+	_ = apps.AddToScheme(scheme)
+	_ = networkingv1.AddToScheme(scheme)
+	_ = crd.AddToScheme(scheme)
+
+	// Create fake client
+	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(frontend, frontendEnv).Build()
+
+	// Create reconciliation instance
+	reconciliation := &ReverseProxyReconciliation{
+		Log:                 logr.Discard(),
+		Recorder:            &record.FakeRecorder{},
+		Client:              client,
+		Ctx:                 context.Background(),
+		Frontend:            frontend,
+		FrontendEnvironment: frontendEnv,
+	}
+
+	t.Run("CreateIngress", func(t *testing.T) {
+		// Test creating ingress
+		err := reconciliation.reconcileIngress()
+		if err != nil {
+			t.Fatalf("Failed to reconcile ingress: %v", err)
+		}
+
+		// Verify ingress was created
+		ingress := &networkingv1.Ingress{}
+		err = client.Get(context.Background(), types.NamespacedName{
+			Name:      "reverse-proxy",
+			Namespace: "test-namespace",
+		}, ingress)
+		if err != nil {
+			t.Fatalf("Failed to get created ingress: %v", err)
+		}
+
+		// Verify ingress properties
+		if ingress.Spec.Rules[0].Host != "test.example.com" {
+			t.Errorf("Expected host=test.example.com, got host=%s", ingress.Spec.Rules[0].Host)
+		}
+
+		if ingress.Spec.Rules[0].HTTP.Paths[0].Path != "/" {
+			t.Errorf("Expected path=/, got path=%s", ingress.Spec.Rules[0].HTTP.Paths[0].Path)
+		}
+
+		if ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name != "reverse-proxy" {
+			t.Errorf("Expected service=reverse-proxy, got service=%s", ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name)
+		}
+
+		if ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Number != ReverseProxyPort {
+			t.Errorf("Expected port=%d, got port=%d", ReverseProxyPort, ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Number)
+		}
+
+		// Verify no TLS since SSL is false
+		if len(ingress.Spec.TLS) != 0 {
+			t.Errorf("Expected no TLS configuration, got %d TLS entries", len(ingress.Spec.TLS))
+		}
+	})
+
+	t.Run("CreateIngressWithSSL", func(t *testing.T) {
+		// Update environment to enable SSL
+		frontendEnvSSL := frontendEnv.DeepCopy()
+		frontendEnvSSL.Spec.SSL = true
+
+		reconciliationSSL := &ReverseProxyReconciliation{
+			Log:                 logr.Discard(),
+			Recorder:            &record.FakeRecorder{},
+			Client:              client,
+			Ctx:                 context.Background(),
+			Frontend:            frontend,
+			FrontendEnvironment: frontendEnvSSL,
+		}
+
+		// Create new ingress config
+		ingressConfig, err := reconciliationSSL.createReverseProxyIngressConfig()
+		if err != nil {
+			t.Fatalf("Failed to create ingress config: %v", err)
+		}
+
+		// Verify TLS configuration is added
+		if len(ingressConfig.Spec.TLS) != 1 {
+			t.Errorf("Expected 1 TLS entry, got %d", len(ingressConfig.Spec.TLS))
+		}
+
+		if ingressConfig.Spec.TLS[0].SecretName != "reverse-proxy-tls" {
+			t.Errorf("Expected TLS secret=reverse-proxy-tls, got secret=%s", ingressConfig.Spec.TLS[0].SecretName)
+		}
+
+		if len(ingressConfig.Spec.TLS[0].Hosts) != 1 || ingressConfig.Spec.TLS[0].Hosts[0] != "test.example.com" {
+			t.Errorf("Expected TLS host=test.example.com, got hosts=%v", ingressConfig.Spec.TLS[0].Hosts)
+		}
+	})
+
+	t.Run("UpdateIngress", func(t *testing.T) {
+		// Create an existing ingress with different configuration
+		existingIngress := &networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "reverse-proxy",
+				Namespace: "test-namespace",
+			},
+			Spec: networkingv1.IngressSpec{
+				Rules: []networkingv1.IngressRule{
+					{
+						Host: "old.example.com", // Different host
+						IngressRuleValue: networkingv1.IngressRuleValue{
+							HTTP: &networkingv1.HTTPIngressRuleValue{
+								Paths: []networkingv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: networkingv1.IngressBackend{
+											Service: &networkingv1.IngressServiceBackend{
+												Name: "reverse-proxy",
+												Port: networkingv1.ServiceBackendPort{
+													Number: ReverseProxyPort,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		// Update client with existing ingress
+		client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(frontend, frontendEnv, existingIngress).Build()
+		reconciliation.Client = client
+
+		// Test updating ingress
+		err := reconciliation.reconcileIngress()
+		if err != nil {
+			t.Fatalf("Failed to reconcile ingress: %v", err)
+		}
+
+		// Verify ingress was updated
+		updatedIngress := &networkingv1.Ingress{}
+		err = client.Get(context.Background(), types.NamespacedName{
+			Name:      "reverse-proxy",
+			Namespace: "test-namespace",
+		}, updatedIngress)
+		if err != nil {
+			t.Fatalf("Failed to get updated ingress: %v", err)
+		}
+
+		// Verify the host was updated
+		if updatedIngress.Spec.Rules[0].Host != "test.example.com" {
+			t.Errorf("Expected updated host=test.example.com, got host=%s", updatedIngress.Spec.Rules[0].Host)
+		}
+	})
+}
+
+// TestReverseProxyReconciliation_CompareIngress tests the ingress comparison logic
+func TestReverseProxyReconciliation_CompareIngress(t *testing.T) {
+	reconciliation := &ReverseProxyReconciliation{}
+
+	pathType := networkingv1.PathTypePrefix
+	baseIngress := &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"nginx.ingress.kubernetes.io/rewrite-target": "/",
+				"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
+			},
+		},
+		Spec: networkingv1.IngressSpec{
+			Rules: []networkingv1.IngressRule{
+				{
+					Host: "test.example.com",
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
+							Paths: []networkingv1.HTTPIngressPath{
+								{
+									Path:     "/",
+									PathType: &pathType,
+									Backend: networkingv1.IngressBackend{
+										Service: &networkingv1.IngressServiceBackend{
+											Name: "reverse-proxy",
+											Port: networkingv1.ServiceBackendPort{
+												Number: ReverseProxyPort,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		name            string
+		current         *networkingv1.Ingress
+		desired         *networkingv1.Ingress
+		expectDifferent bool
+	}{
+		{
+			name:            "Identical ingresses",
+			current:         baseIngress.DeepCopy(),
+			desired:         baseIngress.DeepCopy(),
+			expectDifferent: false,
+		},
+		{
+			name:    "Different host",
+			current: baseIngress.DeepCopy(),
+			desired: func() *networkingv1.Ingress {
+				ing := baseIngress.DeepCopy()
+				ing.Spec.Rules[0].Host = "different.example.com"
+				return ing
+			}(),
+			expectDifferent: true,
+		},
+		{
+			name:    "Different path",
+			current: baseIngress.DeepCopy(),
+			desired: func() *networkingv1.Ingress {
+				ing := baseIngress.DeepCopy()
+				ing.Spec.Rules[0].HTTP.Paths[0].Path = "/different-path"
+				return ing
+			}(),
+			expectDifferent: true,
+		},
+		{
+			name:    "Different service name",
+			current: baseIngress.DeepCopy(),
+			desired: func() *networkingv1.Ingress {
+				ing := baseIngress.DeepCopy()
+				ing.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name = "different-service"
+				return ing
+			}(),
+			expectDifferent: true,
+		},
+		{
+			name:    "Different port",
+			current: baseIngress.DeepCopy(),
+			desired: func() *networkingv1.Ingress {
+				ing := baseIngress.DeepCopy()
+				ing.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Number = 9090
+				return ing
+			}(),
+			expectDifferent: true,
+		},
+		{
+			name:    "TLS added",
+			current: baseIngress.DeepCopy(),
+			desired: func() *networkingv1.Ingress {
+				ing := baseIngress.DeepCopy()
+				ing.Spec.TLS = []networkingv1.IngressTLS{
+					{
+						Hosts:      []string{"test.example.com"},
+						SecretName: "test-tls",
+					},
+				}
+				return ing
+			}(),
+			expectDifferent: true,
+		},
+		{
+			name:    "Different annotation",
+			current: baseIngress.DeepCopy(),
+			desired: func() *networkingv1.Ingress {
+				ing := baseIngress.DeepCopy()
+				ing.Annotations["nginx.ingress.kubernetes.io/ssl-redirect"] = "true"
+				return ing
+			}(),
+			expectDifferent: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			different := reconciliation.compareIngress(tt.current, tt.desired)
+			if different != tt.expectDifferent {
+				t.Errorf("Expected different=%v, got different=%v", tt.expectDifferent, different)
+			}
+		})
+	}
+}
+
+// TestReverseProxyReconciliation_FullReconciliation tests the complete reconciliation flow
+func TestReverseProxyReconciliation_FullReconciliation(t *testing.T) {
+	// Set up environment variables
+	os.Setenv("PUSHCACHE_AWS_ENDPOINT", "minio-service.default.svc.cluster.local")
+	os.Setenv("PUSHCACHE_AWS_PORT", "9000")
+	os.Setenv("PUSHCACHE_AWS_BUCKET_NAME", "frontend-assets")
+	os.Setenv("PUSHCACHE_AWS_ACCESS_KEY_ID", "test-access-key")
+	os.Setenv("PUSHCACHE_AWS_SECRET_ACCESS_KEY", "test-secret-key")
+	os.Setenv("PUSHCACHE_AWS_REGION", "us-east-1")
+	defer func() {
+		os.Unsetenv("PUSHCACHE_AWS_ENDPOINT")
+		os.Unsetenv("PUSHCACHE_AWS_PORT")
+		os.Unsetenv("PUSHCACHE_AWS_BUCKET_NAME")
+		os.Unsetenv("PUSHCACHE_AWS_ACCESS_KEY_ID")
+		os.Unsetenv("PUSHCACHE_AWS_SECRET_ACCESS_KEY")
+		os.Unsetenv("PUSHCACHE_AWS_REGION")
+	}()
+
+	// Create test objects
+	frontend := &crd.Frontend{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-frontend",
+			Namespace: "test-namespace",
+		},
+		Spec: crd.FrontendSpec{
+			EnvName: "test-env",
+		},
+	}
+
+	frontendEnv := &crd.FrontendEnvironment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-env",
+		},
+		Spec: crd.FrontendEnvironmentSpec{
+			EnablePushCache:   true,
+			ReverseProxyImage: "quay.io/test/reverse-proxy:latest",
+			Hostname:          "test.example.com",
+			SSL:               false,
+		},
+	}
+
+	// Create scheme and add our types
+	scheme := runtime.NewScheme()
+	_ = v1.AddToScheme(scheme)
+	_ = apps.AddToScheme(scheme)
+	_ = networkingv1.AddToScheme(scheme)
+	_ = crd.AddToScheme(scheme)
+
+	// Create fake client
+	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(frontend, frontendEnv).Build()
+
+	// Create reconciliation instance
+	reconciliation := &ReverseProxyReconciliation{
+		Log:                 logr.Discard(),
+		Recorder:            &record.FakeRecorder{},
+		Client:              client,
+		Ctx:                 context.Background(),
+		Frontend:            frontend,
+		FrontendEnvironment: frontendEnv,
+	}
+
+	// Run full reconciliation
+	err := reconciliation.run()
+	if err != nil {
+		t.Fatalf("Full reconciliation failed: %v", err)
+	}
+
+	// Verify deployment was created
+	deployment := &apps.Deployment{}
+	err = client.Get(context.Background(), types.NamespacedName{
+		Name:      "reverse-proxy",
+		Namespace: "test-namespace",
+	}, deployment)
+	if err != nil {
+		t.Fatalf("Failed to get created deployment: %v", err)
+	}
+
+	// Verify service was created
+	service := &v1.Service{}
+	err = client.Get(context.Background(), types.NamespacedName{
+		Name:      "reverse-proxy",
+		Namespace: "test-namespace",
+	}, service)
+	if err != nil {
+		t.Fatalf("Failed to get created service: %v", err)
+	}
+
+	// Verify ingress was created
+	ingress := &networkingv1.Ingress{}
+	err = client.Get(context.Background(), types.NamespacedName{
+		Name:      "reverse-proxy",
+		Namespace: "test-namespace",
+	}, ingress)
+	if err != nil {
+		t.Fatalf("Failed to get created ingress: %v", err)
+	}
+
+	// Verify all resources have correct labels for scaling
+	expectedLabels := map[string]string{
+		"app":         "reverse-proxy",
+		"component":   "reverse-proxy",
+		"environment": "test-env",
+	}
+
+	// Check deployment labels and selectors
+	for key, value := range expectedLabels {
+		if deployment.Labels[key] != value {
+			t.Errorf("Deployment label %s: expected=%s, got=%s", key, value, deployment.Labels[key])
+		}
+		if deployment.Spec.Selector.MatchLabels[key] != value {
+			t.Errorf("Deployment selector %s: expected=%s, got=%s", key, value, deployment.Spec.Selector.MatchLabels[key])
+		}
+		if deployment.Spec.Template.Labels[key] != value {
+			t.Errorf("Pod template label %s: expected=%s, got=%s", key, value, deployment.Spec.Template.Labels[key])
+		}
+	}
+
+	// Check service labels and selectors
+	for key, value := range expectedLabels {
+		if service.Labels[key] != value {
+			t.Errorf("Service label %s: expected=%s, got=%s", key, value, service.Labels[key])
+		}
+		if service.Spec.Selector[key] != value {
+			t.Errorf("Service selector %s: expected=%s, got=%s", key, value, service.Spec.Selector[key])
+		}
+	}
+
+	// Verify deployment can be scaled (has proper configuration)
+	if deployment.Spec.Replicas == nil || *deployment.Spec.Replicas != 1 {
+		t.Errorf("Expected deployment replicas=1, got replicas=%v", deployment.Spec.Replicas)
+	}
+
+	// Verify container has proper resource limits for scaling
+	container := deployment.Spec.Template.Spec.Containers[0]
+	if container.Resources.Requests == nil {
+		t.Error("Expected resource requests to be set for scaling")
+	}
+	if container.Resources.Limits == nil {
+		t.Error("Expected resource limits to be set for scaling")
 	}
 }
