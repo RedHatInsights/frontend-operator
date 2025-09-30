@@ -51,10 +51,3 @@ spec:
             - name: config-chrome
               mountPath: /srv/dist/operator-generated/fed-modules.json
               subPath: fed-modules.json
----
-kind: Ingress
-apiVersion: networking.k8s.io/v1
-metadata:
-  namespace: test-ingress-annotations
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /

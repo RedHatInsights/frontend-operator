@@ -9,9 +9,6 @@ metadata:
     app: reverse-proxy
     component: reverse-proxy
     environment: test-reverse-proxy-environment
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
   tls:
   - hosts:

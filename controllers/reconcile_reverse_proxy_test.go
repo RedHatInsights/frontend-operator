@@ -969,10 +969,7 @@ func TestReverseProxyReconciliation_CompareIngressFields(t *testing.T) {
 	pathType := networkingv1.PathTypePrefix
 	baseIngress := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				"nginx.ingress.kubernetes.io/rewrite-target": "/",
-				"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
-			},
+			Annotations: map[string]string{},
 		},
 		Spec: networkingv1.IngressSpec{
 			Rules: []networkingv1.IngressRule{
@@ -1049,28 +1046,6 @@ func TestReverseProxyReconciliation_CompareIngressFields(t *testing.T) {
 			current: func() *networkingv1.Ingress {
 				ing := baseIngress.DeepCopy()
 				ing.Spec.Rules[0].HTTP.Paths[0].Path = "/wrong-path"
-				return ing
-			}(),
-			desiredHost:     "reverse-proxy.cluster.local",
-			desiredLabels:   map[string]string{},
-			expectDifferent: true,
-		},
-		{
-			name: "Missing required annotation",
-			current: func() *networkingv1.Ingress {
-				ing := baseIngress.DeepCopy()
-				delete(ing.Annotations, "nginx.ingress.kubernetes.io/rewrite-target")
-				return ing
-			}(),
-			desiredHost:     "reverse-proxy.cluster.local",
-			desiredLabels:   map[string]string{},
-			expectDifferent: true,
-		},
-		{
-			name: "Wrong annotation value",
-			current: func() *networkingv1.Ingress {
-				ing := baseIngress.DeepCopy()
-				ing.Annotations["nginx.ingress.kubernetes.io/ssl-redirect"] = "true"
 				return ing
 			}(),
 			desiredHost:     "reverse-proxy.cluster.local",

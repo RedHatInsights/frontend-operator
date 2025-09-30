@@ -818,10 +818,7 @@ func (r *ReverseProxyReconciliation) buildReverseProxyIngress() (*networkingv1.I
 	labels := r.getReverseProxyLabels()
 
 	// Set up annotations
-	annotations := map[string]string{
-		"nginx.ingress.kubernetes.io/rewrite-target": "/",
-		"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
-	}
+	annotations := map[string]string{}
 
 	// Get hostname for reverse proxy
 	host := r.FrontendEnvironment.Spec.ReverseProxyHostname
@@ -967,10 +964,7 @@ func (r *ReverseProxyReconciliation) compareIngressFields(current *networkingv1.
 	}
 
 	// Check important annotations
-	requiredAnnotations := map[string]string{
-		"nginx.ingress.kubernetes.io/rewrite-target": "/",
-		"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
-	}
+	requiredAnnotations := map[string]string{}
 
 	// Add whitelist annotations if configured
 	if len(r.FrontendEnvironment.Spec.Whitelist) > 0 {
