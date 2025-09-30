@@ -1703,18 +1703,18 @@ func (r *FrontendReconciliation) setupConfigMaps() ([]*v1.ConfigMap, error) {
 		})
 	}
 
-	defaultCfgMap, err := r.createConfigMap(defaultNN, frontendList, true)
+	defaultCfgMap, err := r.createConfigMap(defaultNN, frontendList, true, nil)
 	if err != nil {
 		return []*v1.ConfigMap{}, err
 	}
 	configMaps = append(configMaps, defaultCfgMap)
-	widgetCfgMap, err := r.createWidgetRegistryConfigMap(defaultWidgetNN, frontendList, true)
+	widgetCfgMap, err := r.createWidgetRegistryConfigMap(defaultWidgetNN, frontendList, true, nil)
 	if err != nil {
 		return []*v1.ConfigMap{}, err
 	}
 	configMaps = append(configMaps, widgetCfgMap)
 
-	baseWidgetDashboardTemplatesConfigMap, err := r.createBaseWidgetDashboardTemplatesConfigMap(defaultBaseLayoutNN, frontendList, true)
+	baseWidgetDashboardTemplatesConfigMap, err := r.createBaseWidgetDashboardTemplatesConfigMap(defaultBaseLayoutNN, frontendList, true, nil)
 	if err != nil {
 		return configMaps, err
 	}
@@ -1729,16 +1729,16 @@ func (r *FrontendReconciliation) setupConfigMaps() ([]*v1.ConfigMap, error) {
 			Name:      baseLayoutsCFGContextName,
 			Namespace: nn.Namespace,
 		}
-		_, err = r.createConfigMap(nn, frontendList, true)
+		_, err = r.createConfigMap(nn, frontendList, true, defaultCfgMap)
 		if err != nil {
 			return configMaps, err
 		}
-		_, err = r.createWidgetRegistryConfigMap(widgetsNN, frontendList, true)
+		_, err = r.createWidgetRegistryConfigMap(widgetsNN, frontendList, true, widgetCfgMap)
 		if err != nil {
 			return configMaps, err
 		}
 
-		_, err = r.createBaseWidgetDashboardTemplatesConfigMap(baseLayoutsNN, frontendList, true)
+		_, err = r.createBaseWidgetDashboardTemplatesConfigMap(baseLayoutsNN, frontendList, true, baseWidgetDashboardTemplatesConfigMap)
 		if err != nil {
 			return configMaps, err
 		}
@@ -1747,7 +1747,7 @@ func (r *FrontendReconciliation) setupConfigMaps() ([]*v1.ConfigMap, error) {
 	return configMaps, err
 }
 
-func (r *FrontendReconciliation) createBaseWidgetDashboardTemplatesConfigMap(nn types.NamespacedName, frontendList *crd.FrontendList, markForRestart bool) (*v1.ConfigMap, error) {
+func (r *FrontendReconciliation) createBaseWidgetDashboardTemplatesConfigMap(nn types.NamespacedName, frontendList *crd.FrontendList, markForRestart bool, sourceConfigMap *v1.ConfigMap) (*v1.ConfigMap, error) {
 	cfgMap := &v1.ConfigMap{}
 	if err := r.Cache.Create(CoreConfig, nn, cfgMap); err != nil {
 		return cfgMap, err
@@ -1760,16 +1760,21 @@ func (r *FrontendReconciliation) createBaseWidgetDashboardTemplatesConfigMap(nn 
 
 	cfgMap = r.setupConfigMapWithLabels(nn, markForRestart)
 
-	baseWidgetDashboardTemplates := setupBaseWidgetDashboardTemplates(frontendList)
+	if sourceConfigMap != nil {
+		r.Log.Info("Using data from existing config map", "targetConfigMapName", cfgMap.Name, "targetConfigMapNamespace", cfgMap.Namespace, "sourceConfigMapName", sourceConfigMap.Name, "sourceConfigMapNamespace", sourceConfigMap.Namespace)
+		cfgMap.Data = sourceConfigMap.Data
+	} else {
+		baseWidgetDashboardTemplates := setupBaseWidgetDashboardTemplates(frontendList)
 
-	baseWidgetDashboardTemplatesJSONData, err := json.Marshal(baseWidgetDashboardTemplates)
-	if err != nil {
-		return cfgMap, err
-	}
+		baseWidgetDashboardTemplatesJSONData, err := json.Marshal(baseWidgetDashboardTemplates)
+		if err != nil {
+			return cfgMap, err
+		}
 
-	cfgMap.Data = map[string]string{}
-	if len(baseWidgetDashboardTemplates) > 0 {
-		cfgMap.Data["base-widget-dashboard-templates.json"] = string(baseWidgetDashboardTemplatesJSONData)
+		cfgMap.Data = map[string]string{}
+		if len(baseWidgetDashboardTemplates) > 0 {
+			cfgMap.Data["base-widget-dashboard-templates.json"] = string(baseWidgetDashboardTemplatesJSONData)
+		}
 	}
 
 	if err := r.Cache.Update(CoreConfig, cfgMap); err != nil {
@@ -1779,7 +1784,7 @@ func (r *FrontendReconciliation) createBaseWidgetDashboardTemplatesConfigMap(nn 
 	return cfgMap, nil
 }
 
-func (r *FrontendReconciliation) createWidgetRegistryConfigMap(nn types.NamespacedName, frontendList *crd.FrontendList, markForRestart bool) (*v1.ConfigMap, error) {
+func (r *FrontendReconciliation) createWidgetRegistryConfigMap(nn types.NamespacedName, frontendList *crd.FrontendList, markForRestart bool, sourceConfigMap *v1.ConfigMap) (*v1.ConfigMap, error) {
 	cfgMap := &v1.ConfigMap{}
 	if err := r.Cache.Create(CoreConfig, nn, cfgMap); err != nil {
 		return cfgMap, err
@@ -1793,16 +1798,21 @@ func (r *FrontendReconciliation) createWidgetRegistryConfigMap(nn types.Namespac
 		cacheMap[frontend.Name] = frontend
 	}
 
-	widgetRegistry := setupWidgetRegistry(frontendList)
+	if sourceConfigMap != nil {
+		r.Log.Info("Using data from existing config map", "targetConfigMapName", cfgMap.Name, "targetConfigMapNamespace", cfgMap.Namespace, "sourceConfigMapName", sourceConfigMap.Name, "sourceConfigMapNamespace", sourceConfigMap.Namespace)
+		cfgMap.Data = sourceConfigMap.Data
+	} else {
+		widgetRegistry := setupWidgetRegistry(frontendList)
 
-	widgetRegistryJSONData, err := json.Marshal(widgetRegistry)
-	if err != nil {
-		return cfgMap, err
-	}
+		widgetRegistryJSONData, err := json.Marshal(widgetRegistry)
+		if err != nil {
+			return cfgMap, err
+		}
 
-	cfgMap.Data = map[string]string{}
-	if len(widgetRegistry) > 0 {
-		cfgMap.Data["widget-registry.json"] = string(widgetRegistryJSONData)
+		cfgMap.Data = map[string]string{}
+		if len(widgetRegistry) > 0 {
+			cfgMap.Data["widget-registry.json"] = string(widgetRegistryJSONData)
+		}
 	}
 
 	if err := r.Cache.Update(CoreConfig, cfgMap); err != nil {
@@ -1812,7 +1822,7 @@ func (r *FrontendReconciliation) createWidgetRegistryConfigMap(nn types.Namespac
 	return cfgMap, nil
 }
 
-func (r *FrontendReconciliation) createConfigMap(nn types.NamespacedName, frontendList *crd.FrontendList, markForRestart bool) (*v1.ConfigMap, error) {
+func (r *FrontendReconciliation) createConfigMap(nn types.NamespacedName, frontendList *crd.FrontendList, markForRestart bool, sourceConfigMap *v1.ConfigMap) (*v1.ConfigMap, error) {
 	cfgMap := &v1.ConfigMap{}
 	if err := r.Cache.Create(CoreConfig, nn, cfgMap); err != nil {
 		return cfgMap, err
@@ -1827,7 +1837,7 @@ func (r *FrontendReconciliation) createConfigMap(nn types.NamespacedName, fronte
 		cacheMap[frontend.Name] = frontend
 	}
 
-	if err := r.populateConfigMap(cfgMap, cacheMap, frontendList); err != nil {
+	if err := r.populateConfigMap(cfgMap, cacheMap, frontendList, sourceConfigMap); err != nil {
 		return cfgMap, err
 	}
 
@@ -1837,9 +1847,15 @@ func (r *FrontendReconciliation) createConfigMap(nn types.NamespacedName, fronte
 	return cfgMap, nil
 }
 
-func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend, feList *crd.FrontendList) error {
+func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMap map[string]crd.Frontend, feList *crd.FrontendList, sourceConfigMap *v1.ConfigMap) error {
 	cfgMap.SetOwnerReferences([]metav1.OwnerReference{r.FrontendEnvironment.MakeOwnerReference()})
 	cfgMap.Data = map[string]string{}
+
+	if sourceConfigMap != nil {
+		r.Log.Info("Using data from existing config map", "targetConfigMapName", cfgMap.Name, "targetConfigMapNamespace", cfgMap.Namespace, "sourceConfigMapName", sourceConfigMap.Name, "sourceConfigMapNamespace", sourceConfigMap.Namespace)
+		cfgMap.Data = sourceConfigMap.Data
+		return nil
+	}
 
 	if r.FrontendEnvironment.Spec.GenerateNavJSON {
 		if err := r.setupBundleData(cfgMap, cacheMap); err != nil {
