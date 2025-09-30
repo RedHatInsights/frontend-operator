@@ -5,7 +5,7 @@ startControlPlane: true
 crdDir: config/crd/test-resources/
 testDirs:
 - tests/e2e/
-timeout: 320
+timeout: 20
 parallel: 1
 commands:
 - command: make install
