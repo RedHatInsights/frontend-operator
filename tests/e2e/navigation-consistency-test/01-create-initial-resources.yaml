@@ -1,0 +1,271 @@
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: navigation-consistency-environment
+spec:
+  generateNavJSON: true
+  ssl: false
+  hostname: nav-test.redhat.com
+  sso: https://sso.nav-test.redhat.com
+  # Disable akamai cache busting to avoid missing secret errors during navigation testing
+  enableAkamaiCacheBust: false
+  # Propagate config maps to additional namespaces to test cache consistency across namespaces
+  targetNamespaces:
+    - nav-test-main
+    - nav-test-patch
+    - nav-test-content
+  # Add service categories to trigger tile processing and potential skipped tiles
+  serviceCategories:
+    - id: management
+      title: Management
+      groups:
+        - id: systems
+          title: Systems Management
+        - id: content
+          title: Content Management
+  bundles:
+   - id: insights
+     title: Insights
+     description: "Test bundle for navigation consistency"
+   # Add a bundle that WON'T be matched by any frontend to trigger skipped bundles
+   - id: nonexistent-bundle
+     title: Non-existent Bundle
+     description: "This will cause skipped bundle logging"
+---
+# Main frontend that defines the bundle structure with segment references
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: main-app
+  namespace: navigation-consistency-test
+spec:
+  feoConfigEnabled: true
+  frontend:
+    paths:
+      - /apps/main
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  envName: navigation-consistency-environment
+  image: quay.io/cloudservices/insights-chrome-frontend:test
+  module:
+    manifestLocation: /apps/chrome/js/fed-mods.json
+  title: Main Navigation App
+  bundleSegments:
+    - segmentId: main-content
+      bundleId: insights
+      position: 100
+      navItems:
+        - id: section-a
+          title: Section A
+          expandable: true
+          routes:
+            # Reference to patch app segments
+            - segmentRef:
+                frontendName: patch-app
+                segmentId: patch-advisories-packages
+            # Reference to content app segments
+            - segmentRef:
+                frontendName: content-app
+                segmentId: content-repositories-templates
+            # Direct nav item
+            - id: main-direct
+              title: Main Direct Item
+              href: /insights/main/direct
+            # Reference to patch systems
+            - segmentRef:
+                frontendName: patch-app
+                segmentId: patch-systems
+---
+# Patch app that provides navigation segments to main app
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: patch-app
+  namespace: navigation-consistency-test
+spec:
+  feoConfigEnabled: true
+  frontend:
+    paths:
+      - /apps/patch
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  envName: navigation-consistency-environment
+  image: quay.io/cloudservices/patch-frontend:test
+  module:
+    manifestLocation: /apps/patch/js/fed-mods.json
+  title: Patch Management App
+  navigationSegments:
+    - segmentId: patch-advisories-packages
+      navItems:
+        - id: advisories
+          title: Advisories
+          href: /insights/patch/advisories
+        - id: packages
+          title: Packages
+          href: /insights/patch/packages
+    - segmentId: patch-systems
+      navItems:
+        - id: patchSystems
+          title: Systems
+          href: /insights/patch/systems
+---
+# Content app that provides navigation segments to main app
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: content-app
+  namespace: navigation-consistency-test
+spec:
+  feoConfigEnabled: true
+  frontend:
+    paths:
+      - /apps/content
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  envName: navigation-consistency-environment
+  image: quay.io/cloudservices/content-frontend:test
+  module:
+    manifestLocation: /apps/content/js/fed-mods.json
+  title: Content Management App
+  navigationSegments:
+    - segmentId: content-repositories-templates
+      navItems:
+        - id: repositories
+          title: Repositories
+          href: /insights/content/repositories
+        - id: templates
+          title: Templates
+          href: /insights/content/templates
+---
+# Additional app to test complex scenarios and trigger dpanic
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: additional-app
+  namespace: navigation-consistency-test
+spec:
+  feoConfigEnabled: true
+  frontend:
+    paths:
+      - /apps/additional
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  envName: navigation-consistency-environment
+  image: quay.io/cloudservices/additional-frontend:test
+  module:
+    manifestLocation: /apps/additional/js/fed-mods.json
+  title: Additional Test App
+  # Add service tiles that will be ORPHANED (no matching service categories)
+  serviceTiles:
+    - id: policies
+      title: Policies Tile
+      description: Policies management tile
+      icon: policy-icon
+      href: /insights/policies
+      section: nonexistent-section  # This section doesn't exist in serviceCategories
+      group: nonexistent-group      # This group doesn't exist
+    - id: subscriptionsUsageObserve
+      title: Subscriptions Usage
+      description: Subscriptions usage monitoring
+      icon: subscription-icon
+      href: /insights/subscriptions
+      section: another-missing-section
+      group: another-missing-group
+    - id: openshift-ai
+      title: OpenShift AI
+      description: OpenShift AI services
+      icon: ai-icon
+      href: /insights/ai
+      section: missing-ai-section
+      group: missing-ai-group
+    - id: openshift-virtualization
+      title: OpenShift Virtualization
+      description: OpenShift virtualization platform
+      icon: virt-icon
+      href: /insights/virt
+      section: missing-virt-section
+      group: missing-virt-group
+    - id: acm
+      title: Advanced Cluster Management
+      description: Advanced cluster management
+      icon: acm-icon
+      href: /insights/acm
+      section: missing-acm-section
+      group: missing-acm-group
+    - id: gitops
+      title: GitOps
+      description: GitOps workflow management
+      icon: gitops-icon
+      href: /insights/gitops
+      section: missing-gitops-section
+      group: missing-gitops-group
+    - id: pipelines
+      title: Pipelines
+      description: CI/CD pipelines management
+      icon: pipeline-icon
+      href: /insights/pipelines
+      section: missing-pipelines-section
+      group: missing-pipelines-group
+    - id: service-mesh
+      title: Service Mesh
+      description: Service mesh management
+      icon: mesh-icon
+      href: /insights/mesh
+      section: missing-mesh-section
+      group: missing-mesh-group
+    - id: connector
+      title: Connector
+      description: Connector services
+      icon: connector-icon
+      href: /insights/connector
+      section: missing-connector-section
+      group: missing-connector-group
+  bundleSegments:
+    - segmentId: additional-content
+      bundleId: insights
+      position: 200
+      navItems:
+        - id: additional-section
+          title: Additional Section
+          expandable: true
+          routes:
+            # This will reference the same segments as main-app to test cache sharing
+            - segmentRef:
+                frontendName: patch-app
+                segmentId: patch-advisories-packages
+            - id: additional-direct
+              title: Additional Direct
+              href: /insights/additional/direct
+    # Add bundle segments for non-existent bundle to trigger skipped bundles
+    - segmentId: orphaned-nav-content
+      bundleId: nonexistent-bundle  # This bundle doesn't exist in FrontendEnvironment
+      position: 100
+      navItems:
+        - id: activation-keys-connector-connector-activation-nav
+          title: Activation Keys Connector
+          href: /insights/activation-keys
+---
+# Frontend that will cause reconciliation failure after navigation processing
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: failing-app
+  namespace: navigation-consistency-test
+spec:
+  feoConfigEnabled: true
+  frontend:
+    paths:
+      - /apps/failing
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  envName: navigation-consistency-environment
+  image: quay.io/cloudservices/failing-frontend:test
+  module:
+    manifestLocation: /apps/failing/js/fed-mods.json
+  title: App That Will Fail Reconciliation
+  # Disable akamai cache bust to avoid missing secret error
+  akamaiCacheBustDisable: true
+  bundleSegments:
+    - segmentId: failing-content
+      bundleId: insights
+      position: 300
+      navItems:
+        - id: failing-section
+          title: Failing Section
+          href: /insights/failing

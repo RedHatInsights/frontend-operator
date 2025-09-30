@@ -1,0 +1,83 @@
+---
+# Wait for all rapid reconciliations to complete
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+---
+# Final consistency check after multiple rapid updates
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+commands:
+# Verify all new items from rapid updates are present
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"policies\") | .title"'
+  expected: "Policies"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"errata\") | .title"'
+  expected: "Errata"
+# Check updated titles are correct
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"repositories\") | .title"'
+  expected: "Repositories - Updated"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"advisories\") | .title"'
+  expected: "Advisories - Rapid"
+# CRITICAL: Verify NO DUPLICATES exist after rapid updates and cache invalidations
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"advisories\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"packages\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"cves\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"errata\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"repositories\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"templates\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"policies\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"patchSystems\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+# CRITICAL: Verify NO MISSING ITEMS after rapid updates
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"advisories\") | .title"'
+  expected: "Advisories - Rapid"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"packages\") | .title"'
+  expected: "Packages - Rapid"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"cves\") | .title"'
+  expected: "CVEs - Rapid"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"repositories\") | .title"'
+  expected: "Repositories - Updated"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"templates\") | .title"'
+  expected: "Templates - Updated"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"patchSystems\") | .title"'
+  expected: "Systems - Rapid"
+# Verify the additional app section also has correct references with no duplicates
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[1].routes[] | select(.id == \"advisories\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[1].routes[] | select(.id == \"repositories\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+# Final count check - should have 10 total items in main section (all the new items added)
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems[0].routes | length"'
+  expected: "10"
+---
+# CRITICAL: Cross-namespace consistency check - all target namespaces should have identical navigation
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+commands:
+# Save final navigation from all namespaces
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems" > /tmp/final-navigation.json'
+- command: sh -c 'kubectl get configmap feo-context-cfg -n nav-test-main -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems" > /tmp/final-nav-main.json'
+- command: sh -c 'kubectl get configmap feo-context-cfg -n nav-test-patch -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems" > /tmp/final-nav-patch.json'
+- command: sh -c 'kubectl get configmap feo-context-cfg -n nav-test-content -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems" > /tmp/final-nav-content.json'
+# Compare all namespaces for consistency - they should be identical
+- command: sh -c 'diff /tmp/final-navigation.json /tmp/final-nav-main.json && echo "Primary and main namespace navigation are consistent"'
+  expected: "Primary and main namespace navigation are consistent"
+- command: sh -c 'diff /tmp/final-navigation.json /tmp/final-nav-patch.json && echo "Primary and patch namespace navigation are consistent"'
+  expected: "Primary and patch namespace navigation are consistent"
+- command: sh -c 'diff /tmp/final-navigation.json /tmp/final-nav-content.json && echo "Primary and content namespace navigation are consistent"'
+  expected: "Primary and content namespace navigation are consistent"
+# Verify all target namespaces have the same number of routes
+- command: sh -c 'kubectl get configmap feo-context-cfg -n nav-test-main -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems[0].routes | length"'
+  expected: "10"
+- command: sh -c 'kubectl get configmap feo-context-cfg -n nav-test-patch -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems[0].routes | length"'
+  expected: "10"
+- command: sh -c 'kubectl get configmap feo-context-cfg -n nav-test-content -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems[0].routes | length"'
+  expected: "10"
+- command: echo "Cross-namespace navigation consistency verified"

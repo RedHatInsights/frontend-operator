@@ -1,0 +1,81 @@
+---
+# Wait for ConfigMap to be created and populated (allow more time for failures)
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+---
+# Verify the environment configmap exists and has navigation data
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: navigation-consistency-environment
+  namespace: navigation-consistency-test
+---
+# Verify config maps are propagated to target namespaces
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: feo-context-cfg
+  namespace: nav-test-main
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: feo-context-cfg
+  namespace: nav-test-patch
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: feo-context-cfg
+  namespace: nav-test-content
+---
+# Verify bundles.json is created and contains expected structure
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+commands:
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems | length"'
+  expected: "2"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems[0].routes | length"'
+  expected: "4"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"advisories\") | .title"'
+  expected: "Advisories"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"packages\") | .title"'
+  expected: "Packages"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"repositories\") | .title"'
+  expected: "Repositories"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"templates\") | .title"'
+  expected: "Templates"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"patchSystems\") | .title"'
+  expected: "Systems"
+# Store initial navigation for comparison from primary namespace
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems" > /tmp/initial-navigation.json'
+# Store navigation from target namespaces for cross-namespace consistency comparison
+- command: sh -c 'kubectl get configmap feo-context-cfg -n nav-test-main -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems" > /tmp/initial-nav-main.json'
+- command: sh -c 'kubectl get configmap feo-context-cfg -n nav-test-patch -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems" > /tmp/initial-nav-patch.json'
+- command: sh -c 'kubectl get configmap feo-context-cfg -n nav-test-content -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems" > /tmp/initial-nav-content.json'
+---
+# Verify no duplicate entries exist in initial state
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+commands:
+# Check for duplicate advisories entries
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"advisories\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+# Check for duplicate packages entries
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"packages\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+# Check for duplicate systems entries
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"patchSystems\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+---
+# Additional assertion to verify dpanic corruption detection
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+commands:
+# Check that the navigation structure shows signs of potential corruption
+# Look for unexpected navigation item counts that might indicate duplication or missing items
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems | length"'
+  expected: "3"  # Should be 3 with main-app, additional-app, and failing-app
+# Store the initial navigation for later corruption comparison
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems" > /tmp/initial-nav-with-dpanic.json && echo "Initial navigation saved"'
