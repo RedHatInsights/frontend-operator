@@ -1,0 +1,27 @@
+---
+# Wait for reconciliation to complete after patch app update
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 60
+---
+# Verify the new CVEs item appears in navigation
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+commands:
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"cves\") | .title"'
+  expected: "CVEs"
+# Verify we still have the correct total number of items (should be 5 now: advisories, packages, cves, repositories, templates, patchSystems)
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems[0].routes | length"'
+  expected: "5"
+# Check no duplicates of existing items
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"advisories\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"packages\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"patchSystems\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+# Verify additional app still references the same segments correctly
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[1].routes[] | select(.id == \"advisories\") | .title"'
+  expected: "Advisories"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[1].routes[] | select(.id == \"cves\") | .title"'
+  expected: "CVEs"

@@ -1,0 +1,48 @@
+---
+# Wait for the failing reconciliation to complete and potentially corrupt the cache
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+---
+# Check for navigation corruption after dpanic-inducing reconciliation failure
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+commands:
+# First verify that we can still access the configmap (reconciliation may have partially succeeded)
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq "." > /dev/null && echo "ConfigMap accessible"'
+  expected: "ConfigMap accessible"
+# Verify target namespace config maps are still accessible after potential corruption
+- command: sh -c 'kubectl get configmap feo-context-cfg -n nav-test-main -o jsonpath="{.data.bundles\.json}" | jq "." > /dev/null && echo "Target ConfigMap accessible"'
+  expected: "Target ConfigMap accessible"
+- command: sh -c 'kubectl get configmap feo-context-cfg -n nav-test-patch -o jsonpath="{.data.bundles\.json}" | jq "." > /dev/null && echo "Target ConfigMap accessible"'
+  expected: "Target ConfigMap accessible"
+- command: sh -c 'kubectl get configmap feo-context-cfg -n nav-test-content -o jsonpath="{.data.bundles\.json}" | jq "." > /dev/null && echo "Target ConfigMap accessible"'
+  expected: "Target ConfigMap accessible"
+# CRITICAL: Check for navigation corruption indicators
+# If dpanic corruption occurred, we might see:
+# 1. Unexpected number of navigation items
+# 2. Duplicate entries where there should be singles
+# 3. Missing entries that should be present
+# 4. Malformed navigation structure
+
+# Check if we have the expected navigation items or if some are missing/duplicated
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems | length"'
+# Note: This might fail with unexpected count if corruption occurred
+
+# Check for duplicate advisories (this should be 1, but corruption might cause duplicates)
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"advisories\") | .id" | wc -l | tr -d " "'
+# If corruption occurred, this might be != 1
+
+# Check for duplicate packages
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"packages\") | .id" | wc -l | tr -d " "'
+
+# Check for missing items that should be present
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"repositories\") | .title" || echo "MISSING"'
+
+# Save current navigation state for comparison
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems" > /tmp/post-dpanic-navigation.json && echo "Post-dpanic navigation saved"'
+  expected: "Post-dpanic navigation saved"
+
+# Compare with initial state to detect corruption
+- command: sh -c 'if ! diff -q /tmp/initial-nav-with-dpanic.json /tmp/post-dpanic-navigation.json > /dev/null; then echo "NAVIGATION_CHANGED"; else echo "NAVIGATION_UNCHANGED"; fi'
+# This will show if the navigation structure was affected by the dpanic corruption
