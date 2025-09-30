@@ -147,3 +147,26 @@ spec:
     environment: test-reverse-proxy-environment
     app: reverse-proxy
     component: reverse-proxy
+---
+# Verify that the reverse proxy ingress was created
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: reverse-proxy
+  namespace: test-reverse-proxy
+  labels:
+    app: reverse-proxy
+    component: reverse-proxy
+    environment: test-reverse-proxy-environment
+spec:
+  rules:
+  - host: reverse-proxy.cluster.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: reverse-proxy
+            port:
+              number: 8080

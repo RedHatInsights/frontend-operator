@@ -20,9 +20,11 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,6 +65,7 @@ type ReverseProxyReconciliation struct {
 //+kubebuilder:rbac:groups=cloud.redhat.com,resources=frontendenvironments,verbs=get;list;watch
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 
 // ReconcileReverseProxy handles the reverse proxy reconciliation for a frontend
 func (r *ReverseProxyReconciler) ReconcileReverseProxy(ctx context.Context, frontend *crd.Frontend, fe *crd.FrontendEnvironment) error {
@@ -94,6 +97,11 @@ func (r *ReverseProxyReconciliation) run() error {
 
 	// Reconcile service
 	if err := r.reconcileService(); err != nil {
+		return err
+	}
+
+	// Reconcile ingress
+	if err := r.reconcileIngress(); err != nil {
 		return err
 	}
 
@@ -148,17 +156,31 @@ func (r *ReverseProxyReconciliation) updateReverseProxyDeployment(deployment *ap
 		return err
 	}
 
+	// Get the desired volumes configuration
+	desiredVolumes := r.createReverseProxyVolumes()
+
 	// Get current container
 	currentContainer := &deployment.Spec.Template.Spec.Containers[0]
 
 	// Check if container needs update
-	needsUpdate, updateReason := r.compareContainer(currentContainer, &desiredContainer)
+	containerNeedsUpdate, updateReason := r.compareContainer(currentContainer, &desiredContainer)
 
-	if needsUpdate {
-		r.Log.Info("Updating reverse proxy deployment", "reason", updateReason)
+	// Check if volumes need update
+	volumesNeedsUpdate := r.compareVolumes(deployment.Spec.Template.Spec.Volumes, desiredVolumes)
+
+	if containerNeedsUpdate || volumesNeedsUpdate {
+		if containerNeedsUpdate {
+			r.Log.Info("Updating reverse proxy deployment", "reason", updateReason)
+		}
+		if volumesNeedsUpdate {
+			r.Log.Info("Updating reverse proxy deployment volumes", "reason", "volumes configuration changed")
+		}
 
 		// Update the entire container specification
 		deployment.Spec.Template.Spec.Containers[0] = desiredContainer
+
+		// Update the volumes specification
+		deployment.Spec.Template.Spec.Volumes = desiredVolumes
 
 		// Add restart annotation to force pod restart
 		if deployment.Spec.Template.Annotations == nil {
@@ -315,6 +337,59 @@ func (r *ReverseProxyReconciliation) compareProbes(current, desired *v1.Probe) b
 	return true
 }
 
+// createReverseProxyVolumes creates the volumes needed for the reverse proxy deployment
+func (r *ReverseProxyReconciliation) createReverseProxyVolumes() []v1.Volume {
+	volumes := []v1.Volume{}
+
+	// Add SSL certificate volume if SSL is enabled
+	if r.FrontendEnvironment.Spec.SSL {
+		volumes = append(volumes, v1.Volume{
+			Name: "certs",
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName: "reverse-proxy-cert",
+				},
+			},
+		})
+	}
+
+	return volumes
+}
+
+// compareVolumes compares current and desired volume configurations
+func (r *ReverseProxyReconciliation) compareVolumes(current, desired []v1.Volume) bool {
+	if len(current) != len(desired) {
+		return true
+	}
+
+	// Create maps for easier comparison
+	currentMap := make(map[string]v1.Volume)
+	for _, vol := range current {
+		currentMap[vol.Name] = vol
+	}
+
+	for _, desiredVol := range desired {
+		currentVol, exists := currentMap[desiredVol.Name]
+		if !exists {
+			return true
+		}
+
+		// Compare secret volumes (the main case we care about)
+		if desiredVol.Secret != nil {
+			if currentVol.Secret == nil {
+				return true
+			}
+			if currentVol.Secret.SecretName != desiredVol.Secret.SecretName {
+				return true
+			}
+		} else if currentVol.Secret != nil {
+			return true
+		}
+	}
+
+	return false
+}
+
 // updateReverseProxyService ensures the service matches the desired state
 func (r *ReverseProxyReconciliation) updateReverseProxyService(service *v1.Service) error {
 	// Get the desired service configuration
@@ -457,6 +532,9 @@ func (r *ReverseProxyReconciliation) createReverseProxyDeployment() error {
 		return err
 	}
 
+	// Create volumes for the deployment
+	volumes := r.createReverseProxyVolumes()
+
 	// Create the deployment
 	deployment := &apps.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -478,6 +556,7 @@ func (r *ReverseProxyReconciliation) createReverseProxyDeployment() error {
 				},
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{container},
+					Volumes:    volumes,
 				},
 			},
 		},
@@ -557,6 +636,29 @@ func (r *ReverseProxyReconciliation) createReverseProxyContainer() (v1.Container
 		},
 	}
 
+	// Add SSL environment variables if SSL is enabled (similar to main reconciler)
+	if r.FrontendEnvironment.Spec.SSL {
+		envVars = append(envVars, v1.EnvVar{
+			Name:  "CADDY_TLS_MODE",
+			Value: "https_port 8080",
+		})
+		envVars = append(envVars, v1.EnvVar{
+			Name:  "CADDY_TLS_CERT",
+			Value: "tls /opt/certs/tls.crt /opt/certs/tls.key",
+		})
+	}
+
+	// Volume mounts for the reverse proxy
+	volumeMounts := []v1.VolumeMount{}
+
+	// Add SSL certificate volume mount if SSL is enabled
+	if r.FrontendEnvironment.Spec.SSL {
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      "certs",
+			MountPath: "/opt/certs",
+		})
+	}
+
 	// Configure the container
 	container := v1.Container{
 		Name:  "reverse-proxy",
@@ -568,7 +670,8 @@ func (r *ReverseProxyReconciliation) createReverseProxyContainer() (v1.Container
 				Protocol:      "TCP",
 			},
 		},
-		Env: envVars,
+		Env:          envVars,
+		VolumeMounts: volumeMounts,
 		Resources: v1.ResourceRequirements{
 			Requests: v1.ResourceList{
 				v1.ResourceCPU:    resource.MustParse("30m"),
@@ -579,29 +682,37 @@ func (r *ReverseProxyReconciliation) createReverseProxyContainer() (v1.Container
 				v1.ResourceMemory: resource.MustParse("128Mi"),
 			},
 		},
-		LivenessProbe: &v1.Probe{
-			ProbeHandler: v1.ProbeHandler{
-				HTTPGet: &v1.HTTPGetAction{
-					Path:   "/healthz",
-					Port:   intstr.FromInt(ReverseProxyPort),
-					Scheme: v1.URISchemeHTTP,
-				},
+	}
+
+	// Set the URI Scheme for the probes (HTTP or HTTPS based on SSL config)
+	probeScheme := v1.URISchemeHTTP
+	if r.FrontendEnvironment.Spec.SSL {
+		probeScheme = v1.URISchemeHTTPS
+	}
+
+	container.LivenessProbe = &v1.Probe{
+		ProbeHandler: v1.ProbeHandler{
+			HTTPGet: &v1.HTTPGetAction{
+				Path:   "/healthz",
+				Port:   intstr.FromInt(ReverseProxyPort),
+				Scheme: probeScheme,
 			},
-			InitialDelaySeconds: 10,
-			PeriodSeconds:       30,
-			FailureThreshold:    3,
 		},
-		ReadinessProbe: &v1.Probe{
-			ProbeHandler: v1.ProbeHandler{
-				HTTPGet: &v1.HTTPGetAction{
-					Path:   "/healthz",
-					Port:   intstr.FromInt(ReverseProxyPort),
-					Scheme: v1.URISchemeHTTP,
-				},
+		InitialDelaySeconds: 10,
+		PeriodSeconds:       30,
+		FailureThreshold:    3,
+	}
+
+	container.ReadinessProbe = &v1.Probe{
+		ProbeHandler: v1.ProbeHandler{
+			HTTPGet: &v1.HTTPGetAction{
+				Path:   "/healthz",
+				Port:   intstr.FromInt(ReverseProxyPort),
+				Scheme: probeScheme,
 			},
-			InitialDelaySeconds: 5,
-			PeriodSeconds:       10,
 		},
+		InitialDelaySeconds: 5,
+		PeriodSeconds:       10,
 	}
 
 	return container, nil
@@ -643,4 +754,287 @@ func (r *ReverseProxyReconciliation) getReverseProxyLabels() map[string]string {
 	labels["component"] = "reverse-proxy"
 
 	return labels
+}
+
+// reconcileIngress ensures the reverse proxy ingress exists and is up to date
+func (r *ReverseProxyReconciliation) reconcileIngress() error {
+	ingress := &networkingv1.Ingress{}
+	ingressKey := types.NamespacedName{
+		Name:      "reverse-proxy",
+		Namespace: r.Frontend.Namespace,
+	}
+
+	err := r.Client.Get(r.Ctx, ingressKey, ingress)
+	if err != nil && k8serr.IsNotFound(err) {
+		// Ingress doesn't exist, create it
+		return r.createReverseProxyIngress()
+	} else if err != nil {
+		return err
+	}
+
+	// Ingress exists, check if it needs update
+	host := r.FrontendEnvironment.Spec.ReverseProxyHostname
+	if host == "" {
+		return fmt.Errorf("reverseProxyHostname must be specified in FrontendEnvironment spec when reverse proxy is enabled")
+	}
+
+	// Get consistent labels
+	labels := r.getReverseProxyLabels()
+
+	// Check if ingress needs update
+	needsUpdate, updateReason := r.compareIngressFields(ingress, host, labels)
+
+	if needsUpdate {
+		r.Log.Info("Updating reverse proxy ingress", "reason", updateReason)
+
+		// Build the desired configuration
+		desiredIngress, err := r.buildReverseProxyIngress()
+		if err != nil {
+			return err
+		}
+
+		// Update only the mutable fields, preserving metadata that Kubernetes manages
+		ingress.Labels = desiredIngress.Labels
+		ingress.Annotations = desiredIngress.Annotations
+		ingress.Spec = desiredIngress.Spec
+
+		return r.Client.Update(r.Ctx, ingress)
+	}
+
+	return nil
+}
+
+// buildReverseProxyIngress builds the desired ingress configuration
+func (r *ReverseProxyReconciliation) buildReverseProxyIngress() (*networkingv1.Ingress, error) {
+	ingressName := "reverse-proxy"
+
+	// Define name of resource
+	nn := types.NamespacedName{
+		Name:      ingressName,
+		Namespace: r.Frontend.Namespace,
+	}
+
+	// Get consistent labels that won't conflict between frontends
+	labels := r.getReverseProxyLabels()
+
+	// Set up annotations
+	annotations := map[string]string{}
+
+	// Get hostname for reverse proxy
+	host := r.FrontendEnvironment.Spec.ReverseProxyHostname
+	if host == "" {
+		return nil, fmt.Errorf("reverseProxyHostname must be specified in FrontendEnvironment spec when reverse proxy is enabled")
+	}
+
+	// Create ingress path
+	pathType := networkingv1.PathTypePrefix
+	paths := []networkingv1.HTTPIngressPath{
+		{
+			Path:     "/",
+			PathType: &pathType,
+			Backend: networkingv1.IngressBackend{
+				Service: &networkingv1.IngressServiceBackend{
+					Name: "reverse-proxy",
+					Port: networkingv1.ServiceBackendPort{
+						Number: ReverseProxyPort,
+					},
+				},
+			},
+		},
+	}
+
+	// Create ingress rules
+	rules := []networkingv1.IngressRule{
+		{
+			Host: host,
+			IngressRuleValue: networkingv1.IngressRuleValue{
+				HTTP: &networkingv1.HTTPIngressRuleValue{
+					Paths: paths,
+				},
+			},
+		},
+	}
+
+	// Create the ingress
+	ingress := &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        nn.Name,
+			Namespace:   nn.Namespace,
+			Labels:      labels,
+			Annotations: annotations,
+		},
+		Spec: networkingv1.IngressSpec{
+			Rules: rules,
+		},
+	}
+
+	// Add whitelist annotations if configured (using ingress pattern from reconcile.go)
+	if len(r.FrontendEnvironment.Spec.Whitelist) != 0 {
+		annotations := ingress.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+		annotations["haproxy.router.openshift.io/ip_whitelist"] = strings.Join(r.FrontendEnvironment.Spec.Whitelist, " ")
+		annotations["nginx.ingress.kubernetes.io/whitelist-source-range"] = strings.Join(r.FrontendEnvironment.Spec.Whitelist, ",")
+		ingress.SetAnnotations(annotations)
+	}
+
+	// Add TLS configuration if SSL is enabled
+	if r.FrontendEnvironment.Spec.SSL {
+		ingress.Spec.TLS = []networkingv1.IngressTLS{
+			{
+				Hosts:      []string{host},
+				SecretName: "reverse-proxy-cert",
+			},
+		}
+	}
+
+	// Set owner reference to the environment instead of the frontend
+	ownerRef := r.getReverseProxyOwnerRef()
+	ingress.SetOwnerReferences([]metav1.OwnerReference{ownerRef})
+
+	return ingress, nil
+}
+
+// createReverseProxyIngress creates an ingress for the reverse proxy
+func (r *ReverseProxyReconciliation) createReverseProxyIngress() error {
+	ingress, err := r.buildReverseProxyIngress()
+	if err != nil {
+		return err
+	}
+
+	r.Log.Info("Creating Ingress for reverse proxy", "name", ingress.Name, "namespace", ingress.Namespace, "host", ingress.Spec.Rules[0].Host)
+
+	return r.Client.Create(r.Ctx, ingress)
+}
+
+// compareIngressFields compares the important fields of the current ingress against desired values
+func (r *ReverseProxyReconciliation) compareIngressFields(current *networkingv1.Ingress, desiredHost string, desiredLabels map[string]string) (bool, string) {
+	if len(current.Spec.Rules) != 1 {
+		return true, fmt.Sprintf("expected 1 rule, found %d", len(current.Spec.Rules))
+	}
+	rule := current.Spec.Rules[0] // defines the / path above
+
+	// Check hostname
+	if rule.Host != desiredHost {
+		return true, fmt.Sprintf("hostname changed from %s to %s", rule.Host, desiredHost)
+	}
+
+	// Check HTTP configuration
+	if rule.HTTP == nil {
+		return true, "missing HTTP configuration in rule"
+	}
+
+	// Check paths
+	if len(rule.HTTP.Paths) != 1 {
+		return true, fmt.Sprintf("expected 1 path, found %d", len(rule.HTTP.Paths))
+	}
+
+	path := rule.HTTP.Paths[0]
+
+	// Check path value
+	if path.Path != "/" {
+		return true, fmt.Sprintf("path changed from %s to /", path.Path)
+	}
+
+	// Check path type
+	expectedPathType := networkingv1.PathTypePrefix
+	if path.PathType == nil || *path.PathType != expectedPathType {
+		currentPathType := "<none>"
+		if path.PathType != nil {
+			currentPathType = string(*path.PathType)
+		}
+		return true, fmt.Sprintf("path type changed from %s to %s", currentPathType, expectedPathType)
+	}
+
+	// Check service backend
+	if path.Backend.Service == nil {
+		return true, "missing service backend"
+	}
+	backend := path.Backend.Service
+
+	// Check service name
+	if backend.Name != "reverse-proxy" {
+		return true, fmt.Sprintf("service name changed from %s to reverse-proxy", backend.Name)
+	}
+
+	// Check service port
+	if backend.Port.Number != ReverseProxyPort {
+		return true, fmt.Sprintf("service port changed from %d to %d", backend.Port.Number, ReverseProxyPort)
+	}
+
+	// Check important annotations
+	requiredAnnotations := map[string]string{}
+
+	// Add whitelist annotations if configured
+	if len(r.FrontendEnvironment.Spec.Whitelist) > 0 {
+		whitelist := strings.Join(r.FrontendEnvironment.Spec.Whitelist, ",")
+		requiredAnnotations["haproxy.router.openshift.io/ip_whitelist"] = whitelist
+		requiredAnnotations["nginx.ingress.kubernetes.io/whitelist-source-range"] = whitelist
+	}
+
+	for key, expectedValue := range requiredAnnotations {
+		if current.Annotations == nil || current.Annotations[key] != expectedValue {
+			return true, fmt.Sprintf("annotation %s changed from %s to %s", key,
+				func() string {
+					if current.Annotations == nil {
+						return "<none>"
+					}
+					return current.Annotations[key]
+				}(), expectedValue)
+		}
+	}
+
+	// Check if whitelist annotations should be removed when not configured
+	if len(r.FrontendEnvironment.Spec.Whitelist) == 0 {
+		whitelistAnnotations := []string{
+			"haproxy.router.openshift.io/ip_whitelist",
+			"nginx.ingress.kubernetes.io/whitelist-source-range",
+		}
+		for _, annotation := range whitelistAnnotations {
+			if current.Annotations != nil && current.Annotations[annotation] != "" {
+				return true, fmt.Sprintf("whitelist annotation %s should be removed", annotation)
+			}
+		}
+	}
+
+	// Check labels
+	importantLabels := []string{"app", "component", "environment"}
+	for _, label := range importantLabels {
+		currentValue := ""
+		if current.Labels != nil {
+			currentValue = current.Labels[label]
+		}
+		desiredValue := ""
+		if desiredLabels != nil {
+			desiredValue = desiredLabels[label]
+		}
+		if currentValue != desiredValue {
+			return true, fmt.Sprintf("label %s changed from %s to %s", label, currentValue, desiredValue)
+		}
+	}
+
+	// Check TLS configuration
+	sslEnabled := r.FrontendEnvironment.Spec.SSL
+	hasTLS := len(current.Spec.TLS) > 0
+
+	if sslEnabled && !hasTLS {
+		return true, "SSL enabled but TLS configuration missing"
+	}
+
+	if !sslEnabled && hasTLS {
+		return true, "SSL disabled but TLS configuration present"
+	}
+
+	if sslEnabled && hasTLS {
+		if len(current.Spec.TLS[0].Hosts) == 0 || current.Spec.TLS[0].Hosts[0] != desiredHost {
+			return true, "TLS hostname mismatch"
+		}
+		expectedSecretName := "reverse-proxy-cert"
+		if current.Spec.TLS[0].SecretName != expectedSecretName {
+			return true, fmt.Sprintf("TLS secret name changed from %s to %s", current.Spec.TLS[0].SecretName, expectedSecretName)
+		}
+	}
+
+	return false, ""
 }

@@ -1,0 +1,16 @@
+---
+# Test SSL configuration by updating the FrontendEnvironment
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: test-reverse-proxy-environment
+spec:
+  generateNavJSON: false
+  ssl: true  # Enable SSL
+  hostname: reverse-proxy-test.example.com
+  sso: https://sso.foo.redhat.com
+  enablePushCache: true
+  reverseProxyHostname: reverse-proxy.cluster.local
+  reverseProxyImage: quay.io/redhatinsights/frontend-asset-proxy:latest
+  reverseProxySPAEntrypointPath: /index.html
+  reverseProxyLogLevel: INFO
