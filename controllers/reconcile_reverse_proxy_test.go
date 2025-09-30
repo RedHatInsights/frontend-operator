@@ -887,8 +887,8 @@ func TestReverseProxyReconciliation_Ingress(t *testing.T) {
 			t.Errorf("Expected 1 TLS entry, got %d", len(ingress.Spec.TLS))
 		}
 
-		if ingress.Spec.TLS[0].SecretName != "reverse-proxy-tls" {
-			t.Errorf("Expected TLS secret=reverse-proxy-tls, got secret=%s", ingress.Spec.TLS[0].SecretName)
+		if ingress.Spec.TLS[0].SecretName != "reverse-proxy-cert" {
+			t.Errorf("Expected TLS secret=reverse-proxy-cert, got secret=%s", ingress.Spec.TLS[0].SecretName)
 		}
 
 		if len(ingress.Spec.TLS[0].Hosts) != 1 || ingress.Spec.TLS[0].Hosts[0] != "reverse-proxy.cluster.local" {

@@ -156,17 +156,31 @@ func (r *ReverseProxyReconciliation) updateReverseProxyDeployment(deployment *ap
 		return err
 	}
 
+	// Get the desired volumes configuration
+	desiredVolumes := r.createReverseProxyVolumes()
+
 	// Get current container
 	currentContainer := &deployment.Spec.Template.Spec.Containers[0]
 
 	// Check if container needs update
-	needsUpdate, updateReason := r.compareContainer(currentContainer, &desiredContainer)
+	containerNeedsUpdate, updateReason := r.compareContainer(currentContainer, &desiredContainer)
 
-	if needsUpdate {
-		r.Log.Info("Updating reverse proxy deployment", "reason", updateReason)
+	// Check if volumes need update
+	volumesNeedsUpdate := r.compareVolumes(deployment.Spec.Template.Spec.Volumes, desiredVolumes)
+
+	if containerNeedsUpdate || volumesNeedsUpdate {
+		if containerNeedsUpdate {
+			r.Log.Info("Updating reverse proxy deployment", "reason", updateReason)
+		}
+		if volumesNeedsUpdate {
+			r.Log.Info("Updating reverse proxy deployment volumes", "reason", "volumes configuration changed")
+		}
 
 		// Update the entire container specification
 		deployment.Spec.Template.Spec.Containers[0] = desiredContainer
+
+		// Update the volumes specification
+		deployment.Spec.Template.Spec.Volumes = desiredVolumes
 
 		// Add restart annotation to force pod restart
 		if deployment.Spec.Template.Annotations == nil {
@@ -323,6 +337,59 @@ func (r *ReverseProxyReconciliation) compareProbes(current, desired *v1.Probe) b
 	return true
 }
 
+// createReverseProxyVolumes creates the volumes needed for the reverse proxy deployment
+func (r *ReverseProxyReconciliation) createReverseProxyVolumes() []v1.Volume {
+	volumes := []v1.Volume{}
+
+	// Add SSL certificate volume if SSL is enabled
+	if r.FrontendEnvironment.Spec.SSL {
+		volumes = append(volumes, v1.Volume{
+			Name: "certs",
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName: "reverse-proxy-cert",
+				},
+			},
+		})
+	}
+
+	return volumes
+}
+
+// compareVolumes compares current and desired volume configurations
+func (r *ReverseProxyReconciliation) compareVolumes(current, desired []v1.Volume) bool {
+	if len(current) != len(desired) {
+		return true
+	}
+
+	// Create maps for easier comparison
+	currentMap := make(map[string]v1.Volume)
+	for _, vol := range current {
+		currentMap[vol.Name] = vol
+	}
+
+	for _, desiredVol := range desired {
+		currentVol, exists := currentMap[desiredVol.Name]
+		if !exists {
+			return true
+		}
+
+		// Compare secret volumes (the main case we care about)
+		if desiredVol.Secret != nil {
+			if currentVol.Secret == nil {
+				return true
+			}
+			if currentVol.Secret.SecretName != desiredVol.Secret.SecretName {
+				return true
+			}
+		} else if currentVol.Secret != nil {
+			return true
+		}
+	}
+
+	return false
+}
+
 // updateReverseProxyService ensures the service matches the desired state
 func (r *ReverseProxyReconciliation) updateReverseProxyService(service *v1.Service) error {
 	// Get the desired service configuration
@@ -465,6 +532,9 @@ func (r *ReverseProxyReconciliation) createReverseProxyDeployment() error {
 		return err
 	}
 
+	// Create volumes for the deployment
+	volumes := r.createReverseProxyVolumes()
+
 	// Create the deployment
 	deployment := &apps.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -486,6 +556,7 @@ func (r *ReverseProxyReconciliation) createReverseProxyDeployment() error {
 				},
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{container},
+					Volumes:    volumes,
 				},
 			},
 		},
@@ -565,6 +636,29 @@ func (r *ReverseProxyReconciliation) createReverseProxyContainer() (v1.Container
 		},
 	}
 
+	// Add SSL environment variables if SSL is enabled (similar to main reconciler)
+	if r.FrontendEnvironment.Spec.SSL {
+		envVars = append(envVars, v1.EnvVar{
+			Name:  "CADDY_TLS_MODE",
+			Value: "https_port 8080",
+		})
+		envVars = append(envVars, v1.EnvVar{
+			Name:  "CADDY_TLS_CERT",
+			Value: "tls /opt/certs/tls.crt /opt/certs/tls.key",
+		})
+	}
+
+	// Volume mounts for the reverse proxy
+	volumeMounts := []v1.VolumeMount{}
+
+	// Add SSL certificate volume mount if SSL is enabled
+	if r.FrontendEnvironment.Spec.SSL {
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      "certs",
+			MountPath: "/opt/certs",
+		})
+	}
+
 	// Configure the container
 	container := v1.Container{
 		Name:  "reverse-proxy",
@@ -576,7 +670,8 @@ func (r *ReverseProxyReconciliation) createReverseProxyContainer() (v1.Container
 				Protocol:      "TCP",
 			},
 		},
-		Env: envVars,
+		Env:          envVars,
+		VolumeMounts: volumeMounts,
 		Resources: v1.ResourceRequirements{
 			Requests: v1.ResourceList{
 				v1.ResourceCPU:    resource.MustParse("30m"),
@@ -587,29 +682,37 @@ func (r *ReverseProxyReconciliation) createReverseProxyContainer() (v1.Container
 				v1.ResourceMemory: resource.MustParse("128Mi"),
 			},
 		},
-		LivenessProbe: &v1.Probe{
-			ProbeHandler: v1.ProbeHandler{
-				HTTPGet: &v1.HTTPGetAction{
-					Path:   "/healthz",
-					Port:   intstr.FromInt(ReverseProxyPort),
-					Scheme: v1.URISchemeHTTP,
-				},
+	}
+
+	// Set the URI Scheme for the probes (HTTP or HTTPS based on SSL config)
+	probeScheme := v1.URISchemeHTTP
+	if r.FrontendEnvironment.Spec.SSL {
+		probeScheme = v1.URISchemeHTTPS
+	}
+
+	container.LivenessProbe = &v1.Probe{
+		ProbeHandler: v1.ProbeHandler{
+			HTTPGet: &v1.HTTPGetAction{
+				Path:   "/healthz",
+				Port:   intstr.FromInt(ReverseProxyPort),
+				Scheme: probeScheme,
 			},
-			InitialDelaySeconds: 10,
-			PeriodSeconds:       30,
-			FailureThreshold:    3,
 		},
-		ReadinessProbe: &v1.Probe{
-			ProbeHandler: v1.ProbeHandler{
-				HTTPGet: &v1.HTTPGetAction{
-					Path:   "/healthz",
-					Port:   intstr.FromInt(ReverseProxyPort),
-					Scheme: v1.URISchemeHTTP,
-				},
+		InitialDelaySeconds: 10,
+		PeriodSeconds:       30,
+		FailureThreshold:    3,
+	}
+
+	container.ReadinessProbe = &v1.Probe{
+		ProbeHandler: v1.ProbeHandler{
+			HTTPGet: &v1.HTTPGetAction{
+				Path:   "/healthz",
+				Port:   intstr.FromInt(ReverseProxyPort),
+				Scheme: probeScheme,
 			},
-			InitialDelaySeconds: 5,
-			PeriodSeconds:       10,
 		},
+		InitialDelaySeconds: 5,
+		PeriodSeconds:       10,
 	}
 
 	return container, nil
@@ -784,7 +887,7 @@ func (r *ReverseProxyReconciliation) buildReverseProxyIngress() (*networkingv1.I
 		ingress.Spec.TLS = []networkingv1.IngressTLS{
 			{
 				Hosts:      []string{host},
-				SecretName: "reverse-proxy-tls",
+				SecretName: "reverse-proxy-cert",
 			},
 		}
 	}
@@ -933,8 +1036,9 @@ func (r *ReverseProxyReconciliation) compareIngressFields(current *networkingv1.
 		if len(current.Spec.TLS[0].Hosts) == 0 || current.Spec.TLS[0].Hosts[0] != desiredHost {
 			return true, "TLS hostname mismatch"
 		}
-		if current.Spec.TLS[0].SecretName != "reverse-proxy-tls" {
-			return true, "TLS secret name mismatch"
+		expectedSecretName := "reverse-proxy-cert"
+		if current.Spec.TLS[0].SecretName != expectedSecretName {
+			return true, fmt.Sprintf("TLS secret name changed from %s to %s", current.Spec.TLS[0].SecretName, expectedSecretName)
 		}
 	}
 
