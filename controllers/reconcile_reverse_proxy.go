@@ -506,6 +506,14 @@ func (r *ReverseProxyReconciliation) createReverseProxyServiceConfig() (*v1.Serv
 			Ports:    ports,
 		},
 	}
+	if r.FrontendEnvironment.Spec.SSL {
+		annotations := service.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+		annotations["service.beta.openshift.io/serving-cert-secret-name"] = "reverse-proxy-cert"
+		service.SetAnnotations(annotations)
+	}
 
 	// Set owner reference to the environment instead of the frontend
 	service.SetOwnerReferences([]metav1.OwnerReference{r.getReverseProxyOwnerRef()})
