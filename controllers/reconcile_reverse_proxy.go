@@ -446,6 +446,22 @@ func (r *ReverseProxyReconciliation) compareService(current, desired *v1.Service
 		}
 	}
 
+	// Compare annotations
+	currentAnnotations := current.GetAnnotations()
+	desiredAnnotations := desired.GetAnnotations()
+
+	// Check if annotation maps have different lengths
+	if len(currentAnnotations) != len(desiredAnnotations) {
+		return true
+	}
+
+	// Check if all desired annotations exist and match in current
+	for key, desiredValue := range desiredAnnotations {
+		if currentValue, exists := currentAnnotations[key]; !exists || currentValue != desiredValue {
+			return true
+		}
+	}
+
 	// Compare selectors
 	if len(current.Spec.Selector) != len(desired.Spec.Selector) {
 		return true
@@ -887,6 +903,16 @@ func (r *ReverseProxyReconciliation) buildReverseProxyIngress() (*networkingv1.I
 		ingress.SetAnnotations(annotations)
 	}
 
+	if r.FrontendEnvironment.Spec.SSL {
+		annotations := ingress.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+
+		annotations["route.openshift.io/termination"] = "reencrypt"
+		ingress.SetAnnotations(annotations)
+	}
+
 	// Add TLS configuration if SSL is enabled
 	if r.FrontendEnvironment.Spec.SSL {
 		ingress.Spec.TLS = []networkingv1.IngressTLS{
@@ -976,9 +1002,14 @@ func (r *ReverseProxyReconciliation) compareIngressFields(current *networkingv1.
 
 	// Add whitelist annotations if configured
 	if len(r.FrontendEnvironment.Spec.Whitelist) > 0 {
-		whitelist := strings.Join(r.FrontendEnvironment.Spec.Whitelist, ",")
-		requiredAnnotations["haproxy.router.openshift.io/ip_whitelist"] = whitelist
-		requiredAnnotations["nginx.ingress.kubernetes.io/whitelist-source-range"] = whitelist
+		// HAProxy uses space-separated, Nginx uses comma-separated
+		requiredAnnotations["haproxy.router.openshift.io/ip_whitelist"] = strings.Join(r.FrontendEnvironment.Spec.Whitelist, " ")
+		requiredAnnotations["nginx.ingress.kubernetes.io/whitelist-source-range"] = strings.Join(r.FrontendEnvironment.Spec.Whitelist, ",")
+	}
+
+	// Add SSL annotations if configured
+	if r.FrontendEnvironment.Spec.SSL {
+		requiredAnnotations["route.openshift.io/termination"] = "reencrypt"
 	}
 
 	for key, expectedValue := range requiredAnnotations {
