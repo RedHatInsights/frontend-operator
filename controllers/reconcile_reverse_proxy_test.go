@@ -967,11 +967,13 @@ func TestReverseProxyReconciliation_CompareIngressFields(t *testing.T) {
 	}
 
 	pathType := networkingv1.PathTypePrefix
+	defaultIngressClass := "nginx"
 	baseIngress := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{},
 		},
 		Spec: networkingv1.IngressSpec{
+			IngressClassName: &defaultIngressClass,
 			Rules: []networkingv1.IngressRule{
 				{
 					Host: "reverse-proxy.cluster.local",
@@ -1059,6 +1061,29 @@ func TestReverseProxyReconciliation_CompareIngressFields(t *testing.T) {
 			desiredLabels:   map[string]string{"app": "test-app"},
 			expectDifferent: true,
 		},
+		{
+			name: "Different ingress class",
+			current: func() *networkingv1.Ingress {
+				ing := baseIngress.DeepCopy()
+				differentClass := "traefik"
+				ing.Spec.IngressClassName = &differentClass
+				return ing
+			}(),
+			desiredHost:     "reverse-proxy.cluster.local",
+			desiredLabels:   map[string]string{},
+			expectDifferent: true,
+		},
+		{
+			name: "Missing ingress class (nil)",
+			current: func() *networkingv1.Ingress {
+				ing := baseIngress.DeepCopy()
+				ing.Spec.IngressClassName = nil
+				return ing
+			}(),
+			desiredHost:     "reverse-proxy.cluster.local",
+			desiredLabels:   map[string]string{},
+			expectDifferent: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1068,6 +1093,73 @@ func TestReverseProxyReconciliation_CompareIngressFields(t *testing.T) {
 				t.Errorf("Expected different=%v, got different=%v", tt.expectDifferent, different)
 			}
 		})
+	}
+}
+
+// TestReverseProxyReconciliation_CustomIngressClass tests custom ingress class functionality
+func TestReverseProxyReconciliation_CustomIngressClass(t *testing.T) {
+	pathType := networkingv1.PathTypePrefix
+	customIngressClass := "traefik"
+
+	reconciliation := &ReverseProxyReconciliation{
+		FrontendEnvironment: &crd.FrontendEnvironment{
+			Spec: crd.FrontendEnvironmentSpec{
+				SSL:          false,
+				IngressClass: customIngressClass, // Custom ingress class
+			},
+		},
+	}
+
+	// Test that when FrontendEnvironment specifies a custom ingress class,
+	// an ingress with the default "nginx" class should be different
+	ingressWithDefault := &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Annotations: map[string]string{},
+		},
+		Spec: networkingv1.IngressSpec{
+			IngressClassName: func() *string { s := "nginx"; return &s }(),
+			Rules: []networkingv1.IngressRule{
+				{
+					Host: "reverse-proxy.cluster.local",
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
+							Paths: []networkingv1.HTTPIngressPath{
+								{
+									Path:     "/",
+									PathType: &pathType,
+									Backend: networkingv1.IngressBackend{
+										Service: &networkingv1.IngressServiceBackend{
+											Name: "reverse-proxy",
+											Port: networkingv1.ServiceBackendPort{
+												Number: ReverseProxyPort,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Should detect difference because ingress has "nginx" but environment expects "traefik"
+	different, reason := reconciliation.compareIngressFields(ingressWithDefault, "reverse-proxy.cluster.local", map[string]string{})
+	if !different {
+		t.Errorf("Expected different=true when ingress class differs, got different=false")
+	}
+	if !strings.Contains(reason, "ingress class changed") {
+		t.Errorf("Expected reason to mention ingress class change, got: %s", reason)
+	}
+
+	// Test that when ingress has the correct custom class, no update is needed
+	ingressWithCustom := ingressWithDefault.DeepCopy()
+	ingressWithCustom.Spec.IngressClassName = &customIngressClass
+
+	different, _ = reconciliation.compareIngressFields(ingressWithCustom, "reverse-proxy.cluster.local", map[string]string{})
+	if different {
+		t.Errorf("Expected different=false when ingress class matches custom class, got different=true")
 	}
 }
 
