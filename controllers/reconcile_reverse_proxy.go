@@ -831,6 +831,10 @@ func (r *ReverseProxyReconciliation) reconcileIngress() error {
 // buildReverseProxyIngress builds the desired ingress configuration
 func (r *ReverseProxyReconciliation) buildReverseProxyIngress() (*networkingv1.Ingress, error) {
 	ingressName := "reverse-proxy"
+	ingressClass := r.FrontendEnvironment.Spec.IngressClass
+	if ingressClass == "" {
+		ingressClass = "nginx"
+	}
 
 	// Define name of resource
 	nn := types.NamespacedName{
@@ -888,7 +892,8 @@ func (r *ReverseProxyReconciliation) buildReverseProxyIngress() (*networkingv1.I
 			Annotations: annotations,
 		},
 		Spec: networkingv1.IngressSpec{
-			Rules: rules,
+			IngressClassName: &ingressClass,
+			Rules:            rules,
 		},
 	}
 
@@ -944,6 +949,22 @@ func (r *ReverseProxyReconciliation) createReverseProxyIngress() error {
 
 // compareIngressFields compares the important fields of the current ingress against desired values
 func (r *ReverseProxyReconciliation) compareIngressFields(current *networkingv1.Ingress, desiredHost string, desiredLabels map[string]string) (bool, string) {
+	// Check IngressClassName
+	desiredIngressClass := r.FrontendEnvironment.Spec.IngressClass
+	if desiredIngressClass == "" {
+		desiredIngressClass = "nginx"
+	}
+
+	currentIngressClass := ""
+	if current.Spec.IngressClassName != nil {
+		currentIngressClass = *current.Spec.IngressClassName
+	}
+
+	if currentIngressClass != desiredIngressClass {
+		return true, fmt.Sprintf("ingress class changed from %s to %s", currentIngressClass, desiredIngressClass)
+	}
+
+	// Check differences in rules
 	if len(current.Spec.Rules) != 1 {
 		return true, fmt.Sprintf("expected 1 rule, found %d", len(current.Spec.Rules))
 	}
