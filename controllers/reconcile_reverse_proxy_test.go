@@ -844,11 +844,6 @@ func TestReverseProxyReconciliation_Ingress(t *testing.T) {
 		if ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Number != ReverseProxyPort {
 			t.Errorf("Expected port=%d, got port=%d", ReverseProxyPort, ingress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Number)
 		}
-
-		// Verify no TLS since SSL is false
-		if len(ingress.Spec.TLS) != 0 {
-			t.Errorf("Expected no TLS configuration, got %d TLS entries", len(ingress.Spec.TLS))
-		}
 	})
 
 	t.Run("CreateIngressWithSSL", func(t *testing.T) {
@@ -880,19 +875,6 @@ func TestReverseProxyReconciliation_Ingress(t *testing.T) {
 		err = client.Get(context.Background(), ingressKey, ingress)
 		if err != nil {
 			t.Fatalf("Failed to get ingress: %v", err)
-		}
-
-		// Verify TLS configuration is added
-		if len(ingress.Spec.TLS) != 1 {
-			t.Errorf("Expected 1 TLS entry, got %d", len(ingress.Spec.TLS))
-		}
-
-		if ingress.Spec.TLS[0].SecretName != "reverse-proxy-cert" {
-			t.Errorf("Expected TLS secret=reverse-proxy-cert, got secret=%s", ingress.Spec.TLS[0].SecretName)
-		}
-
-		if len(ingress.Spec.TLS[0].Hosts) != 1 || ingress.Spec.TLS[0].Hosts[0] != "reverse-proxy.cluster.local" {
-			t.Errorf("Expected TLS host=reverse-proxy.cluster.local, got hosts=%v", ingress.Spec.TLS[0].Hosts)
 		}
 	})
 

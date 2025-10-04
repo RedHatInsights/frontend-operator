@@ -920,12 +920,9 @@ func (r *ReverseProxyReconciliation) buildReverseProxyIngress() (*networkingv1.I
 
 	// Add TLS configuration if SSL is enabled
 	if r.FrontendEnvironment.Spec.SSL {
-		ingress.Spec.TLS = []networkingv1.IngressTLS{
-			{
-				Hosts:      []string{host},
-				SecretName: "reverse-proxy-cert",
-			},
-		}
+		ingress.Spec.TLS = []networkingv1.IngressTLS{{
+			Hosts: []string{},
+		}}
 	}
 
 	// Set owner reference to the environment instead of the frontend
@@ -1087,12 +1084,16 @@ func (r *ReverseProxyReconciliation) compareIngressFields(current *networkingv1.
 	}
 
 	if sslEnabled && hasTLS {
-		if len(current.Spec.TLS[0].Hosts) == 0 || current.Spec.TLS[0].Hosts[0] != desiredHost {
-			return true, "TLS hostname mismatch"
+		// When SSL is enabled, we expect TLS with empty hosts array (OpenShift pattern)
+		if len(current.Spec.TLS) != 1 {
+			return true, fmt.Sprintf("expected 1 TLS entry, found %d", len(current.Spec.TLS))
 		}
-		expectedSecretName := "reverse-proxy-cert"
-		if current.Spec.TLS[0].SecretName != expectedSecretName {
-			return true, fmt.Sprintf("TLS secret name changed from %s to %s", current.Spec.TLS[0].SecretName, expectedSecretName)
+
+		tlsEntry := current.Spec.TLS[0]
+
+		// Check if hosts array is empty (as expected for OpenShift pattern)
+		if len(tlsEntry.Hosts) != 0 {
+			return true, fmt.Sprintf("expected empty hosts array in TLS, found %d hosts", len(tlsEntry.Hosts))
 		}
 	}
 
