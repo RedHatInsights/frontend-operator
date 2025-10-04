@@ -1071,5 +1071,36 @@ func (r *ReverseProxyReconciliation) compareIngressFields(current *networkingv1.
 		}
 	}
 
+	// Check TLS configuration
+	sslEnabled := r.FrontendEnvironment.Spec.SSL
+	hasTLS := len(current.Spec.TLS) > 0
+
+	if sslEnabled && !hasTLS {
+		return true, "SSL enabled but TLS configuration missing"
+	}
+
+	if !sslEnabled && hasTLS {
+		return true, "SSL disabled but TLS configuration present"
+	}
+
+	if sslEnabled && hasTLS {
+		// When SSL is enabled, we expect TLS with empty hosts array (OpenShift pattern)
+		if len(current.Spec.TLS) != 1 {
+			return true, fmt.Sprintf("expected 1 TLS entry, found %d", len(current.Spec.TLS))
+		}
+
+		tlsEntry := current.Spec.TLS[0]
+
+		// Check if hosts array is empty (as expected for OpenShift pattern)
+		if len(tlsEntry.Hosts) != 0 {
+			return true, fmt.Sprintf("expected empty hosts array in TLS, found %d hosts", len(tlsEntry.Hosts))
+		}
+
+		// The SecretName should be empty when using OpenShift service serving certs
+		if tlsEntry.SecretName != "" {
+			return true, fmt.Sprintf("expected empty TLS secret name, found %s", tlsEntry.SecretName)
+		}
+	}
+
 	return false, ""
 }
