@@ -920,12 +920,9 @@ func (r *ReverseProxyReconciliation) buildReverseProxyIngress() (*networkingv1.I
 
 	// Add TLS configuration if SSL is enabled
 	if r.FrontendEnvironment.Spec.SSL {
-		ingress.Spec.TLS = []networkingv1.IngressTLS{
-			{
-				Hosts:      []string{host},
-				SecretName: "reverse-proxy-cert",
-			},
-		}
+		ingress.Spec.TLS = []networkingv1.IngressTLS{{
+			Hosts: []string{},
+		}}
 	}
 
 	// Set owner reference to the environment instead of the frontend
@@ -1071,28 +1068,6 @@ func (r *ReverseProxyReconciliation) compareIngressFields(current *networkingv1.
 		}
 		if currentValue != desiredValue {
 			return true, fmt.Sprintf("label %s changed from %s to %s", label, currentValue, desiredValue)
-		}
-	}
-
-	// Check TLS configuration
-	sslEnabled := r.FrontendEnvironment.Spec.SSL
-	hasTLS := len(current.Spec.TLS) > 0
-
-	if sslEnabled && !hasTLS {
-		return true, "SSL enabled but TLS configuration missing"
-	}
-
-	if !sslEnabled && hasTLS {
-		return true, "SSL disabled but TLS configuration present"
-	}
-
-	if sslEnabled && hasTLS {
-		if len(current.Spec.TLS[0].Hosts) == 0 || current.Spec.TLS[0].Hosts[0] != desiredHost {
-			return true, "TLS hostname mismatch"
-		}
-		expectedSecretName := "reverse-proxy-cert"
-		if current.Spec.TLS[0].SecretName != expectedSecretName {
-			return true, fmt.Sprintf("TLS secret name changed from %s to %s", current.Spec.TLS[0].SecretName, expectedSecretName)
 		}
 	}
 
