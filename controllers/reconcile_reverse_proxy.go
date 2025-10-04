@@ -1095,11 +1095,6 @@ func (r *ReverseProxyReconciliation) compareIngressFields(current *networkingv1.
 		if len(tlsEntry.Hosts) != 0 {
 			return true, fmt.Sprintf("expected empty hosts array in TLS, found %d hosts", len(tlsEntry.Hosts))
 		}
-
-		// The SecretName should be empty when using OpenShift service serving certs
-		if tlsEntry.SecretName != "" {
-			return true, fmt.Sprintf("expected empty TLS secret name, found %s", tlsEntry.SecretName)
-		}
 	}
 
 	return false, ""
