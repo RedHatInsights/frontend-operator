@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>FrontendEnvironment Configuration Guide :: Frontend Operator Documentation</title>
+    <link rel="canonical" href="https://redhatinsights.github.io/frontend-operator/frontend-operator/dev/frontendenvironment-guide.html">
+    <meta name="generator" content="Antora 3.1.14">
+    <link rel="stylesheet" href="../../ui/css/site.css">
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://redhatinsights.github.io/frontend-operator">Frontend Operator Documentation</a>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="frontend-operator" data-version="dev">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="index.html">Frontend Operator</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="frontendenvironment-guide.html">FrontendEnvironment Configuration Guide</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="api_reference.html">API Reference</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Frontend Operator</span>
+    <span class="version">dev</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="index.html">Frontend Operator</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="index.html">dev</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="index.html">Frontend Operator</a></li>
+    <li><a href="frontendenvironment-guide.html">FrontendEnvironment Configuration Guide</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/RedHatInsights/frontend-operator/edit/main/docs/antora/modules/ROOT/pages/frontendenvironment-guide.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">FrontendEnvironment Configuration Guide</h1>
+<div id="toc" class="toc">
+<div id="toctitle">Table of Contents</div>
+<ul class="sectlevel1">
+<li><a href="#_overview">Overview</a>
+<ul class="sectlevel2">
+<li><a href="#_what_is_a_frontendenvironment">What is a FrontendEnvironment?</a></li>
+<li><a href="#_when_to_use_frontendenvironment">When to Use FrontendEnvironment</a></li>
+</ul>
+</li>
+<li><a href="#_prerequisites">Prerequisites</a></li>
+<li><a href="#_basic_configuration">Basic Configuration</a>
+<ul class="sectlevel2">
+<li><a href="#_minimal_frontendenvironment">Minimal FrontendEnvironment</a></li>
+<li><a href="#_applying_the_configuration">Applying the Configuration</a></li>
+</ul>
+</li>
+<li><a href="#_configuration_reference">Configuration Reference</a>
+<ul class="sectlevel2">
+<li><a href="#_authentication_and_sso">Authentication and SSO</a>
+<ul class="sectlevel3">
+<li><a href="#_basic_sso_configuration">Basic SSO Configuration</a></li>
+<li><a href="#_sso_mapping_for_multiple_hostnames">SSO Mapping for Multiple Hostnames</a></li>
+</ul>
+</li>
+<li><a href="#_networking_configuration">Networking Configuration</a>
+<ul class="sectlevel3">
+<li><a href="#_hostname_and_ssl">Hostname and SSL</a></li>
+<li><a href="#_ingress_configuration">Ingress Configuration</a></li>
+<li><a href="#_access_control_with_whitelist">Access Control with Whitelist</a></li>
+<li><a href="#_custom_http_headers">Custom HTTP Headers</a></li>
+</ul>
+</li>
+<li><a href="#_monitoring_configuration">Monitoring Configuration</a></li>
+<li><a href="#_resource_management">Resource Management</a>
+<ul class="sectlevel3">
+<li><a href="#_default_replicas">Default Replicas</a></li>
+<li><a href="#_resource_requests_and_limits">Resource Requests and Limits</a></li>
+</ul>
+</li>
+<li><a href="#_navigation_and_ui_configuration">Navigation and UI Configuration</a>
+<ul class="sectlevel3">
+<li><a href="#_bundles">Bundles</a></li>
+<li><a href="#_service_categories">Service Categories</a></li>
+<li><a href="#_navigation_json_generation">Navigation JSON Generation</a></li>
+</ul>
+</li>
+<li><a href="#_advanced_features">Advanced Features</a>
+<ul class="sectlevel3">
+<li><a href="#_reverse_proxy_configuration">Reverse Proxy Configuration</a></li>
+<li><a href="#_push_cache">Push Cache</a></li>
+<li><a href="#_akamai_cache_busting">Akamai Cache Busting</a></li>
+<li><a href="#_target_namespaces">Target Namespaces</a></li>
+<li><a href="#_caddy_configuration_override">Caddy Configuration Override</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#_common_use_cases">Common Use Cases</a>
+<ul class="sectlevel2">
+<li><a href="#_production_environment_with_ssl">Production Environment with SSL</a></li>
+<li><a href="#_developmentephemeral_environment">Development/Ephemeral Environment</a></li>
+<li><a href="#_environment_with_reverse_proxy_and_navigation">Environment with Reverse Proxy and Navigation</a></li>
+</ul>
+</li>
+<li><a href="#_deploying_with_bonfire">Deploying with Bonfire</a></li>
+<li><a href="#_troubleshooting">Troubleshooting</a>
+<ul class="sectlevel2">
+<li><a href="#_frontendenvironment_not_found">FrontendEnvironment Not Found</a></li>
+<li><a href="#_ssl_certificate_issues">SSL Certificate Issues</a></li>
+<li><a href="#_monitoring_not_working">Monitoring Not Working</a></li>
+<li><a href="#_navigation_not_appearing">Navigation Not Appearing</a></li>
+<li><a href="#_reverse_proxy_not_working">Reverse Proxy Not Working</a></li>
+<li><a href="#_resource_limits_causing_restarts">Resource Limits Causing Restarts</a></li>
+</ul>
+</li>
+<li><a href="#_next_steps">Next Steps</a></li>
+</ul>
+</div>
+<div class="sect1">
+<h2 id="_overview"><a class="anchor" href="#_overview"></a>Overview</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The FrontendEnvironment custom resource defines the shared configuration and infrastructure for deploying frontend applications in the Red Hat Insights (consoledot) ecosystem. It acts as an environment-level configuration that Frontend resources reference to inherit settings like SSO configuration, monitoring, networking, and resource limits.</p>
+</div>
+<div class="sect2">
+<h3 id="_what_is_a_frontendenvironment"><a class="anchor" href="#_what_is_a_frontendenvironment"></a>What is a FrontendEnvironment?</h3>
+<div class="paragraph">
+<p>A FrontendEnvironment is a cluster-scoped Kubernetes custom resource that:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Defines authentication and SSO configuration for frontend applications</p>
+</li>
+<li>
+<p>Configures networking, including hostnames, SSL/TLS, and ingress settings</p>
+</li>
+<li>
+<p>Manages navigation structure and service categorization for the Chrome UI</p>
+</li>
+<li>
+<p>Sets up monitoring and observability</p>
+</li>
+<li>
+<p>Provides environment-wide defaults for resource limits, replicas, and security headers</p>
+</li>
+<li>
+<p>Enables optional features like push cache, reverse proxy, and Akamai cache busting</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_when_to_use_frontendenvironment"><a class="anchor" href="#_when_to_use_frontendenvironment"></a>When to Use FrontendEnvironment</h3>
+<div class="paragraph">
+<p>Create a FrontendEnvironment when you need to:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Set up a new deployment environment (development, staging, production)</p>
+</li>
+<li>
+<p>Configure shared settings for multiple frontend applications</p>
+</li>
+<li>
+<p>Define environment-specific SSO authentication endpoints</p>
+</li>
+<li>
+<p>Establish navigation bundles and service categories for Chrome UI</p>
+</li>
+<li>
+<p>Configure reverse proxy for object storage-based asset serving</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_prerequisites"><a class="anchor" href="#_prerequisites"></a>Prerequisites</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>Access to a Kubernetes cluster with the Frontend Operator installed</p>
+</li>
+<li>
+<p><code>kubectl</code> or <code>oc</code> CLI configured and authenticated</p>
+</li>
+<li>
+<p>Understanding of your environment&#8217;s SSO configuration</p>
+</li>
+<li>
+<p>(Optional) Bonfire CLI for ephemeral environment deployment</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_basic_configuration"><a class="anchor" href="#_basic_configuration"></a>Basic Configuration</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_minimal_frontendenvironment"><a class="anchor" href="#_minimal_frontendenvironment"></a>Minimal FrontendEnvironment</h3>
+<div class="paragraph">
+<p>The simplest FrontendEnvironment requires only SSO configuration:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: my-basic-environment
+spec:
+  sso: https://sso.stage.redhat.com/auth
+  hostname: console.stage.redhat.com
+  ssl: false
+  generateNavJSON: false</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This creates an environment with:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>SSO authentication endpoint</p>
+</li>
+<li>
+<p>HTTP-only access (no SSL)</p>
+</li>
+<li>
+<p>No automatic navigation JSON generation</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_applying_the_configuration"><a class="anchor" href="#_applying_the_configuration"></a>Applying the Configuration</h3>
+<div class="paragraph">
+<p>Apply the FrontendEnvironment to your cluster:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">kubectl apply -f my-frontendenvironment.yaml</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Verify the resource was created:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">kubectl get frontendenvironments
+# or using the short name
+kubectl get feenv</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_configuration_reference"><a class="anchor" href="#_configuration_reference"></a>Configuration Reference</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_authentication_and_sso"><a class="anchor" href="#_authentication_and_sso"></a>Authentication and SSO</h3>
+<div class="sect3">
+<h4 id="_basic_sso_configuration"><a class="anchor" href="#_basic_sso_configuration"></a>Basic SSO Configuration</h4>
+<div class="paragraph">
+<p>The <code>sso</code> field defines the primary authentication endpoint:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">spec:
+  sso: https://sso.stage.redhat.com/auth</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_sso_mapping_for_multiple_hostnames"><a class="anchor" href="#_sso_mapping_for_multiple_hostnames"></a>SSO Mapping for Multiple Hostnames</h4>
+<div class="paragraph">
+<p>Use <code>ssoMapping</code> when different hostnames need different SSO endpoints:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">spec:
+  sso: https://sso.stage.redhat.com/auth  # default SSO
+  ssoMapping:
+    "console.dev.redhat.com": "https://sso.redhat.com/auth"
+    "us.console.dev.redhat.com": "https://sso.redhat.com/auth"
+    "console.stage.openshiftusgov.com": "https://sso.stage.openshiftusgov.com"
+    "console.openshiftusgov.com": "https://sso.openshiftusgov.com"</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The operator will use the mapped SSO URL when the hostname pattern matches; otherwise, it falls back to the default <code>sso</code> value.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_networking_configuration"><a class="anchor" href="#_networking_configuration"></a>Networking Configuration</h3>
+<div class="sect3">
+<h4 id="_hostname_and_ssl"><a class="anchor" href="#_hostname_and_ssl"></a>Hostname and SSL</h4>
+<div class="paragraph">
+<p>Configure the environment&#8217;s hostname and SSL/TLS settings:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">spec:
+  hostname: console.stage.redhat.com
+  ssl: true</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>When <code>ssl: true</code>, the operator:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Requests SSL certificates from Kubernetes/OpenShift</p>
+</li>
+<li>
+<p>Applies certificates to pods</p>
+</li>
+<li>
+<p>Configures routes with re-encryption (on OpenShift)</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_ingress_configuration"><a class="anchor" href="#_ingress_configuration"></a>Ingress Configuration</h4>
+<div class="paragraph">
+<p>Customize ingress class and add annotations:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">spec:
+  ingressClass: nginx
+  ingressAnnotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>These annotations are applied to all ingress objects created by frontends in this environment.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_access_control_with_whitelist"><a class="anchor" href="#_access_control_with_whitelist"></a>Access Control with Whitelist</h4>
+<div class="paragraph">
+<p>Restrict access to specific CIDR blocks:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">spec:
+  whitelist:
+    - 10.0.0.0/8
+    - 192.168.1.0/24
+    - 172.16.0.0/12</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The operator applies these CIDR blocks to ingress configurations for network-level access control.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_custom_http_headers"><a class="anchor" href="#_custom_http_headers"></a>Custom HTTP Headers</h4>
+<div class="paragraph">
+<p>Add security or custom HTTP headers to all frontend responses:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">spec:
+  httpHeaders:
+    "X-Frame-Options": "DENY"
+    "X-XSS-Protection": "1; mode=block"
+    "X-Content-Type-Options": "nosniff"
+    "Content-Security-Policy": "default-src 'self'"
+    "Referrer-Policy": "no-referrer"</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Headers are injected into the Caddy configuration as a header block.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_monitoring_configuration"><a class="anchor" href="#_monitoring_configuration"></a>Monitoring Configuration</h3>
+<div class="paragraph">
+<p>Configure ServiceMonitor resources for Prometheus monitoring:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">spec:
+  monitoring:
+    mode: "local"          # or "app-interface"
+    disabled: false</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Monitoring modes:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>local</code>: Creates ServiceMonitor in the frontend&#8217;s namespace</p>
+</li>
+<li>
+<p><code>app-interface</code>: Creates ServiceMonitor in <code>openshift-customer-monitoring</code> namespace</p>
+</li>
+<li>
+<p><code>disabled: true</code>: Disables monitoring entirely</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_resource_management"><a class="anchor" href="#_resource_management"></a>Resource Management</h3>
+<div class="sect3">
+<h4 id="_default_replicas"><a class="anchor" href="#_default_replicas"></a>Default Replicas</h4>
+<div class="paragraph">
+<p>Set the default replica count for all frontends in the environment:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">spec:
+  defaultReplicas: 3</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Individual Frontend resources can override this value.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_resource_requests_and_limits"><a class="anchor" href="#_resource_requests_and_limits"></a>Resource Requests and Limits</h4>
+<div class="paragraph">
+<p>Define CPU and memory constraints for all frontends:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">spec:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+  limits:
+    cpu: 50m
+    memory: 128Mi</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>These values apply to all frontend pods in the environment unless overridden at the Frontend resource level.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_navigation_and_ui_configuration"><a class="anchor" href="#_navigation_and_ui_configuration"></a>Navigation and UI Configuration</h3>
+<div class="sect3">
+<h4 id="_bundles"><a class="anchor" href="#_bundles"></a>Bundles</h4>
+<div class="paragraph">
+<p>Define navigation bundles for the Chrome UI:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">spec:
+  bundles:
+    - id: rhel
+      title: Red Hat Enterprise Linux
+      description: "RHEL management and automation"
+    - id: ansible
+      title: Ansible
+      description: "Automation and configuration management"
+    - id: settings
+      title: Settings
+      description: "Account and user settings"</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Bundles organize navigation items into logical groupings in the Chrome UI.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_service_categories"><a class="anchor" href="#_service_categories"></a>Service Categories</h4>
+<div class="paragraph">
+<p>Create service categories and groups for the service dropdown in Chrome:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">spec:
+  serviceCategories:
+    - id: automation
+      title: Automation
+      groups:
+        - id: ansible
+          title: Ansible
+        - id: rhel
+          title: Red Hat Enterprise Linux
+    - id: iam
+      title: Identity and Access Management
+      groups:
+        - id: iam
+          title: IAM</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Service categories allow frontends to register service tiles that appear in the Chrome UI service dropdown.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_navigation_json_generation"><a class="anchor" href="#_navigation_json_generation"></a>Navigation JSON Generation</h4>
+<div class="paragraph">
+<p>Enable automatic generation of navigation JSON configmaps:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">spec:
+  generateNavJSON: true</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This is typically enabled for ephemeral and development environments but disabled in production where navigation is managed separately.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_advanced_features"><a class="anchor" href="#_advanced_features"></a>Advanced Features</h3>
+<div class="sect3">
+<h4 id="_reverse_proxy_configuration"><a class="anchor" href="#_reverse_proxy_configuration"></a>Reverse Proxy Configuration</h4>
+<div class="paragraph">
+<p>Enable the object storage-based reverse proxy for serving frontend assets:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">spec:
+  reverseProxyImage: quay.io/redhat-services-prod/hcc-platex-services-tenant/frontend-asset-proxy:latest
+  reverseProxyHostname: reverse-proxy.cluster.local
+  reverseProxySPAEntrypointPath: /index.html
+  reverseProxyLogLevel: DEBUG</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The reverse proxy uses the <a href="https://github.com/RedHatInsights/frontend-asset-proxy">frontend-asset-proxy</a> container to serve assets from S3-compatible storage with SPA routing support.</p>
+</div>
+<div class="paragraph">
+<p>Configuration options:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>reverseProxyImage</code>: Container image for the reverse proxy (required to enable)</p>
+</li>
+<li>
+<p><code>reverseProxyHostname</code>: Hostname for the reverse proxy ingress</p>
+</li>
+<li>
+<p><code>reverseProxySPAEntrypointPath</code>: Path to the SPA entrypoint (default: <code>/index.html</code>)</p>
+</li>
+<li>
+<p><code>reverseProxyLogLevel</code>: Logging verbosity (default: <code>DEBUG</code>)</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_push_cache"><a class="anchor" href="#_push_cache"></a>Push Cache</h4>
+<div class="paragraph">
+<p>Enable the push cache (valpop) job for frontend assets:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">spec:
+  enablePushCache: true</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>When enabled, the operator creates push cache jobs that upload frontend assets to object storage. Individual Frontend resources must also set <code>pushCacheEnabled: true</code> to participate.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_akamai_cache_busting"><a class="anchor" href="#_akamai_cache_busting"></a>Akamai Cache Busting</h4>
+<div class="paragraph">
+<p>Configure Akamai CDN cache busting:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">spec:
+  enableAkamaiCacheBust: true
+  akamaiCacheBustImage: quay.io/cloudservices/akamai-cache-bust:latest
+  akamaiCacheBustURLs:
+    - https://console.redhat.com
+    - https://console.stage.redhat.com
+  akamaiSecretName: akamai-credentials</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The operator creates jobs to invalidate Akamai cache when frontend assets change.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_target_namespaces"><a class="anchor" href="#_target_namespaces"></a>Target Namespaces</h4>
+<div class="paragraph">
+<p>Propagate frontend configuration to additional namespaces:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">spec:
+  targetNamespaces:
+    - boot
+    - chrome-namespace
+    - shared-config</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The operator copies generated configmaps (fed-modules.json, navigation files) to the specified namespaces.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_caddy_configuration_override"><a class="anchor" href="#_caddy_configuration_override"></a>Caddy Configuration Override</h4>
+<div class="paragraph">
+<p>Control whether the operator overwrites Caddyfiles in frontend containers:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">spec:
+  overwriteCaddyConfig: true</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>When <code>true</code>, the operator replaces frontend Caddyfiles with a common core configuration.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_common_use_cases"><a class="anchor" href="#_common_use_cases"></a>Common Use Cases</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_production_environment_with_ssl"><a class="anchor" href="#_production_environment_with_ssl"></a>Production Environment with SSL</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: production-environment
+spec:
+  sso: https://sso.redhat.com/auth
+  hostname: console.redhat.com
+  ssl: true
+  ingressClass: nginx
+  ingressAnnotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  monitoring:
+    mode: app-interface
+    disabled: false
+  httpHeaders:
+    "X-Frame-Options": "DENY"
+    "X-XSS-Protection": "1; mode=block"
+    "X-Content-Type-Options": "nosniff"
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
+  defaultReplicas: 3
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  generateNavJSON: false
+  enablePushCache: true
+  enableAkamaiCacheBust: true
+  akamaiCacheBustImage: quay.io/cloudservices/akamai-cache-bust:latest
+  akamaiCacheBustURLs:
+    - https://console.redhat.com
+  akamaiSecretName: akamai-prod-credentials</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_developmentephemeral_environment"><a class="anchor" href="#_developmentephemeral_environment"></a>Development/Ephemeral Environment</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: dev-environment
+spec:
+  sso: https://sso.stage.redhat.com/auth
+  hostname: console.dev.redhat.com
+  ssl: false
+  monitoring:
+    mode: local
+    disabled: false
+  generateNavJSON: true
+  enablePushCache: false
+  defaultReplicas: 1
+  bundles:
+    - id: test
+      title: Development Bundle
+      description: "Testing and development"</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_environment_with_reverse_proxy_and_navigation"><a class="anchor" href="#_environment_with_reverse_proxy_and_navigation"></a>Environment with Reverse Proxy and Navigation</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: env-with-proxy
+spec:
+  sso: https://sso.stage.redhat.com/auth
+  ssoMapping:
+    "console.dev.redhat.com": "https://sso.redhat.com/auth"
+  hostname: console.stage.redhat.com
+  ssl: true
+  enablePushCache: true
+  reverseProxyImage: quay.io/redhat-services-prod/hcc-platex-services-tenant/frontend-asset-proxy:latest
+  reverseProxyHostname: reverse-proxy.cluster.local
+  reverseProxySPAEntrypointPath: /index.html
+  reverseProxyLogLevel: INFO
+  targetNamespaces:
+    - boot
+  monitoring:
+    mode: local
+    disabled: false
+  serviceCategories:
+    - id: automation
+      title: Automation
+      groups:
+        - id: ansible
+          title: Ansible
+        - id: rhel
+          title: Red Hat Enterprise Linux
+    - id: iam
+      title: Identity and Access Management
+      groups:
+        - id: iam
+          title: IAM
+  bundles:
+    - id: rhel
+      title: Red Hat Enterprise Linux
+    - id: ansible
+      title: Ansible
+    - id: settings
+      title: Settings
+  generateNavJSON: true</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_deploying_with_bonfire"><a class="anchor" href="#_deploying_with_bonfire"></a>Deploying with Bonfire</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>For ephemeral environments in consoledot clusters, use Bonfire to deploy:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash"># Reserve a namespace with bootstrapped FrontendEnvironment
+bonfire namespace reserve
+
+# Deploy your app with frontends enabled
+bonfire deploy myapp --frontends true -d 8h</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Bonfire automatically creates and configures the FrontendEnvironment for ephemeral deployments.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_troubleshooting"><a class="anchor" href="#_troubleshooting"></a>Troubleshooting</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_frontendenvironment_not_found"><a class="anchor" href="#_frontendenvironment_not_found"></a>FrontendEnvironment Not Found</h3>
+<div class="paragraph">
+<p><strong>Problem</strong>: Frontend resources can&#8217;t find the referenced environment.</p>
+</div>
+<div class="paragraph">
+<p><strong>Solution</strong>: Verify the FrontendEnvironment exists and the name matches:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">kubectl get frontendenvironments
+kubectl describe frontendenvironment &lt;environment-name&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Ensure your Frontend resource&#8217;s <code>spec.envName</code> field matches the FrontendEnvironment&#8217;s <code>metadata.name</code>.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_ssl_certificate_issues"><a class="anchor" href="#_ssl_certificate_issues"></a>SSL Certificate Issues</h3>
+<div class="paragraph">
+<p><strong>Problem</strong>: HTTPS connections fail or show certificate errors.</p>
+</div>
+<div class="paragraph">
+<p><strong>Solution</strong>:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Verify SSL is enabled: <code>spec.ssl: true</code></p>
+</li>
+<li>
+<p>Check certificate secrets exist in the namespace</p>
+</li>
+<li>
+<p>Review ingress annotations for cert-manager configuration</p>
+</li>
+<li>
+<p>Inspect pod logs for certificate mounting issues:</p>
+</li>
+</ol>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">kubectl logs -n &lt;namespace&gt; &lt;frontend-pod-name&gt;</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_monitoring_not_working"><a class="anchor" href="#_monitoring_not_working"></a>Monitoring Not Working</h3>
+<div class="paragraph">
+<p><strong>Problem</strong>: ServiceMonitor resources not created or metrics not scraped.</p>
+</div>
+<div class="paragraph">
+<p><strong>Solution</strong>:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Verify monitoring is enabled:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">spec:
+  monitoring:
+    disabled: false
+    mode: "local"  # or "app-interface"</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Check for ServiceMonitor resources:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">kubectl get servicemonitor -n &lt;namespace&gt;
+# or for app-interface mode
+kubectl get servicemonitor -n openshift-customer-monitoring</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Verify Prometheus has permissions to scrape the target namespace</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_navigation_not_appearing"><a class="anchor" href="#_navigation_not_appearing"></a>Navigation Not Appearing</h3>
+<div class="paragraph">
+<p><strong>Problem</strong>: Navigation bundles or service categories don&#8217;t appear in Chrome UI.</p>
+</div>
+<div class="paragraph">
+<p><strong>Solution</strong>:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Ensure <code>generateNavJSON: true</code> is set</p>
+</li>
+<li>
+<p>Verify bundles and serviceCategories are properly defined</p>
+</li>
+<li>
+<p>Check configmaps were generated:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">kubectl get configmap -n &lt;namespace&gt; | grep -E 'nav|fed-modules'</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Review Frontend resources to ensure they&#8217;re registered with the environment</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_reverse_proxy_not_working"><a class="anchor" href="#_reverse_proxy_not_working"></a>Reverse Proxy Not Working</h3>
+<div class="paragraph">
+<p><strong>Problem</strong>: Reverse proxy doesn&#8217;t serve assets or returns 404s.</p>
+</div>
+<div class="paragraph">
+<p><strong>Solution</strong>:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Verify all required fields are set:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>reverseProxyImage</code> (required to enable the feature)</p>
+</li>
+<li>
+<p><code>reverseProxyHostname</code></p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Check the reverse proxy deployment and service:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">kubectl get deployment -n &lt;namespace&gt; | grep reverse-proxy
+kubectl get service -n &lt;namespace&gt; | grep reverse-proxy</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Review reverse proxy logs:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">kubectl logs -n &lt;namespace&gt; deployment/reverse-proxy</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Verify S3/Minio credentials are configured correctly</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_resource_limits_causing_restarts"><a class="anchor" href="#_resource_limits_causing_restarts"></a>Resource Limits Causing Restarts</h3>
+<div class="paragraph">
+<p><strong>Problem</strong>: Frontend pods are OOMKilled or CPU throttled.</p>
+</div>
+<div class="paragraph">
+<p><strong>Solution</strong>:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Review current resource usage:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">kubectl top pods -n &lt;namespace&gt;</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Adjust limits in FrontendEnvironment:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">spec:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Individual Frontend resources can override these for specific applications</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next Steps</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>Learn about the <a href="api_reference.html" class="xref page">complete API reference</a></p>
+</li>
+<li>
+<p>Explore Frontend resource configuration (link to Frontend guide when available)</p>
+</li>
+<li>
+<p>Review the <a href="https://github.com/RedHatInsights/frontend-operator">Frontend Operator source code</a></p>
+</li>
+<li>
+<p>Understand <a href="https://github.com/RedHatInsights/bonfire">Bonfire</a> for ephemeral deployments</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>This page was built using the Antora default UI.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+</footer>
+<script id="site-script" src="../../ui/js/site.js" data-ui-root-path="../../ui"></script>
+<script async src="../../ui/js/vendor/highlight.js"></script>
+  </body>
+</html>
