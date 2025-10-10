@@ -1,8 +1,9 @@
-// Generated documentation. Please do not edit.
 :anchor_prefix: k8s-api
 
 [id="{p}-api-reference"]
 == API Reference
+
+Complete API reference for the Frontend Operator custom resources. For configuration guidance and examples, see the xref:frontendenvironment-guide.adoc[FrontendEnvironment Configuration Guide].
 
 .Packages
 - xref:{anchor_prefix}-cloud-redhat-com-v1alpha1[$$cloud.redhat.com/v1alpha1$$]
@@ -11,354 +12,33 @@
 [id="{anchor_prefix}-cloud-redhat-com-v1alpha1"]
 === cloud.redhat.com/v1alpha1
 
-Package v1alpha1 contains API Schema definitions for the  v1alpha1 API group
+Package v1alpha1 contains API Schema definitions for the v1alpha1 API group. These resources enable deployment and management of frontend applications in the Red Hat Insights (consoledot) ecosystem.
 
 .Resource Types
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle[$$Bundle$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment[$$FrontendEnvironment$$] - Environment-level configuration for frontend deployments
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend[$$Frontend$$] - Individual frontend application configuration
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle[$$Bundle$$] - Navigation bundle definitions
 - xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlelist[$$BundleList$$]
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend[$$Frontend$$]
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment[$$FrontendEnvironment$$]
 - xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentlist[$$FrontendEnvironmentList$$]
 - xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendlist[$$FrontendList$$]
 
 
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-apiinfo"]
-==== APIInfo 
-
-
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`versions`* __string array__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-analytics"]
-==== Analytics 
-
-
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule[$$FedModule$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`APIKey`* __string__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle"]
-==== Bundle 
-
-Bundle is the Schema for the Bundles API
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlelist[$$BundleList$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`apiVersion`* __string__ | `cloud.redhat.com/v1alpha1`
-| *`kind`* __string__ | `Bundle`
-| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta[$$ObjectMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
-
-| *`spec`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec[$$BundleSpec$$]__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlelist"]
-==== BundleList 
-
-BundleList contains a list of Bundle
-
-
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`apiVersion`* __string__ | `cloud.redhat.com/v1alpha1`
-| *`kind`* __string__ | `BundleList`
-| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta[$$ListMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
-
-| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle[$$Bundle$$] array__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem"]
-==== BundleNavItem 
-
-Deprecated: Use ChromeNavItem instead, has to be switched for the updated reconciliation, needs to exist to prevent breaking changes for the Fronted resources and legacy NavItems attribute
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`title`* __string__ | 
-| *`groupId`* __string__ | 
-| *`icon`* __string__ | 
-| *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem[$$LeafBundleNavItem$$] array__ | 
-| *`appId`* __string__ | 
-| *`href`* __string__ | 
-| *`product`* __string__ | 
-| *`isExternal`* __boolean__ | 
-| *`filterable`* __boolean__ | 
-| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$] array__ | 
-| *`routes`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute[$$EmbeddedRoute$$] array__ | 
-| *`expandable`* __boolean__ | 
-| *`dynamicNav`* __string__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission"]
-==== BundlePermission 
-
-
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$]
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem[$$LeafBundleNavItem$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`method`* __string__ | 
-| *`args`* __BundlePermissionArg array__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlesegment"]
-==== BundleSegment 
-
-
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`segmentId`* __string__ | 
-| *`bundleId`* __string__ | Id of the bundle to which the segment should be injected
-| *`position`* __integer__ | A position of the segment within the bundle 0 is the first position The position "steps" should be at least 100 to make sure there is enough space in case some segments should be injected between existing ones
-| *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$]__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec"]
-==== BundleSpec 
-
-BundleSpec defines the desired state of Bundle
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle[$$Bundle$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`id`* __string__ | Foo is an example field of Bundle. Edit Bundle_types.go to remove/update
-| *`title`* __string__ | 
-| *`appList`* __string array__ | 
-| *`envName`* __string__ | 
-| *`extraNavItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem[$$ExtraNavItem$$] array__ | 
-| *`customNav`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$] array__ | 
-|===
-
-
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem"]
-==== ChromeNavItem 
-
-
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlesegment[$$BundleSegment$$]
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec[$$BundleSpec$$]
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$]
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-computedbundle[$$ComputedBundle$$]
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem[$$ExtraNavItem$$]
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendbundlesgenerated[$$FrontendBundlesGenerated$$]
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-navigationsegment[$$NavigationSegment$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`isHidden`* __boolean__ | 
-| *`expandable`* __boolean__ | 
-| *`href`* __string__ | 
-| *`appId`* __string__ | 
-| *`isExternal`* __boolean__ | 
-| *`title`* __string__ | 
-| *`groupId`* __string__ | 
-| *`id`* __string__ | 
-| *`product`* __string__ | 
-| *`notifier`* __string__ | 
-| *`icon`* __string__ | 
-| *`isBeta`* __boolean__ | 
-| *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$] array__ | kubebuilder struggles validating recursive fields, it has to be helped a bit
-| *`routes`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$] array__ | 
-| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-permission[$$Permission$$] array__ | 
-| *`position`* __integer__ | Position argument inherited from the segment, needed for smooth transition between old a new system and for proper developer experience
-| *`segmentRef`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-segmentref[$$SegmentRef$$]__ | 
-| *`bundleSegmentRef`* __string__ | 
-| *`frontendRef`* __string__ | 
-|===
-
-
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute"]
-==== EmbeddedRoute 
-
-EmbeddedRoutes allow deeply nested navs to have support for routes
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$]
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem[$$LeafBundleNavItem$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`title`* __string__ | 
-| *`appId`* __string__ | 
-| *`href`* __string__ | 
-| *`product`* __string__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem"]
-==== ExtraNavItem 
-
-
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec[$$BundleSpec$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`name`* __string__ | 
-| *`navItem`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$]__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule"]
-==== FedModule 
-
-
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`manifestLocation`* __string__ | 
-| *`modules`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-module[$$Module$$] array__ | 
-| *`moduleID`* __string__ | 
-| *`config`* __JSON__ | 
-| *`moduleConfig`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-moduleconfig[$$ModuleConfig$$]__ | 
-| *`fullProfile`* __boolean__ | 
-| *`defaultDocumentTitle`* __string__ | 
-| *`isFedramp`* __boolean__ | 
-| *`analytics`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-analytics[$$Analytics$$]__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend"]
-==== Frontend 
-
-Frontend is the Schema for the frontends API
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendlist[$$FrontendList$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`apiVersion`* __string__ | `cloud.redhat.com/v1alpha1`
-| *`kind`* __string__ | `Frontend`
-| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta[$$ObjectMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
-
-| *`spec`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendbundles"]
-==== FrontendBundles 
-
-FrontendBundles defines the bundles specific to an environment that will be used to construct navigation
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentspec[$$FrontendEnvironmentSpec$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`id`* __string__ | 
-| *`title`* __string__ | 
-| *`description`* __string__ | 
-|===
-
-
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontenddeployments"]
-==== FrontendDeployments 
-
-
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendstatus[$$FrontendStatus$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`managedDeployments`* __integer__ | 
-| *`readyDeployments`* __integer__ | 
-|===
-
+'''
 
 [id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment"]
-==== FrontendEnvironment 
+==== FrontendEnvironment
 
-FrontendEnvironment is the Schema for the FrontendEnvironments API
+FrontendEnvironment is the primary resource for configuring shared infrastructure and settings across multiple frontend applications. It defines environment-level configuration including authentication, networking, monitoring, and navigation structure.
+
+*Use this resource to:*
+
+* Set up deployment environments (dev, staging, production)
+* Configure SSO authentication for all frontends
+* Define networking, SSL/TLS, and ingress settings
+* Manage navigation bundles and service categories
+* Set environment-wide resource limits and defaults
+
+For detailed configuration guidance, see the xref:frontendenvironment-guide.adoc[FrontendEnvironment Configuration Guide].
 
 .Appears In:
 ****
@@ -370,34 +50,16 @@ FrontendEnvironment is the Schema for the FrontendEnvironments API
 | Field | Description
 | *`apiVersion`* __string__ | `cloud.redhat.com/v1alpha1`
 | *`kind`* __string__ | `FrontendEnvironment`
-| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta[$$ObjectMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
+| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta[$$ObjectMeta$$]__ | Standard Kubernetes metadata. The `name` field is referenced by Frontend resources via `spec.envName`.
 
-| *`spec`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentspec[$$FrontendEnvironmentSpec$$]__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentlist"]
-==== FrontendEnvironmentList 
-
-FrontendEnvironmentList contains a list of FrontendEnvironment
-
-
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`apiVersion`* __string__ | `cloud.redhat.com/v1alpha1`
-| *`kind`* __string__ | `FrontendEnvironmentList`
-| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta[$$ListMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
-
-| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment[$$FrontendEnvironment$$] array__ | 
+| *`spec`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentspec[$$FrontendEnvironmentSpec$$]__ | Defines the desired state of the FrontendEnvironment. See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentspec[$$FrontendEnvironmentSpec$$] for all available fields.
 |===
 
 
 [id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentspec"]
-==== FrontendEnvironmentSpec 
+==== FrontendEnvironmentSpec
 
-FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
+FrontendEnvironmentSpec defines the desired state of a FrontendEnvironment. This is where all environment-level configuration is specified.
 
 .Appears In:
 ****
@@ -407,72 +69,236 @@ FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
-| *`sso`* __string__ | Foo is an example field of FrontendEnvironment. Edit FrontendEnvironment_types.go to remove/update
-| *`ingressClass`* __string__ | Ingress class
-| *`ingressAnnotations`* __object (keys:string, values:string)__ | Ingress annotations These annotations will be applied to the ingress objects created by the frontend
-| *`hostname`* __string__ | Hostname
-| *`whitelist`* __string array__ | Whitelist CIDRs
-| *`monitoring`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-monitoringconfig[$$MonitoringConfig$$]__ | MonitorMode determines where a ServiceMonitor object will be placed local will add it to the frontend's namespace app-interface will add it to "openshift-customer-monitoring"
-| *`ssl`* __boolean__ | SSL mode requests SSL from the services in openshift and k8s and then applies them to the pod, the route is also set to reencrypt in the case of OpenShift
-| *`generateNavJSON`* __boolean__ | GenerateNavJSON determines if the nav json configmap parts should be generated for the bundles. We want to do do this in epehemeral environments but not in production
-| *`enableAkamaiCacheBust`* __boolean__ | Enable Akamai Cache Bust
-| *`akamaiCacheBustImage`* __string__ | Set Akamai Cache Bust Image
-| *`akamaiCacheBustURL`* __string__ | Deprecated: Users should move to AkamaiCacheBustURLs Preserving for backwards compatibility
-| *`akamaiCacheBustURLs`* __string array__ | Set Akamai Cache Bust URL that the files will hang off of
-| *`akamaiSecretName`* __string__ | The name of the secret we will use to get the akamai credentials
-| *`targetNamespaces`* __string array__ | List of namespaces that should receive a copy of the frontend configuration as a config map By configurations we mean the fed-modules.json, navigation files, etc.
-| *`serviceCategories`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendservicecategory[$$FrontendServiceCategory$$]__ | For the ChromeUI to render additional global components
-| *`httpHeaders`* __object (keys:string, values:string)__ | Custom HTTP Headers These populate an ENV var that is then added into the caddy config as a header block
-| *`overwriteCaddyConfig`* __boolean__ | OverwriteCaddyConfig determines if the operator should overwrite frontend container Caddyfiles with a common core Caddyfile
-| *`enablePushCache`* __boolean__ | Enable Valpop Push Cache
-| *`defaultReplicas`* __integer__ | 
-| *`bundles`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendbundles[$$FrontendBundles$$]__ | For the ChromeUI to render navigation bundles
-| *`requests`* __object (keys:link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#resourcename-v1-core[$$ResourceName$$], values:Quantity)__ | 
-| *`limits`* __object (keys:link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#resourcename-v1-core[$$ResourceName$$], values:Quantity)__ | 
+
+| *`sso`* __string__ |
+**Required.** SSO authentication endpoint URL. All frontends in this environment will use this SSO server for authentication.
+
+*Example:* `https://sso.stage.redhat.com/auth`
+
+See also: `ssoMapping` for multi-hostname SSO configuration.
+
+| *`ssoMapping`* __object (keys:string, values:string)__ |
+Optional mapping of hostname patterns to SSO URLs. Use this when different hostnames need different SSO endpoints (e.g., console.dev vs console.stage).
+
+*Example:*
+[source,yaml]
+----
+ssoMapping:
+  "console.dev.redhat.com": "https://sso.redhat.com/auth"
+  "console.stage.openshiftusgov.com": "https://sso.stage.openshiftusgov.com"
+----
+
+The operator uses the mapped SSO URL when the hostname matches; otherwise falls back to the `sso` field value.
+
+| *`hostname`* __string__ |
+Hostname for the environment. This is used for ingress configuration and routing.
+
+*Example:* `console.stage.redhat.com`
+
+| *`ssl`* __boolean__ |
+Enable SSL/TLS for frontend applications. When `true`:
+
+* Requests SSL certificates from Kubernetes/OpenShift services
+* Applies certificates to pods
+* Configures routes with re-encryption (on OpenShift)
+
+*Default:* `false`
+
+*Use in production:* Always set to `true` for production environments.
+
+| *`ingressClass`* __string__ |
+Kubernetes ingress class to use for all ingress objects created in this environment.
+
+*Common values:* `nginx`, `traefik`, `openshift-default`
+
+If not specified, uses the cluster's default ingress class.
+
+| *`ingressAnnotations`* __object (keys:string, values:string)__ |
+Annotations to apply to all ingress objects created by frontends in this environment. Commonly used for SSL certificate management, authentication, and ingress controller-specific settings.
+
+*Example:*
+[source,yaml]
+----
+ingressAnnotations:
+  cert-manager.io/cluster-issuer: letsencrypt-prod
+  nginx.ingress.kubernetes.io/ssl-redirect: "true"
+----
+
+| *`whitelist`* __string array__ |
+CIDR blocks for network-level access control. Traffic from addresses outside these ranges will be blocked at the ingress level.
+
+*Example:*
+[source,yaml]
+----
+whitelist:
+  - 10.0.0.0/8
+  - 192.168.1.0/24
+  - 172.16.0.0/12
+----
+
+*Use in production:* Carefully configure to avoid blocking legitimate traffic.
+
+| *`httpHeaders`* __object (keys:string, values:string)__ |
+Custom HTTP headers to add to all frontend responses. Typically used for security headers like CSP, HSTS, X-Frame-Options, etc.
+
+*Example:*
+[source,yaml]
+----
+httpHeaders:
+  "X-Frame-Options": "DENY"
+  "X-Content-Type-Options": "nosniff"
+  "Strict-Transport-Security": "max-age=31536000"
+----
+
+These are injected into the Caddy configuration as a header block.
+
+| *`monitoring`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-monitoringconfig[$$MonitoringConfig$$]__ |
+Monitoring and ServiceMonitor configuration for Prometheus metrics collection.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-monitoringconfig[$$MonitoringConfig$$] for details.
+
+| *`defaultReplicas`* __integer__ |
+Default number of pod replicas for all frontends in this environment. Individual Frontend resources can override this value.
+
+*Example:* `3` for production, `1` for development
+
+| *`requests`* __object (keys:link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#resourcename-v1-core[$$ResourceName$$], values:Quantity)__ |
+Default resource requests for all frontend pods. Individual Frontend resources can override these values.
+
+*Example:*
+[source,yaml]
+----
+requests:
+  cpu: 100m
+  memory: 256Mi
+----
+
+| *`limits`* __object (keys:link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#resourcename-v1-core[$$ResourceName$$], values:Quantity)__ |
+Default resource limits for all frontend pods. Individual Frontend resources can override these values.
+
+*Example:*
+[source,yaml]
+----
+limits:
+  cpu: 500m
+  memory: 512Mi
+----
+
+*Best practice:* Always set limits to prevent resource exhaustion.
+
+| *`generateNavJSON`* __boolean__ |
+Generate navigation JSON configmaps for bundles automatically.
+
+*When to use:*
+
+* Set `true` for ephemeral and development environments
+* Set `false` for production (navigation managed separately)
+
+*Default:* `false`
+
+| *`bundles`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendbundles[$$FrontendBundles$$] array__ |
+Navigation bundles for Chrome UI. Bundles organize navigation items into logical groupings.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendbundles[$$FrontendBundles$$] for structure.
+
+See also: xref:frontendenvironment-guide.adoc#_bundles[Bundles Configuration Guide]
+
+| *`serviceCategories`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendservicecategory[$$FrontendServiceCategory$$] array__ |
+Service categories and groups for the Chrome UI service dropdown. Frontends can register service tiles under these categories.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendservicecategory[$$FrontendServiceCategory$$] for structure.
+
+See also: xref:frontendenvironment-guide.adoc#_service_categories[Service Categories Configuration Guide]
+
+| *`targetNamespaces`* __string array__ |
+List of namespaces that should receive copies of frontend configuration configmaps (fed-modules.json, navigation files, etc.).
+
+*Common values:* `["boot", "chrome-namespace"]`
+
+*Use case:* Share configuration with centralized services like Chrome or shared configuration consumers.
+
+| *`overwriteCaddyConfig`* __boolean__ |
+If `true`, the operator overwrites frontend container Caddyfiles with a common core Caddyfile.
+
+*Default:* `false`
+
+*Use with caution:* This replaces any custom Caddy configuration in frontend images.
+
+| *`enablePushCache`* __boolean__ |
+Enable the push cache (valpop) container for uploading frontend assets to object storage.
+
+*When to use:* Enable for environments using object storage-based asset serving.
+
+*Note:* Individual Frontend resources must also set `pushCacheEnabled: true` to participate.
+
+| *`reverseProxyImage`* __string__ |
+Container image for the reverse proxy. Setting this enables the reverse proxy feature for serving frontend assets from object storage.
+
+*Example:* `quay.io/redhat-services-prod/hcc-platex-services-tenant/frontend-asset-proxy:latest`
+
+*Requires:* `reverseProxyHostname` must also be set.
+
+See also: xref:frontendenvironment-guide.adoc#_reverse_proxy_configuration[Reverse Proxy Configuration Guide]
+
+| *`reverseProxyHostname`* __string__ |
+Hostname for the reverse proxy ingress.
+
+*Example:* `reverse-proxy.cluster.local`
+
+*Required when:* `reverseProxyImage` is set.
+
+| *`reverseProxySPAEntrypointPath`* __string__ |
+Path to the Single Page Application entrypoint for the reverse proxy. Used for SPA routing support.
+
+*Default:* `/index.html`
+
+| *`reverseProxyLogLevel`* __string__ |
+Log verbosity for the reverse proxy container.
+
+*Common values:* `DEBUG`, `INFO`, `WARN`, `ERROR`
+
+*Default:* `DEBUG`
+
+| *`enableAkamaiCacheBust`* __boolean__ |
+Enable Akamai CDN cache busting. When enabled, the operator creates jobs to invalidate Akamai cache when frontend assets change.
+
+*Requires:* `akamaiSecretName` must be set with valid Akamai credentials.
+
+See also: xref:frontendenvironment-guide.adoc#_akamai_cache_busting[Akamai Cache Busting Configuration Guide]
+
+| *`akamaiCacheBustImage`* __string__ |
+Container image for Akamai cache busting jobs.
+
+*Example:* `quay.io/cloudservices/akamai-cache-bust:latest`
+
+| *`akamaiCacheBustURL`* __string__ |
+**Deprecated.** Use `akamaiCacheBustURLs` instead. Preserved for backwards compatibility.
+
+| *`akamaiCacheBustURLs`* __string array__ |
+List of URLs where Akamai cache should be invalidated.
+
+*Example:*
+[source,yaml]
+----
+akamaiCacheBustURLs:
+  - https://console.redhat.com
+  - https://console.stage.redhat.com
+----
+
+| *`akamaiSecretName`* __string__ |
+Name of the Kubernetes secret containing Akamai credentials. Required when `enableAkamaiCacheBust: true`.
+
+*Secret format:* The secret should contain Akamai API credentials.
+
 |===
 
 
+'''
 
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-monitoringconfig"]
+==== MonitoringConfig
 
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendinfo"]
-==== FrontendInfo 
-
-
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`paths`* __string array__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendlist"]
-==== FrontendList 
-
-FrontendList contains a list of Frontend
-
-
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`apiVersion`* __string__ | `cloud.redhat.com/v1alpha1`
-| *`kind`* __string__ | `FrontendList`
-| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta[$$ListMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
-
-| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend[$$Frontend$$] array__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendservicecategory"]
-==== FrontendServiceCategory 
-
-FrontendServiceCategory defines the category to which service can inject ServiceTiles Chroming UI will use this to render the service dropdown component
+Configuration for Prometheus ServiceMonitor resources.
 
 .Appears In:
 ****
@@ -482,18 +308,92 @@ FrontendServiceCategory defines the category to which service can inject Service
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
-| *`id`* __string__ | 
-| *`title`* __string__ | 
-| *`groups`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendservicecategorygroup[$$FrontendServiceCategoryGroup$$] array__ | 
+
+| *`mode`* __string__ |
+**Required when monitoring is enabled.** Determines where ServiceMonitor resources are created.
+
+*Valid values:*
+
+* `local` - Creates ServiceMonitor in the frontend's namespace (for namespace-scoped Prometheus)
+* `app-interface` - Creates ServiceMonitor in `openshift-customer-monitoring` namespace (for centralized monitoring)
+
+*Validation:* Must be one of `local` or `app-interface`.
+
+| *`disabled`* __boolean__ |
+If `true`, disables ServiceMonitor creation entirely.
+
+*Default:* `false`
+
+*When to disable:* Environments where Prometheus monitoring is not available or not desired.
 |===
 
 
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendbundles"]
+==== FrontendBundles
+
+Defines navigation bundles for the Chrome UI. Bundles organize frontend applications into logical groupings in the navigation.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentspec[$$FrontendEnvironmentSpec$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`id`* __string__ |
+**Required.** Unique identifier for the bundle. Used by Frontend resources to register navigation items.
+
+*Example:* `rhel`, `ansible`, `settings`
+
+| *`title`* __string__ |
+**Required.** Display title for the bundle in the Chrome UI.
+
+*Example:* `Red Hat Enterprise Linux`, `Ansible Automation Platform`
+
+| *`description`* __string__ |
+Optional description of the bundle. Provides additional context about the bundle's purpose.
+
+*Example:* `RHEL management and automation tools`
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendservicecategory"]
+==== FrontendServiceCategory
+
+Defines service categories for the Chrome UI service dropdown. Categories organize service tiles that frontends can register.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentspec[$$FrontendEnvironmentSpec$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`id`* __string__ |
+**Required.** Unique identifier for the service category.
+
+*Example:* `automation`, `iam`, `observability`
+
+| *`title`* __string__ |
+**Required.** Display title for the category in the Chrome UI.
+
+*Example:* `Automation`, `Identity and Access Management`
+
+| *`groups`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendservicecategorygroup[$$FrontendServiceCategoryGroup$$] array__ |
+**Required.** List of groups within this category. Must contain at least one group.
+
+*Validation:* Minimum of 1 group required.
+|===
 
 
 [id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendservicecategorygroup"]
-==== FrontendServiceCategoryGroup 
+==== FrontendServiceCategoryGroup
 
-
+Defines a group within a service category. Service tiles are organized under groups.
 
 .Appears In:
 ****
@@ -503,34 +403,69 @@ FrontendServiceCategory defines the category to which service can inject Service
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
-| *`id`* __string__ | 
-| *`title`* __string__ | 
+
+| *`id`* __string__ |
+**Required.** Unique identifier for the group.
+
+*Example:* `ansible`, `rhel`
+
+| *`title`* __string__ |
+**Required.** Display title for the group.
+
+*Example:* `Ansible`, `Red Hat Enterprise Linux`
 |===
 
 
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendservicecategorygroupgenerated"]
-==== FrontendServiceCategoryGroupGenerated 
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentlist"]
+==== FrontendEnvironmentList
+
+FrontendEnvironmentList contains a list of FrontendEnvironment resources. Returned by Kubernetes API list operations.
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`apiVersion`* __string__ | `cloud.redhat.com/v1alpha1`
+| *`kind`* __string__ | `FrontendEnvironmentList`
+| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta[$$ListMeta$$]__ | Standard Kubernetes list metadata.
+
+| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironment[$$FrontendEnvironment$$] array__ | List of FrontendEnvironment resources.
+|===
 
 
+'''
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend"]
+==== Frontend
+
+Frontend is the Schema for individual frontend application deployments. Each Frontend resource represents a single frontend application and references a FrontendEnvironment for shared configuration.
+
+*Use this resource to:*
+
+* Deploy a frontend application (React, Angular, Vue, etc.)
+* Configure module federation and navigation
+* Define service tiles and search entries
+* Set application-specific replicas and resources
 
 .Appears In:
 ****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendservicecategorygenerated[$$FrontendServiceCategoryGenerated$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendlist[$$FrontendList$$]
 ****
 
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
-| *`id`* __string__ | 
-| *`title`* __string__ | 
-| *`tiles`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicetile[$$ServiceTile$$]__ | 
+| *`apiVersion`* __string__ | `cloud.redhat.com/v1alpha1`
+| *`kind`* __string__ | `Frontend`
+| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta[$$ObjectMeta$$]__ | Standard Kubernetes metadata. The `name` typically matches the frontend application name.
+
+| *`spec`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]__ | Defines the desired state of the Frontend application. See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$] for all available fields.
 |===
 
 
 [id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec"]
-==== FrontendSpec 
+==== FrontendSpec
 
-FrontendSpec defines the desired state of Frontend
+FrontendSpec defines the desired state of a Frontend application.
 
 .Appears In:
 ****
@@ -540,120 +475,123 @@ FrontendSpec defines the desired state of Frontend
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
-| *`disabled`* __boolean__ | 
-| *`envName`* __string__ | 
-| *`title`* __string__ | 
-| *`deploymentRepo`* __string__ | 
-| *`API`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-apiinfo[$$APIInfo$$]__ | 
-| *`frontend`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendinfo[$$FrontendInfo$$]__ | 
-| *`image`* __string__ | 
-| *`service`* __string__ | 
-| *`serviceMonitor`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicemonitorconfig[$$ServiceMonitorConfig$$]__ | 
-| *`module`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule[$$FedModule$$]__ | 
-| *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$] array__ | 
-| *`bundleSegments`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlesegment[$$BundleSegment$$] array__ | navigation segments for the frontend
-| *`navigationSegments`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-navigationsegment[$$NavigationSegment$$] array__ | 
-| *`assetsPrefix`* __string__ | 
-| *`akamaiCacheBustDisable`* __boolean__ | Akamai cache bust opt-out
-| *`akamaiCacheBustPaths`* __string array__ | Files to cache bust
-| *`searchEntries`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-searchentry[$$SearchEntry$$] array__ | The search index partials for the resource
-| *`serviceTiles`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicetile[$$ServiceTile$$] array__ | Data for the all services dropdown
-| *`widgetRegistry`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-widgetentry[$$WidgetEntry$$] array__ | Data for the available widgets for the resource
-| *`replicas`* __integer__ | 
-| *`feoConfigEnabled`* __boolean__ | Injects configuration from application when enabled
+
+| *`disabled`* __boolean__ |
+If `true`, the operator will not reconcile this Frontend resource. Use to temporarily disable a frontend without deleting the resource.
+
+*Default:* `false`
+
+| *`envName`* __string__ |
+**Required.** Name of the FrontendEnvironment this frontend belongs to. Must match the `metadata.name` of an existing FrontendEnvironment resource.
+
+*Example:* `production-environment`
+
+| *`title`* __string__ |
+**Required.** Human-readable title for the frontend application.
+
+*Example:* `Ansible Automation Platform`, `Inventory Management`
+
+| *`deploymentRepo`* __string__ |
+**Required.** Git repository containing the frontend application deployment configuration.
+
+*Example:* `https://github.com/RedHatInsights/frontend-deployments`
+
+| *`image`* __string__ |
+Container image for the frontend application. If not specified, the operator may derive this from other configuration.
+
+*Example:* `quay.io/cloudservices/insights-inventory-frontend:latest`
+
+| *`service`* __string__ |
+Service name for the frontend. Used for internal service discovery and networking.
+
+| *`replicas`* __integer__ |
+Number of pod replicas for this frontend. Overrides the FrontendEnvironment's `defaultReplicas`.
+
+*Example:* `3` for production, `1` for development
+
+| *`frontend`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendinfo[$$FrontendInfo$$]__ |
+Frontend routing paths. Defines which URL paths this frontend handles.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendinfo[$$FrontendInfo$$] for structure.
+
+| *`API`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-apiinfo[$$APIInfo$$]__ |
+API version and specification information for the frontend.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-apiinfo[$$APIInfo$$] for structure.
+
+| *`module`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule[$$FedModule$$]__ |
+Module federation configuration for this frontend. Defines how the frontend integrates with the Chrome framework.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule[$$FedModule$$] for structure.
+
+| *`serviceMonitor`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicemonitorconfig[$$ServiceMonitorConfig$$]__ |
+Override ServiceMonitor configuration for this specific frontend.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicemonitorconfig[$$ServiceMonitorConfig$$] for structure.
+
+| *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$] array__ |
+**Deprecated.** Legacy navigation items. Use `bundleSegments` or `navigationSegments` instead.
+
+| *`bundleSegments`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlesegment[$$BundleSegment$$] array__ |
+Navigation segments to inject into bundles defined in the FrontendEnvironment.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlesegment[$$BundleSegment$$] for structure.
+
+| *`navigationSegments`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-navigationsegment[$$NavigationSegment$$] array__ |
+Standalone navigation segments for this frontend.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-navigationsegment[$$NavigationSegment$$] for structure.
+
+| *`serviceTiles`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicetile[$$ServiceTile$$] array__ |
+Service tiles to register in the Chrome UI service dropdown. These appear under the categories defined in FrontendEnvironment.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicetile[$$ServiceTile$$] for structure.
+
+| *`searchEntries`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-searchentry[$$SearchEntry$$] array__ |
+Search index entries for this frontend. Makes frontend pages discoverable in Chrome's global search.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-searchentry[$$SearchEntry$$] for structure.
+
+| *`widgetRegistry`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-widgetentry[$$WidgetEntry$$] array__ |
+**Note:** Field name in spec is `widgetRegistry` but it's documented as `WidgetEntry`. Widget registry entries for dashboard widgets provided by this frontend.
+
+| *`assetsPrefix`* __string__ |
+Prefix path for frontend assets. Used when assets are served from a CDN or non-root path.
+
+*Example:* `/apps/inventory`
+
+| *`akamaiCacheBustDisable`* __boolean__ |
+Opt-out of Akamai cache busting for this frontend, even if enabled at the environment level.
+
+*Default:* `false`
+
+| *`akamaiCacheBustPaths`* __string array__ |
+Specific file paths to cache bust for this frontend.
+
+*Example:*
+[source,yaml]
+----
+akamaiCacheBustPaths:
+  - /apps/inventory/index.html
+  - /apps/inventory/fed-mods.json
+----
+
+| *`feoConfigEnabled`* __boolean__ |
+If `true`, injects configuration from the application into the frontend deployment.
+
+*Default:* `false`
+
+| *`pushCacheEnabled`* __boolean__ |
+If `true` and the FrontendEnvironment has `enablePushCache: true`, this frontend participates in push cache operations.
+
+*Default:* `false`
 |===
 
 
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendinfo"]
+==== FrontendInfo
 
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem"]
-==== LeafBundleNavItem 
-
-
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`title`* __string__ | 
-| *`groupId`* __string__ | 
-| *`appId`* __string__ | 
-| *`href`* __string__ | 
-| *`product`* __string__ | 
-| *`isExternal`* __boolean__ | 
-| *`filterable`* __boolean__ | 
-| *`expandable`* __boolean__ | 
-| *`notifier`* __string__ | 
-| *`routes`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute[$$EmbeddedRoute$$] array__ | 
-| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$] array__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-module"]
-==== Module 
-
-
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule[$$FedModule$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`id`* __string__ | 
-| *`module`* __string__ | 
-| *`routes`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-route[$$Route$$] array__ | 
-| *`dependencies`* __string array__ | 
-| *`optionalDependencies`* __string array__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-moduleconfig"]
-==== ModuleConfig 
-
-
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule[$$FedModule$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`supportCaseData`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-supportcasedata[$$SupportCaseData$$]__ | 
-| *`ssoScopes`* __string array__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-monitoringconfig"]
-==== MonitoringConfig 
-
-
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendenvironmentspec[$$FrontendEnvironmentSpec$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`mode`* __string__ | 
-| *`disabled`* __boolean__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-navigationsegment"]
-==== NavigationSegment 
-
-
+Defines the URL paths that this frontend application handles.
 
 .Appears In:
 ****
@@ -663,15 +601,268 @@ FrontendSpec defines the desired state of Frontend
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
-| *`segmentId`* __string__ | 
-| *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$]__ | 
+
+| *`paths`* __string array__ |
+**Required.** List of URL paths this frontend serves. Used for routing configuration.
+
+*Example:*
+[source,yaml]
+----
+paths:
+  - /insights/inventory
+  - /ansible/inventory
+----
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-apiinfo"]
+==== APIInfo
+
+API version information for the frontend application.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`versions`* __string array__ |
+List of API versions supported by this frontend.
+
+*Example:* `["v1", "v2"]`
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule"]
+==== FedModule
+
+Module federation configuration for integrating with the Chrome framework. Defines how this frontend exposes federated modules and routes.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`manifestLocation`* __string__ |
+**Required.** URL or path to the module federation manifest file (fed-mods.json).
+
+*Example:* `/apps/inventory/fed-mods.json`
+
+| *`modules`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-module[$$Module$$] array__ |
+List of federated modules exposed by this frontend.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-module[$$Module$$] for structure.
+
+| *`moduleID`* __string__ |
+Unique identifier for this federated module.
+
+*Example:* `inventory`
+
+| *`config`* __JSON__ |
+Arbitrary JSON configuration for the module. Passed to the frontend at runtime.
+
+| *`moduleConfig`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-moduleconfig[$$ModuleConfig$$]__ |
+Structured module configuration.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-moduleconfig[$$ModuleConfig$$] for structure.
+
+| *`fullProfile`* __boolean__ |
+If `true`, requires full user profile data to be loaded.
+
+| *`defaultDocumentTitle`* __string__ |
+Default document title for pages in this module.
+
+*Example:* `Inventory Management`
+
+| *`isFedramp`* __boolean__ |
+If `true`, indicates this module is FedRAMP compliant.
+
+| *`analytics`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-analytics[$$Analytics$$]__ |
+Analytics configuration for the module.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-analytics[$$Analytics$$] for structure.
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-module"]
+==== Module
+
+Defines a federated module and its routes.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule[$$FedModule$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`id`* __string__ |
+**Required.** Unique identifier for the module.
+
+| *`module`* __string__ |
+**Required.** Module name as exposed by webpack module federation.
+
+*Example:* `./RootApp`
+
+| *`routes`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-route[$$Route$$] array__ |
+**Required.** Routes handled by this module.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-route[$$Route$$] for structure.
+
+| *`dependencies`* __string array__ |
+List of module dependencies. Other modules that must be loaded before this one.
+
+| *`optionalDependencies`* __string array__ |
+List of optional module dependencies. These will be loaded if available but won't block module initialization.
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-route"]
+==== Route
+
+Defines a route within a federated module.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-module[$$Module$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`pathname`* __string__ |
+**Required.** URL pathname for this route.
+
+*Example:* `/insights/inventory/hosts`
+
+| *`dynamic`* __boolean__ |
+If `true`, this is a dynamic route that may have path parameters.
+
+| *`exact`* __boolean__ |
+If `true`, the pathname must match exactly (no prefix matching).
+
+| *`props`* __JSON__ |
+Arbitrary JSON properties passed to the route component.
+
+| *`fullProfile`* __boolean__ |
+If `true`, requires full user profile for this route.
+
+| *`isFedramp`* __boolean__ |
+If `true`, this route is FedRAMP compliant.
+
+| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-permission[$$Permission$$] array__ |
+RBAC permissions required to access this route.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-permission[$$Permission$$] for structure.
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicetile"]
+==== ServiceTile
+
+Defines a service tile in the Chrome UI service dropdown.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`section`* __string__ |
+**Required.** Service category ID. Must match a category defined in FrontendEnvironment `serviceCategories`.
+
+*Example:* `automation`
+
+| *`group`* __string__ |
+**Required.** Service group ID within the category.
+
+*Example:* `ansible`
+
+| *`id`* __string__ |
+**Required.** Unique identifier for this service tile.
+
+| *`href`* __string__ |
+**Required.** URL for the service.
+
+*Example:* `/ansible/overview`
+
+| *`title`* __string__ |
+**Required.** Display title for the service tile.
+
+*Example:* `Automation Analytics`
+
+| *`description`* __string__ |
+**Required.** Description of the service.
+
+| *`icon`* __string__ |
+**Required.** Icon identifier for the service tile.
+
+| *`isExternal`* __boolean__ |
+If `true`, indicates this is an external link.
+
+| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-permission[$$Permission$$] array__ |
+RBAC permissions required to see this service tile.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-permission[$$Permission$$] for structure.
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-searchentry"]
+==== SearchEntry
+
+Defines an entry in the Chrome global search index.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`id`* __string__ |
+**Required.** Unique identifier for the search entry.
+
+| *`href`* __string__ |
+**Required.** URL for the search result.
+
+| *`title`* __string__ |
+**Required.** Display title for the search result.
+
+| *`description`* __string__ |
+**Required.** Description shown in search results.
+
+| *`alt_title`* __string array__ |
+Alternative titles for improved searchability.
+
+| *`isExternal`* __boolean__ |
+If `true`, indicates this is an external link.
+
+| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-permission[$$Permission$$] array__ |
+RBAC permissions required to see this search entry.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-permission[$$Permission$$] for structure.
 |===
 
 
 [id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-permission"]
-==== Permission 
+==== Permission
 
-
+Defines RBAC permission requirements.
 
 .Appears In:
 ****
@@ -679,11 +870,601 @@ FrontendSpec defines the desired state of Frontend
 - xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-route[$$Route$$]
 - xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-searchentry[$$SearchEntry$$]
 - xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicetile[$$ServiceTile$$]
-- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-widgetconfig[$$WidgetConfig$$]
 ****
 
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
-| *`method`* __string__ | 
-| *`apps`* __
+
+| *`method`* __string__ |
+**Required.** Permission check method name.
+
+*Example:* `hasPermission`, `isOrgAdmin`
+
+| *`apps`* __string array__ |
+List of application identifiers for permission scoping.
+
+| *`args`* __JSON__ |
+Arguments passed to the permission check method. Format depends on the method.
+
+*Example:* `["inventory:hosts:read"]`
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlesegment"]
+==== BundleSegment
+
+Defines a navigation segment to inject into a bundle.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`segmentId`* __string__ |
+**Required.** Unique identifier for this segment.
+
+| *`bundleId`* __string__ |
+**Required.** ID of the bundle to inject this segment into. Must match a bundle defined in FrontendEnvironment.
+
+| *`position`* __integer__ |
+**Required.** Position within the bundle where this segment should appear. `0` is the first position.
+
+*Best practice:* Use position steps of at least 100 (e.g., 0, 100, 200) to allow inserting segments between existing ones.
+
+| *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$] array__ |
+Navigation items in this segment.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$] for structure.
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-navigationsegment"]
+==== NavigationSegment
+
+Defines a standalone navigation segment.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`segmentId`* __string__ |
+**Required.** Unique identifier for this segment.
+
+| *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$] array__ |
+Navigation items in this segment.
+
+See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$] for structure.
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem"]
+==== ChromeNavItem
+
+Defines a navigation item in the Chrome UI. Supports hierarchical navigation with groups, expandable sections, and routes.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlesegment[$$BundleSegment$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec[$$BundleSpec$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$] (recursive)
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-navigationsegment[$$NavigationSegment$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`id`* __string__ |
+Unique identifier for this navigation item.
+
+| *`title`* __string__ |
+Display title for the navigation item.
+
+| *`href`* __string__ |
+URL for the navigation item. Required for leaf items.
+
+| *`appId`* __string__ |
+Application ID this navigation item belongs to.
+
+| *`groupId`* __string__ |
+Group ID for organizing related navigation items.
+
+| *`product`* __string__ |
+Product identifier.
+
+| *`icon`* __string__ |
+Icon identifier for the navigation item.
+
+| *`isHidden`* __boolean__ |
+If `true`, hides this navigation item from display.
+
+| *`isExternal`* __boolean__ |
+If `true`, indicates this is an external link.
+
+| *`isBeta`* __boolean__ |
+If `true`, marks this item as beta/preview.
+
+| *`expandable`* __boolean__ |
+If `true`, this item can be expanded to show child routes.
+
+| *`notifier`* __string__ |
+Notifier identifier for showing badges/notifications on this nav item.
+
+| *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$] array__ |
+Child navigation items. Creates hierarchical navigation.
+
+**Note:** Recursive field - validation is limited due to kubebuilder constraints.
+
+| *`routes`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$] array__ |
+Routes within this navigation item for expandable items.
+
+**Note:** Recursive field - validation is limited due to kubebuilder constraints.
+
+| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-permission[$$Permission$$] array__ |
+RBAC permissions required to see this navigation item.
+
+| *`position`* __integer__ |
+Position hint for ordering navigation items. Inherited from segment position.
+
+| *`segmentRef`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-segmentref[$$SegmentRef$$]__ |
+Reference to another frontend's navigation segment.
+
+| *`bundleSegmentRef`* __string__ |
+Reference to a bundle segment.
+
+| *`frontendRef`* __string__ |
+Reference to the Frontend resource that owns this navigation item.
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-segmentref"]
+==== SegmentRef
+
+Reference to a navigation segment from another frontend.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`frontendName`* __string__ |
+**Required.** Name of the Frontend resource containing the segment.
+
+| *`segmentId`* __string__ |
+**Required.** ID of the segment within that Frontend.
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicemonitorconfig"]
+==== ServiceMonitorConfig
+
+Configuration for ServiceMonitor at the Frontend level.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`disabled`* __boolean__ |
+If `true`, disables ServiceMonitor creation for this specific Frontend, even if enabled at the environment level.
+
+*Default:* `false`
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-moduleconfig"]
+==== ModuleConfig
+
+Structured configuration for federated modules.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule[$$FedModule$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`supportCaseData`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-supportcasedata[$$SupportCaseData$$]__ |
+Support case metadata for Red Hat support integration.
+
+| *`ssoScopes`* __string array__ |
+SSO OAuth scopes required by this module.
+
+*Example:* `["openid", "profile"]`
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-supportcasedata"]
+==== SupportCaseData
+
+Support case metadata for Red Hat support integration.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-moduleconfig[$$ModuleConfig$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`version`* __string__ |
+**Required.** Version string for support cases.
+
+| *`product`* __string__ |
+**Required.** Product name for support cases.
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-analytics"]
+==== Analytics
+
+Analytics configuration for frontend modules.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-fedmodule[$$FedModule$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`APIKey`* __string__ |
+**Required.** Analytics API key for production environments.
+
+| *`APIKeyDev`* __string__ |
+Optional analytics API key for development environments.
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendstatus"]
+==== FrontendStatus
+
+FrontendStatus defines the observed state of a Frontend resource.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend[$$Frontend$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`deployments`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontenddeployments[$$FrontendDeployments$$]__ |
+Deployment status information.
+
+| *`ready`* __boolean__ |
+Overall readiness status. `true` when all managed deployments are ready.
+
+| *`conditions`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#condition-v1-meta[$$Condition$$] array__ |
+Standard Kubernetes conditions for the Frontend resource.
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontenddeployments"]
+==== FrontendDeployments
+
+Deployment counts for a Frontend resource.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendstatus[$$FrontendStatus$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`managedDeployments`* __integer__ |
+Total number of deployments managed by this Frontend resource.
+
+| *`readyDeployments`* __integer__ |
+Number of deployments that are ready and healthy.
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendlist"]
+==== FrontendList
+
+FrontendList contains a list of Frontend resources. Returned by Kubernetes API list operations.
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`apiVersion`* __string__ | `cloud.redhat.com/v1alpha1`
+| *`kind`* __string__ | `FrontendList`
+| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta[$$ListMeta$$]__ | Standard Kubernetes list metadata.
+
+| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontend[$$Frontend$$] array__ | List of Frontend resources.
+|===
+
+
+'''
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle"]
+==== Bundle
+
+Bundle is the Schema for navigation bundles. Bundles define collections of navigation items that can be referenced by Frontend resources.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlelist[$$BundleList$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`apiVersion`* __string__ | `cloud.redhat.com/v1alpha1`
+| *`kind`* __string__ | `Bundle`
+| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#objectmeta-v1-meta[$$ObjectMeta$$]__ | Standard Kubernetes metadata.
+
+| *`spec`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec[$$BundleSpec$$]__ | Defines the desired state of the Bundle. See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec[$$BundleSpec$$] for all available fields.
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec"]
+==== BundleSpec
+
+BundleSpec defines the desired state of a Bundle.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle[$$Bundle$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`id`* __string__ |
+**Required.** Unique identifier for the bundle.
+
+| *`title`* __string__ |
+Display title for the bundle.
+
+| *`appList`* __string array__ |
+List of application IDs included in this bundle.
+
+| *`envName`* __string__ |
+Name of the FrontendEnvironment this bundle belongs to.
+
+| *`extraNavItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem[$$ExtraNavItem$$] array__ |
+Additional named navigation items for this bundle.
+
+| *`customNav`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$] array__ |
+Custom navigation items defined directly in the bundle.
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-extranavitem"]
+==== ExtraNavItem
+
+Named navigation item for inclusion in bundles.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlespec[$$BundleSpec$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+
+| *`name`* __string__ |
+**Required.** Name for this navigation item.
+
+| *`navItem`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$]__ |
+**Required.** The navigation item definition.
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlelist"]
+==== BundleList
+
+BundleList contains a list of Bundle resources. Returned by Kubernetes API list operations.
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`apiVersion`* __string__ | `cloud.redhat.com/v1alpha1`
+| *`kind`* __string__ | `BundleList`
+| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#listmeta-v1-meta[$$ListMeta$$]__ | Standard Kubernetes list metadata.
+
+| *`items`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundle[$$Bundle$$] array__ | List of Bundle resources.
+|===
+
+
+'''
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem"]
+==== BundleNavItem
+
+**Deprecated:** Use ChromeNavItem instead. This type is preserved for backwards compatibility with existing Frontend resources using the legacy `navItems` attribute.
+
+Legacy navigation item structure. New configurations should use xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$] with `bundleSegments` or `navigationSegments`.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendspec[$$FrontendSpec$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`title`* __string__ | Display title
+| *`groupId`* __string__ | Group identifier
+| *`icon`* __string__ | Icon identifier
+| *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem[$$LeafBundleNavItem$$] array__ | Child navigation items
+| *`appId`* __string__ | Application identifier
+| *`href`* __string__ | URL
+| *`product`* __string__ | Product identifier
+| *`isExternal`* __boolean__ | External link flag
+| *`filterable`* __boolean__ | Filterable flag
+| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$] array__ | Permission requirements
+| *`routes`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute[$$EmbeddedRoute$$] array__ | Embedded routes
+| *`expandable`* __boolean__ | Expandable flag
+| *`dynamicNav`* __string__ | Dynamic navigation configuration
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem"]
+==== LeafBundleNavItem
+
+Leaf node in legacy navigation structure.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`title`* __string__ | Display title
+| *`groupId`* __string__ | Group identifier
+| *`appId`* __string__ | Application identifier
+| *`href`* __string__ | URL
+| *`product`* __string__ | Product identifier
+| *`isExternal`* __boolean__ | External link flag
+| *`filterable`* __boolean__ | Filterable flag
+| *`expandable`* __boolean__ | Expandable flag
+| *`notifier`* __string__ | Notifier identifier
+| *`routes`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute[$$EmbeddedRoute$$] array__ | Embedded routes
+| *`permissions`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission[$$BundlePermission$$] array__ | Permission requirements
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-embeddedroute"]
+==== EmbeddedRoute
+
+EmbeddedRoutes allow deeply nested navigation structures to support routes.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem[$$LeafBundleNavItem$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`title`* __string__ | Display title
+| *`appId`* __string__ | Application identifier
+| *`href`* __string__ | URL
+| *`product`* __string__ | Product identifier
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlepermission"]
+==== BundlePermission
+
+Legacy permission structure. See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-permission[$$Permission$$] for current permission configuration.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$]
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-leafbundlenavitem[$$LeafBundleNavItem$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`method`* __string__ | Permission check method
+| *`args`* __BundlePermissionArg array__ | Method arguments
+|===
+
+
+'''
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendservicecategorygroupgenerated"]
+==== FrontendServiceCategoryGroupGenerated
+
+Generated service category group with service tiles populated. Used internally by the operator.
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendservicecategorygenerated[$$FrontendServiceCategoryGenerated$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`id`* __string__ | Group identifier
+| *`title`* __string__ | Group display title
+| *`tiles`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-servicetile[$$ServiceTile$$] array__ | Service tiles in this group
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendservicecategorygenerated"]
+==== FrontendServiceCategoryGenerated
+
+Generated service category with groups and tiles populated. Used internally by the operator.
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`id`* __string__ | Category identifier
+| *`title`* __string__ | Category display title
+| *`groups`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendservicecategorygroupgenerated[$$FrontendServiceCategoryGroupGenerated$$] array__ | Groups in this category with populated service tiles
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-frontendbundlesgenerated"]
+==== FrontendBundlesGenerated
+
+Generated bundle with navigation items populated. Used internally by the operator.
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`id`* __string__ | Bundle identifier
+| *`title`* __string__ | Bundle display title
+| *`description`* __string__ | Bundle description
+| *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$] array__ | Navigation items in this bundle
+|===
+
+
+[id="{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-computedbundle"]
+==== ComputedBundle
+
+Computed bundle structure. Used internally by the operator.
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`id`* __string__ | Bundle identifier
+| *`title`* __string__ | Bundle display title
+| *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-chromenavitem[$$ChromeNavItem$$] array__ | **Deprecated:** Use ChromeNavItems instead. Navigation items in this bundle.
+|===
+
+
+'''
+
+== Additional Resources
+
+* xref:frontendenvironment-guide.adoc[FrontendEnvironment Configuration Guide] - Detailed configuration examples and use cases
+* xref:index.adoc[Frontend Operator Documentation] - Overview and getting started
+* https://github.com/RedHatInsights/frontend-operator[Frontend Operator GitHub Repository] - Source code and examples
+* https://kubernetes.io/docs/reference/[Kubernetes API Reference] - Core Kubernetes resource documentation

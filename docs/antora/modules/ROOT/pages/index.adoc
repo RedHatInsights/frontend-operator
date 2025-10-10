@@ -1,5 +1,11 @@
-= Main docs
+= Frontend Operator Documentation
 
-Main docs for Frontend Operator
+Welcome to the Frontend Operator documentation. The Frontend Operator is a Kubernetes operator designed to deploy and manage containerized frontend applications in the Red Hat Insights (consoledot) ecosystem.
 
-- xref:api_reference.adoc[API Reference]
+== Getting Started
+
+* xref:frontendenvironment-guide.adoc[FrontendEnvironment Configuration Guide] - Learn how to create and configure FrontendEnvironment custom resources
+
+== Reference Documentation
+
+* xref:api_reference.adoc[API Reference] - Complete API specification for all custom resources
