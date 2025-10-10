@@ -1,22 +1,56 @@
 # Insights Frontend Operator
 
-A Kubernetes operator designed to deploy and managed containerized frontends.
+A Kubernetes operator designed to deploy and manage containerized frontend applications in the Red Hat Insights (consoledot) ecosystem.
 
-## Usage
+## Documentation
 
-The operator is generally availble in the Consoledot Ephemeral and Dev Clusters. In order to use the Frontend Operator, 
-you only need to apply a Frontend CRD to a namespace that you manage using Bonfire. 
+Comprehensive documentation is available to help you get started and configure the Frontend Operator:
 
-## Deploying a Frontend with Bonfire in ephemeral
+### For Users
 
-[Bonfire](https://github.com/RedHatInsights/bonfire#bonfire-) is the consoledot tool used to interact with Kuberentes clusters.
+- **[FrontendEnvironment Configuration Guide](docs/antora/modules/ROOT/pages/frontendenvironment-guide.adoc)** - Complete guide for creating and configuring FrontendEnvironment custom resources
+  - Step-by-step instructions for basic and advanced configurations
+  - Common use cases and practical examples
+  - Troubleshooting guide
+  - Integration with Bonfire for ephemeral deployments
 
-Simply login to the ephemeral cluster and run `bonfire deploy $MYAPP --frontends true -d 8h` to get access to your own ephemeral environment. 
+- **[API Reference](docs/antora/modules/ROOT/pages/api_reference.adoc)** - Complete API specification for all custom resources
+  - Detailed field descriptions for FrontendEnvironment and Frontend resources
+  - Validation requirements and best practices
+  - Cross-references to configuration guides
 
-If your app does not have an entry into app-interface yet, `bonfire namespace reserve` will supply you with a bootstrapped
-namespace to deploy your application with `oc apply -f $My-Frontend-CRD.yaml -n $NS`
+- **[Documentation Index](docs/antora/modules/ROOT/pages/index.adoc)** - Documentation landing page with navigation to all guides
 
-## Local development for contributors
+### For Contributors
+
+See the [Local Development](#local-development-for-contributors) section below for instructions on setting up the operator for local development.
+
+## Quick Start
+
+### Using the Frontend Operator
+
+The operator is generally available in the Consoledot Ephemeral and Dev Clusters. To use the Frontend Operator, you only need to apply a Frontend custom resource to a namespace that you manage using Bonfire.
+
+### Deploying a Frontend with Bonfire in Ephemeral
+
+[Bonfire](https://github.com/RedHatInsights/bonfire#bonfire-) is the consoledot tool used to interact with Kubernetes clusters.
+
+Simply login to the ephemeral cluster and run:
+```bash
+bonfire deploy $MYAPP --frontends true -d 8h
+```
+
+This will give you access to your own ephemeral environment.
+
+If your app does not have an entry into app-interface yet, `bonfire namespace reserve` will supply you with a bootstrapped namespace to deploy your application:
+```bash
+bonfire namespace reserve
+oc apply -f $My-Frontend-CRD.yaml -n $NS
+```
+
+For detailed configuration options and examples, see the [FrontendEnvironment Configuration Guide](docs/antora/modules/ROOT/pages/frontendenvironment-guide.adoc).
+
+## Local Development for Contributors
 
 **Note**: We only recommend this method for local development on the **operator** **itself**.
 

@@ -1,0 +1,627 @@
+= FrontendEnvironment Configuration Guide
+:toc: left
+:toclevels: 3
+
+== Overview
+
+The FrontendEnvironment custom resource defines the shared configuration and infrastructure for deploying frontend applications in the Red Hat Insights (consoledot) ecosystem. It acts as an environment-level configuration that Frontend resources reference to inherit settings like SSO configuration, monitoring, networking, and resource limits.
+
+=== What is a FrontendEnvironment?
+
+A FrontendEnvironment is a cluster-scoped Kubernetes custom resource that:
+
+* Defines authentication and SSO configuration for frontend applications
+* Configures networking, including hostnames, SSL/TLS, and ingress settings
+* Manages navigation structure and service categorization for the Chrome UI
+* Sets up monitoring and observability
+* Provides environment-wide defaults for resource limits, replicas, and security headers
+* Enables optional features like push cache, reverse proxy, and Akamai cache busting
+
+=== When to Use FrontendEnvironment
+
+Create a FrontendEnvironment when you need to:
+
+* Set up a new deployment environment (development, staging, production)
+* Configure shared settings for multiple frontend applications
+* Define environment-specific SSO authentication endpoints
+* Establish navigation bundles and service categories for Chrome UI
+* Configure reverse proxy for object storage-based asset serving
+
+== Prerequisites
+
+* Access to a Kubernetes cluster with the Frontend Operator installed
+* `kubectl` or `oc` CLI configured and authenticated
+* Understanding of your environment's SSO configuration
+* (Optional) Bonfire CLI for ephemeral environment deployment
+
+== Basic Configuration
+
+=== Minimal FrontendEnvironment
+
+The simplest FrontendEnvironment requires only SSO configuration:
+
+[source,yaml]
+----
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: my-basic-environment
+spec:
+  sso: https://sso.stage.redhat.com/auth
+  hostname: console.stage.redhat.com
+  ssl: false
+  generateNavJSON: false
+----
+
+This creates an environment with:
+
+* SSO authentication endpoint
+* HTTP-only access (no SSL)
+* No automatic navigation JSON generation
+
+=== Applying the Configuration
+
+Apply the FrontendEnvironment to your cluster:
+
+[source,bash]
+----
+kubectl apply -f my-frontendenvironment.yaml
+----
+
+Verify the resource was created:
+
+[source,bash]
+----
+kubectl get frontendenvironments
+# or using the short name
+kubectl get feenv
+----
+
+== Configuration Reference
+
+=== Authentication and SSO
+
+==== Basic SSO Configuration
+
+The `sso` field defines the primary authentication endpoint:
+
+[source,yaml]
+----
+spec:
+  sso: https://sso.stage.redhat.com/auth
+----
+
+==== SSO Mapping for Multiple Hostnames
+
+Use `ssoMapping` when different hostnames need different SSO endpoints:
+
+[source,yaml]
+----
+spec:
+  sso: https://sso.stage.redhat.com/auth  # default SSO
+  ssoMapping:
+    "console.dev.redhat.com": "https://sso.redhat.com/auth"
+    "us.console.dev.redhat.com": "https://sso.redhat.com/auth"
+    "console.stage.openshiftusgov.com": "https://sso.stage.openshiftusgov.com"
+    "console.openshiftusgov.com": "https://sso.openshiftusgov.com"
+----
+
+The operator will use the mapped SSO URL when the hostname pattern matches; otherwise, it falls back to the default `sso` value.
+
+=== Networking Configuration
+
+==== Hostname and SSL
+
+Configure the environment's hostname and SSL/TLS settings:
+
+[source,yaml]
+----
+spec:
+  hostname: console.stage.redhat.com
+  ssl: true
+----
+
+When `ssl: true`, the operator:
+
+* Requests SSL certificates from Kubernetes/OpenShift
+* Applies certificates to pods
+* Configures routes with re-encryption (on OpenShift)
+
+==== Ingress Configuration
+
+Customize ingress class and add annotations:
+
+[source,yaml]
+----
+spec:
+  ingressClass: nginx
+  ingressAnnotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+----
+
+These annotations are applied to all ingress objects created by frontends in this environment.
+
+==== Access Control with Whitelist
+
+Restrict access to specific CIDR blocks:
+
+[source,yaml]
+----
+spec:
+  whitelist:
+    - 10.0.0.0/8
+    - 192.168.1.0/24
+    - 172.16.0.0/12
+----
+
+The operator applies these CIDR blocks to ingress configurations for network-level access control.
+
+==== Custom HTTP Headers
+
+Add security or custom HTTP headers to all frontend responses:
+
+[source,yaml]
+----
+spec:
+  httpHeaders:
+    "X-Frame-Options": "DENY"
+    "X-XSS-Protection": "1; mode=block"
+    "X-Content-Type-Options": "nosniff"
+    "Content-Security-Policy": "default-src 'self'"
+    "Referrer-Policy": "no-referrer"
+----
+
+Headers are injected into the Caddy configuration as a header block.
+
+=== Monitoring Configuration
+
+Configure ServiceMonitor resources for Prometheus monitoring:
+
+[source,yaml]
+----
+spec:
+  monitoring:
+    mode: "local"          # or "app-interface"
+    disabled: false
+----
+
+Monitoring modes:
+
+* `local`: Creates ServiceMonitor in the frontend's namespace
+* `app-interface`: Creates ServiceMonitor in `openshift-customer-monitoring` namespace
+* `disabled: true`: Disables monitoring entirely
+
+=== Resource Management
+
+==== Default Replicas
+
+Set the default replica count for all frontends in the environment:
+
+[source,yaml]
+----
+spec:
+  defaultReplicas: 3
+----
+
+Individual Frontend resources can override this value.
+
+==== Resource Requests and Limits
+
+Define CPU and memory constraints for all frontends:
+
+[source,yaml]
+----
+spec:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+  limits:
+    cpu: 50m
+    memory: 128Mi
+----
+
+These values apply to all frontend pods in the environment unless overridden at the Frontend resource level.
+
+=== Navigation and UI Configuration
+
+==== Bundles
+
+Define navigation bundles for the Chrome UI:
+
+[source,yaml]
+----
+spec:
+  bundles:
+    - id: rhel
+      title: Red Hat Enterprise Linux
+      description: "RHEL management and automation"
+    - id: ansible
+      title: Ansible
+      description: "Automation and configuration management"
+    - id: settings
+      title: Settings
+      description: "Account and user settings"
+----
+
+Bundles organize navigation items into logical groupings in the Chrome UI.
+
+==== Service Categories
+
+Create service categories and groups for the service dropdown in Chrome:
+
+[source,yaml]
+----
+spec:
+  serviceCategories:
+    - id: automation
+      title: Automation
+      groups:
+        - id: ansible
+          title: Ansible
+        - id: rhel
+          title: Red Hat Enterprise Linux
+    - id: iam
+      title: Identity and Access Management
+      groups:
+        - id: iam
+          title: IAM
+----
+
+Service categories allow frontends to register service tiles that appear in the Chrome UI service dropdown.
+
+==== Navigation JSON Generation
+
+Enable automatic generation of navigation JSON configmaps:
+
+[source,yaml]
+----
+spec:
+  generateNavJSON: true
+----
+
+This is typically enabled for ephemeral and development environments but disabled in production where navigation is managed separately.
+
+=== Advanced Features
+
+==== Reverse Proxy Configuration
+
+Enable the object storage-based reverse proxy for serving frontend assets:
+
+[source,yaml]
+----
+spec:
+  reverseProxyImage: quay.io/redhat-services-prod/hcc-platex-services-tenant/frontend-asset-proxy:latest
+  reverseProxyHostname: reverse-proxy.cluster.local
+  reverseProxySPAEntrypointPath: /index.html
+  reverseProxyLogLevel: DEBUG
+----
+
+The reverse proxy uses the https://github.com/RedHatInsights/frontend-asset-proxy[frontend-asset-proxy] container to serve assets from S3-compatible storage with SPA routing support.
+
+Configuration options:
+
+* `reverseProxyImage`: Container image for the reverse proxy (required to enable)
+* `reverseProxyHostname`: Hostname for the reverse proxy ingress
+* `reverseProxySPAEntrypointPath`: Path to the SPA entrypoint (default: `/index.html`)
+* `reverseProxyLogLevel`: Logging verbosity (default: `DEBUG`)
+
+==== Push Cache
+
+Enable the push cache (valpop) job for frontend assets:
+
+[source,yaml]
+----
+spec:
+  enablePushCache: true
+----
+
+When enabled, the operator creates push cache jobs that upload frontend assets to object storage. Individual Frontend resources must also set `pushCacheEnabled: true` to participate.
+
+==== Akamai Cache Busting
+
+Configure Akamai CDN cache busting:
+
+[source,yaml]
+----
+spec:
+  enableAkamaiCacheBust: true
+  akamaiCacheBustImage: quay.io/cloudservices/akamai-cache-bust:latest
+  akamaiCacheBustURLs:
+    - https://console.redhat.com
+    - https://console.stage.redhat.com
+  akamaiSecretName: akamai-credentials
+----
+
+The operator creates jobs to invalidate Akamai cache when frontend assets change.
+
+==== Target Namespaces
+
+Propagate frontend configuration to additional namespaces:
+
+[source,yaml]
+----
+spec:
+  targetNamespaces:
+    - boot
+    - chrome-namespace
+    - shared-config
+----
+
+The operator copies generated configmaps (fed-modules.json, navigation files) to the specified namespaces.
+
+==== Caddy Configuration Override
+
+Control whether the operator overwrites Caddyfiles in frontend containers:
+
+[source,yaml]
+----
+spec:
+  overwriteCaddyConfig: true
+----
+
+When `true`, the operator replaces frontend Caddyfiles with a common core configuration.
+
+== Common Use Cases
+
+=== Production Environment with SSL
+
+[source,yaml]
+----
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: production-environment
+spec:
+  sso: https://sso.redhat.com/auth
+  hostname: console.redhat.com
+  ssl: true
+  ingressClass: nginx
+  ingressAnnotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  monitoring:
+    mode: app-interface
+    disabled: false
+  httpHeaders:
+    "X-Frame-Options": "DENY"
+    "X-XSS-Protection": "1; mode=block"
+    "X-Content-Type-Options": "nosniff"
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
+  defaultReplicas: 3
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  generateNavJSON: false
+  enablePushCache: true
+  enableAkamaiCacheBust: true
+  akamaiCacheBustImage: quay.io/cloudservices/akamai-cache-bust:latest
+  akamaiCacheBustURLs:
+    - https://console.redhat.com
+  akamaiSecretName: akamai-prod-credentials
+----
+
+=== Development/Ephemeral Environment
+
+[source,yaml]
+----
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: dev-environment
+spec:
+  sso: https://sso.stage.redhat.com/auth
+  hostname: console.dev.redhat.com
+  ssl: false
+  monitoring:
+    mode: local
+    disabled: false
+  generateNavJSON: true
+  enablePushCache: false
+  defaultReplicas: 1
+  bundles:
+    - id: test
+      title: Development Bundle
+      description: "Testing and development"
+----
+
+=== Environment with Reverse Proxy and Navigation
+
+[source,yaml]
+----
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: env-with-proxy
+spec:
+  sso: https://sso.stage.redhat.com/auth
+  ssoMapping:
+    "console.dev.redhat.com": "https://sso.redhat.com/auth"
+  hostname: console.stage.redhat.com
+  ssl: true
+  enablePushCache: true
+  reverseProxyImage: quay.io/redhat-services-prod/hcc-platex-services-tenant/frontend-asset-proxy:latest
+  reverseProxyHostname: reverse-proxy.cluster.local
+  reverseProxySPAEntrypointPath: /index.html
+  reverseProxyLogLevel: INFO
+  targetNamespaces:
+    - boot
+  monitoring:
+    mode: local
+    disabled: false
+  serviceCategories:
+    - id: automation
+      title: Automation
+      groups:
+        - id: ansible
+          title: Ansible
+        - id: rhel
+          title: Red Hat Enterprise Linux
+    - id: iam
+      title: Identity and Access Management
+      groups:
+        - id: iam
+          title: IAM
+  bundles:
+    - id: rhel
+      title: Red Hat Enterprise Linux
+    - id: ansible
+      title: Ansible
+    - id: settings
+      title: Settings
+  generateNavJSON: true
+----
+
+== Deploying with Bonfire
+
+For ephemeral environments in consoledot clusters, use Bonfire to deploy:
+
+[source,bash]
+----
+# Reserve a namespace with bootstrapped FrontendEnvironment
+bonfire namespace reserve
+
+# Deploy your app with frontends enabled
+bonfire deploy myapp --frontends true -d 8h
+----
+
+Bonfire automatically creates and configures the FrontendEnvironment for ephemeral deployments.
+
+== Troubleshooting
+
+=== FrontendEnvironment Not Found
+
+*Problem*: Frontend resources can't find the referenced environment.
+
+*Solution*: Verify the FrontendEnvironment exists and the name matches:
+
+[source,bash]
+----
+kubectl get frontendenvironments
+kubectl describe frontendenvironment <environment-name>
+----
+
+Ensure your Frontend resource's `spec.envName` field matches the FrontendEnvironment's `metadata.name`.
+
+=== SSL Certificate Issues
+
+*Problem*: HTTPS connections fail or show certificate errors.
+
+*Solution*:
+
+1. Verify SSL is enabled: `spec.ssl: true`
+2. Check certificate secrets exist in the namespace
+3. Review ingress annotations for cert-manager configuration
+4. Inspect pod logs for certificate mounting issues:
+
+[source,bash]
+----
+kubectl logs -n <namespace> <frontend-pod-name>
+----
+
+=== Monitoring Not Working
+
+*Problem*: ServiceMonitor resources not created or metrics not scraped.
+
+*Solution*:
+
+1. Verify monitoring is enabled:
++
+[source,yaml]
+----
+spec:
+  monitoring:
+    disabled: false
+    mode: "local"  # or "app-interface"
+----
+
+2. Check for ServiceMonitor resources:
++
+[source,bash]
+----
+kubectl get servicemonitor -n <namespace>
+# or for app-interface mode
+kubectl get servicemonitor -n openshift-customer-monitoring
+----
+
+3. Verify Prometheus has permissions to scrape the target namespace
+
+=== Navigation Not Appearing
+
+*Problem*: Navigation bundles or service categories don't appear in Chrome UI.
+
+*Solution*:
+
+1. Ensure `generateNavJSON: true` is set
+2. Verify bundles and serviceCategories are properly defined
+3. Check configmaps were generated:
++
+[source,bash]
+----
+kubectl get configmap -n <namespace> | grep -E 'nav|fed-modules'
+----
+
+4. Review Frontend resources to ensure they're registered with the environment
+
+=== Reverse Proxy Not Working
+
+*Problem*: Reverse proxy doesn't serve assets or returns 404s.
+
+*Solution*:
+
+1. Verify all required fields are set:
+   * `reverseProxyImage` (required to enable the feature)
+   * `reverseProxyHostname`
+2. Check the reverse proxy deployment and service:
++
+[source,bash]
+----
+kubectl get deployment -n <namespace> | grep reverse-proxy
+kubectl get service -n <namespace> | grep reverse-proxy
+----
+
+3. Review reverse proxy logs:
++
+[source,bash]
+----
+kubectl logs -n <namespace> deployment/reverse-proxy
+----
+
+4. Verify S3/Minio credentials are configured correctly
+
+=== Resource Limits Causing Restarts
+
+*Problem*: Frontend pods are OOMKilled or CPU throttled.
+
+*Solution*:
+
+1. Review current resource usage:
++
+[source,bash]
+----
+kubectl top pods -n <namespace>
+----
+
+2. Adjust limits in FrontendEnvironment:
++
+[source,yaml]
+----
+spec:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+----
+
+3. Individual Frontend resources can override these for specific applications
+
+== Next Steps
+
+* Learn about the xref:api_reference.adoc[complete API reference]
+* Explore Frontend resource configuration (link to Frontend guide when available)
+* Review the https://github.com/RedHatInsights/frontend-operator[Frontend Operator source code]
+* Understand https://github.com/RedHatInsights/bonfire[Bonfire] for ephemeral deployments
