@@ -103,4 +103,4 @@ require (
 
 replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340
 
-replace github.com/google/gnostic-models => github.com/google/gnostic-models v0.6.8
+replace github.com/google/gnostic-models => github.com/google/gnostic-models v0.7.0
