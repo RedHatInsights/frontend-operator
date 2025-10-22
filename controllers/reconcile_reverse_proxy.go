@@ -663,12 +663,12 @@ func (r *ReverseProxyReconciliation) createReverseProxyContainer() (v1.Container
 	// Add SSL environment variables if SSL is enabled (similar to main reconciler)
 	if r.FrontendEnvironment.Spec.SSL {
 		envVars = append(envVars, v1.EnvVar{
-			Name:  "CADDY_TLS_MODE",
-			Value: "https_port 8080",
+			Name:  "TLS_CERT_FILE",
+			Value: "/opt/certs/tls.crt",
 		})
 		envVars = append(envVars, v1.EnvVar{
-			Name:  "CADDY_TLS_CERT",
-			Value: "tls /opt/certs/tls.crt /opt/certs/tls.key",
+			Name:  "TLS_KEY_FILE",
+			Value: "/opt/certs/tls.key",
 		})
 	}
 
