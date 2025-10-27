@@ -50,10 +50,10 @@ spec:
               containerPort: 9000
               protocol: TCP
           env:
-            - name: TLS_CERT_FILE
-              value: /opt/certs/tls.crt
-            - name: TLS_KEY_FILE
-              value: /opt/certs/tls.key
+            - name: CADDY_TLS_MODE
+              value: https_port 8000
+            - name: CADDY_TLS_CERT
+              value: tls /opt/certs/tls.crt /opt/certs/tls.key
             - name: APP_NAME
               value: chrome
             - name: ROUTE_PATH
