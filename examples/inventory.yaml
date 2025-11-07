@@ -14,7 +14,6 @@ spec:
     - /apps/inventory
   # image: quay.io/cloudservices/insights-inventory-frontend:27803c7
   image: quay.io/tahmidefaz/inventory-frontend-valpop:latest
-  pushCacheEnabled: true
   navItems:
     - appId: "inventory"
       title: "Inventory"

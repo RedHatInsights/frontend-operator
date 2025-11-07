@@ -109,7 +109,7 @@ func (r *FrontendReconciliation) run() error {
 			}
 		}
 		// If push cache is enabled for the environment, add the push cache container
-		if r.FrontendEnvironment.Spec.EnablePushCache && r.Frontend.Spec.Image != "" && r.Frontend.Spec.PushCacheEnabled {
+		if r.FrontendEnvironment.Spec.EnablePushCache && r.Frontend.Spec.Image != "" {
 			if err := r.createOrUpdateJob(r.generatePushCacheJobName, r.populatePushCacheContainer); err != nil {
 				return err
 			}
