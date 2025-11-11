@@ -910,6 +910,7 @@ func (r *FrontendReconciliation) createOrUpdateJob(generateJobName func() string
 	j.Spec.Template.Spec.RestartPolicy = v1.RestartPolicyNever
 
 	j.Spec.Completions = utils.Int32Ptr(1)
+	j.Spec.BackoffLimit = utils.Int32Ptr(3)
 
 	// Set the image frontend image annotation
 	annotations := j.Spec.Template.ObjectMeta.Annotations
