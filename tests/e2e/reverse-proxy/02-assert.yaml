@@ -92,6 +92,8 @@ spec:
           value: "8080"
         - name: MINIO_UPSTREAM_URL
           value: http://minio-service.minio-env.svc.cluster.local:9000  # Updated URL
+        - name: AWS_REGION
+          value: us-west-2
         - name: BUCKET_PATH_PREFIX
           value: frontend  # Updated from /frontend-assets
         - name: SPA_ENTRYPOINT_PATH
