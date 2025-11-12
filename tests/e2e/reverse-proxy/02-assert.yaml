@@ -98,6 +98,10 @@ spec:
           value: /index.html
         - name: LOG_LEVEL
           value: INFO
+        - name: PUSHCACHE_AWS_ACCESS_KEY_ID
+          value: minioadmin
+        - name: PUSHCACHE_AWS_SECRET_ACCESS_KEY
+          value: minioadmin
         resources:
           limits:
             cpu: 100m

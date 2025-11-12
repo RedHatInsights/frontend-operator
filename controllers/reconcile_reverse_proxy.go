@@ -612,8 +612,10 @@ func (r *ReverseProxyReconciliation) createReverseProxyContainer() (v1.Container
 
 	// Get default values
 	minioPort := *objectStoreInfo.Port
-	minioEndpoint := *objectStoreInfo.Endpoint // PUSHCACHE_AWS_ENDPOINT
-	bucketPathPrefix := *objectStoreInfo.Name  // PUSHCACHE_AWS_BUCKET_NAME
+	minioEndpoint := *objectStoreInfo.Endpoint    // PUSHCACHE_AWS_ENDPOINT
+	bucketPathPrefix := *objectStoreInfo.Name     // PUSHCACHE_AWS_BUCKET_NAME
+	accessKeyID := *objectStoreInfo.AccessKey     // PUSHCACHE_AWS_ACCESS_KEY_ID
+	secretAccessKey := *objectStoreInfo.SecretKey // PUSHCACHE_AWS_SECRET_ACCESS_KEY
 	var minioUpstreamURL string
 	var protocol string
 	// Construct upstream URL with appropriate scheme based on port
@@ -657,6 +659,14 @@ func (r *ReverseProxyReconciliation) createReverseProxyContainer() (v1.Container
 		{
 			Name:  "LOG_LEVEL",
 			Value: logLevel,
+		},
+		{
+			Name:  "PUSHCACHE_AWS_ACCESS_KEY_ID",
+			Value: accessKeyID,
+		},
+		{
+			Name:  "PUSHCACHE_AWS_SECRET_ACCESS_KEY",
+			Value: secretAccessKey,
 		},
 	}
 
