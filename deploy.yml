@@ -1174,9 +1174,6 @@ objects:
                     - segmentId
                     type: object
                   type: array
-                pushCacheEnabled:
-                  description: Push cache job enabled
-                  type: boolean
                 replicas:
                   format: int32
                   type: integer

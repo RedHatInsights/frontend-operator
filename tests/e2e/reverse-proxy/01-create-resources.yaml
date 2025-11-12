@@ -28,5 +28,4 @@ spec:
   envName: test-reverse-proxy-environment
   image: quay.io/cloudservices/insights-chrome-frontend:latest
   title: Test Frontend with Reverse Proxy
-  pushCacheEnabled: true
   feoConfigEnabled: true
