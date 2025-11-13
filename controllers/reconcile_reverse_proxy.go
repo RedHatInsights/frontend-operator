@@ -408,6 +408,7 @@ func (r *ReverseProxyReconciliation) updateReverseProxyService(service *v1.Servi
 		service.Spec.Ports = desiredService.Spec.Ports
 		service.Spec.Selector = desiredService.Spec.Selector
 		service.Labels = desiredService.Labels
+		service.Annotations = desiredService.Annotations
 
 		// Update the service
 		return r.Client.Update(r.Ctx, service)
