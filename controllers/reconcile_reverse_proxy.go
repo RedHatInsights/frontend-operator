@@ -150,43 +150,33 @@ func (r *ReverseProxyReconciliation) reconcileService() error {
 
 // updateReverseProxyDeployment ensures the deployment matches the desired state
 func (r *ReverseProxyReconciliation) updateReverseProxyDeployment(deployment *apps.Deployment) error {
-	// Get the desired container configuration
-	desiredContainer, err := r.createReverseProxyContainer()
-	if err != nil {
-		return err
-	}
-
 	// Get the desired volumes configuration
 	desiredVolumes := r.createReverseProxyVolumes()
 
 	// Get current container
 	currentContainer := &deployment.Spec.Template.Spec.Containers[0]
 
-	// Check if container needs update
-	containerNeedsUpdate, updateReason := r.compareContainer(currentContainer, &desiredContainer)
+	// Check what specific changes are needed
+	changes := r.detectContainerChanges(currentContainer)
 
-	// Check if volumes need update
-	volumesNeedsUpdate := r.compareVolumes(deployment.Spec.Template.Spec.Volumes, desiredVolumes)
+	volumesChanged := r.compareVolumes(deployment.Spec.Template.Spec.Volumes, desiredVolumes)
 
-	if containerNeedsUpdate || volumesNeedsUpdate {
-		if containerNeedsUpdate {
-			r.Log.Info("Updating reverse proxy deployment", "reason", updateReason)
-		}
-		if volumesNeedsUpdate {
+	if len(changes) > 0 || volumesChanged {
+		needsRestart := r.applyContainerChanges(currentContainer, changes)
+
+		if volumesChanged {
 			r.Log.Info("Updating reverse proxy deployment volumes", "reason", "volumes configuration changed")
+			deployment.Spec.Template.Spec.Volumes = desiredVolumes
+			needsRestart = true // Volume changes require restart
 		}
 
-		// Update the entire container specification
-		deployment.Spec.Template.Spec.Containers[0] = desiredContainer
-
-		// Update the volumes specification
-		deployment.Spec.Template.Spec.Volumes = desiredVolumes
-
-		// Add restart annotation to force pod restart
-		if deployment.Spec.Template.Annotations == nil {
-			deployment.Spec.Template.Annotations = make(map[string]string)
+		// Only add restart annotation if changes require pod restart
+		if needsRestart {
+			if deployment.Spec.Template.Annotations == nil {
+				deployment.Spec.Template.Annotations = make(map[string]string)
+			}
+			deployment.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"] = metav1.Now().Format("2006-01-02T15:04:05Z")
 		}
-		deployment.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"] = metav1.Now().Format("2006-01-02T15:04:05Z")
 
 		// Update the deployment
 		return r.Client.Update(r.Ctx, deployment)
@@ -215,38 +205,288 @@ func (r *ReverseProxyReconciliation) compareEnvVars(existing, desired []v1.EnvVa
 	return true
 }
 
-// compareContainer compares current and desired container specifications
-func (r *ReverseProxyReconciliation) compareContainer(current, desired *v1.Container) (bool, string) {
+// ContainerChange represents a specific change needed for a container
+type ContainerChange struct {
+	Field        string
+	NeedsRestart bool
+	Reason       string
+}
+
+// detectContainerChanges identifies specific changes needed for the container by comparing against expected values
+func (r *ReverseProxyReconciliation) detectContainerChanges(current *v1.Container) []ContainerChange {
+	var changes []ContainerChange
+
+	// Get expected values without creating the full container
+	expectedImage := r.FrontendEnvironment.Spec.ReverseProxyImage
+	expectedEnvVars := r.getExpectedEnvVars()
+	expectedPorts := r.getExpectedPorts()
+	expectedResources := r.getExpectedResources()
+	expectedVolumeMounts := r.getExpectedVolumeMounts()
+	expectedLivenessProbe := r.getExpectedLivenessProbe()
+	expectedReadinessProbe := r.getExpectedReadinessProbe()
+
 	// Check image
-	if current.Image != desired.Image {
-		return true, fmt.Sprintf("image changed from %s to %s", current.Image, desired.Image)
+	if current.Image != expectedImage {
+		changes = append(changes, ContainerChange{
+			Field:        "image",
+			NeedsRestart: true,
+			Reason:       fmt.Sprintf("image changed from %s to %s", current.Image, expectedImage),
+		})
 	}
 
 	// Check environment variables
-	if !r.compareEnvVars(current.Env, desired.Env) {
-		return true, "environment variables changed"
+	if !r.compareEnvVars(current.Env, expectedEnvVars) {
+		changes = append(changes, ContainerChange{
+			Field:        "env",
+			NeedsRestart: true,
+			Reason:       "environment variables changed",
+		})
 	}
 
 	// Check ports
-	if !r.compareContainerPorts(current.Ports, desired.Ports) {
-		return true, "container ports changed"
+	if !r.compareContainerPorts(current.Ports, expectedPorts) {
+		changes = append(changes, ContainerChange{
+			Field:        "ports",
+			NeedsRestart: true,
+			Reason:       "container ports changed",
+		})
 	}
 
-	// Check resource requirements
-	if !r.compareResourceRequirements(current.Resources, desired.Resources) {
-		return true, "resource requirements changed"
+	// Check resource requirements (doesn't require restart)
+	if !r.compareResourceRequirements(current.Resources, expectedResources) {
+		changes = append(changes, ContainerChange{
+			Field:        "resources",
+			NeedsRestart: false,
+			Reason:       "resource requirements changed",
+		})
 	}
 
-	// Check probes
-	if !r.compareProbes(current.LivenessProbe, desired.LivenessProbe) {
-		return true, "liveness probe changed"
+	// Check volume mounts
+	if !r.compareVolumeMounts(current.VolumeMounts, expectedVolumeMounts) {
+		changes = append(changes, ContainerChange{
+			Field:        "volumeMounts",
+			NeedsRestart: true,
+			Reason:       "volume mounts changed",
+		})
 	}
 
-	if !r.compareProbes(current.ReadinessProbe, desired.ReadinessProbe) {
-		return true, "readiness probe changed"
+	// Check probes (doesn't require restart)
+	if !r.compareProbes(current.LivenessProbe, expectedLivenessProbe) {
+		changes = append(changes, ContainerChange{
+			Field:        "livenessProbe",
+			NeedsRestart: false,
+			Reason:       "liveness probe changed",
+		})
 	}
 
-	return false, ""
+	if !r.compareProbes(current.ReadinessProbe, expectedReadinessProbe) {
+		changes = append(changes, ContainerChange{
+			Field:        "readinessProbe",
+			NeedsRestart: false,
+			Reason:       "readiness probe changed",
+		})
+	}
+
+	return changes
+}
+
+// applyContainerChanges applies only the specific changes needed and returns whether restart is needed
+func (r *ReverseProxyReconciliation) applyContainerChanges(current *v1.Container, changes []ContainerChange) bool {
+	needsRestart := false
+
+	for _, change := range changes {
+		r.Log.Info("Applying container change", "field", change.Field, "reason", change.Reason)
+
+		switch change.Field {
+		case "image":
+			current.Image = r.FrontendEnvironment.Spec.ReverseProxyImage
+			needsRestart = true
+		case "env":
+			current.Env = r.getExpectedEnvVars()
+			needsRestart = true
+		case "ports":
+			current.Ports = r.getExpectedPorts()
+			needsRestart = true
+		case "resources":
+			current.Resources = r.getExpectedResources()
+			// Resource changes don't require restart
+		case "volumeMounts":
+			current.VolumeMounts = r.getExpectedVolumeMounts()
+			needsRestart = true
+		case "livenessProbe":
+			current.LivenessProbe = r.getExpectedLivenessProbe()
+			// Probe changes don't require restart
+		case "readinessProbe":
+			current.ReadinessProbe = r.getExpectedReadinessProbe()
+			// Probe changes don't require restart
+		}
+
+		if change.NeedsRestart {
+			needsRestart = true
+		}
+	}
+
+	return needsRestart
+}
+
+// compareVolumeMounts compares two volume mount slices for equality
+func (r *ReverseProxyReconciliation) compareVolumeMounts(current, desired []v1.VolumeMount) bool {
+	if len(current) != len(desired) {
+		return false
+	}
+
+	currentMap := make(map[string]v1.VolumeMount)
+	for _, mount := range current {
+		currentMap[mount.Name] = mount
+	}
+
+	for _, desiredMount := range desired {
+		currentMount, exists := currentMap[desiredMount.Name]
+		if !exists ||
+			currentMount.MountPath != desiredMount.MountPath ||
+			currentMount.ReadOnly != desiredMount.ReadOnly {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Helper methods to get expected values without creating full container
+
+// getExpectedEnvVars returns the expected environment variables
+func (r *ReverseProxyReconciliation) getExpectedEnvVars() []v1.EnvVar {
+	// Get object store configuration
+	objectStoreInfo, err := ExtractBucketConfigFromEnv()
+	if err != nil {
+		// Return empty slice if we can't get config, comparison will detect the difference
+		return []v1.EnvVar{}
+	}
+
+	minioPort := *objectStoreInfo.Port
+	minioEndpoint := *objectStoreInfo.Endpoint
+	bucketPathPrefix := *objectStoreInfo.Name
+	var protocol string
+	switch minioPort {
+	case "443":
+		protocol = "https://"
+	default:
+		protocol = "http://"
+	}
+	minioUpstreamURL := protocol + minioEndpoint + ":" + minioPort
+
+	logLevel := r.FrontendEnvironment.Spec.ReverseProxyLogLevel
+	if logLevel == "" {
+		logLevel = "DEBUG"
+	}
+
+	spaEntrypointPath := r.FrontendEnvironment.Spec.ReverseProxySPAEntrypointPath
+	if spaEntrypointPath == "" {
+		spaEntrypointPath = "/index.html"
+	}
+
+	envVars := []v1.EnvVar{
+		{Name: "SERVER_PORT", Value: strconv.Itoa(ReverseProxyPort)},
+		{Name: "MINIO_UPSTREAM_URL", Value: minioUpstreamURL},
+		{Name: "BUCKET_PATH_PREFIX", Value: bucketPathPrefix},
+		{Name: "SPA_ENTRYPOINT_PATH", Value: spaEntrypointPath},
+		{Name: "LOG_LEVEL", Value: logLevel},
+	}
+
+	// Add SSL environment variables if SSL is enabled
+	if r.FrontendEnvironment.Spec.SSL {
+		envVars = append(envVars, v1.EnvVar{
+			Name:  "CADDY_TLS_MODE",
+			Value: "https_port 8080",
+		})
+		envVars = append(envVars, v1.EnvVar{
+			Name:  "CADDY_TLS_CERT",
+			Value: "tls /opt/certs/tls.crt /opt/certs/tls.key",
+		})
+	}
+
+	return envVars
+}
+
+// getExpectedPorts returns the expected container ports
+func (r *ReverseProxyReconciliation) getExpectedPorts() []v1.ContainerPort {
+	return []v1.ContainerPort{
+		{
+			Name:          "http",
+			ContainerPort: int32(ReverseProxyPort),
+			Protocol:      "TCP",
+		},
+	}
+}
+
+// getExpectedResources returns the expected resource requirements
+func (r *ReverseProxyReconciliation) getExpectedResources() v1.ResourceRequirements {
+	return v1.ResourceRequirements{
+		Requests: v1.ResourceList{
+			v1.ResourceCPU:    resource.MustParse("30m"),
+			v1.ResourceMemory: resource.MustParse("50Mi"),
+		},
+		Limits: v1.ResourceList{
+			v1.ResourceCPU:    resource.MustParse("100m"),
+			v1.ResourceMemory: resource.MustParse("128Mi"),
+		},
+	}
+}
+
+// getExpectedVolumeMounts returns the expected volume mounts
+func (r *ReverseProxyReconciliation) getExpectedVolumeMounts() []v1.VolumeMount {
+	volumeMounts := []v1.VolumeMount{}
+
+	// Add SSL certificate volume mount if SSL is enabled
+	if r.FrontendEnvironment.Spec.SSL {
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      "certs",
+			MountPath: "/opt/certs",
+		})
+	}
+
+	return volumeMounts
+}
+
+// getExpectedLivenessProbe returns the expected liveness probe
+func (r *ReverseProxyReconciliation) getExpectedLivenessProbe() *v1.Probe {
+	probeScheme := v1.URISchemeHTTP
+	if r.FrontendEnvironment.Spec.SSL {
+		probeScheme = v1.URISchemeHTTPS
+	}
+
+	return &v1.Probe{
+		ProbeHandler: v1.ProbeHandler{
+			HTTPGet: &v1.HTTPGetAction{
+				Path:   "/healthz",
+				Port:   intstr.FromInt(ReverseProxyPort),
+				Scheme: probeScheme,
+			},
+		},
+		InitialDelaySeconds: 10,
+		PeriodSeconds:       30,
+		FailureThreshold:    3,
+	}
+}
+
+// getExpectedReadinessProbe returns the expected readiness probe
+func (r *ReverseProxyReconciliation) getExpectedReadinessProbe() *v1.Probe {
+	probeScheme := v1.URISchemeHTTP
+	if r.FrontendEnvironment.Spec.SSL {
+		probeScheme = v1.URISchemeHTTPS
+	}
+
+	return &v1.Probe{
+		ProbeHandler: v1.ProbeHandler{
+			HTTPGet: &v1.HTTPGetAction{
+				Path:   "/healthz",
+				Port:   intstr.FromInt(ReverseProxyPort),
+				Scheme: probeScheme,
+			},
+		},
+		InitialDelaySeconds: 5,
+		PeriodSeconds:       10,
+	}
 }
 
 // compareContainerPorts compares two container port slices for equality
