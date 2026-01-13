@@ -88,6 +88,12 @@ spec:
               defaultReplicas:
                 format: int32
                 type: integer
+              deployCutoffTimestampPushCache:
+                description: |-
+                  Redeploy pushcache jobs created before this date (RFC3339 format)
+                  Any jobs with creation timestamp before this value will be deleted and recreated
+                  Example: "2026-01-13T10:30:00Z"
+                type: string
               enableAkamaiCacheBust:
                 description: Enable Akamai Cache Bust
                 type: boolean
