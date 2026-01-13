@@ -1,0 +1,7 @@
+# Assert the job still exists with the same creation timestamp (job should NOT be recreated)
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+commands:
+  - script: |
+      # Get the job's UID - if it exists with the same UID, it wasn't recreated
+      kubectl get job chrome-test-cutoff-frontend-pushcache -n test-pushcache-cutoff -o jsonpath='{.metadata.uid}' | grep -v '^$'

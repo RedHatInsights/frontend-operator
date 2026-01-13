@@ -1,0 +1,34 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: chrome-test-cutoff-frontend-pushcache
+  namespace: test-pushcache-cutoff
+  labels:
+    frontend: chrome-test-cutoff
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: chrome-test-cutoff
+spec:
+  template:
+    metadata:
+      annotations:
+        frontend-image: quay.io/cloudservices/insights-chrome-frontend:720317c
+    spec:
+      volumes:
+        - name: pushcache-volume
+          configMap:
+            name: test-pushcache-cutoff-environment
+            defaultMode: 420
+      containers:
+        - name: valpop-pushcache
+          image: quay.io/cloudservices/insights-chrome-frontend:720317c
+          command:
+            - /bin/bash
+            - '-c'
+            - 'sleep 120; valpop populate -r chrome-test-cutoff -s /srv/dist --timeout 172800 --bucket frontend --hostname minio-service.minio-env.svc.cluster.local --port 9000 --username minioadmin --password minioadmin'
+          resources: {}
+          volumeMounts:
+            - name: pushcache-volume
+              mountPath: /opt/pushcache-volume
+      restartPolicy: Never

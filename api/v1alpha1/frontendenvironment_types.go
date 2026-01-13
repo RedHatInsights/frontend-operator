@@ -137,6 +137,10 @@ type FrontendEnvironmentSpec struct {
 	ReverseProxyLogLevel string `json:"reverseProxyLogLevel,omitempty"`
 	// Hostname for reverse proxy ingress
 	ReverseProxyHostname string `json:"reverseProxyHostname,omitempty"`
+	// Redeploy pushcache jobs created before this date (RFC3339 format)
+	// Any jobs with creation timestamp before this value will be deleted and recreated
+	// Example: "2026-01-13T10:30:00Z"
+	DeployCutoffTimestampPushCache string `json:"deployCutoffTimestampPushCache,omitempty"`
 
 	DefaultReplicas *int32 `json:"defaultReplicas,omitempty" yaml:"defaultReplicas,omitempty"`
 	// For the ChromeUI to render navigation bundles

@@ -843,6 +843,16 @@ func (r *FrontendReconciliation) isJobFromCurrentFrontendImage(j *batchv1.Job) b
 	return j.Spec.Template.ObjectMeta.Annotations["frontend-image"] == r.Frontend.Spec.Image
 }
 
+func (r *FrontendReconciliation) isJobBehindCutoffTimestamp(j *batchv1.Job, jobName, deployCutoffTimestamp string) bool {
+	if deployCutoffTimestamp == "" || !strings.Contains(jobName, "pushcache") {
+		return false
+	}
+
+	// Only redeploy if job was created before the deployCutoffTimestamp date
+	jobTimestamp := j.CreationTimestamp.Format("2006-01-02T15:04:05Z")
+	return jobTimestamp < deployCutoffTimestamp
+}
+
 // manageExistingJob will delete the existing job if it exists and is not from the current frontend image
 // It will return true if the job exists and is from the current frontend image
 func (r *FrontendReconciliation) manageExistingJob(jobName string) (bool, error) {
@@ -857,7 +867,7 @@ func (r *FrontendReconciliation) manageExistingJob(jobName string) (bool, error)
 	}
 
 	// If it exists but is not from the current frontend image we delete it
-	if !r.isJobFromCurrentFrontendImage(j) {
+	if !r.isJobFromCurrentFrontendImage(j) || r.isJobBehindCutoffTimestamp(j, jobName, r.FrontendEnvironment.Spec.DeployCutoffTimestampPushCache) {
 		backgroundDeletion := metav1.DeletePropagationBackground
 		return false, r.Client.Delete(r.Ctx, j, &client.DeleteOptions{
 			PropagationPolicy: &backgroundDeletion,
@@ -877,11 +887,11 @@ func (r *FrontendReconciliation) createOrUpdateJob(generateJobName func() string
 	// If the job exists and is from the current frontend image we can return
 	// If the job exists and is not from the current frontend image we delete it
 	// If the job doesn't exist we create it
-	existsAndMatchesCurrentFrontendImage, err := r.manageExistingJob(jobName)
+	skipUpdate, err := r.manageExistingJob(jobName)
 	if err != nil {
 		return err
 	}
-	if existsAndMatchesCurrentFrontendImage {
+	if skipUpdate {
 		return nil
 	}
 

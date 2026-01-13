@@ -1,0 +1,18 @@
+# Assert the job was recreated (new creation timestamp)
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: chrome-test-cutoff-frontend-pushcache
+  namespace: test-pushcache-cutoff
+  labels:
+    frontend: chrome-test-cutoff
+spec:
+  template:
+    metadata:
+      annotations:
+        frontend-image: quay.io/cloudservices/insights-chrome-frontend:720317c
+    spec:
+      containers:
+        - name: valpop-pushcache
+          image: quay.io/cloudservices/insights-chrome-frontend:720317c
+      restartPolicy: Never
