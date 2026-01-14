@@ -40,7 +40,7 @@ import (
 
 const (
 	ReverseProxyPort     = 8080
-	ReverseProxyReplicas = 2
+	ReverseProxyReplicas = 3
 )
 
 // ReverseProxyReconciliation handles the reconciliation logic for reverse proxy resources
