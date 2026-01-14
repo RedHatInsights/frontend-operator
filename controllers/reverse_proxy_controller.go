@@ -64,10 +64,7 @@ func (r *ReverseProxyController) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, nil
 	}
 
-	// Use the FrontendEnvironment name as the namespace
-	namespace := fe.Name
-
-	log.Info("Reconciling reverse proxy", "namespace", namespace)
+	log.Info("Reconciling reverse proxy", "namespace", fe.Spec.Namespace)
 
 	// Create the reconciliation context
 	reconciliation := ReverseProxyReconciliation{
@@ -75,7 +72,6 @@ func (r *ReverseProxyController) Reconcile(ctx context.Context, req ctrl.Request
 		Recorder:            r.Recorder,
 		Client:              r.Client,
 		Ctx:                 ctx,
-		Namespace:           namespace,
 		FrontendEnvironment: fe,
 	}
 
@@ -85,7 +81,7 @@ func (r *ReverseProxyController) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{Requeue: true}, err
 	}
 
-	log.Info("Successfully reconciled reverse proxy", "namespace", namespace)
+	log.Info("Successfully reconciled reverse proxy", "namespace", fe.Spec.Namespace)
 	return ctrl.Result{}, nil
 }
 

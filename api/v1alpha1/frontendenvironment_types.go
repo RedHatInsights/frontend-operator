@@ -89,6 +89,9 @@ type FrontendEnvironmentSpec struct {
 	// Hostname
 	Hostname string `json:"hostname,omitempty"`
 
+	// Namespace to deploy reverse-proxy frontends into
+	Namespace string `json:"namespace,omitempty"`
+
 	// Whitelist CIDRs
 	Whitelist []string `json:"whitelist,omitempty"`
 

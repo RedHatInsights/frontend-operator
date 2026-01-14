@@ -3,6 +3,7 @@ kind: FrontendEnvironment
 metadata:
   name: env-boot
 spec:
+  namespace: boot
   sso: https://sso.stage.redhat.com/auth
   # SSO URL mapping for special cases
   # Maps hostname patterns to specific SSO URLs

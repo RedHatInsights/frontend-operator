@@ -49,7 +49,6 @@ type ReverseProxyReconciliation struct {
 	Recorder            record.EventRecorder
 	Client              client.Client
 	Ctx                 context.Context
-	Namespace           string
 	FrontendEnvironment *crd.FrontendEnvironment
 }
 
@@ -78,7 +77,7 @@ func (r *ReverseProxyReconciliation) reconcileDeployment() error {
 	deployment := &apps.Deployment{}
 	deploymentKey := types.NamespacedName{
 		Name:      "reverse-proxy",
-		Namespace: r.Namespace,
+		Namespace: r.FrontendEnvironment.Spec.Namespace,
 	}
 
 	err := r.Client.Get(r.Ctx, deploymentKey, deployment)
@@ -98,7 +97,7 @@ func (r *ReverseProxyReconciliation) reconcileService() error {
 	service := &v1.Service{}
 	serviceKey := types.NamespacedName{
 		Name:      "reverse-proxy",
-		Namespace: r.Namespace,
+		Namespace: r.FrontendEnvironment.Spec.Namespace,
 	}
 
 	err := r.Client.Get(r.Ctx, serviceKey, service)
@@ -459,7 +458,7 @@ func (r *ReverseProxyReconciliation) createReverseProxyServiceConfig() (*v1.Serv
 	// Define name of resource
 	nn := types.NamespacedName{
 		Name:      serviceName,
-		Namespace: r.Namespace,
+		Namespace: r.FrontendEnvironment.Spec.Namespace,
 	}
 
 	// Get consistent labels that won't conflict between frontends
@@ -510,7 +509,7 @@ func (r *ReverseProxyReconciliation) createReverseProxyDeployment() error {
 	// Define name of resource
 	nn := types.NamespacedName{
 		Name:      deploymentName,
-		Namespace: r.Namespace,
+		Namespace: r.FrontendEnvironment.Spec.Namespace,
 	}
 
 	// Get consistent labels that won't conflict between frontends
@@ -764,7 +763,7 @@ func (r *ReverseProxyReconciliation) reconcileIngress() error {
 	ingress := &networkingv1.Ingress{}
 	ingressKey := types.NamespacedName{
 		Name:      "reverse-proxy",
-		Namespace: r.Namespace,
+		Namespace: r.FrontendEnvironment.Spec.Namespace,
 	}
 
 	err := r.Client.Get(r.Ctx, ingressKey, ingress)
@@ -818,7 +817,7 @@ func (r *ReverseProxyReconciliation) buildReverseProxyIngress() (*networkingv1.I
 	// Define name of resource
 	nn := types.NamespacedName{
 		Name:      ingressName,
-		Namespace: r.Namespace,
+		Namespace: r.FrontendEnvironment.Spec.Namespace,
 	}
 
 	// Get consistent labels that won't conflict between frontends

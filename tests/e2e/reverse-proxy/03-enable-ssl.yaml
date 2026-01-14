@@ -8,6 +8,7 @@ spec:
   generateNavJSON: false
   ssl: true  # Enable SSL
   hostname: reverse-proxy-test.example.com
+  namespace: test-reverse-proxy
   sso: https://sso.foo.redhat.com
   enablePushCache: true
   reverseProxyHostname: reverse-proxy.cluster.local

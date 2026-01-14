@@ -152,6 +152,9 @@ spec:
                 - disabled
                 - mode
                 type: object
+              namespace:
+                description: Namespace to deploy reverse-proxy frontends into
+                type: string
               overwriteCaddyConfig:
                 description: |-
                   OverwriteCaddyConfig determines if the operator should overwrite

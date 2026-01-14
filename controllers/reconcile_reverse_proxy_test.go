@@ -197,11 +197,10 @@ func TestUpdateReverseProxyDeployment(t *testing.T) {
 
 	// Create reconciliation context
 	reconciliation := &ReverseProxyReconciliation{
-		Log:       logr.Discard(),
-		Recorder:  &record.FakeRecorder{},
-		Client:    fakeClient,
-		Ctx:       context.Background(),
-		Namespace: "test-namespace",
+		Log:      logr.Discard(),
+		Recorder: &record.FakeRecorder{},
+		Client:   fakeClient,
+		Ctx:      context.Background(),
 		FrontendEnvironment: &crd.FrontendEnvironment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-env",
@@ -445,11 +444,10 @@ func TestUpdateReverseProxyService(t *testing.T) {
 
 	// Create reconciliation context
 	reconciliation := &ReverseProxyReconciliation{
-		Log:       logr.Discard(),
-		Recorder:  &record.FakeRecorder{},
-		Client:    fakeClient,
-		Ctx:       context.Background(),
-		Namespace: "test-namespace",
+		Log:      logr.Discard(),
+		Recorder: &record.FakeRecorder{},
+		Client:   fakeClient,
+		Ctx:      context.Background(),
 		FrontendEnvironment: &crd.FrontendEnvironment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-env",
@@ -760,17 +758,6 @@ func TestReverseProxyReconciliation_Ingress(t *testing.T) {
 		os.Unsetenv("PUSHCACHE_AWS_REGION")
 	}()
 
-	// Create test objects
-	frontend := &crd.Frontend{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-frontend",
-			Namespace: "test-namespace",
-		},
-		Spec: crd.FrontendSpec{
-			EnvName: "test-env",
-		},
-	}
-
 	frontendEnv := &crd.FrontendEnvironment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-env",
@@ -792,7 +779,7 @@ func TestReverseProxyReconciliation_Ingress(t *testing.T) {
 	_ = crd.AddToScheme(scheme)
 
 	// Create fake client
-	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(frontend, frontendEnv).Build()
+	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(frontendEnv).Build()
 
 	// Create reconciliation instance
 	reconciliation := &ReverseProxyReconciliation{
@@ -800,7 +787,6 @@ func TestReverseProxyReconciliation_Ingress(t *testing.T) {
 		Recorder:            &record.FakeRecorder{},
 		Client:              client,
 		Ctx:                 context.Background(),
-		Namespace:           frontend.Namespace,
 		FrontendEnvironment: frontendEnv,
 	}
 
@@ -849,7 +835,6 @@ func TestReverseProxyReconciliation_Ingress(t *testing.T) {
 			Recorder:            &record.FakeRecorder{},
 			Client:              client,
 			Ctx:                 context.Background(),
-			Namespace:           frontend.Namespace,
 			FrontendEnvironment: frontendEnvSSL,
 		}
 
@@ -905,7 +890,7 @@ func TestReverseProxyReconciliation_Ingress(t *testing.T) {
 		}
 
 		// Update client with existing ingress
-		client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(frontend, frontendEnv, existingIngress).Build()
+		client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(frontendEnv, existingIngress).Build()
 		reconciliation.Client = client
 
 		// Test updating ingress
@@ -1165,7 +1150,6 @@ func TestReverseProxyReconciliation_Whitelist(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reconciliation := &ReverseProxyReconciliation{
-				Namespace: "test-namespace",
 				FrontendEnvironment: &crd.FrontendEnvironment{
 					Spec: crd.FrontendEnvironmentSpec{
 						SSL:                  false,
@@ -1273,7 +1257,6 @@ func TestReverseProxyReconciliation_FullReconciliation(t *testing.T) {
 		Recorder:            &record.FakeRecorder{},
 		Client:              client,
 		Ctx:                 context.Background(),
-		Namespace:           frontend.Namespace,
 		FrontendEnvironment: frontendEnv,
 	}
 
