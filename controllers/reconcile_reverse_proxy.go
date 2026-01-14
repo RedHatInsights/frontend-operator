@@ -686,12 +686,12 @@ func (r *ReverseProxyReconciliation) createReverseProxyContainer() (v1.Container
 		VolumeMounts: volumeMounts,
 		Resources: v1.ResourceRequirements{
 			Requests: v1.ResourceList{
-				v1.ResourceCPU:    resource.MustParse("30m"),
-				v1.ResourceMemory: resource.MustParse("50Mi"),
+				v1.ResourceCPU:    resource.MustParse("250m"),
+				v1.ResourceMemory: resource.MustParse("256Mi"),
 			},
 			Limits: v1.ResourceList{
-				v1.ResourceCPU:    resource.MustParse("100m"),
-				v1.ResourceMemory: resource.MustParse("128Mi"),
+				v1.ResourceCPU:    resource.MustParse("500m"),
+				v1.ResourceMemory: resource.MustParse("512Mi"),
 			},
 		},
 	}
