@@ -1,54 +1,4 @@
 ---
-# Verify that the frontend deployment was created
-kind: Deployment
-apiVersion: apps/v1
-metadata:
-  name: test-frontend-with-proxy-frontend
-  namespace: test-reverse-proxy
-  labels:
-    frontend: test-frontend-with-proxy
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      frontend: test-frontend-with-proxy
-  template:
-    metadata:
-      labels:
-        frontend: test-frontend-with-proxy
-    spec:
-      containers:
-      - name: fe-image
-        image: quay.io/cloudservices/insights-chrome-frontend:latest
-        ports:
-        - name: web
-          containerPort: 80
-          protocol: TCP
-        - name: metrics
-          containerPort: 9000
-          protocol: TCP
----
-# Verify that the frontend service was created
-apiVersion: v1
-kind: Service
-metadata:
-  name: test-frontend-with-proxy
-  namespace: test-reverse-proxy
-spec:
-  ports:
-  - name: public
-    port: 8000
-    targetPort: 8000
-    protocol: TCP
-    appProtocol: http
-  - name: metrics
-    port: 9000
-    targetPort: 9000
-    protocol: TCP
-    appProtocol: http
-  selector:
-    frontend: test-frontend-with-proxy
----
 # Verify that the reverse proxy deployment was created
 kind: Deployment
 apiVersion: apps/v1
@@ -66,7 +16,7 @@ metadata:
     kind: FrontendEnvironment
     name: test-reverse-proxy
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: reverse-proxy
@@ -106,11 +56,11 @@ spec:
           value: minioadmin
         resources:
           limits:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 500m
+            memory: 512Mi
           requests:
-            cpu: 30m
-            memory: 50Mi
+            cpu: 250m
+            memory: 256Mi
         livenessProbe:
           httpGet:
             path: /healthz
