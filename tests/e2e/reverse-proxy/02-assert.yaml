@@ -58,24 +58,24 @@ metadata:
   labels:
     app: reverse-proxy
     component: reverse-proxy
-    environment: test-reverse-proxy-environment
+    environment: test-reverse-proxy
   annotations:
     kube-linter.io/ignore-all: "we don't need no any checking"
   ownerReferences:
   - apiVersion: cloud.redhat.com/v1alpha1
     kind: FrontendEnvironment
-    name: test-reverse-proxy-environment
+    name: test-reverse-proxy
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: reverse-proxy
       component: reverse-proxy
-      environment: test-reverse-proxy-environment
+      environment: test-reverse-proxy
   template:
     metadata:
       labels:
-        environment: test-reverse-proxy-environment
+        environment: test-reverse-proxy
         app: reverse-proxy
         component: reverse-proxy
     spec:
@@ -139,7 +139,7 @@ metadata:
   name: reverse-proxy
   namespace: test-reverse-proxy
   labels:
-    environment: test-reverse-proxy-environment
+    environment: test-reverse-proxy
     app: reverse-proxy
     component: reverse-proxy
 spec:
@@ -150,7 +150,7 @@ spec:
     protocol: TCP
     appProtocol: http
   selector:
-    environment: test-reverse-proxy-environment
+    environment: test-reverse-proxy
     app: reverse-proxy
     component: reverse-proxy
 ---
@@ -163,7 +163,7 @@ metadata:
   labels:
     app: reverse-proxy
     component: reverse-proxy
-    environment: test-reverse-proxy-environment
+    environment: test-reverse-proxy
 spec:
   rules:
   - host: reverse-proxy.cluster.local

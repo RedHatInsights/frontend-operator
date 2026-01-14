@@ -102,6 +102,16 @@ func Run(metricsAddr, probeAddr string, enableLeaderElection bool) error {
 		setupLog.Error(err, "unable to create controller", "controller", "Frontend")
 		return fmt.Errorf("unable to create manager: %w", err)
 	}
+
+	if err = (&controllers.ReverseProxyController{
+		Log:      ctrl.Log.WithName("controllers").WithName("ReverseProxy"),
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Recorder: mgr.GetEventRecorderFor("reverse-proxy-controller"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ReverseProxy")
+		return fmt.Errorf("unable to create reverse proxy controller: %w", err)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

@@ -3,7 +3,7 @@
 apiVersion: cloud.redhat.com/v1alpha1
 kind: FrontendEnvironment
 metadata:
-  name: test-reverse-proxy-environment
+  name: test-reverse-proxy
 spec:
   generateNavJSON: false
   ssl: true  # Enable SSL

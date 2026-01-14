@@ -197,16 +197,11 @@ func TestUpdateReverseProxyDeployment(t *testing.T) {
 
 	// Create reconciliation context
 	reconciliation := &ReverseProxyReconciliation{
-		Log:      logr.Discard(),
-		Recorder: &record.FakeRecorder{},
-		Client:   fakeClient,
-		Ctx:      context.Background(),
-		Frontend: &crd.Frontend{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-frontend",
-				Namespace: "test-namespace",
-			},
-		},
+		Log:       logr.Discard(),
+		Recorder:  &record.FakeRecorder{},
+		Client:    fakeClient,
+		Ctx:       context.Background(),
+		Namespace: "test-namespace",
 		FrontendEnvironment: &crd.FrontendEnvironment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-env",
@@ -450,16 +445,11 @@ func TestUpdateReverseProxyService(t *testing.T) {
 
 	// Create reconciliation context
 	reconciliation := &ReverseProxyReconciliation{
-		Log:      logr.Discard(),
-		Recorder: &record.FakeRecorder{},
-		Client:   fakeClient,
-		Ctx:      context.Background(),
-		Frontend: &crd.Frontend{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-frontend",
-				Namespace: "test-namespace",
-			},
-		},
+		Log:       logr.Discard(),
+		Recorder:  &record.FakeRecorder{},
+		Client:    fakeClient,
+		Ctx:       context.Background(),
+		Namespace: "test-namespace",
 		FrontendEnvironment: &crd.FrontendEnvironment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "test-env",
@@ -810,7 +800,7 @@ func TestReverseProxyReconciliation_Ingress(t *testing.T) {
 		Recorder:            &record.FakeRecorder{},
 		Client:              client,
 		Ctx:                 context.Background(),
-		Frontend:            frontend,
+		Namespace:           frontend.Namespace,
 		FrontendEnvironment: frontendEnv,
 	}
 
@@ -859,7 +849,7 @@ func TestReverseProxyReconciliation_Ingress(t *testing.T) {
 			Recorder:            &record.FakeRecorder{},
 			Client:              client,
 			Ctx:                 context.Background(),
-			Frontend:            frontend,
+			Namespace:           frontend.Namespace,
 			FrontendEnvironment: frontendEnvSSL,
 		}
 
@@ -1175,12 +1165,7 @@ func TestReverseProxyReconciliation_Whitelist(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reconciliation := &ReverseProxyReconciliation{
-				Frontend: &crd.Frontend{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-frontend",
-						Namespace: "test-namespace",
-					},
-				},
+				Namespace: "test-namespace",
 				FrontendEnvironment: &crd.FrontendEnvironment{
 					Spec: crd.FrontendEnvironmentSpec{
 						SSL:                  false,
@@ -1288,7 +1273,7 @@ func TestReverseProxyReconciliation_FullReconciliation(t *testing.T) {
 		Recorder:            &record.FakeRecorder{},
 		Client:              client,
 		Ctx:                 context.Background(),
-		Frontend:            frontend,
+		Namespace:           frontend.Namespace,
 		FrontendEnvironment: frontendEnv,
 	}
 
@@ -1358,9 +1343,9 @@ func TestReverseProxyReconciliation_FullReconciliation(t *testing.T) {
 		}
 	}
 
-	// Verify deployment can be scaled (has proper configuration)
-	if deployment.Spec.Replicas == nil || *deployment.Spec.Replicas != 1 {
-		t.Errorf("Expected deployment replicas=1, got replicas=%v", deployment.Spec.Replicas)
+	// Verify deployment has proper replicas for high availability
+	if deployment.Spec.Replicas == nil || *deployment.Spec.Replicas != ReverseProxyReplicas {
+		t.Errorf("Expected deployment replicas=%d, got replicas=%v", ReverseProxyReplicas, deployment.Spec.Replicas)
 	}
 
 	// Verify container has proper resource limits for scaling
