@@ -1,0 +1,17 @@
+---
+# First, manually patch the deployment to have 2 replicas to simulate an old state
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |
+      # Patch the deployment to have 2 replicas (simulating old operator version)
+      kubectl patch deployment reverse-proxy -n test-reverse-proxy --type='merge' -p '{"spec":{"replicas":2}}'
+      # Wait for the patch to be applied
+      sleep 2
+      # Verify it has 2 replicas
+      REPLICAS=$(kubectl get deployment reverse-proxy -n test-reverse-proxy -o jsonpath='{.spec.replicas}')
+      if [ "$REPLICAS" != "2" ]; then
+        echo "Failed to patch replicas to 2, got: $REPLICAS"
+        exit 1
+      fi
+      echo "Successfully patched deployment to 2 replicas"

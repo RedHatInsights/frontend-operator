@@ -286,23 +286,8 @@ func TestUpdateReverseProxyDeployment(t *testing.T) {
 				t.Fatalf("Failed to get updated deployment: %v", err)
 			}
 
-			// Check if restart annotation was added when update was expected
-			if tt.expectUpdate {
-				if updatedDeployment.Spec.Template.Annotations == nil {
-					t.Error("Expected restart annotation to be added, but annotations were nil")
-				} else if _, exists := updatedDeployment.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"]; !exists {
-					t.Error("Expected restart annotation to be added, but it was not found")
-				}
-			} else {
-				// No update expected, so no restart annotation should be added
-				if updatedDeployment.Spec.Template.Annotations != nil {
-					if _, exists := updatedDeployment.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"]; exists {
-						t.Error("No update expected, but restart annotation was added")
-					}
-				}
-			}
-
-			// Verify environment variables are correctly set
+			// The update function now always updates to desired state (no restart annotation)
+			// Verify environment variables are correctly set to desired values
 			envVars := updatedDeployment.Spec.Template.Spec.Containers[0].Env
 			envMap := make(map[string]string)
 			for _, env := range envVars {
@@ -326,6 +311,135 @@ func TestUpdateReverseProxyDeployment(t *testing.T) {
 				t.Error("BUCKET_PATH_PREFIX environment variable not found")
 			}
 		})
+	}
+}
+
+// TestUpdateReverseProxyDeploymentReplicas tests that replica count is updated correctly
+func TestUpdateReverseProxyDeploymentReplicas(t *testing.T) {
+	// Setup environment variables for the test
+	os.Setenv("PUSHCACHE_AWS_ACCESS_KEY_ID", "test-access-key")
+	os.Setenv("PUSHCACHE_AWS_SECRET_ACCESS_KEY", "test-secret-key")
+	os.Setenv("PUSHCACHE_AWS_REGION", "us-east-1")
+	os.Setenv("PUSHCACHE_AWS_ENDPOINT", "minio-service.minio-env.svc.cluster.local")
+	os.Setenv("PUSHCACHE_AWS_PORT", "9000")
+	os.Setenv("PUSHCACHE_AWS_BUCKET_NAME", "frontend")
+	defer func() {
+		os.Unsetenv("PUSHCACHE_AWS_ACCESS_KEY_ID")
+		os.Unsetenv("PUSHCACHE_AWS_SECRET_ACCESS_KEY")
+		os.Unsetenv("PUSHCACHE_AWS_REGION")
+		os.Unsetenv("PUSHCACHE_AWS_ENDPOINT")
+		os.Unsetenv("PUSHCACHE_AWS_PORT")
+		os.Unsetenv("PUSHCACHE_AWS_BUCKET_NAME")
+	}()
+
+	// Create a fake client with the required objects
+	scheme := runtime.NewScheme()
+	_ = crd.AddToScheme(scheme)
+	_ = apps.AddToScheme(scheme)
+	_ = v1.AddToScheme(scheme)
+
+	// Create existing deployment with 2 replicas (simulating old state)
+	oldReplicas := int32(2)
+	existingDeployment := &apps.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "reverse-proxy",
+			Namespace: "test-namespace",
+			Labels: map[string]string{
+				"app":       "reverse-proxy",
+				"component": "reverse-proxy",
+			},
+		},
+		Spec: apps.DeploymentSpec{
+			Replicas: &oldReplicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app":       "reverse-proxy",
+					"component": "reverse-proxy",
+				},
+			},
+			Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app":       "reverse-proxy",
+						"component": "reverse-proxy",
+					},
+				},
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Name:  "reverse-proxy",
+							Image: "old-image:v1",
+							Env: []v1.EnvVar{
+								{Name: "SERVER_PORT", Value: "8080"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	fakeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(existingDeployment).
+		Build()
+
+	// Create reconciliation context
+	reconciliation := &ReverseProxyReconciliation{
+		Log:       logr.Discard(),
+		Recorder:  &record.FakeRecorder{},
+		Client:    fakeClient,
+		Ctx:       context.Background(),
+		Namespace: "test-namespace",
+		FrontendEnvironment: &crd.FrontendEnvironment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-env",
+			},
+			Spec: crd.FrontendEnvironmentSpec{
+				ReverseProxyImage: "new-image:v2",
+			},
+		},
+	}
+
+	// Get the deployment before update
+	deployment := &apps.Deployment{}
+	err := fakeClient.Get(context.Background(), types.NamespacedName{
+		Name:      "reverse-proxy",
+		Namespace: "test-namespace",
+	}, deployment)
+	if err != nil {
+		t.Fatalf("Failed to get deployment: %v", err)
+	}
+
+	// Verify initial state has 2 replicas
+	if *deployment.Spec.Replicas != 2 {
+		t.Fatalf("Expected initial replicas to be 2, got %d", *deployment.Spec.Replicas)
+	}
+
+	// Update the deployment
+	err = reconciliation.updateReverseProxyDeployment(deployment)
+	if err != nil {
+		t.Fatalf("updateReverseProxyDeployment failed: %v", err)
+	}
+
+	// Get the updated deployment
+	updatedDeployment := &apps.Deployment{}
+	err = fakeClient.Get(context.Background(), types.NamespacedName{
+		Name:      "reverse-proxy",
+		Namespace: "test-namespace",
+	}, updatedDeployment)
+	if err != nil {
+		t.Fatalf("Failed to get updated deployment: %v", err)
+	}
+
+	// Verify replicas updated to ReverseProxyReplicas constant (3)
+	if *updatedDeployment.Spec.Replicas != ReverseProxyReplicas {
+		t.Errorf("Expected replicas to be %d, got %d", ReverseProxyReplicas, *updatedDeployment.Spec.Replicas)
+	}
+
+	// Verify image was also updated
+	if updatedDeployment.Spec.Template.Spec.Containers[0].Image != "new-image:v2" {
+		t.Errorf("Expected image to be 'new-image:v2', got %s", updatedDeployment.Spec.Template.Spec.Containers[0].Image)
 	}
 }
 
@@ -643,100 +757,6 @@ func TestServiceNeedsUpdate(t *testing.T) {
 			result := reconciliation.compareService(tt.current, tt.desired)
 			if result != tt.expected {
 				t.Errorf("Expected %v, got %v", tt.expected, result)
-			}
-		})
-	}
-}
-
-// TestContainerNeedsUpdate tests the container comparison function
-func TestContainerNeedsUpdate(t *testing.T) {
-	reconciliation := &ReverseProxyReconciliation{}
-
-	baseContainer := &v1.Container{
-		Name:  "reverse-proxy",
-		Image: "quay.io/cloudservices/frontend-asset-proxy:old-tag",
-		Ports: []v1.ContainerPort{
-			{Name: "http", ContainerPort: 8080, Protocol: "TCP"},
-		},
-		Env: []v1.EnvVar{
-			{Name: "VAR1", Value: "value1"},
-		},
-	}
-
-	tests := []struct {
-		name           string
-		current        *v1.Container
-		desired        *v1.Container
-		expectUpdate   bool
-		expectedReason string
-	}{
-		{
-			name:           "Identical containers - no update needed",
-			current:        baseContainer,
-			desired:        baseContainer,
-			expectUpdate:   false,
-			expectedReason: "",
-		},
-		{
-			name:    "Image changed - update needed",
-			current: baseContainer,
-			desired: &v1.Container{
-				Name:  "reverse-proxy",
-				Image: "quay.io/cloudservices/frontend-asset-proxy:new-tag",
-				Ports: []v1.ContainerPort{
-					{Name: "http", ContainerPort: 8080, Protocol: "TCP"},
-				},
-				Env: []v1.EnvVar{
-					{Name: "VAR1", Value: "value1"},
-				},
-			},
-			expectUpdate:   true,
-			expectedReason: "image changed from quay.io/cloudservices/frontend-asset-proxy:old-tag to quay.io/cloudservices/frontend-asset-proxy:new-tag",
-		},
-		{
-			name:    "Environment variables changed - update needed",
-			current: baseContainer,
-			desired: &v1.Container{
-				Name:  "reverse-proxy",
-				Image: "quay.io/cloudservices/frontend-asset-proxy:old-tag",
-				Ports: []v1.ContainerPort{
-					{Name: "http", ContainerPort: 8080, Protocol: "TCP"},
-				},
-				Env: []v1.EnvVar{
-					{Name: "VAR1", Value: "new-value"},
-				},
-			},
-			expectUpdate:   true,
-			expectedReason: "environment variables changed",
-		},
-		{
-			name:    "Port changed - update needed",
-			current: baseContainer,
-			desired: &v1.Container{
-				Name:  "reverse-proxy",
-				Image: "quay.io/cloudservices/frontend-asset-proxy:old-tag",
-				Ports: []v1.ContainerPort{
-					{Name: "http", ContainerPort: 9090, Protocol: "TCP"},
-				},
-				Env: []v1.EnvVar{
-					{Name: "VAR1", Value: "value1"},
-				},
-			},
-			expectUpdate:   true,
-			expectedReason: "container ports changed",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			needsUpdate, reason := reconciliation.compareContainer(tt.current, tt.desired)
-
-			if needsUpdate != tt.expectUpdate {
-				t.Errorf("Expected update=%v, got update=%v", tt.expectUpdate, needsUpdate)
-			}
-
-			if tt.expectUpdate && reason != tt.expectedReason {
-				t.Errorf("Expected reason=%s, got reason=%s", tt.expectedReason, reason)
 			}
 		})
 	}

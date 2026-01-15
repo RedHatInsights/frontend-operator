@@ -1,0 +1,22 @@
+---
+# Assert that the deployment now has 3 replicas (the operator's desired state)
+# and the LOG_LEVEL was also updated
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+commands:
+  - script: |
+      # Verify replicas is now 3
+      REPLICAS=$(kubectl get deployment reverse-proxy -n test-reverse-proxy -o jsonpath='{.spec.replicas}')
+      if [ "$REPLICAS" != "3" ]; then
+        echo "Expected replicas to be 3, got: $REPLICAS"
+        exit 1
+      fi
+      echo "Replicas correctly updated to 3"
+      
+      # Verify LOG_LEVEL env var is DEBUG
+      LOG_LEVEL=$(kubectl get deployment reverse-proxy -n test-reverse-proxy -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="LOG_LEVEL")].value}')
+      if [ "$LOG_LEVEL" != "DEBUG" ]; then
+        echo "Expected LOG_LEVEL to be DEBUG, got: $LOG_LEVEL"
+        exit 1
+      fi
+      echo "LOG_LEVEL correctly updated to DEBUG"

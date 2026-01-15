@@ -113,51 +113,23 @@ func (r *ReverseProxyReconciliation) reconcileService() error {
 	return r.updateReverseProxyService(service)
 }
 
-// updateReverseProxyDeployment ensures the deployment matches the desired state
-func (r *ReverseProxyReconciliation) updateReverseProxyDeployment(deployment *apps.Deployment) error {
-	// Get the desired container configuration
-	desiredContainer, err := r.createReverseProxyContainer()
+// updateReverseProxyDeployment ensures the deployment matches the desired state by replacing it entirely
+func (r *ReverseProxyReconciliation) updateReverseProxyDeployment(existing *apps.Deployment) error {
+	// Build the desired deployment configuration
+	desired, err := r.buildReverseProxyDeployment()
 	if err != nil {
 		return err
 	}
 
-	// Get the desired volumes configuration
-	desiredVolumes := r.createReverseProxyVolumes()
+	// Preserve the existing resource version for update
+	desired.ObjectMeta.ResourceVersion = existing.ObjectMeta.ResourceVersion
+	// Preserve UID and creation timestamp
+	desired.ObjectMeta.UID = existing.ObjectMeta.UID
+	desired.ObjectMeta.CreationTimestamp = existing.ObjectMeta.CreationTimestamp
 
-	// Get current container
-	currentContainer := &deployment.Spec.Template.Spec.Containers[0]
+	r.Log.Info("Updating reverse proxy deployment to match desired state")
 
-	// Check if container needs update
-	containerNeedsUpdate, updateReason := r.compareContainer(currentContainer, &desiredContainer)
-
-	// Check if volumes need update
-	volumesNeedsUpdate := r.compareVolumes(deployment.Spec.Template.Spec.Volumes, desiredVolumes)
-
-	if containerNeedsUpdate || volumesNeedsUpdate {
-		if containerNeedsUpdate {
-			r.Log.Info("Updating reverse proxy deployment", "reason", updateReason)
-		}
-		if volumesNeedsUpdate {
-			r.Log.Info("Updating reverse proxy deployment volumes", "reason", "volumes configuration changed")
-		}
-
-		// Update the entire container specification
-		deployment.Spec.Template.Spec.Containers[0] = desiredContainer
-
-		// Update the volumes specification
-		deployment.Spec.Template.Spec.Volumes = desiredVolumes
-
-		// Add restart annotation to force pod restart
-		if deployment.Spec.Template.Annotations == nil {
-			deployment.Spec.Template.Annotations = make(map[string]string)
-		}
-		deployment.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"] = metav1.Now().Format("2006-01-02T15:04:05Z")
-
-		// Update the deployment
-		return r.Client.Update(r.Ctx, deployment)
-	}
-
-	return nil
+	return r.Client.Update(r.Ctx, desired)
 }
 
 // compareEnvVars compares two environment variable slices for equality
@@ -180,128 +152,6 @@ func (r *ReverseProxyReconciliation) compareEnvVars(existing, desired []v1.EnvVa
 	return true
 }
 
-// compareContainer compares current and desired container specifications
-func (r *ReverseProxyReconciliation) compareContainer(current, desired *v1.Container) (bool, string) {
-	// Check image
-	if current.Image != desired.Image {
-		return true, fmt.Sprintf("image changed from %s to %s", current.Image, desired.Image)
-	}
-
-	// Check environment variables
-	if !r.compareEnvVars(current.Env, desired.Env) {
-		return true, "environment variables changed"
-	}
-
-	// Check ports
-	if !r.compareContainerPorts(current.Ports, desired.Ports) {
-		return true, "container ports changed"
-	}
-
-	// Check resource requirements
-	if !r.compareResourceRequirements(current.Resources, desired.Resources) {
-		return true, "resource requirements changed"
-	}
-
-	// Check probes
-	if !r.compareProbes(current.LivenessProbe, desired.LivenessProbe) {
-		return true, "liveness probe changed"
-	}
-
-	if !r.compareProbes(current.ReadinessProbe, desired.ReadinessProbe) {
-		return true, "readiness probe changed"
-	}
-
-	return false, ""
-}
-
-// compareContainerPorts compares two container port slices for equality
-func (r *ReverseProxyReconciliation) compareContainerPorts(current, desired []v1.ContainerPort) bool {
-	if len(current) != len(desired) {
-		return false
-	}
-
-	currentMap := make(map[string]v1.ContainerPort)
-	for _, port := range current {
-		currentMap[port.Name] = port
-	}
-
-	for _, port := range desired {
-		if currentPort, exists := currentMap[port.Name]; !exists ||
-			currentPort.ContainerPort != port.ContainerPort ||
-			currentPort.Protocol != port.Protocol {
-			return false
-		}
-	}
-
-	return true
-}
-
-// compareResourceRequirements compares resource requirements for equality
-func (r *ReverseProxyReconciliation) compareResourceRequirements(current, desired v1.ResourceRequirements) bool {
-	// Compare requests
-	if !r.compareResourceList(current.Requests, desired.Requests) {
-		return false
-	}
-
-	// Compare limits
-	if !r.compareResourceList(current.Limits, desired.Limits) {
-		return false
-	}
-
-	return true
-}
-
-// compareResourceList compares resource lists for equality
-func (r *ReverseProxyReconciliation) compareResourceList(current, desired v1.ResourceList) bool {
-	if len(current) != len(desired) {
-		return false
-	}
-
-	for resource, desiredQuantity := range desired {
-		if currentQuantity, exists := current[resource]; !exists || !currentQuantity.Equal(desiredQuantity) {
-			return false
-		}
-	}
-
-	return true
-}
-
-// compareProbes compares two probes for equality
-func (r *ReverseProxyReconciliation) compareProbes(current, desired *v1.Probe) bool {
-	// Both nil
-	if current == nil && desired == nil {
-		return true
-	}
-
-	// One nil, one not
-	if current == nil || desired == nil {
-		return false
-	}
-
-	// Compare basic settings
-	if current.InitialDelaySeconds != desired.InitialDelaySeconds ||
-		current.PeriodSeconds != desired.PeriodSeconds ||
-		current.FailureThreshold != desired.FailureThreshold {
-		return false
-	}
-
-	// Compare HTTP probe handlers
-	if current.HTTPGet != nil && desired.HTTPGet != nil {
-		return current.HTTPGet.Path == desired.HTTPGet.Path &&
-			current.HTTPGet.Port == desired.HTTPGet.Port &&
-			current.HTTPGet.Scheme == desired.HTTPGet.Scheme
-	}
-
-	// If one has HTTPGet and the other doesn't, they're different
-	if (current.HTTPGet == nil) != (desired.HTTPGet == nil) {
-		return false
-	}
-
-	// For other probe types, we'd need additional comparisons
-	// but for now we only use HTTPGet probes
-	return true
-}
-
 // createReverseProxyVolumes creates the volumes needed for the reverse proxy deployment
 func (r *ReverseProxyReconciliation) createReverseProxyVolumes() []v1.Volume {
 	volumes := []v1.Volume{}
@@ -319,40 +169,6 @@ func (r *ReverseProxyReconciliation) createReverseProxyVolumes() []v1.Volume {
 	}
 
 	return volumes
-}
-
-// compareVolumes compares current and desired volume configurations
-func (r *ReverseProxyReconciliation) compareVolumes(current, desired []v1.Volume) bool {
-	if len(current) != len(desired) {
-		return true
-	}
-
-	// Create maps for easier comparison
-	currentMap := make(map[string]v1.Volume)
-	for _, vol := range current {
-		currentMap[vol.Name] = vol
-	}
-
-	for _, desiredVol := range desired {
-		currentVol, exists := currentMap[desiredVol.Name]
-		if !exists {
-			return true
-		}
-
-		// Compare secret volumes (the main case we care about)
-		if desiredVol.Secret != nil {
-			if currentVol.Secret == nil {
-				return true
-			}
-			if currentVol.Secret.SecretName != desiredVol.Secret.SecretName {
-				return true
-			}
-		} else if currentVol.Secret != nil {
-			return true
-		}
-	}
-
-	return false
 }
 
 // updateReverseProxyService ensures the service matches the desired state
@@ -505,6 +321,16 @@ func (r *ReverseProxyReconciliation) createReverseProxyServiceConfig() (*v1.Serv
 
 // createReverseProxyDeployment creates a reverse proxy deployment for frontend assets
 func (r *ReverseProxyReconciliation) createReverseProxyDeployment() error {
+	deployment, err := r.buildReverseProxyDeployment()
+	if err != nil {
+		return err
+	}
+
+	return r.Client.Create(r.Ctx, deployment)
+}
+
+// buildReverseProxyDeployment builds the desired deployment configuration
+func (r *ReverseProxyReconciliation) buildReverseProxyDeployment() (*apps.Deployment, error) {
 	deploymentName := "reverse-proxy"
 
 	// Define name of resource
@@ -519,7 +345,7 @@ func (r *ReverseProxyReconciliation) createReverseProxyDeployment() error {
 	// Configure the reverse proxy container
 	container, err := r.createReverseProxyContainer()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Create volumes for the deployment
@@ -562,7 +388,7 @@ func (r *ReverseProxyReconciliation) createReverseProxyDeployment() error {
 	// Set owner reference to the environment instead of the frontend
 	deployment.SetOwnerReferences([]metav1.OwnerReference{r.getReverseProxyOwnerRef()})
 
-	return r.Client.Create(r.Ctx, deployment)
+	return deployment, nil
 }
 
 // createReverseProxyService creates a service for the reverse proxy deployment
