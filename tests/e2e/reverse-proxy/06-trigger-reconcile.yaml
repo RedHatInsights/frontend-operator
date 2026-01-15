@@ -1,0 +1,16 @@
+---
+# Trigger reconciliation by updating the FrontendEnvironment with a minor change
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: test-reverse-proxy
+spec:
+  generateNavJSON: false
+  ssl: false
+  hostname: reverse-proxy-test.example.com
+  reverseProxyHostname: reverse-proxy.cluster.local
+  sso: https://sso.foo.redhat.com
+  enablePushCache: true
+  reverseProxyImage: quay.io/redhatinsights/frontend-asset-proxy:latest
+  reverseProxySPAEntrypointPath: /index.html
+  reverseProxyLogLevel: DEBUG  # Changed from INFO to DEBUG to trigger reconciliation
