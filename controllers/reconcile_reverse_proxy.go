@@ -28,7 +28,6 @@ import (
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
@@ -40,16 +39,9 @@ import (
 )
 
 const (
-	ReverseProxyPort = 8080
+	ReverseProxyPort     = 8080
+	ReverseProxyReplicas = 3
 )
-
-// ReverseProxyReconciler reconciles reverse proxy resources for FrontendEnvironments
-type ReverseProxyReconciler struct {
-	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Recorder record.EventRecorder
-}
 
 // ReverseProxyReconciliation handles the reconciliation logic for reverse proxy resources
 type ReverseProxyReconciliation struct {
@@ -57,35 +49,8 @@ type ReverseProxyReconciliation struct {
 	Recorder            record.EventRecorder
 	Client              client.Client
 	Ctx                 context.Context
-	Frontend            *crd.Frontend
+	Namespace           string
 	FrontendEnvironment *crd.FrontendEnvironment
-}
-
-//+kubebuilder:rbac:groups=cloud.redhat.com,resources=frontends,verbs=get;list;watch
-//+kubebuilder:rbac:groups=cloud.redhat.com,resources=frontendenvironments,verbs=get;list;watch
-//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
-
-// ReconcileReverseProxy handles the reverse proxy reconciliation for a frontend
-func (r *ReverseProxyReconciler) ReconcileReverseProxy(ctx context.Context, frontend *crd.Frontend, fe *crd.FrontendEnvironment) error {
-	log := r.Log.WithValues("reverse-proxy reconcile: triggered by", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
-
-	// Only deploy reverse proxy if push cache is enabled and reverse proxy image is configured
-	if !fe.Spec.EnablePushCache || fe.Spec.ReverseProxyImage == "" {
-		return nil
-	}
-
-	reconciliation := ReverseProxyReconciliation{
-		Log:                 log,
-		Recorder:            r.Recorder,
-		Client:              r.Client,
-		Ctx:                 ctx,
-		Frontend:            frontend,
-		FrontendEnvironment: fe,
-	}
-
-	return reconciliation.run()
 }
 
 // run executes the reverse proxy reconciliation logic
@@ -113,7 +78,7 @@ func (r *ReverseProxyReconciliation) reconcileDeployment() error {
 	deployment := &apps.Deployment{}
 	deploymentKey := types.NamespacedName{
 		Name:      "reverse-proxy",
-		Namespace: r.Frontend.Namespace,
+		Namespace: r.Namespace,
 	}
 
 	err := r.Client.Get(r.Ctx, deploymentKey, deployment)
@@ -133,7 +98,7 @@ func (r *ReverseProxyReconciliation) reconcileService() error {
 	service := &v1.Service{}
 	serviceKey := types.NamespacedName{
 		Name:      "reverse-proxy",
-		Namespace: r.Frontend.Namespace,
+		Namespace: r.Namespace,
 	}
 
 	err := r.Client.Get(r.Ctx, serviceKey, service)
@@ -494,7 +459,7 @@ func (r *ReverseProxyReconciliation) createReverseProxyServiceConfig() (*v1.Serv
 	// Define name of resource
 	nn := types.NamespacedName{
 		Name:      serviceName,
-		Namespace: r.Frontend.Namespace,
+		Namespace: r.Namespace,
 	}
 
 	// Get consistent labels that won't conflict between frontends
@@ -545,7 +510,7 @@ func (r *ReverseProxyReconciliation) createReverseProxyDeployment() error {
 	// Define name of resource
 	nn := types.NamespacedName{
 		Name:      deploymentName,
-		Namespace: r.Frontend.Namespace,
+		Namespace: r.Namespace,
 	}
 
 	// Get consistent labels that won't conflict between frontends
@@ -571,7 +536,14 @@ func (r *ReverseProxyReconciliation) createReverseProxyDeployment() error {
 			},
 		},
 		Spec: apps.DeploymentSpec{
-			Replicas: utils.Int32Ptr(1),
+			Replicas: utils.Int32Ptr(ReverseProxyReplicas),
+			Strategy: apps.DeploymentStrategy{
+				Type: apps.RollingUpdateDeploymentStrategyType,
+				RollingUpdate: &apps.RollingUpdateDeployment{
+					MaxUnavailable: &intstr.IntOrString{Type: intstr.Int, IntVal: 0},
+					MaxSurge:       &intstr.IntOrString{Type: intstr.Int, IntVal: 1},
+				},
+			},
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
@@ -714,12 +686,12 @@ func (r *ReverseProxyReconciliation) createReverseProxyContainer() (v1.Container
 		VolumeMounts: volumeMounts,
 		Resources: v1.ResourceRequirements{
 			Requests: v1.ResourceList{
-				v1.ResourceCPU:    resource.MustParse("30m"),
-				v1.ResourceMemory: resource.MustParse("50Mi"),
+				v1.ResourceCPU:    resource.MustParse("250m"),
+				v1.ResourceMemory: resource.MustParse("256Mi"),
 			},
 			Limits: v1.ResourceList{
-				v1.ResourceCPU:    resource.MustParse("100m"),
-				v1.ResourceMemory: resource.MustParse("128Mi"),
+				v1.ResourceCPU:    resource.MustParse("500m"),
+				v1.ResourceMemory: resource.MustParse("512Mi"),
 			},
 		},
 	}
@@ -759,24 +731,15 @@ func (r *ReverseProxyReconciliation) createReverseProxyContainer() (v1.Container
 }
 
 // getReverseProxyOwnerRef returns an owner reference to the FrontendEnvironment
-// instead of the individual Frontend, which allows multiple Frontends sharing
-// the same environment to co-exist without conflicts.
 func (r *ReverseProxyReconciliation) getReverseProxyOwnerRef() metav1.OwnerReference {
-	// If we have a FrontendEnvironment, use it as the owner
-	if r.FrontendEnvironment != nil {
-		// Create a ClusterRole-referencing OwnerReference since FrontendEnvironment is cluster-scoped
-		return metav1.OwnerReference{
-			APIVersion: r.FrontendEnvironment.APIVersion,
-			Kind:       r.FrontendEnvironment.Kind,
-			Name:       r.FrontendEnvironment.Name,
-			UID:        r.FrontendEnvironment.UID,
-			// We don't want to set controller=true since FrontendEnvironment is cluster-scoped
-			// and the reverse proxy is namespace-scoped
-		}
+	// Use FrontendEnvironment as the owner
+	// Note: FrontendEnvironment is cluster-scoped, so we don't set controller=true
+	return metav1.OwnerReference{
+		APIVersion: r.FrontendEnvironment.APIVersion,
+		Kind:       r.FrontendEnvironment.Kind,
+		Name:       r.FrontendEnvironment.Name,
+		UID:        r.FrontendEnvironment.UID,
 	}
-
-	// Fall back to the Frontend if no environment is available
-	return r.Frontend.MakeOwnerReference()
 }
 
 // getReverseProxyLabels returns consistent labels for the reverse proxy
@@ -801,7 +764,7 @@ func (r *ReverseProxyReconciliation) reconcileIngress() error {
 	ingress := &networkingv1.Ingress{}
 	ingressKey := types.NamespacedName{
 		Name:      "reverse-proxy",
-		Namespace: r.Frontend.Namespace,
+		Namespace: r.Namespace,
 	}
 
 	err := r.Client.Get(r.Ctx, ingressKey, ingress)
@@ -855,7 +818,7 @@ func (r *ReverseProxyReconciliation) buildReverseProxyIngress() (*networkingv1.I
 	// Define name of resource
 	nn := types.NamespacedName{
 		Name:      ingressName,
-		Namespace: r.Frontend.Namespace,
+		Namespace: r.Namespace,
 	}
 
 	// Get consistent labels that won't conflict between frontends

@@ -8,7 +8,7 @@ metadata:
   labels:
     app: reverse-proxy
     component: reverse-proxy
-    environment: test-reverse-proxy-environment
+    environment: test-reverse-proxy
 spec:
   tls:
   - {}

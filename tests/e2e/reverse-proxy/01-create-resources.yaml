@@ -2,8 +2,7 @@
 apiVersion: cloud.redhat.com/v1alpha1
 kind: FrontendEnvironment
 metadata:
-  name: test-reverse-proxy-environment
-  namespace: test-reverse-proxy
+  name: test-reverse-proxy
 spec:
   generateNavJSON: false
   ssl: false
@@ -14,18 +13,3 @@ spec:
   reverseProxyImage: quay.io/redhatinsights/frontend-asset-proxy:latest
   reverseProxySPAEntrypointPath: /index.html
   reverseProxyLogLevel: INFO
----
-apiVersion: cloud.redhat.com/v1alpha1
-kind: Frontend
-metadata:
-  name: test-frontend-with-proxy
-  namespace: test-reverse-proxy
-spec:
-  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
-  frontend:
-    paths:
-      - /apps/test-proxy
-  envName: test-reverse-proxy-environment
-  image: quay.io/cloudservices/insights-chrome-frontend:latest
-  title: Test Frontend with Reverse Proxy
-  feoConfigEnabled: true

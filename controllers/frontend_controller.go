@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	apps "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -46,8 +47,6 @@ import (
 	"github.com/go-logr/logr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-
-	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -194,20 +193,6 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		WebIngress,
 		MetricsServiceMonitor,
 	)
-
-	// Deploy reverse proxy if push cache is enabled and reverse proxy image is configured
-	// Only create it once per environment (not per frontend)
-	reverseProxyReconciler := &ReverseProxyReconciler{
-		Client:   r.Client,
-		Log:      r.Log,
-		Scheme:   r.Scheme,
-		Recorder: r.Recorder,
-	}
-
-	if reverseProxyErr := reverseProxyReconciler.ReconcileReverseProxy(ctx, &frontend, fe); reverseProxyErr != nil {
-		log.Error(reverseProxyErr, "Failed to reconcile reverse proxy")
-		return ctrl.Result{Requeue: true}, reverseProxyErr
-	}
 
 	reconciliation := FrontendReconciliation{
 		Log:                 log,
