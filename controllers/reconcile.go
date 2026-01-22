@@ -1923,7 +1923,7 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 	}
 
 	if len(skippedTiles) > 0 {
-		r.Log.Info("Unable to find service categories for tiles:", strings.Join(skippedTiles, ","))
+		r.Log.Info(fmt.Sprintf("Unable to find bundle for nav items: %s", strings.Join(skippedBundles, ",")))
 	}
 
 	if len(skippedBundles) > 0 {
