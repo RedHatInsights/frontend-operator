@@ -1,3 +1,9 @@
+version: "2"
+formatters:
+  # Enable specific formatter
+  enable:
+    - gofmt
+    - goimports
 linters:
   # Enable specific linter
   enable:
@@ -9,27 +15,39 @@ linters:
 #    - staticcheck
 #    - unused
     - gocritic
-    - gofmt
-    - goimports
     - gosec
     - revive
-    - typecheck
     - bodyclose
-linters-settings:
-  staticcheck:
-    checks:
-      - all
-      # Ignore usage of deprecated things, will be removed after frontend resources are using new navigation
-      - '-SA1019'
-  gosec:
-    excludes:
-      - G115
+  settings:
+    staticcheck:
+      checks:
+        - all
+        # Ignore usage of deprecated things, will be removed after frontend resources are using new navigation
+        - '-SA1019'
+        # Ignore embedded field optimization suggestions
+        - '-QF1008'
+        # Ignore comment format suggestions
+        - '-ST1021'
+    gosec:
+      excludes:
+        - G115
+    revive:
+      rules:
+        # Disable exported type comment requirements
+        - name: exported
+          disabled: true
+  exclusions:
+    rules:
+      - path: api/v1alpha1/groupversion_info.go
+        linters:
+          - gofmt
+          - goimports
+      # Ignore errcheck and gosec issues in test files
+      - path: ".*_test\\.go"
+        linters:
+          - errcheck
+          - gosec
 issues:
-  exclude-rules:
-    - path: api/v1alpha1/groupversion_info.go
-      linters:
-        - gofmt
-        - goimports
   # Fix found issues (if it's supported by the linter).
   # Default: false
   # fix: true
@@ -39,44 +57,6 @@ issues:
   # Default: 3
   max-same-issues: 20
   uniq-by-line: false
-
-output:
-# The formats used to render issues.
-# Formats:
-# - `colored-line-number`
-# - `line-number`
-# - `json`
-# - `colored-tab`
-# - `tab`
-# - `html`
-# - `checkstyle`
-# - `code-climate`
-# - `junit-xml`
-# - `github-actions`
-# - `teamcity`
-# - `sarif`
-# Output path can be either `stdout`, `stderr` or path to the file to write to.
-#
-# For the CLI flag (`--out-format`), multiple formats can be specified by separating them by comma.
-# The output can be specified for each of them by separating format name and path by colon symbol.
-# Example: "--out-format=checkstyle:report.xml,json:stdout,colored-line-number"
-# The CLI flag (`--out-format`) override the configuration file.
-#
-# Default:
-#  formats:
-#    - format: colored-line-number
-#      path: stdout
-# Print lines of code with issue.
-# Default: true
-#  print-issued-lines: false
-# Print linter name in the end of issue text.
-# Default: true
-#  print-linter-name: false
-# Sort results by the order defined in `sort-order`.
-# Default: false
-  sort-results: true
-# Make issues output unique by line.
-# Default: true
 
 run:
   # Timeout for analysis, e.g. 30s, 5m.

@@ -1,3 +1,5 @@
+// Package controllers implements Kubernetes controllers for frontend resources,
+// managing Frontend and FrontendEnvironment custom resources and their lifecycle.
 package controllers
 
 import (
