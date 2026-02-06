@@ -1,3 +1,4 @@
+// Package utils provides utility functions for the frontend operator controllers.
 package utils
 
 import "strings"

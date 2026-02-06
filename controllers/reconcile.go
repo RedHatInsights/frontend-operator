@@ -607,7 +607,7 @@ type ObjectStoreBucket struct {
 	TLS       *bool
 }
 
-// ExtractBucketConfigFromSecretByName extracts ObjectStoreBucket configuration from secrets
+// ExtractBucketConfigFromEnv extracts ObjectStoreBucket configuration from environment variables
 func ExtractBucketConfigFromEnv() (*ObjectStoreBucket, error) {
 	// Required environment variables
 	accessKeyID := os.Getenv("PUSHCACHE_AWS_ACCESS_KEY_ID")
