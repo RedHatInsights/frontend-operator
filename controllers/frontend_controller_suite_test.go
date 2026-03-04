@@ -21,10 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func intPtr(i int) *int {
-	return &i
-}
-
 var _ = ginkgo.Describe("Frontend controller with image", func() {
 	const (
 		FrontendName       = "test-frontend"

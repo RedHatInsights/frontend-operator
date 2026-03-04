@@ -1784,6 +1784,22 @@ func (r *FrontendReconciliation) createBaseWidgetDashboardTemplatesConfigMap(nn 
 		cfgMap.Data = map[string]string{}
 		if len(baseWidgetDashboardTemplates) > 0 {
 			cfgMap.Data["base-widget-dashboard-templates.json"] = string(baseWidgetDashboardTemplatesJSONData)
+		} else {
+			dummyTemplates := []crd.BaseWidgetDashboardTemplate{
+				{
+					Name:        "dummy-dashboard-template",
+					DisplayName: "Dummy Dashboard Template",
+					FrontendRef: "dummy-frontend",
+					TemplateConfig: crd.TemplateConfig{
+						Sm: []crd.WidgetTemplateConfigItem{{W: 1, H: 1, I: "dummyWidget"}},
+						Md: []crd.WidgetTemplateConfigItem{{W: 2, H: 1, I: "dummyWidget"}},
+						Lg: []crd.WidgetTemplateConfigItem{{W: 4, H: 3, I: "dummyWidget"}},
+						Xl: []crd.WidgetTemplateConfigItem{{W: 4, H: 3, I: "dummyWidget"}},
+					},
+				},
+			}
+			dummyJSON, _ := json.Marshal(dummyTemplates)
+			cfgMap.Data["base-widget-dashboard-templates.json"] = string(dummyJSON)
 		}
 	}
 
@@ -1822,6 +1838,24 @@ func (r *FrontendReconciliation) createWidgetRegistryConfigMap(nn types.Namespac
 		cfgMap.Data = map[string]string{}
 		if len(widgetRegistry) > 0 {
 			cfgMap.Data["widget-registry.json"] = string(widgetRegistryJSONData)
+		} else {
+			dummyWidgets := []crd.WidgetModuleFederationMetadata{
+				{
+					Scope:       "dummyWidget",
+					Module:      "./DummyWidget",
+					ImportName:  "DummyWidget",
+					FrontendRef: "dummy-frontend",
+					Defaults: crd.WidgetBaseDimensions{
+						Width:  intPtr(4),
+						Height: intPtr(3),
+					},
+					Config: crd.WidgetConfiguration{
+						Title: "Dummy Widget",
+					},
+				},
+			}
+			dummyJSON, _ := json.Marshal(dummyWidgets)
+			cfgMap.Data["widget-registry.json"] = string(dummyJSON)
 		}
 	}
 
@@ -1998,4 +2032,8 @@ func (r *FrontendReconciliation) createServiceMonitor() error {
 
 	err := r.Cache.Update(MetricsServiceMonitor, svcMonitor)
 	return err
+}
+
+func intPtr(i int) *int {
+	return &i
 }
