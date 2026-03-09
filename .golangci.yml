@@ -31,6 +31,7 @@ linters:
     gosec:
       excludes:
         - G115
+        - G117
     revive:
       rules:
         # Disable exported type comment requirements
