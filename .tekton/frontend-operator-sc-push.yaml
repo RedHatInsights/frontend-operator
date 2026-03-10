@@ -14,7 +14,7 @@ metadata:
     appstudio.openshift.io/component: frontend-operator-sc
     pipelines.appstudio.openshift.io/type: build
   name: frontend-operator-sc-on-push
-  namespace: hcm-eng-prod-tenant
+  namespace: hcc-platex-services-tenant
 spec:
   params:
   - name: git-url
@@ -22,7 +22,7 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/redhat-user-workloads/hcm-eng-prod-tenant/frontend-operator-sc/frontend-operator-sc:{{revision}}
+    value: quay.io/redhat-user-workloads/hcc-platex-services-tenant/frontend-operator-sc/frontend-operator-sc:{{revision}}
   - name: dockerfile
     value: Dockerfile
   - name: path-context
