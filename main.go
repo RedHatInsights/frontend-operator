@@ -57,14 +57,16 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	var logLevel int
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.IntVar(&logLevel, "log-level", 2, "Minimum log level (-1=Debug, 0=Info, 1=Warn, 2=Error)")
 	flag.Parse()
 
-	logger, err := logging.SetupLogging(true)
+	logger, err := logging.SetupLoggingWithLevel(true, int8(logLevel))
 
 	if err != nil {
 		panic(err)
