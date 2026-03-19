@@ -1953,6 +1953,8 @@ objects:
             value: ${PUSHCACHE_AWS_ENDPOINT}
           - name: PUSHCACHE_AWS_PORT
             value: ${PUSHCACHE_AWS_PORT}
+          - name: GOMEMLIMIT
+            value: ${GOMEMLIMIT}
           image: ${IMAGE}:${IMAGE_TAG}
           livenessProbe:
             httpGet:
@@ -2008,4 +2010,6 @@ parameters:
   value: 100m
 - name: MEMORY_REQUEST
   value: 500Mi
+- name: GOMEMLIMIT
+  value: 750MiB
 
