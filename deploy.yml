@@ -1972,11 +1972,11 @@ objects:
             periodSeconds: 10
           resources:
             limits:
-              cpu: 200m
-              memory: 900Mi
+              cpu: ${CPU_LIMIT}
+              memory: ${MEMORY_LIMIT}
             requests:
-              cpu: 100m
-              memory: 500Mi
+              cpu: ${CPU_REQUEST}
+              memory: ${MEMORY_REQUEST}
           securityContext:
             allowPrivilegeEscalation: false
         securityContext:
@@ -2000,4 +2000,12 @@ parameters:
   value: ''
 - name: PUSHCACHE_AWS_PORT
   value: ''
+- name: CPU_LIMIT
+  value: 200m
+- name: MEMORY_LIMIT
+  value: 900Mi
+- name: CPU_REQUEST
+  value: 100m
+- name: MEMORY_REQUEST
+  value: 500Mi
 
