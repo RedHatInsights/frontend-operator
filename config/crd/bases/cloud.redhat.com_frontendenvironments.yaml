@@ -230,6 +230,11 @@ spec:
                 items:
                   type: string
                 type: array
+              valpopImage:
+                description: |-
+                  Valpop Image for Push Cache Jobs
+                  If not set, falls back to using the frontend container image
+                type: string
               whitelist:
                 description: Whitelist CIDRs
                 items:

@@ -12,7 +12,10 @@ spec:
       annotations:
         frontend-image: quay.io/cloudservices/insights-chrome-frontend:720317c
     spec:
+      initContainers:
+        - name: copy-frontend-assets
+          image: quay.io/cloudservices/insights-chrome-frontend:720317c
       containers:
         - name: valpop-pushcache
-          image: quay.io/cloudservices/insights-chrome-frontend:720317c
+          image: quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop:9843de0
       restartPolicy: Never

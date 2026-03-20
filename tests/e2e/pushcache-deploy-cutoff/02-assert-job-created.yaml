@@ -20,15 +20,29 @@ spec:
           configMap:
             name: test-pushcache-cutoff-environment
             defaultMode: 420
+        - name: frontend-assets
+          emptyDir: {}
+      initContainers:
+        - name: copy-frontend-assets
+          image: quay.io/cloudservices/insights-chrome-frontend:720317c
+          command:
+            - /bin/sh
+            - '-c'
+            - 'cp -r /srv/dist/* /assets/'
+          volumeMounts:
+            - name: frontend-assets
+              mountPath: /assets
       containers:
         - name: valpop-pushcache
-          image: quay.io/cloudservices/insights-chrome-frontend:720317c
+          image: quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop:9843de0
           command:
             - /bin/bash
             - '-c'
-            - 'sleep 120; valpop populate -r chrome-test-cutoff -s /srv/dist -i quay.io/cloudservices/insights-chrome-frontend:720317c --timeout 172800 --bucket frontend --hostname minio-service.minio-env.svc.cluster.local --port 9000 --username minioadmin --password minioadmin'
+            - 'sleep 120; valpop populate -r chrome-test-cutoff -s /assets -i quay.io/cloudservices/insights-chrome-frontend:720317c --timeout 172800 --bucket frontend --hostname minio-service.minio-env.svc.cluster.local --port 9000 --username minioadmin --password minioadmin'
           resources: {}
           volumeMounts:
             - name: pushcache-volume
               mountPath: /opt/pushcache-volume
+            - name: frontend-assets
+              mountPath: /assets
       restartPolicy: Never

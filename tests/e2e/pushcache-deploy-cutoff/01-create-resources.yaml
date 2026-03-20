@@ -10,6 +10,7 @@ spec:
   sso: https://sso.foo.redhat.com
   overwriteCaddyConfig: true
   enablePushCache: true
+  valpopImage: quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop:9843de0
   # No cutoff set initially
 ---
 apiVersion: cloud.redhat.com/v1alpha1

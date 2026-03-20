@@ -129,6 +129,9 @@ type FrontendEnvironmentSpec struct {
 	OverwriteCaddyConfig bool `json:"overwriteCaddyConfig,omitempty"`
 	// Enable Push Cache Container
 	EnablePushCache bool `json:"enablePushCache,omitempty"`
+	// Valpop Image for Push Cache Jobs
+	// If not set, falls back to using the frontend container image
+	ValpopImage string `json:"valpopImage,omitempty"`
 	// Reverse Proxy Container Image
 	ReverseProxyImage string `json:"reverseProxyImage,omitempty"`
 	// SPA entrypoint path for reverse proxy
