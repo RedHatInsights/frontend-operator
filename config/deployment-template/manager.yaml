@@ -9,6 +9,9 @@ spec:
       containers:
       - image: ${IMAGE}:${IMAGE_TAG}
         name: manager
+        args:
+        - --leader-elect
+        - --log-level=${LOG_LEVEL}
         env:
         - name: PUSHCACHE_AWS_ACCESS_KEY_ID
           value: ${PUSHCACHE_AWS_ACCESS_KEY_ID}
@@ -22,3 +25,12 @@ spec:
           value: ${PUSHCACHE_AWS_ENDPOINT}
         - name: PUSHCACHE_AWS_PORT
           value: ${PUSHCACHE_AWS_PORT}
+        - name: GOMEMLIMIT
+          value: ${GOMEMLIMIT}
+        resources:
+          limits:
+            cpu: ${CPU_LIMIT}
+            memory: ${MEMORY_LIMIT}
+          requests:
+            cpu: ${CPU_REQUEST}
+            memory: ${MEMORY_REQUEST}
