@@ -12,6 +12,7 @@ spec:
   serviceCategories:
     - id: automation
       title: Automation
+      icon: AutomationIcon
       groups:
         - id: ansible
           title: Ansible

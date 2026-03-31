@@ -1369,6 +1369,7 @@ func setupServiceTilesData(feList *crd.FrontendList, feEnvironment crd.FrontendE
 		newCategory := crd.FrontendServiceCategoryGenerated{
 			ID:     category.ID,
 			Title:  category.Title,
+			Icon:   category.Icon,
 			Groups: groups,
 		}
 
