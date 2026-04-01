@@ -1,0 +1,44 @@
+---
+# Second reconciliation trigger: Update the main app while keeping patch app references
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: main-app
+  namespace: navigation-consistency-test
+spec:
+  feoConfigEnabled: true
+  frontend:
+    paths:
+      - /apps/main
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  envName: navigation-consistency-environment
+  image: quay.io/cloudservices/insights-chrome-frontend:updated-v2  # Changed image to trigger reconciliation
+  module:
+    manifestLocation: /apps/chrome/js/fed-mods.json
+  title: Main Navigation App - Updated
+  bundleSegments:
+    - segmentId: main-content
+      bundleId: insights
+      position: 100
+      navItems:
+        - id: section-a
+          title: Section A - Updated
+          expandable: true
+          routes:
+            # Same references but in different order to test cache consistency
+            - segmentRef:
+                frontendName: content-app
+                segmentId: content-repositories-templates
+            - segmentRef:
+                frontendName: patch-app
+                segmentId: patch-advisories-packages
+            - id: main-direct
+              title: Main Direct Item - Updated
+              href: /insights/main/direct
+            - segmentRef:
+                frontendName: patch-app
+                segmentId: patch-systems
+            # Add a new direct item
+            - id: main-new
+              title: Main New Item
+              href: /insights/main/new

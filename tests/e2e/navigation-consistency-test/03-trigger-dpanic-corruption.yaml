@@ -1,0 +1,38 @@
+---
+# Update the failing app to trigger a reconciliation that will:
+# 1. Process navigation (including orphaned tiles/bundles that cause dpanic)
+# 2. Fail on missing akamai secret
+# 3. Leave corrupted cache state
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: failing-app
+  namespace: navigation-consistency-test
+spec:
+  feoConfigEnabled: true
+  frontend:
+    paths:
+      - /apps/failing
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  envName: navigation-consistency-environment
+  image: quay.io/cloudservices/failing-frontend:trigger-corruption  # Changed to trigger reconciliation
+  module:
+    manifestLocation: /apps/failing/js/fed-mods.json
+  title: App That Will Fail Reconciliation - Updated
+  # Keep akamai cache bust enabled to ensure failure after navigation processing
+  akamaiCacheBustDisable: false
+  bundleSegments:
+    - segmentId: failing-content
+      bundleId: insights
+      position: 300
+      navItems:
+        - id: failing-section
+          title: Failing Section - Updated
+          href: /insights/failing
+        # Add more navigation items to make corruption more likely
+        - id: failing-extra-1
+          title: Extra Failing Item 1
+          href: /insights/failing/extra1
+        - id: failing-extra-2
+          title: Extra Failing Item 2
+          href: /insights/failing/extra2

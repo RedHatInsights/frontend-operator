@@ -1,0 +1,45 @@
+---
+# Wait for reconciliation to complete after main app update
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 60
+---
+# Verify navigation structure after main app update
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+commands:
+# Check that we now have 8 items in main section (repositories, templates, advisories, packages, cves, main-direct, patchSystems, main-new)
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq ".[0].navItems[0].routes | length"'
+  expected: "8"
+# Verify the new main item appears
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"main-new\") | .title"'
+  expected: "Main New Item"
+# Verify updated titles appear
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].title"'
+  expected: "Section A - Updated"
+# Critical: Verify NO DUPLICATES of segment-referenced items after reordering
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"advisories\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"packages\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"cves\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"repositories\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"templates\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"patchSystems\") | .id" | wc -l | tr -d " "'
+  expected: "1"
+# Verify all original items are still present (NO MISSING ITEMS)
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"advisories\") | .title"'
+  expected: "Advisories"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"packages\") | .title"'
+  expected: "Packages"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"cves\") | .title"'
+  expected: "CVEs"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"repositories\") | .title"'
+  expected: "Repositories"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"templates\") | .title"'
+  expected: "Templates"
+- command: sh -c 'kubectl get configmap navigation-consistency-environment -n navigation-consistency-test -o jsonpath="{.data.bundles\.json}" | jq -r ".[0].navItems[0].routes[] | select(.id == \"patchSystems\") | .title"'
+  expected: "Systems"
