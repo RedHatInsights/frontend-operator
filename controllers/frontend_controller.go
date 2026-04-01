@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -183,44 +184,56 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	ctx = context.WithValue(ctx, FEKey("obj"), &frontend)
 
-	cacheConfig := resCache.NewCacheConfig(scheme, nil, nil, resCache.Options{})
-
-	cache := resCache.NewObjectCache(ctx, r.Client, &log, cacheConfig)
-	cache.AddPossibleGVKFromIdent(
-		CoreDeployment,
-		CoreService,
-		CoreConfig,
-		SSOConfig,
-		WebIngress,
-		MetricsServiceMonitor,
-	)
-
-	reconciliation := FrontendReconciliation{
-		Log:                 log,
-		Recorder:            r.Recorder,
-		Cache:               cache,
-		FRE:                 r,
-		FrontendEnvironment: fe,
-		Ctx:                 ctx,
-		Frontend:            &frontend,
-		Client:              r.Client,
-	}
-
-	err = reconciliation.run()
-	if err != nil {
-		if sErr := SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, err); sErr != nil {
-			return ctrl.Result{Requeue: true}, fmt.Errorf("error setting status after recon error: %w", sErr)
+	// Wrap cache creation + run() + ApplyAll() in RetryOnConflict to handle
+	// optimistic concurrency conflicts (HTTP 409) caused by concurrent controllers
+	// (e.g. ReverseProxyController) modifying the same Deployments.
+	// Each retry re-fetches the Frontend and FrontendEnvironment to get the latest
+	// resourceVersion, then rebuilds the cache and reconciliation from scratch.
+	var cache resCache.ObjectCache
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		// Re-fetch Frontend and FrontendEnvironment on each retry to get the
+		// latest resourceVersion, preventing stale-object 409 loops.
+		if err := r.Client.Get(ctx, req.NamespacedName, &frontend); err != nil {
+			return err
 		}
-		return ctrl.Result{Requeue: true}, err
-	}
-
-	cacheErr := cache.ApplyAll()
-
-	if cacheErr != nil {
-		if sErr := SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, cacheErr); sErr != nil {
-			return ctrl.Result{Requeue: true}, fmt.Errorf("error setting status after cacheapply error: %w", sErr)
+		if err := r.Client.Get(ctx, types.NamespacedName{Name: frontend.Spec.EnvName}, fe); err != nil {
+			return err
 		}
-		return ctrl.Result{Requeue: true}, cacheErr
+
+		cacheConfig := resCache.NewCacheConfig(scheme, nil, nil, resCache.Options{})
+		cache = resCache.NewObjectCache(ctx, r.Client, &log, cacheConfig)
+		cache.AddPossibleGVKFromIdent(
+			CoreDeployment,
+			CoreService,
+			CoreConfig,
+			SSOConfig,
+			WebIngress,
+			MetricsServiceMonitor,
+		)
+
+		reconciliation := FrontendReconciliation{
+			Log:                 log,
+			Recorder:            r.Recorder,
+			Cache:               cache,
+			FRE:                 r,
+			FrontendEnvironment: fe,
+			Ctx:                 ctx,
+			Frontend:            &frontend,
+			Client:              r.Client,
+		}
+
+		if err := reconciliation.run(); err != nil {
+			return err
+		}
+
+		return cache.ApplyAll()
+	})
+
+	if retryErr != nil {
+		if sErr := SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, retryErr); sErr != nil {
+			return ctrl.Result{Requeue: true}, fmt.Errorf("error setting status after reconciliation error: %w", sErr)
+		}
+		return ctrl.Result{Requeue: true}, retryErr
 	}
 
 	opts := []client.ListOption{

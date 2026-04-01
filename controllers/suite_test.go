@@ -30,6 +30,7 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var k8sClient client.Client
+var k8sManagerClient client.Client // manager client with field indexes (for conflict tests)
 var testEnv *envtest.Environment
 var stopController context.CancelFunc
 var MonitoringNamespace = "openshift-customer-monitoring"
@@ -77,8 +78,10 @@ var _ = ginkgo.BeforeSuite(func(_ context.Context) {
 	})
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
+	k8sManagerClient = k8sManager.GetClient()
+
 	err = (&FrontendReconciler{
-		Client: k8sManager.GetClient(),
+		Client: k8sManagerClient,
 		Scheme: k8sManager.GetScheme(),
 		Log:    ctrl.Log.WithName("controllers").WithName("CronJob"),
 	}).SetupWithManager(k8sManager)
