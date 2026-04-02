@@ -121,4 +121,89 @@ var _ = ginkgo.Describe("GenerationChangedPredicate on Owns watches (RHCLOUD-464
 		}, 5*time.Second, 200*time.Millisecond).Should(gomega.Equal(settledCount),
 			"Reconciliation count should not increase after a Deployment status-only update")
 	})
+
+	ginkgo.It("should re-reconcile when a Frontend spec change occurs", func() {
+		envName := "gen-pred-env-2"
+		frontendName := "gen-pred-fe-2"
+
+		// Create FrontendEnvironment
+		fe := &crd.FrontendEnvironment{
+			ObjectMeta: metav1.ObjectMeta{Name: envName},
+			Spec: crd.FrontendEnvironmentSpec{
+				SSO:      "https://sso.gen-pred-2.example.com",
+				Hostname: "gen-pred-2.example.com",
+			},
+		}
+		err := k8sClient.Create(ctx, fe)
+		if err != nil && !k8serr.IsAlreadyExists(err) {
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		}
+
+		// Create Frontend
+		frontend := &crd.Frontend{
+			ObjectMeta: metav1.ObjectMeta{Name: frontendName, Namespace: ns},
+			Spec: crd.FrontendSpec{
+				EnvName: envName,
+				Image:   "quay.io/gen-pred-test:v1",
+				Frontend: crd.FrontendInfo{
+					Paths: []string{"/apps/" + frontendName},
+				},
+				Module: &crd.FedModule{
+					ManifestLocation: "/apps/" + frontendName + "/fed-mods.json",
+					Modules: []crd.Module{{
+						ID:     frontendName,
+						Module: "./RootApp",
+						Routes: []crd.Route{{Pathname: "/apps/" + frontendName}},
+					}},
+				},
+				FeoConfigEnabled: true,
+			},
+		}
+		gomega.Expect(k8sClient.Create(ctx, frontend)).To(gomega.Succeed())
+
+		// Wait for initial reconciliation to complete.
+		deployNN := types.NamespacedName{Name: frontendName + "-frontend", Namespace: ns}
+		frontendNN := types.NamespacedName{Name: frontendName, Namespace: ns}
+
+		gomega.Eventually(func() error {
+			return k8sClient.Get(ctx, deployNN, &apps.Deployment{})
+		}, 30*time.Second, 100*time.Millisecond).Should(gomega.Succeed(),
+			"Deployment should be created by initial reconciliation")
+
+		// Wait for reconciliation to settle.
+		gomega.Eventually(func() bool {
+			count1 := getReconcileCount(frontendName)
+			time.Sleep(2 * time.Second)
+			count2 := getReconcileCount(frontendName)
+			return count1 == count2
+		}, 30*time.Second, 100*time.Millisecond).Should(gomega.BeTrue(),
+			"Reconciliation count should stabilize")
+		countBeforeSpecChange := getReconcileCount(frontendName)
+
+		// Update the Frontend spec (image change). This triggers reconciliation
+		// via the For(&crd.Frontend{}) watch, which updates the Deployment spec,
+		// which increments its metadata.generation.
+		f := &crd.Frontend{}
+		gomega.Expect(k8sClient.Get(ctx, frontendNN, f)).To(gomega.Succeed())
+		f.Spec.Image = "quay.io/gen-pred-test:v2"
+		gomega.Expect(k8sClient.Update(ctx, f)).To(gomega.Succeed())
+
+		// The reconciler should run and update the Deployment's container image.
+		gomega.Eventually(func() string {
+			d := &apps.Deployment{}
+			if err := k8sClient.Get(ctx, deployNN, d); err != nil {
+				return ""
+			}
+			if len(d.Spec.Template.Spec.Containers) == 0 {
+				return ""
+			}
+			return d.Spec.Template.Spec.Containers[0].Image
+		}, 30*time.Second, 200*time.Millisecond).Should(gomega.Equal("quay.io/gen-pred-test:v2"),
+			"Deployment image should be updated after Frontend spec change")
+
+		// Verify reconciliation actually ran.
+		countAfterSpecChange := getReconcileCount(frontendName)
+		gomega.Expect(countAfterSpecChange).To(gomega.BeNumerically(">", countBeforeSpecChange),
+			"Reconciliation count should increase after a Frontend spec change")
+	})
 })
