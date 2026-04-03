@@ -1530,44 +1530,6 @@ func filterUnknownNavRefs(navItems []crd.ChromeNavItem) []crd.ChromeNavItem {
 	return res
 }
 
-// sortNavItemsByPosition sorts nav items by position first, then by ID for deterministic ordering
-func sortNavItemsByPosition(navItems []crd.ChromeNavItem) []crd.ChromeNavItem {
-	sort.Slice(navItems, func(i, j int) bool {
-		navItemA := navItems[i]
-		navItemB := navItems[j]
-
-		// Get positions, defaulting to 0 if nil
-		posA := uint(0)
-		if navItemA.Position != nil {
-			posA = *navItemA.Position
-		}
-		posB := uint(0)
-		if navItemB.Position != nil {
-			posB = *navItemB.Position
-		}
-
-		// Sort by position first
-		if posA != posB {
-			return posA < posB
-		}
-
-		// If positions are equal, sort by ID for deterministic ordering
-		return navItemA.ID < navItemB.ID
-	})
-
-	// Recursively sort nested items
-	for i := range navItems {
-		if navItems[i].IsExpandable() {
-			navItems[i].Routes = sortNavItemsByPosition(navItems[i].Routes)
-		}
-		if navItems[i].IsGroup() {
-			navItems[i].NavItems = sortNavItemsByPosition(navItems[i].NavItems)
-		}
-	}
-
-	return navItems
-}
-
 func addRefsToNavItems(navItems []crd.ChromeNavItem, bundleID string, frontendID string, parentBundleSegmentRef string) []crd.ChromeNavItem {
 	res := []crd.ChromeNavItem{}
 	for _, navItem := range navItems {
@@ -1629,7 +1591,7 @@ func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnviro
 		delete(skippedNavItemsMap, bundle.ID)
 		sort.Slice(bundleNavSegmentMap[bundle.ID], func(i, j int) bool {
 			if (bundleNavSegmentMap[bundle.ID])[i].Position == (bundleNavSegmentMap[bundle.ID])[j].Position {
-				return (bundleNavSegmentMap[bundle.ID])[i].SegmentID[0] < (bundleNavSegmentMap[bundle.ID])[j].SegmentID[0]
+				return (bundleNavSegmentMap[bundle.ID])[i].SegmentID < (bundleNavSegmentMap[bundle.ID])[j].SegmentID
 			}
 			return (bundleNavSegmentMap[bundle.ID])[i].Position < (bundleNavSegmentMap[bundle.ID])[j].Position
 		})
@@ -1650,8 +1612,6 @@ func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnviro
 		}
 
 		navItems = filterUnknownNavRefs(navItems)
-		navItems = sortNavItemsByPosition(navItems)
-
 		newBundle := crd.FrontendBundlesGenerated{
 			ID:          bundle.ID,
 			Title:       bundle.Title,
