@@ -448,6 +448,8 @@ objects:
                           type: object
                         minItems: 1
                         type: array
+                      icon:
+                        type: string
                       id:
                         type: string
                       title:
