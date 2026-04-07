@@ -29,20 +29,18 @@ See the [Local Development](#local-development-for-contributors) section below f
 
 ### Using the Frontend Operator
 
-The operator is generally available in the Consoledot Ephemeral and Dev Clusters. To use the Frontend Operator, you only need to apply a Frontend custom resource to a namespace that you manage using Bonfire.
+The Frontend Operator is already running in the Consoledot Ephemeral and Dev Clusters — you do not need to deploy it yourself. To use it, you simply apply a Frontend custom resource to a namespace you manage.
 
-### Deploying a Frontend with Bonfire in Ephemeral
+### Deploying a Frontend in Ephemeral
 
-[Bonfire](https://github.com/RedHatInsights/bonfire#bonfire-) is the consoledot tool used to interact with Kubernetes clusters.
+[Bonfire](https://github.com/RedHatInsights/bonfire#bonfire-) is the consoledot tool for deploying **applications** into ephemeral namespaces. It is not used to deploy the Frontend Operator itself.
 
-Simply login to the ephemeral cluster and run:
+To deploy your app into an ephemeral namespace where the operator is already running:
 ```bash
 bonfire deploy $MYAPP --frontends true -d 8h
 ```
 
-This will give you access to your own ephemeral environment.
-
-If your app does not have an entry into app-interface yet, `bonfire namespace reserve` will supply you with a bootstrapped namespace to deploy your application:
+If your app does not have an entry in app-interface yet, reserve a namespace and apply your Frontend resource manually:
 ```bash
 bonfire namespace reserve
 oc apply -f $My-Frontend-CRD.yaml -n $NS
