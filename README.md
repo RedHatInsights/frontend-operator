@@ -126,7 +126,7 @@ Once you update it you can access the app from `https://env-boot/insights/invent
 
 ### Pushcache (valpop) job
 
-The pushcache job or [valpop](https://github.com/RedHatInsights/valpop) copies frontend assets to an S3 bucket (MinIO locally). It is disabled by default in `examples/feenvironment.yaml` (`enablePushCache: false`), which is the correct setting for local development.
+The pushcache job or [valpop](https://github.com/RedHatInsights/valpop) copies frontend assets to an S3 bucket (MinIO locally). It is disabled by default in `examples/feenvironment.yaml` (`enablePushCache: false`).
 
 If you enable push cache (`enablePushCache: true`), you must also set `valpopImage` in the FrontendEnvironment, otherwise the operator will error on reconciliation:
 
