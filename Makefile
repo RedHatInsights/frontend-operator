@@ -137,14 +137,17 @@ docker-build: test ## Build docker image with the manager.
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
 
-create-boot-namespace: manifests generate fmt vet
+create-namespaces: manifests generate fmt vet
 	oc create namespace boot
+	oc create namespace env-boot
+
+create-boot-namespace: create-namespaces ## Deprecated: use create-namespaces
 
 install-resources:
 	oc apply -f config/crd/bases/cloud.redhat.com_frontends.yaml
 	oc apply -f config/crd/bases/cloud.redhat.com_frontendenvironments.yaml
 	oc apply -f config/crd/bases/cloud.redhat.com_bundles.yaml
-	oc apply -f examples/clowdenvironment.yaml
+	# oc apply -f examples/clowdenvironment.yaml
 	oc apply -f examples/feenvironment.yaml -n boot
 	oc apply -f examples/minio.yaml
 	oc apply -f examples/minio-bucket-secret.yaml -n boot
@@ -153,7 +156,7 @@ install-resources:
 	oc apply -f examples/chrome.yaml -n boot
 
 run-local:
-	$(PUSHCACHE_ENVS) $(GO_CMD) run ./main.go --metrics-bind-address :9090 --health-probe-bind-address :9091
+	$(PUSHCACHE_ENVS) $(GO_CMD) run ./main.go --metrics-bind-address :9090 --health-probe-bind-address :9091 --log-level 0
 
 ##@ Deployment
 

@@ -25,17 +25,21 @@ kubectl config current-context   # must show "minikube"
 kubectl config use-context minikube
 ```
 
-### 4. Create the boot namespace and install resources
-`make create-boot-namespace` creates the `boot` namespace (note: `env-boot` is the FrontendEnvironment resource name, not a namespace).
-It also regenerates manifests as a side effect.
+### 4. Create namespaces and install resources
+`make create-namespaces` creates both the `boot` and `env-boot` namespaces and regenerates manifests as a side effect.
+Note: `env-boot` is also the FrontendEnvironment resource name — both the namespace and the resource are required.
 ```sh
-make create-boot-namespace
+make create-namespaces
 make install-resources
 ```
 
 ### 5. Run the operator (terminal 1)
+`make run-local` defaults to Info log level (`--log-level 0`). Use `--log-level -1` for Debug output.
+Available levels: `-1` Debug, `0` Info, `1` Warn, `2` Error.
 ```sh
 make run-local
+# or for debug:
+make run-local 2>&1 | grep -v "level\":\"info\""  # filter if too noisy
 ```
 
 ### 6. Exercise it (terminal 2)
@@ -54,6 +58,9 @@ watch -n 0.1 'kubectl annotate frontend inventory -n default force-conflict=$(da
 
 **`no container with name or ID "minikube" found`**
 → Full reset: `minikube delete --purge && minikube config set rootless true && minikube start --driver=podman`
+
+**`ValpopImage must be specified in the FrontendEnvironment when PushCache is enabled`**
+→ `examples/feenvironment.yaml` has `enablePushCache: true`. Set it to `false` for local dev, or add a `valpopImage` field pointing to the valpop image. Re-apply: `oc apply -f examples/feenvironment.yaml -n boot`
 
 **Resource exhaustion / OOMKilled / cluster instability**
 → Beef up the podman machine and minikube resources:

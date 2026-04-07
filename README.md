@@ -50,7 +50,11 @@ oc apply -f $My-Frontend-CRD.yaml -n $NS
 
 For detailed configuration options and examples, see the [FrontendEnvironment Configuration Guide](docs/antora/modules/ROOT/pages/frontendenvironment-guide.adoc).
 
-If you are running a full app stack locally — including backend services managed by [Clowder](https://github.com/RedHatInsights/clowder) — you will need both operators running in your local cluster. See the Clowder repo for setup instructions.
+If you are running a full app stack locally — including backend services managed by [Clowder](https://github.com/RedHatInsights/clowder) — you will need both operators running in your local cluster. See the Clowder repo for setup instructions. Once Clowder's CRDs are installed, apply the example ClowdEnvironment:
+
+```sh
+oc apply -f examples/clowdenvironment.yaml
+```
 
 ## Local Development for Contributors
 
@@ -65,15 +69,17 @@ You need to run kubernetes locally, we recommend [minikube](https://minikube.sig
 You will also need the [OpenShift CLI (`oc`)](https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html) installed, as the resource commands use `oc` rather than `kubectl`.
 
 ```
-# Create the `boot` namespace (also regenerates manifests):
-make create-boot-namespace
+# Create the `boot` and `env-boot` namespaces (also regenerates manifests):
+make create-namespaces
 
 # Install CRDs and example resources:
 make install-resources
 
-# Run
+# Run (defaults to Info log level, use --log-level -1 for Debug)
 make run-local
 ```
+
+The operator supports the following log levels via `--log-level`: `-1` (Debug), `0` (Info), `1` (Warn), `2` (Error). `make run-local` defaults to Info.
 
 If you make changes to the CRDs make sure to install the resources and run again.
 
@@ -114,11 +120,17 @@ Once you update it you can access the app from `https://env-boot/insights/invent
 
 ### Pushcache (valpop) job
 
-The pushcache job or [valpop](https://github.com/RedHatInsights/valpop) will be disabled by default for all frontends.
+The pushcache job or [valpop](https://github.com/RedHatInsights/valpop) copies frontend assets to an S3 bucket (MinIO locally). It is disabled by default in `examples/feenvironment.yaml` (`enablePushCache: false`), which is the correct setting for local development.
 
-To disable the pushcache job altogether through the Frontend Operator, set `enablePushCache` to `false` in the frontend enviornment of the FEO.
+If you enable push cache (`enablePushCache: true`), you must also set `valpopImage` in the FrontendEnvironment, otherwise the operator will error on reconciliation:
 
-For local development purposes, the minio or AWS bucket secrets are stored under `examples/minio-bucket-secret.yaml`.
+```yaml
+spec:
+  enablePushCache: true
+  valpopImage: quay.io/redhatinsights/valpop:latest
+```
+
+For local development, MinIO is used as the S3 backend. The bucket secrets are stored under `examples/minio-bucket-secret.yaml`.
 
 ### Reverse Proxy
 

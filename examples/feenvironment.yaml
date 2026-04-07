@@ -11,7 +11,7 @@ spec:
     "us.console.dev.redhat.com": "https://sso.redhat.com/auth"
     "console.stage.openshiftusgov.com": "https://sso.stage.openshiftusgov.com"
     "console.openshiftusgov.com": "https://sso.openshiftusgov.com"
-  enablePushCache: true
+  enablePushCache: false
   reverseProxyImage: quay.io/redhat-services-prod/hcc-platex-services-tenant/frontend-asset-proxy:latest
   reverseProxyHostname: reverse-proxy.cluster.local
   reverseProxySPAEntrypointPath: /index.html
