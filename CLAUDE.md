@@ -88,7 +88,7 @@ This is unrelated to `metrics-server`. To silence it, install the Prometheus Ope
 → Full reset: `minikube delete --purge && minikube config set rootless true && minikube start --driver=podman`
 
 **`ValpopImage must be specified in the FrontendEnvironment when PushCache is enabled`**
-→ `examples/feenvironment.yaml` has `enablePushCache: true`. Set it to `false` for local dev, or add `valpopImage: quay.io/redhat-services-prod/hcc-platex-services-tenant/valpop:latest`. Re-apply: `oc apply -f examples/feenvironment.yaml -n boot`
+→ `valpopImage` is missing from `examples/feenvironment.yaml`. Add `valpopImage: quay.io/redhat-services-prod/hcc-platex-services-tenant/valpop:latest`. Re-apply: `oc apply -f examples/feenvironment.yaml -n boot`
 
 **Resource exhaustion / OOMKilled / cluster instability**
 → Beef up the podman machine and minikube resources:
