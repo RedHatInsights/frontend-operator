@@ -18,6 +18,11 @@ minikube config set rootless true
 minikube start --driver=podman --container-runtime=cri-o
 ```
 
+The operator creates Ingress resources (nginx ingress class) for each Frontend and the reverse proxy. Enable the ingress addon if you want frontends accessible in the browser — not required for operator development:
+```sh
+minikube addons enable ingress
+```
+
 ### 3. Verify you're talking to minikube — do this at the start of every session
 ```sh
 kubectl config current-context   # must show "minikube"
@@ -47,6 +52,29 @@ make run-local 2>&1 | grep -v "level\":\"info\""  # filter if too noisy
 kubectl apply -f config/crd/test-resources/
 watch -n 0.1 'kubectl annotate frontend inventory -n default force-conflict=$(date +%s) --overwrite'
 ```
+
+## Optional minikube addons
+
+Enable these as needed depending on what you're working on:
+
+```sh
+# Required to access deployed frontends in the browser (operator creates nginx Ingress resources)
+minikube addons enable ingress
+
+# Useful for building and pushing custom operator or frontend images locally
+minikube addons enable registry
+
+# Enables kubectl top and HPA (horizontal pod autoscaler) support
+minikube addons enable metrics-server
+```
+
+`--disable-optimizations` can be passed to `minikube start` for more production-like cluster behaviour.
+
+**ServiceMonitor CRD warning** — the operator logs a non-fatal error on startup if the Prometheus Operator CRDs are not installed:
+```
+no matches for kind "ServiceMonitor" in version "monitoring.coreos.com/v1"
+```
+This is unrelated to `metrics-server`. To silence it, install the Prometheus Operator CRDs. Safe to ignore for most local development.
 
 ## Common Failures
 

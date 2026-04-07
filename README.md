@@ -68,6 +68,12 @@ You need to run kubernetes locally, we recommend [minikube](https://minikube.sig
 
 You will also need the [OpenShift CLI (`oc`)](https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html) installed, as the resource commands use `oc` rather than `kubectl`.
 
+The operator creates Ingress resources (defaulting to the `nginx` ingress class) for each Frontend and for the reverse proxy. Enable the ingress addon if you want deployed frontends to be accessible in the browser:
+
+```sh
+minikube addons enable ingress
+```
+
 ```
 # Create the `boot` and `env-boot` namespaces (also regenerates manifests):
 make create-namespaces
