@@ -50,6 +50,8 @@ oc apply -f $My-Frontend-CRD.yaml -n $NS
 
 For detailed configuration options and examples, see the [FrontendEnvironment Configuration Guide](docs/antora/modules/ROOT/pages/frontendenvironment-guide.adoc).
 
+If you are running a full app stack locally — including backend services managed by [Clowder](https://github.com/RedHatInsights/clowder) — you will need both operators running in your local cluster. See the Clowder repo for setup instructions.
+
 ## Local Development for Contributors
 
 **Note**: We only recommend this method for local development on the **operator** **itself**.
@@ -60,25 +62,17 @@ Please use the above section to develop an app that depends on this operator.
 
 You need to run kubernetes locally, we recommend [minikube](https://minikube.sigs.k8s.io/docs/).
 
-The frontend operator is dependent on [Clowder](https://github.com/RedHatInsights/clowder#getting-clowder). 
-Follow those directions to get Clowder running and continue along.  
+You will also need the [OpenShift CLI (`oc`)](https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html) installed, as the resource commands use `oc` rather than `kubectl`.
 
-Once Clowder is up and running (`oc get pod -n clowder-system` has a running `controller-manager`), there are two
-options we can use to proceed. 
+```
+# Create the `boot` namespace (also regenerates manifests):
+make create-boot-namespace
 
-1. Create the boot namespace
-```
-$ make create-boot-namespace
-```
+# Install CRDs and example resources:
+make install-resources
 
-2. Install the resources:
-```
-$ make install-resources
-```
-
-3. Run:
-```
-$ make run-local
+# Run
+make run-local
 ```
 
 If you make changes to the CRDs make sure to install the resources and run again.
@@ -152,7 +146,7 @@ This will create a deployment and service for the reverse proxy, making it acces
 
 [Kuttl](https://kuttl.dev/) is an end to end testing framework for Kubernetes operators. We hope to provide full test coverage for the Frontend Operator with kuttl.
 
-To run the kuttl tests you'll need to be running the operator and Clowder in minikube as shown in the directions above. You also need to make sure you [have kuttl installed on your machine](https://kuttl.dev/docs/cli.html#setup-the-kuttl-kubectl-plugin).
+To run the kuttl tests you'll need to be running the operator in minikube as shown in the directions above. You also need to make sure you [have kuttl installed on your machine](https://kuttl.dev/docs/cli.html#setup-the-kuttl-kubectl-plugin).
 
 Once all that is in place you can run the kuttl tests:
 
