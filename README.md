@@ -164,7 +164,7 @@ This will create a deployment and service for the reverse proxy, making it acces
 
 [Kuttl](https://kuttl.dev/) is an end to end testing framework for Kubernetes operators. We hope to provide full test coverage for the Frontend Operator with kuttl.
 
-To run the kuttl tests you'll need to be running the operator in minikube as shown in the directions above. You also need to make sure you [have kuttl installed on your machine](https://kuttl.dev/docs/cli.html#setup-the-kuttl-kubectl-plugin).
+To run the kuttl tests you'll need to be running the operator in minikube as shown in the directions above. You also need to make sure you [have kuttl installed on your machine](https://github.com/kudobuilder/kuttl/blob/main/docs/cli.md).
 
 Once all that is in place you can run the kuttl tests:
 
