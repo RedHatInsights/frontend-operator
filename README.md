@@ -133,7 +133,7 @@ If you enable push cache (`enablePushCache: true`), you must also set `valpopIma
 ```yaml
 spec:
   enablePushCache: true
-  valpopImage: quay.io/redhatinsights/valpop:latest
+  valpopImage: quay.io/redhat-services-prod/hcc-platex-services-tenant/valpop:latest
 ```
 
 For local development, MinIO is used as the S3 backend. The bucket secrets are stored under `examples/minio-bucket-secret.yaml`.
