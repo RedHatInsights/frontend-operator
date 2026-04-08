@@ -291,9 +291,12 @@ func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&crd.FrontendEnvironment{},
 			handler.EnqueueRequestsFromMapFunc(r.appsToEnqueueUponFrontendEnvironmentUpdate()),
 		).
-		Owns(&apps.Deployment{}).
-		Owns(&networking.Ingress{}).
-		Owns(&prom.ServiceMonitor{}).
+		// GenerationChangedPredicate filters out status-only updates (e.g. pod
+		// readiness) that don't change metadata.generation, preventing unnecessary
+		// reconciliations and 409 conflicts (RHCLOUD-46492).
+		Owns(&apps.Deployment{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Owns(&networking.Ingress{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Owns(&prom.ServiceMonitor{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
 }
 
