@@ -11,76 +11,88 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func SetFrontendConditions(ctx context.Context, client client.Client, o *crd.Frontend, state string, err error) error {
-	oldStatus := o.Status.DeepCopy()
-	conditions := []metav1.Condition{}
-
-	loopConditions := []string{crd.ReconciliationSuccessful, crd.ReconciliationFailed}
-	for _, conditionType := range loopConditions {
-		condition := &metav1.Condition{}
-		condition.Type = conditionType
-		condition.Status = metav1.ConditionFalse
-		condition.Reason = "NoError"
-
-		if state == conditionType {
-			condition.Status = metav1.ConditionTrue
-			if err != nil {
-				condition.Message = err.Error()
-				condition.Reason = "Error"
-			}
-		}
-
-		condition.LastTransitionTime = metav1.Now()
-		conditions = append(conditions, *condition)
-	}
-
-	frontendStatus, err := GetFrontendResources(ctx, client, o)
-	if err != nil {
-		return err
-	}
-
-	condition := &metav1.Condition{}
-
-	condition.Reason = "NoError"
-	condition.Status = metav1.ConditionFalse
-	condition.Message = "Deployments are not yet ready"
-	if frontendStatus {
-		condition.Status = metav1.ConditionTrue
-		condition.Message = "All managed deployments ready"
-	}
-
-	condition.Type = crd.FrontendsReady
-	condition.LastTransitionTime = metav1.Now()
-	//FIXME: condition is always false
-	if err != nil {
-		condition.Message += err.Error()
-		condition.Reason = "Error"
-	}
-
-	conditions = append(conditions, *condition)
-	for _, condition := range conditions {
-		innerCondition := condition
-		meta.SetStatusCondition(&o.Status.Conditions, innerCondition)
-	}
-
-	o.Status.Ready = frontendStatus
-	stats, _, err := GetFrontendFigures(ctx, client, o)
-	if err != nil {
-		return err
-	}
-
-	o.Status.Deployments.ManagedDeployments = stats.ManagedDeployments
-	o.Status.Deployments.ReadyDeployments = stats.ReadyDeployments
-
-	if !equality.Semantic.DeepEqual(*oldStatus, o.Status) {
-		if err := client.Status().Update(ctx, o); err != nil {
+func SetFrontendConditions(ctx context.Context, client client.Client, o *crd.Frontend, state string, conditionErr error) error {
+	// RetryOnConflict handles 409 conflicts caused by the Frontend CR's
+	// resourceVersion changing between the reconciler's initial Get and this
+	// status update (e.g. annotation changes, concurrent reconcilers).
+	// Each retry re-fetches the Frontend to get the latest resourceVersion.
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		if err := client.Get(ctx, types.NamespacedName{Name: o.Name, Namespace: o.Namespace}, o); err != nil {
 			return err
 		}
-	}
-	return nil
+
+		oldStatus := o.Status.DeepCopy()
+		conditions := []metav1.Condition{}
+
+		loopConditions := []string{crd.ReconciliationSuccessful, crd.ReconciliationFailed}
+		for _, conditionType := range loopConditions {
+			condition := &metav1.Condition{}
+			condition.Type = conditionType
+			condition.Status = metav1.ConditionFalse
+			condition.Reason = "NoError"
+
+			if state == conditionType {
+				condition.Status = metav1.ConditionTrue
+				if conditionErr != nil {
+					condition.Message = conditionErr.Error()
+					condition.Reason = "Error"
+				}
+			}
+
+			condition.LastTransitionTime = metav1.Now()
+			conditions = append(conditions, *condition)
+		}
+
+		frontendStatus, err := GetFrontendResources(ctx, client, o)
+		if err != nil {
+			return err
+		}
+
+		condition := &metav1.Condition{}
+
+		condition.Reason = "NoError"
+		condition.Status = metav1.ConditionFalse
+		condition.Message = "Deployments are not yet ready"
+		if frontendStatus {
+			condition.Status = metav1.ConditionTrue
+			condition.Message = "All managed deployments ready"
+		}
+
+		condition.Type = crd.FrontendsReady
+		condition.LastTransitionTime = metav1.Now()
+		//FIXME: condition is always false
+		if err != nil {
+			condition.Message += err.Error()
+			condition.Reason = "Error"
+		}
+
+		conditions = append(conditions, *condition)
+		for _, condition := range conditions {
+			innerCondition := condition
+			meta.SetStatusCondition(&o.Status.Conditions, innerCondition)
+		}
+
+		o.Status.Ready = frontendStatus
+		stats, _, err := GetFrontendFigures(ctx, client, o)
+		if err != nil {
+			return err
+		}
+
+		o.Status.Deployments.ManagedDeployments = stats.ManagedDeployments
+		o.Status.Deployments.ReadyDeployments = stats.ReadyDeployments
+
+		if !equality.Semantic.DeepEqual(*oldStatus, o.Status) {
+			if err := client.Status().Update(ctx, o); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func GetFrontendResources(ctx context.Context, client client.Client, o *crd.Frontend) (bool, error) {
