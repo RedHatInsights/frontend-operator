@@ -29,26 +29,30 @@ See the [Local Development](#local-development-for-contributors) section below f
 
 ### Using the Frontend Operator
 
-The operator is generally available in the Consoledot Ephemeral and Dev Clusters. To use the Frontend Operator, you only need to apply a Frontend custom resource to a namespace that you manage using Bonfire.
+The Frontend Operator is already running in the Consoledot Ephemeral and Dev Clusters — you do not need to deploy it yourself. To use it, you simply apply a Frontend custom resource to a namespace you manage.
 
-### Deploying a Frontend with Bonfire in Ephemeral
+### Deploying a Frontend in Ephemeral
 
-[Bonfire](https://github.com/RedHatInsights/bonfire#bonfire-) is the consoledot tool used to interact with Kubernetes clusters.
+[Bonfire](https://github.com/RedHatInsights/bonfire#bonfire-) is the consoledot tool for deploying **applications** into ephemeral namespaces. It is not used to deploy the Frontend Operator itself.
 
-Simply login to the ephemeral cluster and run:
+To deploy your app into an ephemeral namespace where the operator is already running:
 ```bash
 bonfire deploy $MYAPP --frontends true -d 8h
 ```
 
-This will give you access to your own ephemeral environment.
-
-If your app does not have an entry into app-interface yet, `bonfire namespace reserve` will supply you with a bootstrapped namespace to deploy your application:
+If your app does not have an entry in app-interface yet, reserve a namespace and apply your Frontend resource manually:
 ```bash
 bonfire namespace reserve
 oc apply -f $My-Frontend-CRD.yaml -n $NS
 ```
 
 For detailed configuration options and examples, see the [FrontendEnvironment Configuration Guide](docs/antora/modules/ROOT/pages/frontendenvironment-guide.adoc).
+
+If you are running a full app stack locally — including backend services managed by [Clowder](https://github.com/RedHatInsights/clowder) — you will need both operators running in your local cluster. See the Clowder repo for setup instructions. Once Clowder's CRDs are installed, apply the example ClowdEnvironment:
+
+```sh
+oc apply -f examples/clowdenvironment.yaml
+```
 
 ## Local Development for Contributors
 
@@ -60,26 +64,26 @@ Please use the above section to develop an app that depends on this operator.
 
 You need to run kubernetes locally, we recommend [minikube](https://minikube.sigs.k8s.io/docs/).
 
-The frontend operator is dependent on [Clowder](https://github.com/RedHatInsights/clowder#getting-clowder). 
-Follow those directions to get Clowder running and continue along.  
+You will also need the [OpenShift CLI (`oc`)](https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html) installed, as the resource commands use `oc` rather than `kubectl`.
 
-Once Clowder is up and running (`oc get pod -n clowder-system` has a running `controller-manager`), there are two
-options we can use to proceed. 
+The operator creates Ingress resources (defaulting to the `nginx` ingress class) for each Frontend and for the reverse proxy. Enable the ingress addon if you want deployed frontends to be accessible in the browser:
 
-1. Create the boot namespace
-```
-$ make create-boot-namespace
+```sh
+minikube addons enable ingress
 ```
 
-2. Install the resources:
 ```
-$ make install-resources
+# Create the `boot` and `env-boot` namespaces (also regenerates manifests):
+make create-namespaces
+
+# Install CRDs and example resources:
+make install-resources
+
+# Run (defaults to Info log level, use --log-level -1 for Debug)
+make run-local
 ```
 
-3. Run:
-```
-$ make run-local
-```
+The operator supports the following log levels via `--log-level`: `-1` (Debug), `0` (Info), `1` (Warn), `2` (Error). `make run-local` defaults to Info.
 
 If you make changes to the CRDs make sure to install the resources and run again.
 
@@ -120,11 +124,17 @@ Once you update it you can access the app from `https://env-boot/insights/invent
 
 ### Pushcache (valpop) job
 
-The pushcache job or [valpop](https://github.com/RedHatInsights/valpop) will be disabled by default for all frontends.
+The pushcache job or [valpop](https://github.com/RedHatInsights/valpop) copies frontend assets to an S3 bucket (MinIO locally). It is enabled by default in `examples/feenvironment.yaml` using the valpop image from the Red Hat image registry.
 
-To disable the pushcache job altogether through the Frontend Operator, set `enablePushCache` to `false` in the frontend enviornment of the FEO.
+If you enable push cache (`enablePushCache: true`), you must also set `valpopImage` in the FrontendEnvironment, otherwise the operator will error on reconciliation:
 
-For local development purposes, the minio or AWS bucket secrets are stored under `examples/minio-bucket-secret.yaml`.
+```yaml
+spec:
+  enablePushCache: true
+  valpopImage: quay.io/redhat-services-prod/hcc-platex-services-tenant/valpop:latest
+```
+
+For local development, MinIO is used as the S3 backend. The bucket secrets are stored under `examples/minio-bucket-secret.yaml`.
 
 ### Reverse Proxy
 
@@ -152,7 +162,7 @@ This will create a deployment and service for the reverse proxy, making it acces
 
 [Kuttl](https://kuttl.dev/) is an end to end testing framework for Kubernetes operators. We hope to provide full test coverage for the Frontend Operator with kuttl.
 
-To run the kuttl tests you'll need to be running the operator and Clowder in minikube as shown in the directions above. You also need to make sure you [have kuttl installed on your machine](https://kuttl.dev/docs/cli.html#setup-the-kuttl-kubectl-plugin).
+To run the kuttl tests you'll need to be running the operator in minikube as shown in the directions above. You also need to make sure you [have kuttl installed on your machine](https://github.com/kudobuilder/kuttl/blob/main/docs/cli.md).
 
 Once all that is in place you can run the kuttl tests:
 
