@@ -38,7 +38,15 @@ make create-namespaces
 make install-resources
 ```
 
-### 5. Run the operator (terminal 1)
+### 5. Configure environment
+Copy the example environment file and adjust values if needed:
+```sh
+make env
+# or: cp .env.example .env
+```
+The defaults target a local MinIO instance. The operator loads `.env` automatically via `godotenv` on startup.
+
+### 6. Run the operator (terminal 1)
 `make run-local` defaults to Info log level (`--log-level 0`). Use `--log-level -1` for Debug output.
 Available levels: `-1` Debug, `0` Info, `1` Warn, `2` Error.
 ```sh
@@ -47,7 +55,7 @@ make run-local
 make run-local 2>&1 | grep -v "level\":\"info\""  # filter if too noisy
 ```
 
-### 6. Exercise it (terminal 2)
+### 7. Exercise it (terminal 2)
 ```sh
 kubectl apply -f config/crd/test-resources/
 watch -n 0.1 'kubectl annotate frontend inventory -n default force-conflict=$(date +%s) --overwrite'

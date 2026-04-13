@@ -46,7 +46,18 @@ CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 # Go command to use, enables using different Go versions
 GO_CMD ?= go
 
-PUSHCACHE_ENVS := $(shell echo PUSHCACHE_AWS_ACCESS_KEY_ID=minioadmin PUSHCACHE_AWS_SECRET_ACCESS_KEY=minioadmin PUSHCACHE_AWS_BUCKET_NAME=frontend PUSHCACHE_AWS_REGION=us-west-2 PUSHCACHE_AWS_ENDPOINT=minio-service.minio-env.svc.cluster.local PUSHCACHE_AWS_PORT=9000)
+# Load .env if present (copy .env.example to .env to get started)
+-include .env
+
+# Default pushcache values when .env is absent (local MinIO)
+PUSHCACHE_AWS_ACCESS_KEY_ID ?= minioadmin
+PUSHCACHE_AWS_SECRET_ACCESS_KEY ?= minioadmin
+PUSHCACHE_AWS_BUCKET_NAME ?= frontend
+PUSHCACHE_AWS_REGION ?= us-west-2
+PUSHCACHE_AWS_ENDPOINT ?= minio-service.minio-env.svc.cluster.local
+PUSHCACHE_AWS_PORT ?= 9000
+
+export PUSHCACHE_AWS_ACCESS_KEY_ID PUSHCACHE_AWS_SECRET_ACCESS_KEY PUSHCACHE_AWS_BUCKET_NAME PUSHCACHE_AWS_REGION PUSHCACHE_AWS_ENDPOINT PUSHCACHE_AWS_PORT
 
 PROJECT_DIR := $(shell pwd)
 
@@ -64,6 +75,13 @@ SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
 all: build
+
+env: ## Create .env from .env.example
+	@if [ -f .env ]; then \
+		echo ".env already exists; copy from .env.example manually to avoid losing changes."; \
+		exit 1; \
+	fi
+	cp .env.example .env
 
 api-docs:
 	./build/build_api_docs.sh
@@ -121,7 +139,7 @@ junit: gotestsum manifests envtest generate fmt vet
 
 # entry point for testing kuttl with kind
 kuttl: manifests envtest generate fmt vet
-	$(PUSHCACHE_ENVS) KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" kubectl kuttl test --config kuttl-config.yml  ./tests/e2e
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" kubectl kuttl test --config kuttl-config.yml  ./tests/e2e
 	
 ##@ Build
 
@@ -155,7 +173,7 @@ install-resources:
 	oc apply -f examples/chrome.yaml -n boot
 
 run-local:
-	$(PUSHCACHE_ENVS) $(GO_CMD) run ./main.go --metrics-bind-address :9090 --health-probe-bind-address :9091 --log-level 0
+	$(GO_CMD) run ./main.go --metrics-bind-address :9090 --health-probe-bind-address :9091 --log-level 0
 
 ##@ Deployment
 

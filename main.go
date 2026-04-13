@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/joho/godotenv"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -54,6 +55,10 @@ func init() {
 }
 
 func main() {
+	// Load .env file if present (local development convenience).
+	// In production, environment variables are injected by the platform.
+	_ = godotenv.Load()
+
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
