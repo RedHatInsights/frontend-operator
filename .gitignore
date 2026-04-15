@@ -48,3 +48,6 @@ kuttl-report.json
 
 # Project tmp folder
 /tmp
+
+# Local environment config (copy from .env.example)
+.env
