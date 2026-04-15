@@ -6,8 +6,10 @@ A Kubernetes operator that deploys and manages containerized frontend applicatio
 
 | Document | Description |
 |----------|-------------|
+| [Architecture](docs/ARCHITECTURE.md) | System design, controller flow, CRD design decisions, key subsystems |
 | [Testing Guidelines](docs/testing-guidelines.md) | Unit test patterns (envtest/Ginkgo), e2e tests (kuttl), CI checks |
 | [Operator Development Guidelines](docs/operator-development-guidelines.md) | CRD types, reconciliation flow, ConfigMap generation, pushcache jobs |
+| [Contributing](CONTRIBUTING.md) | Development workflow, commit conventions, PR guidelines, CI checks |
 
 ## Tech Stack
 
