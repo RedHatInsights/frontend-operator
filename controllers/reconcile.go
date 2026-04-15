@@ -883,8 +883,9 @@ func (r *FrontendReconciliation) isJobFromCurrentFrontendImage(j *batchv1.Job) b
 func (r *FrontendReconciliation) isJobFromCurrentValpopImage(j *batchv1.Job) bool {
 	valpopImage, exists := j.Spec.Template.ObjectMeta.Annotations["valpop-image"]
 	if !exists {
-		// Backward compatibility: old jobs without the annotation are considered current
-		return true
+		// Old jobs without the annotation were created before valpop image tracking;
+		// treat as stale so they get recreated with the current valpop image.
+		return false
 	}
 	return valpopImage == r.FrontendEnvironment.Spec.ValpopImage
 }
