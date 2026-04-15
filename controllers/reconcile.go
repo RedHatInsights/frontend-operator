@@ -570,6 +570,7 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
+	annotations["valpop-image"] = valpopImage
 	annotations["kube-linter.io/ignore-all"] = "we don't need no any checking"
 
 	j.Spec.Template.ObjectMeta.SetAnnotations(annotations)
@@ -879,6 +880,15 @@ func (r *FrontendReconciliation) isJobFromCurrentFrontendImage(j *batchv1.Job) b
 	return j.Spec.Template.ObjectMeta.Annotations["frontend-image"] == r.Frontend.Spec.Image
 }
 
+func (r *FrontendReconciliation) isJobFromCurrentValpopImage(j *batchv1.Job) bool {
+	valpopImage, exists := j.Spec.Template.ObjectMeta.Annotations["valpop-image"]
+	if !exists {
+		// Backward compatibility: old jobs without the annotation are considered current
+		return true
+	}
+	return valpopImage == r.FrontendEnvironment.Spec.ValpopImage
+}
+
 func (r *FrontendReconciliation) isJobBehindCutoffTimestamp(j *batchv1.Job, jobName, deployCutoffTimestamp string) bool {
 	if deployCutoffTimestamp == "" || !strings.Contains(jobName, "pushcache") {
 		return false
@@ -889,8 +899,8 @@ func (r *FrontendReconciliation) isJobBehindCutoffTimestamp(j *batchv1.Job, jobN
 	return jobTimestamp < deployCutoffTimestamp
 }
 
-// manageExistingJob will delete the existing job if it exists and is not from the current frontend image
-// It will return true if the job exists and is from the current frontend image
+// manageExistingJob will delete the existing job if it exists and is not from the current frontend/valpop image
+// It will return true if the job exists and is from the current images
 func (r *FrontendReconciliation) manageExistingJob(jobName string) (bool, error) {
 	j, exists, err := r.getExistingJob(jobName)
 	if err != nil {
@@ -902,15 +912,15 @@ func (r *FrontendReconciliation) manageExistingJob(jobName string) (bool, error)
 		return false, nil
 	}
 
-	// If it exists but is not from the current frontend image we delete it
-	if !r.isJobFromCurrentFrontendImage(j) || r.isJobBehindCutoffTimestamp(j, jobName, r.FrontendEnvironment.Spec.DeployCutoffTimestampPushCache) {
+	// If it exists but is not from the current frontend image, valpop image, or is behind the cutoff timestamp, we delete it
+	if !r.isJobFromCurrentFrontendImage(j) || !r.isJobFromCurrentValpopImage(j) || r.isJobBehindCutoffTimestamp(j, jobName, r.FrontendEnvironment.Spec.DeployCutoffTimestampPushCache) {
 		backgroundDeletion := metav1.DeletePropagationBackground
 		return false, r.Client.Delete(r.Ctx, j, &client.DeleteOptions{
 			PropagationPolicy: &backgroundDeletion,
 		})
 	}
 
-	// If it exists and is from the current frontend image we return true and no error
+	// If it exists and is from the current images we return true and no error
 	return true, nil
 }
 
