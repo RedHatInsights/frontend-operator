@@ -25,6 +25,12 @@ Comprehensive documentation is available to help you get started and configure t
 
 See the [Local Development](#local-development-for-contributors) section below for instructions on setting up the operator for local development.
 
+### For AI Agents
+
+- **[AGENTS.md](AGENTS.md)** - Onboarding guide for AI-assisted development: project conventions, structure overview, and documentation index
+- **[Testing Guidelines](docs/testing-guidelines.md)** - Unit test patterns, e2e test conventions, CI checks
+- **[Operator Development Guidelines](docs/operator-development-guidelines.md)** - CRD types, reconciliation flow, ConfigMap generation, pushcache jobs
+
 ## Quick Start
 
 ### Using the Frontend Operator

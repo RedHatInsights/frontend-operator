@@ -1,4 +1,20 @@
+@AGENTS.md
+
 # frontend-operator Local Development
+
+## Build & Test Commands
+
+```sh
+make test          # Unit tests (envtest + Ginkgo)
+make lint          # golangci-lint
+make build         # Build operator binary
+make run-local     # Run operator locally (requires minikube)
+make kuttl         # E2E tests (requires operator running)
+make generate      # Regenerate DeepCopy methods after CRD changes
+make manifests     # Regenerate CRD YAML after CRD changes
+make fmt           # go fmt
+make vet           # go vet
+```
 
 ## Prerequisites
 - podman (rootless mode required)
@@ -114,3 +130,11 @@ Always verify context before applying resources — a wrong context means you're
 ```sh
 kubectl config current-context   # must be "minikube"
 ```
+
+## Pre-commit Checklist
+
+Before committing CRD changes, always run:
+```sh
+make generate && make manifests
+```
+Both outputs must be committed alongside the type changes.
