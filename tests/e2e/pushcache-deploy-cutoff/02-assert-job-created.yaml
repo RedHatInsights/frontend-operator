@@ -14,6 +14,7 @@ spec:
     metadata:
       annotations:
         frontend-image: quay.io/cloudservices/insights-chrome-frontend:720317c
+        valpop-image: quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop:9843de0
     spec:
       volumes:
         - name: pushcache-volume
@@ -38,7 +39,7 @@ spec:
           command:
             - /bin/bash
             - '-c'
-            - 'valpop populate -r chrome-test-cutoff -s /assets -i quay.io/cloudservices/insights-chrome-frontend:720317c --timeout 172800 --bucket frontend --hostname minio-service.minio-env.svc.cluster.local --port 9000 --username minioadmin --password minioadmin'
+            - 'valpop populate -r chrome-test-cutoff -s /assets -i quay.io/cloudservices/insights-chrome-frontend:720317c --valpop-image quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop:9843de0 --timeout 172800 --bucket frontend --hostname minio-service.minio-env.svc.cluster.local --port 9000 --username minioadmin --password minioadmin'
           resources: {}
           volumeMounts:
             - name: pushcache-volume
