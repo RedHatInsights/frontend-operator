@@ -1,6 +1,12 @@
 # Build the manager binary
 FROM registry.access.redhat.com/ubi9/go-toolset:latest as base
 
+# Force Go to download and use go1.25.9 even if the base image ships an older
+# version.  This ensures the compiled binary (and the stdlib linked into it)
+# includes the CVE fixes shipped in go1.25.9, which the Grype security scan
+# checks against.
+ENV GOTOOLCHAIN=go1.25.9
+
 WORKDIR /workspace
 
 COPY go.mod go.mod
