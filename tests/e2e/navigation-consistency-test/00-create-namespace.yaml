@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: navigation-consistency-test
+---
+# Additional namespaces to test cross-namespace cache consistency
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nav-test-main
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nav-test-patch
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nav-test-content

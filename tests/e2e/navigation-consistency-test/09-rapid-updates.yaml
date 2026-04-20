@@ -1,0 +1,107 @@
+---
+# Rapid update 1: Update content app to trigger cache invalidation
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: content-app
+  namespace: navigation-consistency-test
+spec:
+  feoConfigEnabled: true
+  frontend:
+    paths:
+      - /apps/content
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  envName: navigation-consistency-environment
+  image: quay.io/cloudservices/content-frontend:rapid-v1
+  module:
+    manifestLocation: /apps/content/js/fed-mods.json
+  title: Content Management App - Rapid Update 1
+  navigationSegments:
+    - segmentId: content-repositories-templates
+      navItems:
+        - id: repositories
+          title: Repositories - Updated
+          href: /insights/content/repositories
+        - id: templates
+          title: Templates - Updated
+          href: /insights/content/templates
+        # Add new item to test rapid cache updates
+        - id: policies
+          title: Policies
+          href: /insights/content/policies
+---
+# Rapid update 2: Immediately update additional app to test concurrent reconciliation
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: additional-app
+  namespace: navigation-consistency-test
+spec:
+  feoConfigEnabled: true
+  frontend:
+    paths:
+      - /apps/additional
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  envName: navigation-consistency-environment
+  image: quay.io/cloudservices/additional-frontend:rapid-v1
+  module:
+    manifestLocation: /apps/additional/js/fed-mods.json
+  title: Additional Test App - Rapid Update
+  bundleSegments:
+    - segmentId: additional-content
+      bundleId: insights
+      position: 200
+      navItems:
+        - id: additional-section
+          title: Additional Section - Rapid Update
+          expandable: true
+          routes:
+            # Reference the same segments that are being updated concurrently
+            - segmentRef:
+                frontendName: patch-app
+                segmentId: patch-advisories-packages
+            - segmentRef:
+                frontendName: content-app
+                segmentId: content-repositories-templates
+            - id: additional-direct
+              title: Additional Direct - Updated
+              href: /insights/additional/direct
+---
+# Rapid update 3: Update patch app again to create multiple cache invalidations
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: patch-app
+  namespace: navigation-consistency-test
+spec:
+  feoConfigEnabled: true
+  frontend:
+    paths:
+      - /apps/patch
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  envName: navigation-consistency-environment
+  image: quay.io/cloudservices/patch-frontend:rapid-v2
+  module:
+    manifestLocation: /apps/patch/js/fed-mods.json
+  title: Patch Management App - Rapid Update 2
+  navigationSegments:
+    - segmentId: patch-advisories-packages
+      navItems:
+        - id: advisories
+          title: Advisories - Rapid
+          href: /insights/patch/advisories
+        - id: packages
+          title: Packages - Rapid
+          href: /insights/patch/packages
+        - id: cves
+          title: CVEs - Rapid
+          href: /insights/patch/cves
+        # Add another new item during rapid updates
+        - id: errata
+          title: Errata
+          href: /insights/patch/errata
+    - segmentId: patch-systems
+      navItems:
+        - id: patchSystems
+          title: Systems - Rapid
+          href: /insights/patch/systems
