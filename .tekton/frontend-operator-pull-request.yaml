@@ -220,6 +220,64 @@ spec:
       workspaces:
       - name: source
         workspace: workspace
+    - name: run-template-check
+      runAfter:
+      - clone-repository
+      taskSpec:
+        steps:
+        - name: template-check
+          image: registry.access.redhat.com/ubi9/go-toolset:latest
+          securityContext:
+            runAsUser: 0
+          env:
+          - name: GOTOOLCHAIN
+            value: go1.25.9
+          - name: GOPATH
+            value: /tmp/go
+          computeResources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          script: |
+            set -xe
+            dnf install -y python3 python3-pip
+            source build/template_check.sh
+          workingDir: $(workspaces.source.path)
+        workspaces:
+        - name: source
+      workspaces:
+      - name: source
+        workspace: workspace
+    - name: run-unit-tests
+      runAfter:
+      - clone-repository
+      taskSpec:
+        steps:
+        - name: unit-tests
+          image: registry.access.redhat.com/ubi9/go-toolset:latest
+          securityContext:
+            runAsUser: 0
+          env:
+          - name: GOTOOLCHAIN
+            value: go1.25.9
+          - name: GOPATH
+            value: /tmp/go
+          computeResources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          script: |
+            set -xe
+            make test
+          workingDir: $(workspaces.source.path)
+        workspaces:
+        - name: source
+      workspaces:
+      - name: source
+        workspace: workspace
     - name: build-image-index
       params:
       - name: IMAGE
@@ -237,6 +295,8 @@ spec:
         value: $(params.buildah-format)
       runAfter:
       - build-container
+      - run-template-check
+      - run-unit-tests
       taskRef:
         params:
         - name: name
