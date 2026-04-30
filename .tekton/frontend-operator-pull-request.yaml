@@ -248,12 +248,17 @@ spec:
               memory: 2Gi
           script: |
             set -xe
-            # Use prefetched Go modules (cachi2)
+            # Install Go tool binaries BEFORE activating cachi2.
+            # cachi2 sets GOPROXY to a local file cache that only contains
+            # project deps from go.mod — tool modules (controller-gen,
+            # kustomize, setup-envtest) are not prefetched and would fail.
+            dnf install -y python3 python3-pip
+            make controller-gen kustomize envtest
+            # Now activate cachi2 for project build/test
             if [ -f "$(workspaces.source.path)/cachi2/cachi2.env" ]; then
               source "$(workspaces.source.path)/cachi2/cachi2.env"
             fi
-            # Template check (needs python3 for manifest2template.py)
-            dnf install -y python3 python3-pip
+            # Template check
             source build/template_check.sh
             # Unit tests (envtest + Ginkgo)
             make test
