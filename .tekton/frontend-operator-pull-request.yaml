@@ -157,6 +157,28 @@ spec:
         workspace: workspace
       - name: basic-auth
         workspace: git-auth
+    - name: clone-repository-oci-ta
+      params:
+      - name: url
+        value: $(params.git-url)
+      - name: revision
+        value: $(params.revision)
+      - name: ociStorage
+        value: $(params.output-image).git
+      runAfter:
+      - init
+      taskRef:
+        params:
+        - name: name
+          value: git-clone-oci-ta
+        - name: bundle
+          value: quay.io/konflux-ci/tekton-catalog/task-git-clone-oci-ta:0.1@sha256:f3f28a40fb7b4c8a5c1ec935df5576139bb6ba5b80f3531f42da2f1f2448a53b
+        - name: kind
+          value: task
+        resolver: bundles
+      workspaces:
+      - name: basic-auth
+        workspace: git-auth
     - name: prefetch-dependencies
       params:
       - name: input
@@ -225,13 +247,34 @@ spec:
       - name: source
         workspace: workspace
     - name: run-checks
+      params:
+      - name: SOURCE_ARTIFACT
+        value: $(tasks.clone-repository-oci-ta.results.SOURCE_ARTIFACT)
       runAfter:
+      - clone-repository-oci-ta
       - prefetch-dependencies
       timeout: "2h"
       taskSpec:
+        params:
+        - name: SOURCE_ARTIFACT
+          type: string
+        volumes:
+        - name: workdir
+          emptyDir: {}
+        stepTemplate:
+          volumeMounts:
+          - mountPath: /var/workdir
+            name: workdir
+            readOnly: false
         steps:
+        - name: use-trusted-artifact
+          image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:9b180776a41d9a22a1c51539f1647c60defbbd55b44bbebdd4130e33512d8b0d
+          args:
+          - use
+          - $(params.SOURCE_ARTIFACT)=/var/workdir
         - name: checks
           image: registry.access.redhat.com/ubi9/go-toolset:latest
+          workingDir: /var/workdir
           securityContext:
             runAsUser: 0
           env:
@@ -249,29 +292,13 @@ spec:
           script: |
             set -xe
             dnf install -y python3 python3-pip
-            # Install Go tool binaries (controller-gen, kustomize, envtest)
-            # with network access BEFORE cachi2 restricts GOPROXY.
             make controller-gen kustomize envtest
-            # Activate cachi2 prefetched modules.
-            # cachi2.env contains paths like /cachi2/output/... which is
-            # where buildah mounts the cache. In inline tasks the cache
-            # lives under the workspace, so we symlink to match.
             if [ -f "$(workspaces.source.path)/cachi2/cachi2.env" ]; then
-              echo "=== cachi2.env contents ==="
-              cat "$(workspaces.source.path)/cachi2/cachi2.env"
-              echo "=== cachi2 output listing ==="
-              ls -la "$(workspaces.source.path)/cachi2/" || true
-              ls -la "$(workspaces.source.path)/cachi2/output/deps/gomod/pkg/mod/cache/download/" 2>/dev/null | head -20 || true
               ln -sfn "$(workspaces.source.path)/cachi2" /cachi2
               source "$(workspaces.source.path)/cachi2/cachi2.env"
-              echo "=== GOPROXY=$GOPROXY ==="
-              echo "=== GOMODCACHE=$GOMODCACHE ==="
             fi
-            # Template check
             source build/template_check.sh
-            # Unit tests (envtest + Ginkgo)
             make test
-          workingDir: $(workspaces.source.path)/source
         workspaces:
         - name: source
       workspaces:
