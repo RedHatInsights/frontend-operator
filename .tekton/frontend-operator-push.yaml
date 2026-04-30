@@ -248,12 +248,10 @@ spec:
             dnf install -y python3 python3-pip
             # Install Go tool binaries (controller-gen, kustomize, envtest)
             # with network access BEFORE cachi2 restricts GOPROXY.
-            # cachi2's gomod prefetch caches module metadata (.info/.mod) for
-            # everything in go.mod, but only downloads source archives (.zip)
-            # for packages needed by the default build — tools behind the
-            # //go:build tools tag don't get their zips cached.
-            # Pre-installing ensures the binaries exist so Make targets are
-            # no-ops when cachi2 is active.
+            # These are dev-only tools not in go.mod — they require
+            # unrestricted network to `go install <pkg>@<version>`.
+            # Pre-installing ensures the binaries exist so Make targets
+            # are no-ops when cachi2 is active.
             make controller-gen kustomize envtest
             # Activate cachi2 for project build and test dependencies.
             if [ -f "$(workspaces.source.path)/cachi2/cachi2.env" ]; then
