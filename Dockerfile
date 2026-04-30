@@ -1,11 +1,11 @@
 # Build the manager binary
 FROM registry.access.redhat.com/ubi9/go-toolset:latest as base
 
-# Force Go to download and use go1.25.9 even if the base image ships an older
-# version.  This ensures the compiled binary (and the stdlib linked into it)
-# includes the CVE fixes shipped in go1.25.9, which the Grype security scan
-# checks against.
-ENV GOTOOLCHAIN=go1.25.9
+# Use whatever Go toolchain ships in the base image.  GOTOOLCHAIN=local avoids
+# an automatic download of a newer patch release, which fails when cachi2
+# prefetching is active (network is restricted during the build).  The
+# go-toolset:latest image is updated regularly and satisfies go.mod's minimum.
+ENV GOTOOLCHAIN=local
 
 WORKDIR /workspace
 

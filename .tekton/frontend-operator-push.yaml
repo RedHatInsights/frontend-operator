@@ -233,7 +233,7 @@ spec:
             runAsUser: 0
           env:
           - name: GOTOOLCHAIN
-            value: go1.25.9
+            value: local
           - name: GOPATH
             value: /tmp/go
           computeResources:
