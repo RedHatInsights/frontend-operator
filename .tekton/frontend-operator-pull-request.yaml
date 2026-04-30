@@ -242,7 +242,7 @@ spec:
             set -xe
             dnf install -y python3 python3-pip
             source build/template_check.sh
-          workingDir: $(workspaces.source.path)
+          workingDir: $(workspaces.source.path)/source
         workspaces:
         - name: source
       workspaces:
@@ -272,7 +272,7 @@ spec:
           script: |
             set -xe
             make test
-          workingDir: $(workspaces.source.path)
+          workingDir: $(workspaces.source.path)/source
         workspaces:
         - name: source
       workspaces:
