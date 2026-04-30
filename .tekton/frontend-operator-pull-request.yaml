@@ -251,14 +251,21 @@ spec:
             dnf install -y python3 python3-pip
             # Install Go tool binaries (controller-gen, kustomize, envtest)
             # with network access BEFORE cachi2 restricts GOPROXY.
-            # These are dev-only tools not in go.mod — they require
-            # unrestricted network to `go install <pkg>@<version>`.
-            # Pre-installing ensures the binaries exist so Make targets
-            # are no-ops when cachi2 is active.
             make controller-gen kustomize envtest
-            # Activate cachi2 for project build and test dependencies.
+            # Activate cachi2 prefetched modules.
+            # cachi2.env contains paths like /cachi2/output/... which is
+            # where buildah mounts the cache. In inline tasks the cache
+            # lives under the workspace, so we symlink to match.
             if [ -f "$(workspaces.source.path)/cachi2/cachi2.env" ]; then
+              echo "=== cachi2.env contents ==="
+              cat "$(workspaces.source.path)/cachi2/cachi2.env"
+              echo "=== cachi2 output listing ==="
+              ls -la "$(workspaces.source.path)/cachi2/" || true
+              ls -la "$(workspaces.source.path)/cachi2/output/deps/gomod/pkg/mod/cache/download/" 2>/dev/null | head -20 || true
+              ln -sfn "$(workspaces.source.path)/cachi2" /cachi2
               source "$(workspaces.source.path)/cachi2/cachi2.env"
+              echo "=== GOPROXY=$GOPROXY ==="
+              echo "=== GOMODCACHE=$GOMODCACHE ==="
             fi
             # Template check
             source build/template_check.sh
