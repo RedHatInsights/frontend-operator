@@ -18,6 +18,8 @@ metadata:
   name: frontend-operator-on-pull-request
   namespace: hcc-platex-services-tenant
 spec:
+  timeouts:
+    pipeline: "3h"
   params:
   - name: git-url
     value: '{{source_url}}'
@@ -220,40 +222,13 @@ spec:
       workspaces:
       - name: source
         workspace: workspace
-    - name: run-template-check
+    - name: run-checks
       runAfter:
       - clone-repository
+      timeout: "2h"
       taskSpec:
         steps:
-        - name: template-check
-          image: registry.access.redhat.com/ubi9/go-toolset:latest
-          securityContext:
-            runAsUser: 0
-          env:
-          - name: GOTOOLCHAIN
-            value: go1.25.9
-          - name: GOPATH
-            value: /tmp/go
-          computeResources:
-            requests:
-              cpu: 100m
-              memory: 256Mi
-          script: |
-            set -xe
-            dnf install -y python3 python3-pip
-            source build/template_check.sh
-          workingDir: $(workspaces.source.path)/source
-        workspaces:
-        - name: source
-      workspaces:
-      - name: source
-        workspace: workspace
-    - name: run-unit-tests
-      runAfter:
-      - clone-repository
-      taskSpec:
-        steps:
-        - name: unit-tests
+        - name: checks
           image: registry.access.redhat.com/ubi9/go-toolset:latest
           securityContext:
             runAsUser: 0
@@ -271,6 +246,10 @@ spec:
               memory: 2Gi
           script: |
             set -xe
+            # Template check (needs python3 for manifest2template.py)
+            dnf install -y python3 python3-pip
+            source build/template_check.sh
+            # Unit tests (envtest + Ginkgo)
             make test
           workingDir: $(workspaces.source.path)/source
         workspaces:
@@ -295,8 +274,7 @@ spec:
         value: $(params.buildah-format)
       runAfter:
       - build-container
-      - run-template-check
-      - run-unit-tests
+      - run-checks
       taskRef:
         params:
         - name: name
