@@ -248,13 +248,10 @@ spec:
               memory: 2Gi
           script: |
             set -xe
-            # Install Go tool binaries BEFORE activating cachi2.
-            # cachi2 sets GOPROXY to a local file cache that only contains
-            # project deps from go.mod — tool modules (controller-gen,
-            # kustomize, setup-envtest) are not prefetched and would fail.
             dnf install -y python3 python3-pip
-            make controller-gen kustomize envtest
-            # Now activate cachi2 for project build/test
+            # Activate cachi2 — tool deps (controller-gen, kustomize,
+            # setup-envtest) are in go.mod via tools.go, so the prefetch
+            # cache includes them alongside project dependencies.
             if [ -f "$(workspaces.source.path)/cachi2/cachi2.env" ]; then
               source "$(workspaces.source.path)/cachi2/cachi2.env"
             fi
