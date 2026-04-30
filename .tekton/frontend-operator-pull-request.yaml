@@ -241,11 +241,11 @@ spec:
             value: /tmp/go
           computeResources:
             requests:
-              cpu: 200m
-              memory: 512Mi
-            limits:
               cpu: "2"
               memory: 2Gi
+            limits:
+              cpu: "8"
+              memory: 8Gi
           script: |
             set -xe
             dnf install -y python3 python3-pip
