@@ -5,6 +5,7 @@ Welcome to the Frontend Operator documentation. The Frontend Operator is a Kuber
 == Getting Started
 
 * xref:frontendenvironment-guide.adoc[FrontendEnvironment Configuration Guide] - Learn how to create and configure FrontendEnvironment custom resources
+* xref:widget-registry-guide.adoc[Widget Registry Configuration Guide] - Learn how to register dashboard widgets for the HCC widget catalog
 
 == Reference Documentation
 

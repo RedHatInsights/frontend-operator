@@ -1,0 +1,357 @@
+= Widget Registry Configuration Guide
+:toc: left
+:toclevels: 3
+
+== Overview
+
+The widget registry allows application teams to register dashboard widgets that appear in the HCC widget catalog. Users can then add these widgets to their personalized dashboards.
+
+Widget registration is done through the `widgetRegistry` section in your application's `frontend.yml` configuration file. The Frontend Operator processes this configuration and makes widgets available to the dashboard system.
+
+=== Prerequisites
+
+Your `frontend.yml` must have `feoConfigEnabled: true` set in the spec for the operator to process widget configuration:
+
+[source,yaml]
+----
+spec:
+  feoConfigEnabled: true
+----
+
+Without this flag, the operator ignores the `widgetRegistry` section entirely.
+
+== Quick Start
+
+Add a `widgetRegistry` entry to your `frontend.yml` to register a widget:
+
+[source,yaml]
+----
+widgetRegistry:
+  - scope: "my-app"
+    module: "./MyWidget"
+    config:
+      title: "My Widget"
+    defaults:
+      w: 1
+      h: 4
+----
+
+This registers a single widget that:
+
+* Loads the `./MyWidget` component from the `my-app` module federation scope
+* Displays "My Widget" as the title
+* Uses a 1-column wide, 4-row tall default size
+
+== Field Reference
+
+=== `widgetRegistry` Entry
+
+Each entry in the `widgetRegistry` array describes one widget. The full schema:
+
+[source,yaml]
+----
+widgetRegistry:
+  - scope: "string"           # Required — module federation scope
+    module: "string"          # Required — exposed component path
+    importName: "string"      # Optional — custom import name
+    featureFlag: "string"     # Optional — feature flag for conditional rendering
+    config:                   # Required — display configuration
+      title: "string"         # Required — display title
+      icon: "string"          # Optional — PatternFly icon identifier
+      headerLink:             # Optional — link in widget header
+        title: "string"       # Required — link text
+        href: "string"        # Required — link URL
+      permissions:            # Optional — access control
+        - method: "string"    # Required — permission check method
+          apps: ["string"]    # Optional — application identifiers
+          args: [...]         # Optional — method arguments
+    defaults:                 # Required — default grid dimensions
+      w: integer              # Required — width in grid columns
+      h: integer              # Required — height in grid rows
+      maxH: integer           # Optional — maximum height
+      minH: integer           # Optional — minimum height
+----
+
+=== `scope`
+
+**Required.** The module federation scope name. This must match the scope defined in your application's module federation configuration (typically set by the build tooling or `fec.config.js`).
+
+For example, if your app's module federation scope is `landing`, use `scope: "landing"`.
+
+=== `module`
+
+**Required.** The path to the exposed component in your module federation configuration. This corresponds to the `exposes` entries in your webpack or module federation config.
+
+For example, `./ExploreCapabilities` means the widget will load the component exposed as `./ExploreCapabilities` from the specified scope.
+
+=== `importName`
+
+**Optional.** A custom import name for the module. Use this when the default import behavior needs to be overridden, for example when the exposed module exports multiple components.
+
+=== `featureFlag`
+
+**Optional.** A feature flag identifier that controls whether the widget is visible in the catalog. When set, the widget only appears for users who have the specified feature flag enabled.
+
+[source,yaml]
+----
+featureFlag: "widget.favoriteServices.enable"
+----
+
+This is useful for gradually rolling out new widgets or keeping them behind a toggle during development.
+
+=== `config`
+
+**Required.** Display and behavior configuration for the widget.
+
+==== `config.title`
+
+**Required.** The human-readable title displayed in the widget header and in the widget catalog.
+
+==== `config.icon`
+
+**Optional.** A PatternFly icon identifier for the widget. This icon appears in the widget catalog and optionally in the widget header.
+
+Common PatternFly icons: `CogIcon`, `StarIcon`, `RocketIcon`, `HistoryIcon`, `HeadsetIcon`, `ChartBarIcon`, `BellIcon`, `ShieldAltIcon`.
+
+See the https://www.patternfly.org/icons[PatternFly Icons documentation] for the full list.
+
+==== `config.headerLink`
+
+**Optional.** A link displayed in the widget header, typically used to navigate to the full-page version of the data shown in the widget.
+
+[source,yaml]
+----
+headerLink:
+  title: "View all services"
+  href: "/allservices"
+----
+
+Both `title` and `href` are required when `headerLink` is specified. The `href` can be an absolute URL (for external links) or a relative path (for in-app navigation).
+
+==== `config.permissions`
+
+**Optional.** Access control rules that determine which users can see the widget. When specified, the widget is only visible to users who satisfy the permission check.
+
+[source,yaml]
+----
+permissions:
+  - method: "isOrgAdmin"
+  - method: "hasPermissions"
+    args: [["inventory:hosts:read"]]
+----
+
+Each permission entry has:
+
+* `method` — The permission check method to call (e.g., `isOrgAdmin`, `hasPermissions`, `isActive`, `loosePermissions`)
+* `apps` — Optional list of application identifiers relevant to the check
+* `args` — Optional arguments passed to the permission method. This is a JSON array that can contain strings, numbers, booleans, or nested arrays
+
+Multiple permission entries are evaluated together. The exact evaluation logic depends on the method used.
+
+=== `defaults`
+
+**Required.** Default grid dimensions for the widget when first added to a dashboard.
+
+==== `defaults.w`
+
+**Required.** Default width in grid columns. The dashboard uses a responsive grid — typical values range from 1 (narrow) to 4 (full width).
+
+==== `defaults.h`
+
+**Required.** Default height in grid rows. Typical values range from 3 (compact) to 8 (tall).
+
+==== `defaults.maxH`
+
+**Optional.** Maximum height the user can resize the widget to. Prevents widgets from becoming excessively tall.
+
+==== `defaults.minH`
+
+**Optional.** Minimum height the user can resize the widget to. Prevents widgets from being collapsed too small to be useful.
+
+== Examples
+
+=== Basic Widget
+
+A minimal widget with just the required fields:
+
+[source,yaml]
+----
+widgetRegistry:
+  - scope: "my-app"
+    module: "./StatusOverview"
+    config:
+      title: "Status overview"
+    defaults:
+      w: 1
+      h: 4
+----
+
+=== Widget with Feature Flag
+
+A widget that only appears when a feature flag is enabled:
+
+[source,yaml]
+----
+widgetRegistry:
+  - scope: "my-app"
+    module: "./RecentActivity"
+    featureFlag: "widget.recentActivity.enable"
+    config:
+      icon: "HistoryIcon"
+      title: "Recent activity"
+    defaults:
+      w: 1
+      h: 7
+      maxH: 10
+      minH: 1
+----
+
+=== Widget with Header Link
+
+A widget with a link in the header that navigates to a detail page:
+
+[source,yaml]
+----
+widgetRegistry:
+  - scope: "my-app"
+    module: "./SupportCases"
+    config:
+      icon: "HeadsetIcon"
+      title: "My support cases"
+      headerLink:
+        title: "Open a support case"
+        href: "https://access.redhat.com/support/cases/#/case/new/get-support?caseCreate=true"
+    defaults:
+      w: 2
+      h: 4
+      maxH: 10
+      minH: 1
+----
+
+=== Widget with Permissions
+
+A widget visible only to organization administrators:
+
+[source,yaml]
+----
+widgetRegistry:
+  - scope: "my-app"
+    module: "./AdminDashboard"
+    config:
+      icon: "ShieldAltIcon"
+      title: "Admin dashboard"
+      permissions:
+        - method: "isOrgAdmin"
+    defaults:
+      w: 2
+      h: 5
+      maxH: 10
+      minH: 2
+----
+
+=== Full-Featured Example
+
+A complete `frontend.yml` snippet with multiple widgets:
+
+[source,yaml]
+----
+spec:
+  feoConfigEnabled: true
+  # ... other spec fields ...
+  widgetRegistry:
+    - scope: "my-app"
+      module: "./ExploreCapabilities"
+      config:
+        icon: "RocketIcon"
+        title: "Explore capabilities"
+      defaults:
+        w: 3
+        h: 5
+        maxH: 10
+        minH: 1
+
+    - scope: "my-app"
+      module: "./FavoriteItems"
+      featureFlag: "widget.favorites.enable"
+      config:
+        icon: "StarIcon"
+        title: "My favorites"
+        headerLink:
+          title: "View all"
+          href: "/my-app/favorites"
+      defaults:
+        w: 1
+        h: 6
+        maxH: 10
+        minH: 1
+
+    - scope: "my-app"
+      module: "./AdminPanel"
+      config:
+        icon: "CogIcon"
+        title: "Administration"
+        headerLink:
+          title: "Go to settings"
+          href: "/my-app/settings"
+        permissions:
+          - method: "isOrgAdmin"
+      defaults:
+        w: 2
+        h: 4
+        maxH: 8
+        minH: 2
+----
+
+== Module Federation Contract
+
+The `scope` and `module` fields establish the module federation contract between the dashboard and your application.
+
+=== How It Works
+
+1. **Scope** identifies your application's module federation container. It must match the scope defined in your build configuration (e.g., in `fec.config.js` or webpack module federation plugin).
+
+2. **Module** specifies which exposed component to load. This must match an entry in the `exposes` configuration of your module federation setup.
+
+For example, if your `fec.config.js` has:
+
+[source,javascript]
+----
+module.exports = {
+  appName: 'my-app',
+  // The scope is derived from the appName
+  moduleFederation: {
+    exposes: {
+      './MyWidget': '/src/components/MyWidget.tsx',
+    },
+  },
+};
+----
+
+Then your widget registry entry would use:
+
+[source,yaml]
+----
+scope: "my-app"       # matches appName
+module: "./MyWidget"   # matches the exposes key
+----
+
+=== Widget Component Requirements
+
+The exposed component should be a standard React component. The dashboard renders it inside a widget container that provides the title bar, resize handles, and layout integration.
+
+== Real-World Reference
+
+The https://github.com/RedHatInsights/landing-page-frontend/blob/master/frontend.yml[landing-page-frontend] repository contains the canonical example of widget registration in production. It registers multiple widgets including:
+
+* **Explore capabilities** — a wide widget showcasing platform features
+* **My favorite services** — a feature-flagged widget with a header link
+* **Recently visited** — a feature-flagged activity widget
+* **My support cases** — a widget with an external header link
+
+Review this file for a real-world reference of how widgets are configured in a production application.
+
+== Next Steps
+
+* xref:frontendenvironment-guide.adoc[FrontendEnvironment Configuration Guide] — environment-level configuration
+* xref:api_reference.adoc[API Reference] — complete API specification
+* https://github.com/RedHatInsights/frontend-operator[Frontend Operator source code] — operator implementation details
