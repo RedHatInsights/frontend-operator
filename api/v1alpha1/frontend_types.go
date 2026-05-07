@@ -173,8 +173,10 @@ type Route struct {
 }
 
 type Analytics struct {
-	APIKey    string `json:"APIKey" yaml:"APIKey"`
-	APIKeyDev string `json:"APIKeyDev,omitempty" yaml:"APIKeyDev,omitempty"`
+	APIKey               string `json:"APIKey" yaml:"APIKey"`
+	APIKeyDev            string `json:"APIKeyDev,omitempty" yaml:"APIKeyDev,omitempty"`
+	AutocaptureAPIKey    string `json:"autocaptureAPIKey,omitempty" yaml:"autocaptureAPIKey,omitempty"`
+	AutocaptureAPIKeyDev string `json:"autocaptureAPIKeyDev,omitempty" yaml:"autocaptureAPIKeyDev,omitempty"`
 }
 
 type SupportCaseData struct {

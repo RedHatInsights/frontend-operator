@@ -897,6 +897,10 @@ objects:
                           type: string
                         APIKeyDev:
                           type: string
+                        autocaptureAPIKey:
+                          type: string
+                        autocaptureAPIKeyDev:
+                          type: string
                       required:
                       - APIKey
                       type: object
