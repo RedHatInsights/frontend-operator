@@ -1,0 +1,371 @@
+= Widget Registry Configuration Guide
+:toc: left
+:toclevels: 3
+
+== Overview
+
+The widget registry allows application teams to register dashboard widgets that appear in the HCC widget catalog. Users can then add these widgets to their personalized dashboards.
+
+=== How It Works
+
+Each Frontend resource can declare widgets in its `widgetRegistry` field. The frontend-operator collects all widget entries from Frontend resources that have `feoConfigEnabled: true`, sorts them alphabetically, and writes them to a `widget-registry.json` ConfigMap. The Chrome UI reads this ConfigMap to populate the widget catalog.
+
+The operator also automatically sets the `frontendRef` field on each widget entry to the name of the Frontend resource that declared it, so you do not need to set it manually.
+
+=== Prerequisites
+
+* A Frontend resource deployed in a FrontendEnvironment
+* `feoConfigEnabled: true` set on your Frontend resource -- without this, the operator ignores the `widgetRegistry` field entirely
+* A React component exposed via https://webpack.js.org/concepts/module-federation/[Module Federation] in your frontend application
+
+== Field Reference
+
+=== widgetRegistry
+
+The `widgetRegistry` field is an array of widget entries on the Frontend spec. Each entry has the following fields:
+
+[cols="1,1,1,3"]
+|===
+| Field | Type | Required | Description
+
+| `scope`
+| string
+| Yes
+| The Module Federation scope of your application. This must match the scope defined in your app's Module Federation plugin configuration.
+
+| `module`
+| string
+| Yes
+| The exposed component path in your Module Federation configuration (e.g., `./MyWidget`). This is the `exposes` key from your webpack or rspack Module Federation plugin.
+
+| `importName`
+| string
+| No
+| Custom import name for the widget component. Use this when the default export name differs from what the widget catalog expects.
+
+| `featureFlag`
+| string
+| No
+| A feature flag identifier. When set, the widget only appears in the catalog for users who have this feature flag enabled.
+
+| `config`
+| object
+| Yes
+| Display configuration for the widget. See <<Widget Configuration>>.
+
+| `defaults`
+| object
+| Yes
+| Default grid dimensions for the widget. See <<Default Dimensions>>.
+|===
+
+=== Widget Configuration
+
+The `config` object controls how the widget appears in the catalog and on the dashboard:
+
+[cols="1,1,1,3"]
+|===
+| Field | Type | Required | Description
+
+| `title`
+| string
+| Yes
+| The display title shown in the widget catalog and as the widget header on the dashboard.
+
+| `icon`
+| string
+| No
+| A PatternFly icon identifier (e.g., `CogIcon`, `RocketIcon`, `StarIcon`). Shown next to the widget title in the catalog.
+
+| `headerLink`
+| object
+| No
+| An optional link displayed in the widget header. Contains `title` (link text) and `href` (URL). See <<Widget with Header Link>>.
+
+| `permissions`
+| array
+| No
+| Access control rules that determine which users can see the widget. See <<Widget with Permissions>>.
+|===
+
+=== Default Dimensions
+
+The `defaults` object defines the widget's initial size on the dashboard grid:
+
+[cols="1,1,1,3"]
+|===
+| Field | Type | Required | Description
+
+| `w`
+| integer
+| Yes
+| Default width in grid columns.
+
+| `h`
+| integer
+| Yes
+| Default height in grid rows.
+
+| `maxH`
+| integer
+| No
+| Maximum height the user can resize the widget to.
+
+| `minH`
+| integer
+| No
+| Minimum height the user can resize the widget to.
+|===
+
+=== Permissions
+
+The `permissions` array controls widget visibility per user. Each entry has:
+
+[cols="1,1,1,3"]
+|===
+| Field | Type | Required | Description
+
+| `method`
+| string
+| Yes
+| The permission-checking method to call (e.g., `isOrgAdmin`, `hasPermissions`).
+
+| `apps`
+| array of strings
+| No
+| Application identifiers to check permissions against.
+
+| `args`
+| JSON array
+| No
+| Arguments passed to the permission method. The format depends on the method being used.
+|===
+
+== Examples
+
+=== Basic Widget
+
+A minimal widget registration with only the required fields:
+
+[source,yaml]
+----
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: my-app
+spec:
+  envName: my-environment
+  title: My App
+  deploymentRepo: https://github.com/RedHatInsights/my-app-frontend
+  frontend:
+    paths:
+      - /apps/my-app
+  image: quay.io/cloudservices/my-app-frontend:latest
+  feoConfigEnabled: true  # Required for widget processing
+  module:
+    manifestLocation: /apps/my-app/fed-mods.json
+    modules:
+      - id: my-app
+        module: ./RootApp
+        routes:
+          - pathname: /my-app
+  widgetRegistry:
+    - scope: "my-app"
+      module: "./StatusWidget"
+      config:
+        title: "System Status"
+        icon: "CogIcon"
+      defaults:
+        w: 1
+        h: 3
+----
+
+=== Widget with Feature Flag
+
+Gate widget availability behind a feature flag so it only appears for users with the flag enabled:
+
+[source,yaml]
+----
+  widgetRegistry:
+    - scope: "my-app"
+      module: "./BetaDashboard"
+      featureFlag: "widget.betaDashboard.enable"
+      config:
+        title: "Beta Dashboard"
+        icon: "FlaskIcon"
+      defaults:
+        w: 2
+        h: 4
+        maxH: 8
+        minH: 2
+----
+
+=== Widget with Header Link
+
+Add a link in the widget header that navigates users to a related page:
+
+[source,yaml]
+----
+  widgetRegistry:
+    - scope: "my-app"
+      module: "./SupportCaseWidget"
+      config:
+        title: "My support cases"
+        icon: "HeadsetIcon"
+        headerLink:
+          title: "Open a support case"
+          href: "https://access.redhat.com/support/cases/#/case/new/get-support?caseCreate=true"
+      defaults:
+        w: 2
+        h: 4
+        maxH: 10
+        minH: 1
+----
+
+=== Widget with Permissions
+
+Restrict widget visibility to users with specific permissions:
+
+[source,yaml]
+----
+  widgetRegistry:
+    - scope: "my-app"
+      module: "./AdminPanel"
+      config:
+        title: "Admin Overview"
+        icon: "UsersIcon"
+        permissions:
+          - method: "isOrgAdmin"
+      defaults:
+        w: 2
+        h: 5
+        maxH: 10
+        minH: 2
+----
+
+=== Multiple Widgets from One Frontend
+
+A single Frontend can register multiple widgets:
+
+[source,yaml]
+----
+  widgetRegistry:
+    - scope: "landing"
+      module: "./ExploreCapabilities"
+      config:
+        icon: "RocketIcon"
+        title: "Explore capabilities"
+      defaults:
+        w: 3
+        h: 5
+        maxH: 10
+        minH: 1
+    - scope: "landing"
+      module: "./RecentlyVisited"
+      featureFlag: "widget.recentlyVisited.enable"
+      config:
+        icon: "HistoryIcon"
+        title: "Recently visited"
+      defaults:
+        w: 1
+        h: 7
+        maxH: 10
+        minH: 1
+----
+
+== Module Federation Contract
+
+The `scope` and `module` fields map directly to your application's Module Federation configuration:
+
+* `scope` must match the `name` field in your Module Federation plugin configuration
+* `module` must match one of the keys in your `exposes` configuration
+
+For example, if your webpack or rspack configuration has:
+
+[source,javascript]
+----
+new ModuleFederationPlugin({
+  name: "my_app",
+  exposes: {
+    "./StatusWidget": "./src/widgets/StatusWidget",
+  },
+})
+----
+
+Then your widget entry should use:
+
+[source,yaml]
+----
+widgetRegistry:
+  - scope: "my_app"
+    module: "./StatusWidget"
+----
+
+The widget component should be a standard React component. It will be loaded at runtime via Module Federation when a user adds it to their dashboard.
+
+== How the Operator Processes Widgets
+
+Understanding the processing pipeline helps when troubleshooting:
+
+1. The operator lists all Frontend resources in the FrontendEnvironment.
+2. For each Frontend with `feoConfigEnabled: true`, it reads the `widgetRegistry` entries.
+3. The operator sets `frontendRef` on each entry to the Frontend resource name.
+4. All entries are collected and sorted alphabetically by `frontendRef` + `scope` + `module` + `importName`.
+5. The sorted array is serialized to JSON and stored in a ConfigMap named `<environment-name>-widget-registry` with the key `widget-registry.json`.
+6. If target namespaces are configured on the FrontendEnvironment, the ConfigMap is propagated to those namespaces as well.
+
+== Real-World Example
+
+The https://github.com/RedHatInsights/landing-page-frontend/blob/master/frontend.yml[landing-page-frontend] is the canonical example of widget registration. It registers widgets including "Explore capabilities", "My favorite services", "Recently visited", and "My support cases".
+
+== Troubleshooting
+
+=== Widget Not Appearing in Catalog
+
+*Problem*: Your widget entry exists in `frontend.yml` but does not appear in the widget catalog.
+
+*Solution*:
+
+1. Verify `feoConfigEnabled: true` is set on your Frontend resource:
++
+[source,bash]
+----
+kubectl get frontend <name> -o jsonpath='{.spec.feoConfigEnabled}'
+----
+
+2. Check the widget-registry ConfigMap was generated:
++
+[source,bash]
+----
+kubectl get configmap -n <namespace> | grep widget-registry
+kubectl get configmap <env-name>-widget-registry -n <namespace> -o jsonpath='{.data.widget-registry\.json}' | python3 -m json.tool
+----
+
+3. Verify your widget entry is present in the JSON output.
+
+=== Widget Loads but Shows an Error
+
+*Problem*: The widget appears in the catalog but fails to render.
+
+*Solution*:
+
+1. Verify the `scope` matches your Module Federation configuration exactly (case-sensitive).
+2. Verify the `module` path matches an `exposes` key in your webpack/rspack config.
+3. Check the browser console for Module Federation loading errors.
+4. Ensure your widget component is a valid default React export.
+
+=== Feature-Flagged Widget Not Visible
+
+*Problem*: A widget with `featureFlag` set does not appear even when expected.
+
+*Solution*:
+
+1. Confirm the feature flag is enabled for the user/environment.
+2. Check that the `featureFlag` value matches the flag name exactly as configured in the feature flag system.
+
+== Next Steps
+
+* Learn about xref:frontendenvironment-guide.adoc[FrontendEnvironment configuration]
+* Review the xref:api_reference.adoc[complete API reference]
+* See the https://github.com/RedHatInsights/landing-page-frontend/blob/master/frontend.yml[landing-page-frontend] for a production example
+* Explore the https://github.com/RedHatInsights/widget-layout[widget-layout] repository for the dashboard UI implementation

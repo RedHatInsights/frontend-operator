@@ -1,2 +1,3 @@
 * xref:frontendenvironment-guide.adoc[FrontendEnvironment Configuration Guide]
+* xref:widget-registry-guide.adoc[Widget Registry Configuration Guide]
 * xref:api_reference.adoc[API Reference]
