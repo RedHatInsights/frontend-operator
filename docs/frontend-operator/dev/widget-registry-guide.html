@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Widget Registry Configuration Guide :: Frontend Operator Documentation</title>
+    <link rel="canonical" href="https://redhatinsights.github.io/frontend-operator/frontend-operator/dev/widget-registry-guide.html">
+    <meta name="generator" content="Antora 3.1.14">
+    <link rel="stylesheet" href="../../ui/css/site.css">
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://redhatinsights.github.io/frontend-operator">Frontend Operator Documentation</a>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="frontend-operator" data-version="dev">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="index.html">Frontend Operator</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="frontendenvironment-guide.html">FrontendEnvironment Configuration Guide</a>
+  </li>
+  <li class="nav-item is-current-page" data-depth="1">
+    <a class="nav-link" href="widget-registry-guide.html">Widget Registry Configuration Guide</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="api_reference.html">API Reference</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Frontend Operator</span>
+    <span class="version">dev</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="index.html">Frontend Operator</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="index.html">dev</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="index.html">Frontend Operator</a></li>
+    <li><a href="widget-registry-guide.html">Widget Registry Configuration Guide</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/RedHatInsights/frontend-operator/edit/main/docs/antora/modules/ROOT/pages/widget-registry-guide.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Widget Registry Configuration Guide</h1>
+<div id="toc" class="toc">
+<div id="toctitle">Table of Contents</div>
+<ul class="sectlevel1">
+<li><a href="#_overview">Overview</a>
+<ul class="sectlevel2">
+<li><a href="#_how_it_works">How It Works</a></li>
+<li><a href="#_prerequisites">Prerequisites</a></li>
+</ul>
+</li>
+<li><a href="#_field_reference">Field Reference</a>
+<ul class="sectlevel2">
+<li><a href="#_widgetregistry">widgetRegistry</a></li>
+<li><a href="#_widget_configuration">Widget Configuration</a></li>
+<li><a href="#_default_dimensions">Default Dimensions</a></li>
+<li><a href="#_permissions">Permissions</a></li>
+</ul>
+</li>
+<li><a href="#_examples">Examples</a>
+<ul class="sectlevel2">
+<li><a href="#_basic_widget">Basic Widget</a></li>
+<li><a href="#_widget_with_feature_flag">Widget with Feature Flag</a></li>
+<li><a href="#_widget_with_header_link">Widget with Header Link</a></li>
+<li><a href="#_widget_with_permissions">Widget with Permissions</a></li>
+<li><a href="#_multiple_widgets_from_one_frontend">Multiple Widgets from One Frontend</a></li>
+</ul>
+</li>
+<li><a href="#_module_federation_contract">Module Federation Contract</a></li>
+<li><a href="#_how_the_operator_processes_widgets">How the Operator Processes Widgets</a></li>
+<li><a href="#_real_world_example">Real-World Example</a></li>
+<li><a href="#_troubleshooting">Troubleshooting</a>
+<ul class="sectlevel2">
+<li><a href="#_widget_not_appearing_in_catalog">Widget Not Appearing in Catalog</a></li>
+<li><a href="#_widget_loads_but_shows_an_error">Widget Loads but Shows an Error</a></li>
+<li><a href="#_feature_flagged_widget_not_visible">Feature-Flagged Widget Not Visible</a></li>
+</ul>
+</li>
+<li><a href="#_next_steps">Next Steps</a></li>
+</ul>
+</div>
+<div class="sect1">
+<h2 id="_overview"><a class="anchor" href="#_overview"></a>Overview</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The widget registry allows application teams to register dashboard widgets that appear in the HCC widget catalog. Users can then add these widgets to their personalized dashboards.</p>
+</div>
+<div class="sect2">
+<h3 id="_how_it_works"><a class="anchor" href="#_how_it_works"></a>How It Works</h3>
+<div class="paragraph">
+<p>Each Frontend resource can declare widgets in its <code>widgetRegistry</code> field. The frontend-operator collects all widget entries from Frontend resources that have <code>feoConfigEnabled: true</code>, sorts them alphabetically, and writes them to a <code>widget-registry.json</code> ConfigMap. The Chrome UI reads this ConfigMap to populate the widget catalog.</p>
+</div>
+<div class="paragraph">
+<p>The operator also automatically sets the <code>frontendRef</code> field on each widget entry to the name of the Frontend resource that declared it, so you do not need to set it manually.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_prerequisites"><a class="anchor" href="#_prerequisites"></a>Prerequisites</h3>
+<div class="ulist">
+<ul>
+<li>
+<p>A Frontend resource deployed in a FrontendEnvironment</p>
+</li>
+<li>
+<p><code>feoConfigEnabled: true</code> set on your Frontend resource&#8201;&#8212;&#8201;without this, the operator ignores the <code>widgetRegistry</code> field entirely</p>
+</li>
+<li>
+<p>A React component exposed via <a href="https://webpack.js.org/concepts/module-federation/">Module Federation</a> in your frontend application</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_field_reference"><a class="anchor" href="#_field_reference"></a>Field Reference</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_widgetregistry"><a class="anchor" href="#_widgetregistry"></a>widgetRegistry</h3>
+<div class="paragraph">
+<p>The <code>widgetRegistry</code> field is an array of widget entries on the Frontend spec. Each entry has the following fields:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 50.0002%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>scope</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">string</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The Module Federation scope of your application. This must match the scope defined in your app&#8217;s Module Federation plugin configuration.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>module</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">string</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The exposed component path in your Module Federation configuration (e.g., <code>./MyWidget</code>). This is the <code>exposes</code> key from your webpack or rspack Module Federation plugin.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>importName</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">string</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Custom import name for the widget component. Use this when the default export name differs from what the widget catalog expects.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>featureFlag</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">string</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A feature flag identifier. When set, the widget only appears in the catalog for users who have this feature flag enabled.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>config</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">object</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Display configuration for the widget. See <a href="#_widget_configuration">Widget Configuration</a>.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>defaults</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">object</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Default grid dimensions for the widget. See <a href="#_default_dimensions">Default Dimensions</a>.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_widget_configuration"><a class="anchor" href="#_widget_configuration"></a>Widget Configuration</h3>
+<div class="paragraph">
+<p>The <code>config</code> object controls how the widget appears in the catalog and on the dashboard:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 50.0002%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>title</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">string</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The display title shown in the widget catalog and as the widget header on the dashboard.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>icon</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">string</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A PatternFly icon identifier (e.g., <code>CogIcon</code>, <code>RocketIcon</code>, <code>StarIcon</code>). Shown next to the widget title in the catalog.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>headerLink</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">object</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">An optional link displayed in the widget header. Contains <code>title</code> (link text) and <code>href</code> (URL). See <a href="#_widget_with_header_link">Widget with Header Link</a>.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>permissions</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">array</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Access control rules that determine which users can see the widget. See <a href="#_widget_with_permissions">Widget with Permissions</a>.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_default_dimensions"><a class="anchor" href="#_default_dimensions"></a>Default Dimensions</h3>
+<div class="paragraph">
+<p>The <code>defaults</code> object defines the widget&#8217;s initial size on the dashboard grid:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 50.0002%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>w</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">integer</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Default width in grid columns.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>h</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">integer</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Default height in grid rows.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>maxH</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">integer</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Maximum height the user can resize the widget to.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>minH</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">integer</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Minimum height the user can resize the widget to.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_permissions"><a class="anchor" href="#_permissions"></a>Permissions</h3>
+<div class="paragraph">
+<p>The <code>permissions</code> array controls widget visibility per user. Each entry has:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 50.0002%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>method</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">string</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The permission-checking method to call (e.g., <code>isOrgAdmin</code>, <code>hasPermissions</code>).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>apps</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">array of strings</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Application identifiers to check permissions against.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>args</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">JSON array</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Arguments passed to the permission method. The format depends on the method being used.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_examples"><a class="anchor" href="#_examples"></a>Examples</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_basic_widget"><a class="anchor" href="#_basic_widget"></a>Basic Widget</h3>
+<div class="paragraph">
+<p>A minimal widget registration with only the required fields:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: my-app
+spec:
+  envName: my-environment
+  title: My App
+  deploymentRepo: https://github.com/RedHatInsights/my-app-frontend
+  frontend:
+    paths:
+      - /apps/my-app
+  image: quay.io/cloudservices/my-app-frontend:latest
+  feoConfigEnabled: true  # Required for widget processing
+  module:
+    manifestLocation: /apps/my-app/fed-mods.json
+    modules:
+      - id: my-app
+        module: ./RootApp
+        routes:
+          - pathname: /my-app
+  widgetRegistry:
+    - scope: "my-app"
+      module: "./StatusWidget"
+      config:
+        title: "System Status"
+        icon: "CogIcon"
+      defaults:
+        w: 1
+        h: 3</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_widget_with_feature_flag"><a class="anchor" href="#_widget_with_feature_flag"></a>Widget with Feature Flag</h3>
+<div class="paragraph">
+<p>Gate widget availability behind a feature flag so it only appears for users with the flag enabled:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">  widgetRegistry:
+    - scope: "my-app"
+      module: "./BetaDashboard"
+      featureFlag: "widget.betaDashboard.enable"
+      config:
+        title: "Beta Dashboard"
+        icon: "FlaskIcon"
+      defaults:
+        w: 2
+        h: 4
+        maxH: 8
+        minH: 2</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_widget_with_header_link"><a class="anchor" href="#_widget_with_header_link"></a>Widget with Header Link</h3>
+<div class="paragraph">
+<p>Add a link in the widget header that navigates users to a related page:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">  widgetRegistry:
+    - scope: "my-app"
+      module: "./SupportCaseWidget"
+      config:
+        title: "My support cases"
+        icon: "HeadsetIcon"
+        headerLink:
+          title: "Open a support case"
+          href: "https://access.redhat.com/support/cases/#/case/new/get-support?caseCreate=true"
+      defaults:
+        w: 2
+        h: 4
+        maxH: 10
+        minH: 1</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_widget_with_permissions"><a class="anchor" href="#_widget_with_permissions"></a>Widget with Permissions</h3>
+<div class="paragraph">
+<p>Restrict widget visibility to users with specific permissions:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">  widgetRegistry:
+    - scope: "my-app"
+      module: "./AdminPanel"
+      config:
+        title: "Admin Overview"
+        icon: "UsersIcon"
+        permissions:
+          - method: "isOrgAdmin"
+      defaults:
+        w: 2
+        h: 5
+        maxH: 10
+        minH: 2</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_multiple_widgets_from_one_frontend"><a class="anchor" href="#_multiple_widgets_from_one_frontend"></a>Multiple Widgets from One Frontend</h3>
+<div class="paragraph">
+<p>A single Frontend can register multiple widgets:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">  widgetRegistry:
+    - scope: "landing"
+      module: "./ExploreCapabilities"
+      config:
+        icon: "RocketIcon"
+        title: "Explore capabilities"
+      defaults:
+        w: 3
+        h: 5
+        maxH: 10
+        minH: 1
+    - scope: "landing"
+      module: "./RecentlyVisited"
+      featureFlag: "widget.recentlyVisited.enable"
+      config:
+        icon: "HistoryIcon"
+        title: "Recently visited"
+      defaults:
+        w: 1
+        h: 7
+        maxH: 10
+        minH: 1</code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_module_federation_contract"><a class="anchor" href="#_module_federation_contract"></a>Module Federation Contract</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The <code>scope</code> and <code>module</code> fields map directly to your application&#8217;s Module Federation configuration:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>scope</code> must match the <code>name</code> field in your Module Federation plugin configuration</p>
+</li>
+<li>
+<p><code>module</code> must match one of the keys in your <code>exposes</code> configuration</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>For example, if your webpack or rspack configuration has:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-javascript hljs" data-lang="javascript">new ModuleFederationPlugin({
+  name: "my_app",
+  exposes: {
+    "./StatusWidget": "./src/widgets/StatusWidget",
+  },
+})</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Then your widget entry should use:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">widgetRegistry:
+  - scope: "my_app"
+    module: "./StatusWidget"</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The widget component should be a standard React component. It will be loaded at runtime via Module Federation when a user adds it to their dashboard.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_how_the_operator_processes_widgets"><a class="anchor" href="#_how_the_operator_processes_widgets"></a>How the Operator Processes Widgets</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Understanding the processing pipeline helps when troubleshooting:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>The operator lists all Frontend resources in the FrontendEnvironment.</p>
+</li>
+<li>
+<p>For each Frontend with <code>feoConfigEnabled: true</code>, it reads the <code>widgetRegistry</code> entries.</p>
+</li>
+<li>
+<p>The operator sets <code>frontendRef</code> on each entry to the Frontend resource name.</p>
+</li>
+<li>
+<p>All entries are collected and sorted alphabetically by <code>frontendRef</code> + <code>scope</code> + <code>module</code> + <code>importName</code>.</p>
+</li>
+<li>
+<p>The sorted array is serialized to JSON and stored in a ConfigMap named <code>&lt;environment-name&gt;-widget-registry</code> with the key <code>widget-registry.json</code>.</p>
+</li>
+<li>
+<p>If target namespaces are configured on the FrontendEnvironment, the ConfigMap is propagated to those namespaces as well.</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_real_world_example"><a class="anchor" href="#_real_world_example"></a>Real-World Example</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The <a href="https://github.com/RedHatInsights/landing-page-frontend/blob/master/frontend.yml">landing-page-frontend</a> is the canonical example of widget registration. It registers widgets including "Explore capabilities", "My favorite services", "Recently visited", and "My support cases".</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_troubleshooting"><a class="anchor" href="#_troubleshooting"></a>Troubleshooting</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_widget_not_appearing_in_catalog"><a class="anchor" href="#_widget_not_appearing_in_catalog"></a>Widget Not Appearing in Catalog</h3>
+<div class="paragraph">
+<p><strong>Problem</strong>: Your widget entry exists in <code>frontend.yml</code> but does not appear in the widget catalog.</p>
+</div>
+<div class="paragraph">
+<p><strong>Solution</strong>:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Verify <code>feoConfigEnabled: true</code> is set on your Frontend resource:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">kubectl get frontend &lt;name&gt; -o jsonpath='{.spec.feoConfigEnabled}'</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Check the widget-registry ConfigMap was generated:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">kubectl get configmap -n &lt;namespace&gt; | grep widget-registry
+kubectl get configmap &lt;env-name&gt;-widget-registry -n &lt;namespace&gt; -o jsonpath='{.data.widget-registry\.json}' | python3 -m json.tool</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Verify your widget entry is present in the JSON output.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_widget_loads_but_shows_an_error"><a class="anchor" href="#_widget_loads_but_shows_an_error"></a>Widget Loads but Shows an Error</h3>
+<div class="paragraph">
+<p><strong>Problem</strong>: The widget appears in the catalog but fails to render.</p>
+</div>
+<div class="paragraph">
+<p><strong>Solution</strong>:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Verify the <code>scope</code> matches your Module Federation configuration exactly (case-sensitive).</p>
+</li>
+<li>
+<p>Verify the <code>module</code> path matches an <code>exposes</code> key in your webpack/rspack config.</p>
+</li>
+<li>
+<p>Check the browser console for Module Federation loading errors.</p>
+</li>
+<li>
+<p>Ensure your widget component is a valid default React export.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_feature_flagged_widget_not_visible"><a class="anchor" href="#_feature_flagged_widget_not_visible"></a>Feature-Flagged Widget Not Visible</h3>
+<div class="paragraph">
+<p><strong>Problem</strong>: A widget with <code>featureFlag</code> set does not appear even when expected.</p>
+</div>
+<div class="paragraph">
+<p><strong>Solution</strong>:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Confirm the feature flag is enabled for the user/environment.</p>
+</li>
+<li>
+<p>Check that the <code>featureFlag</code> value matches the flag name exactly as configured in the feature flag system.</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next Steps</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>Learn about <a href="frontendenvironment-guide.html" class="xref page">FrontendEnvironment configuration</a></p>
+</li>
+<li>
+<p>Review the <a href="api_reference.html" class="xref page">complete API reference</a></p>
+</li>
+<li>
+<p>See the <a href="https://github.com/RedHatInsights/landing-page-frontend/blob/master/frontend.yml">landing-page-frontend</a> for a production example</p>
+</li>
+<li>
+<p>Explore the <a href="https://github.com/RedHatInsights/widget-layout">widget-layout</a> repository for the dashboard UI implementation</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>This page was built using the Antora default UI.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+</footer>
+<script id="site-script" src="../../ui/js/site.js" data-ui-root-path="../../ui"></script>
+<script async src="../../ui/js/vendor/highlight.js"></script>
+  </body>
+</html>
