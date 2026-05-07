@@ -1135,6 +1135,12 @@ Analytics configuration for frontend modules.
 
 | *`APIKeyDev`* __string__ |
 Optional analytics API key for development environments.
+
+| *`autocaptureAPIKey`* __string__ |
+Optional autocapture analytics API key for production environments.
+
+| *`autocaptureAPIKeyDev`* __string__ |
+Optional autocapture analytics API key for development environments.
 |===
 
 
