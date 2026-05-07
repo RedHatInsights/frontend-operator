@@ -5,6 +5,7 @@ Welcome to the Frontend Operator documentation. The Frontend Operator is a Kuber
 == Getting Started
 
 * xref:frontendenvironment-guide.adoc[FrontendEnvironment Configuration Guide] - Learn how to create and configure FrontendEnvironment custom resources
+* xref:widget-layout-guide.adoc[Widget Layout Template Guide] - Learn how to define default dashboard layout templates for your widgets
 
 == Reference Documentation
 

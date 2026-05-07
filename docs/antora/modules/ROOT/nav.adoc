@@ -1,2 +1,3 @@
 * xref:frontendenvironment-guide.adoc[FrontendEnvironment Configuration Guide]
+* xref:widget-layout-guide.adoc[Widget Layout Template Guide]
 * xref:api_reference.adoc[API Reference]
