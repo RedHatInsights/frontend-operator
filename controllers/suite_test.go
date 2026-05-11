@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
@@ -75,6 +76,9 @@ var _ = ginkgo.BeforeSuite(func(_ context.Context) {
 
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: k8sscheme,
+		Metrics: metricsserver.Options{
+			BindAddress: "0",
+		},
 	})
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
@@ -98,7 +102,11 @@ var _ = ginkgo.BeforeSuite(func(_ context.Context) {
 	gomega.Expect(k8sClient.Create(ctx, &monitorNs)).Should(gomega.Succeed())
 
 	go func() {
+		defer ginkgo.GinkgoRecover()
 		err = k8sManager.Start(ctx)
+		if err != nil {
+			logf.Log.Error(err, "manager start failed")
+		}
 		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	}()
 

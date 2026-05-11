@@ -13,7 +13,7 @@ objects:
   kind: CustomResourceDefinition
   metadata:
     annotations:
-      controller-gen.kubebuilder.io/version: v0.16.4
+      controller-gen.kubebuilder.io/version: v0.18.0
     name: bundles.cloud.redhat.com
   spec:
     group: cloud.redhat.com
@@ -231,7 +231,7 @@ objects:
   kind: CustomResourceDefinition
   metadata:
     annotations:
-      controller-gen.kubebuilder.io/version: v0.16.4
+      controller-gen.kubebuilder.io/version: v0.18.0
     name: frontendenvironments.cloud.redhat.com
   spec:
     group: cloud.redhat.com
@@ -512,7 +512,7 @@ objects:
   kind: CustomResourceDefinition
   metadata:
     annotations:
-      controller-gen.kubebuilder.io/version: v0.16.4
+      controller-gen.kubebuilder.io/version: v0.18.0
     name: frontends.cloud.redhat.com
   spec:
     group: cloud.redhat.com
