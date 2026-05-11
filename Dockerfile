@@ -1,11 +1,15 @@
 # Build the manager binary
 FROM registry.access.redhat.com/ubi9/go-toolset:latest as base
 
-# Use whatever Go toolchain ships in the base image.  GOTOOLCHAIN=local avoids
-# an automatic download of a newer patch release, which fails when cachi2
-# prefetching is active (network is restricted during the build).  The
-# go-toolset:latest image is updated regularly and satisfies go.mod's minimum.
-ENV GOTOOLCHAIN=local
+# Default to 'auto' so Go downloads the exact toolchain version specified in
+# go.mod (e.g. go1.25.10).  This ensures the built binary uses the patched
+# stdlib and passes Grype vulnerability scans in GHA.
+#
+# For hermetic/cachi2 builds (Konflux), override with:
+#   --build-arg GOTOOLCHAIN_MODE=local
+# to avoid network downloads during the restricted build phase.
+ARG GOTOOLCHAIN_MODE=auto
+ENV GOTOOLCHAIN=${GOTOOLCHAIN_MODE}
 
 WORKDIR /workspace
 
