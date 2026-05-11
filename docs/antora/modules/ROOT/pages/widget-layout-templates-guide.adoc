@@ -1,0 +1,532 @@
+= Widget Layout Templates Guide
+:toc: left
+:toclevels: 3
+
+== Overview
+
+The frontend-operator supports a widget dashboard system that allows app teams to register widgets and define base layout templates. These are aggregated across all Frontend resources in an environment and served to https://github.com/RedHatInsights/insights-chrome[insights-chrome] as JSON ConfigMaps, enabling users to customize their dashboards.
+
+=== Key Concepts
+
+Widget Registry:: A catalog of available widgets that users can add to their dashboards. Each entry defines the widget's module federation metadata, display configuration, default dimensions, and optional access controls.
+
+Base Widget Layout Templates:: Pre-built dashboard layouts that users can fork and customize. Each template defines widget positions and sizes across four responsive breakpoints (small, medium, large, extra-large).
+
+FEO Config:: The `feoConfigEnabled: true` flag on a Frontend resource enables widget processing. Without it, widget registry entries and base layouts are ignored by the operator even if they are defined.
+
+=== How It Works
+
+. App teams define `widgetRegistry` and `baseWidgetLayouts` in their Frontend custom resources
+. The operator collects entries from *all* Frontends in the same FrontendEnvironment that have `feoConfigEnabled: true`
+. Widget registry entries are aggregated into a single `widget-registry.json` ConfigMap
+. Base layout templates are aggregated into a single `base-widget-dashboard-templates.json` ConfigMap
+. Template names are auto-prefixed with the Frontend name (e.g., `my-app-dashboard` becomes `my-app-my-app-dashboard`) to prevent collisions across teams
+. ConfigMaps are propagated to all `targetNamespaces` defined in the FrontendEnvironment
+. insights-chrome reads these ConfigMaps to render widget dashboards
+
+== Prerequisites
+
+* A Frontend custom resource deployed in a namespace with the frontend-operator running
+* The FrontendEnvironment referenced by `spec.envName` must exist
+* `spec.feoConfigEnabled: true` must be set on the Frontend resource
+
+== Defining a Widget Registry Entry
+
+Add widgets to `spec.widgetRegistry` in your Frontend resource. Each entry describes a module federation remote that Chrome can load at runtime.
+
+=== Minimal Widget
+
+[source,yaml]
+----
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: my-app
+  namespace: my-team
+spec:
+  envName: production
+  title: My App
+  feoConfigEnabled: true  # Required
+  widgetRegistry:
+    - scope: "my-app"
+      module: "./DashboardWidget"
+      config:
+        title: "My Dashboard Widget"
+      defaults:
+        w: 1
+        h: 1
+  # ... other spec fields ...
+----
+
+=== Full Widget Example
+
+[source,yaml]
+----
+widgetRegistry:
+  - scope: "my-app"
+    module: "./ActiveAlerts"
+    importName: "ActiveAlertsWidget"
+    featureFlag: "platform.my-app.alerts-widget"
+    config:
+      title: "Active Alerts"
+      icon: "BellIcon"
+      headerLink:
+        title: "View all alerts"
+        href: "/insights/my-app/alerts"
+      permissions:
+        - method: "withEmail"
+          apps: ["my-app"]
+          args: ["@redhat.com"]
+    defaults:
+      w: 2
+      h: 2
+      maxH: 4
+      minH: 1
+----
+
+=== Widget Registry Field Reference
+
+[cols="2,1,1,4"]
+|===
+| Field | Type | Required | Description
+
+| `scope`
+| string
+| Yes
+| Module federation scope. Typically matches your app name.
+
+| `module`
+| string
+| Yes
+| Module path within the scope (e.g., `"./MyWidget"`).
+
+| `importName`
+| string
+| No
+| Named export to use. If omitted, the default export is used.
+
+| `featureFlag`
+| string
+| No
+| Feature flag name. When set, the widget is only available if the flag is enabled.
+
+| `defaults.w`
+| int
+| Yes
+| Default grid width.
+
+| `defaults.h`
+| int
+| Yes
+| Default grid height.
+
+| `defaults.maxH`
+| int
+| No
+| Maximum allowed height.
+
+| `defaults.minH`
+| int
+| No
+| Minimum allowed height.
+
+| `config.title`
+| string
+| Yes
+| Display title shown in the widget header and widget picker.
+
+| `config.icon`
+| string
+| No
+| PatternFly icon name (e.g., `"CogIcon"`, `"BellIcon"`).
+
+| `config.headerLink.title`
+| string
+| No
+| Text for an optional link in the widget header.
+
+| `config.headerLink.href`
+| string
+| No
+| URL for the header link.
+
+| `config.permissions`
+| array
+| No
+| Access control rules. Each entry has `method`, `apps`, and `args` fields.
+|===
+
+== Defining Base Widget Layout Templates
+
+Add layout templates to `spec.baseWidgetLayouts` in your Frontend resource. Each template defines a grid layout that users can fork and customize.
+
+=== Minimal Layout
+
+[source,yaml]
+----
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: my-app
+  namespace: my-team
+spec:
+  envName: production
+  title: My App
+  feoConfigEnabled: true
+  baseWidgetLayouts:
+    - name: "default"
+      displayName: "Default Dashboard"
+      templateConfig:
+        sm:
+          - { w: 1, h: 2, cx: 0, cy: 0, i: "alerts-widget" }
+        md:
+          - { w: 2, h: 2, cx: 0, cy: 0, i: "alerts-widget" }
+        lg:
+          - { w: 3, h: 2, cx: 0, cy: 0, i: "alerts-widget" }
+        xl:
+          - { w: 4, h: 2, cx: 0, cy: 0, i: "alerts-widget" }
+----
+
+=== Multi-Widget Layout
+
+[source,yaml]
+----
+baseWidgetLayouts:
+  - name: "operations"
+    displayName: "Operations Dashboard"
+    templateConfig:
+      sm:
+        - { w: 1, h: 2, cx: 0, cy: 0, i: "alerts-widget" }
+        - { w: 1, h: 2, cx: 0, cy: 2, i: "status-widget" }
+      md:
+        - { w: 2, h: 2, cx: 0, cy: 0, i: "alerts-widget" }
+        - { w: 2, h: 2, cx: 2, cy: 0, i: "status-widget" }
+      lg:
+        - { w: 3, h: 2, cx: 0, cy: 0, i: "alerts-widget" }
+        - { w: 3, h: 2, cx: 3, cy: 0, i: "status-widget" }
+      xl:
+        - { w: 4, h: 2, cx: 0, cy: 0, i: "alerts-widget" }
+        - { w: 4, h: 2, cx: 4, cy: 0, i: "status-widget" }
+  - name: "overview"
+    displayName: "Overview"
+    templateConfig:
+      sm:
+        - { w: 1, h: 3, cx: 0, cy: 0, i: "summary-widget", static: true }
+      md:
+        - { w: 4, h: 3, cx: 0, cy: 0, i: "summary-widget", static: true }
+      lg:
+        - { w: 6, h: 3, cx: 0, cy: 0, i: "summary-widget", static: true }
+      xl:
+        - { w: 8, h: 3, cx: 0, cy: 0, i: "summary-widget", static: true }
+----
+
+=== Base Layout Field Reference
+
+[cols="2,1,1,4"]
+|===
+| Field | Type | Required | Description
+
+| `name`
+| string
+| Yes
+| Template identifier. Auto-prefixed with the Frontend name by the operator (e.g., `my-app-operations`).
+
+| `displayName`
+| string
+| Yes
+| User-visible name shown in the dashboard template picker.
+
+| `templateConfig`
+| object
+| Yes
+| Grid configurations for each responsive breakpoint.
+
+| `templateConfig.sm`
+| array
+| Yes
+| Widget layout items for small screens (phones).
+
+| `templateConfig.md`
+| array
+| Yes
+| Widget layout items for medium screens (tablets).
+
+| `templateConfig.lg`
+| array
+| Yes
+| Widget layout items for large screens (desktops).
+
+| `templateConfig.xl`
+| array
+| Yes
+| Widget layout items for extra-large screens.
+|===
+
+==== Widget Grid Item Fields
+
+Each item in a breakpoint array defines a widget's position and size in the grid:
+
+[cols="2,1,1,4"]
+|===
+| Field | Type | Required | Description
+
+| `w`
+| int
+| Yes
+| Grid width (number of columns the widget spans).
+
+| `h`
+| int
+| Yes
+| Grid height (number of rows the widget spans).
+
+| `cx`
+| int
+| Yes
+| X position (column) in the grid. Starts at 0.
+
+| `cy`
+| int
+| Yes
+| Y position (row) in the grid. Starts at 0.
+
+| `i`
+| string
+| Yes
+| Widget identifier. Must match a widget registered in the widget registry.
+
+| `maxH`
+| int
+| No
+| Maximum height the user can resize this widget to.
+
+| `minH`
+| int
+| No
+| Minimum height the user can resize this widget to.
+
+| `static`
+| bool
+| No
+| When `true`, the widget is locked in place and cannot be moved or resized by the user.
+|===
+
+NOTE: The fields `cx` and `cy` are used instead of `x` and `y` because some YAML parsers treat bare `y` as a boolean (`true`). This is a known YAML 1.1 quirk. Always use `cx` and `cy` for grid coordinates.
+
+== Complete Example
+
+A full Frontend resource with both widget registry and base layout templates:
+
+[source,yaml]
+----
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: advisor
+  namespace: advisor-team
+spec:
+  envName: stage-environment
+  title: Advisor
+  deploymentRepo: https://github.com/RedHatInsights/insights-advisor-frontend
+  image: "quay.io/cloudservices/insights-advisor-frontend:latest"
+  frontend:
+    paths:
+      - /apps/advisor
+  module:
+    manifestLocation: /apps/advisor/fed-mods.json
+    modules: []
+    moduleID: advisor
+  feoConfigEnabled: true
+
+  widgetRegistry:
+    - scope: "advisor"
+      module: "./RecommendationsWidget"
+      config:
+        title: "Recommendations"
+        icon: "LightbulbIcon"
+        headerLink:
+          title: "View all"
+          href: "/insights/advisor/recommendations"
+      defaults:
+        w: 2
+        h: 2
+        maxH: 4
+        minH: 1
+    - scope: "advisor"
+      module: "./SystemsAtRiskWidget"
+      config:
+        title: "Systems at Risk"
+        icon: "ExclamationTriangleIcon"
+      defaults:
+        w: 1
+        h: 1
+
+  baseWidgetLayouts:
+    - name: "recommended"
+      displayName: "Recommended Layout"
+      templateConfig:
+        sm:
+          - { w: 1, h: 2, cx: 0, cy: 0, i: "recommendations" }
+          - { w: 1, h: 1, cx: 0, cy: 2, i: "systems-at-risk" }
+        md:
+          - { w: 2, h: 2, cx: 0, cy: 0, i: "recommendations" }
+          - { w: 2, h: 1, cx: 2, cy: 0, i: "systems-at-risk" }
+        lg:
+          - { w: 4, h: 2, cx: 0, cy: 0, i: "recommendations" }
+          - { w: 2, h: 1, cx: 4, cy: 0, i: "systems-at-risk" }
+        xl:
+          - { w: 6, h: 2, cx: 0, cy: 0, i: "recommendations" }
+          - { w: 2, h: 1, cx: 6, cy: 0, i: "systems-at-risk" }
+----
+
+== Generated Output
+
+The operator produces two ConfigMaps from the widget data.
+
+=== Widget Registry ConfigMap
+
+Name pattern: `<environment-name>-widget-registry`
+
+[source,json]
+----
+[
+  {
+    "scope": "advisor",
+    "module": "./RecommendationsWidget",
+    "defaults": { "w": 2, "h": 2, "maxH": 4, "minH": 1 },
+    "config": {
+      "title": "Recommendations",
+      "icon": "LightbulbIcon",
+      "headerLink": { "title": "View all", "href": "/insights/advisor/recommendations" }
+    },
+    "frontendRef": "advisor"
+  }
+]
+----
+
+=== Base Widget Dashboard Templates ConfigMap
+
+Name pattern: `<environment-name>-base-widget-dashboard-templates`
+
+[source,json]
+----
+[
+  {
+    "name": "advisor-recommended",
+    "displayName": "Recommended Layout",
+    "templateConfig": {
+      "sm": [{ "w": 1, "h": 2, "cx": 0, "cy": 0, "i": "recommendations" }],
+      "md": [{ "w": 2, "h": 2, "cx": 0, "cy": 0, "i": "recommendations" }],
+      "lg": [{ "w": 4, "h": 2, "cx": 0, "cy": 0, "i": "recommendations" }],
+      "xl": [{ "w": 6, "h": 2, "cx": 0, "cy": 0, "i": "recommendations" }]
+    },
+    "frontendRef": "advisor"
+  }
+]
+----
+
+Note: The template `name` was auto-prefixed from `recommended` to `advisor-recommended` by the operator.
+
+== ConfigMap Propagation
+
+Both ConfigMaps are created in:
+
+. The Frontend's own namespace
+. Every namespace listed in `FrontendEnvironment.spec.targetNamespaces`
+
+In the default namespace, ConfigMap names follow the pattern `<envName>-widget-registry` and `<envName>-base-widget-dashboard-templates`. In target namespaces, they use the pattern `widget-registry-cfg` and `base-widget-dashboard-templates-cfg`.
+
+All ConfigMaps include the `qontract.recycle: "true"` annotation, which signals app-interface to restart consuming pods when the ConfigMap content changes.
+
+== Multi-Frontend Aggregation
+
+When multiple Frontend resources in the same environment define widgets and layouts, the operator merges them into shared ConfigMaps:
+
+[source,text]
+----
+Frontend "advisor" (feoConfigEnabled: true)
+  widgetRegistry: [RecommendationsWidget, SystemsAtRiskWidget]
+  baseWidgetLayouts: [{name: "recommended", ...}]
+
+Frontend "vulnerability" (feoConfigEnabled: true)
+  widgetRegistry: [CriticalCVEsWidget]
+  baseWidgetLayouts: [{name: "security-overview", ...}]
+                        |
+                        v
+        Operator aggregates + sorts alphabetically
+                        |
+                        v
+  widget-registry.json:
+    [advisor/RecommendationsWidget, advisor/SystemsAtRiskWidget, vulnerability/CriticalCVEsWidget]
+
+  base-widget-dashboard-templates.json:
+    [advisor-recommended, vulnerability-security-overview]
+----
+
+Each entry retains a `frontendRef` field so consumers can trace which Frontend owns the widget or template.
+
+== Permissions
+
+Widgets can be restricted to specific users or roles using the `permissions` field:
+
+[source,yaml]
+----
+widgetRegistry:
+  - scope: "admin"
+    module: "./AdminWidget"
+    config:
+      title: "Admin Controls"
+      permissions:
+        - method: "withEmail"
+          apps: ["admin-panel"]
+          args: ["@redhat.com"]
+        - method: "isOrgAdmin"
+    defaults:
+      w: 2
+      h: 1
+----
+
+The `permissions` array is passed to insights-chrome, which evaluates the rules at runtime to determine widget visibility. Available methods depend on the Chrome permission framework.
+
+== Troubleshooting
+
+=== Widget Not Appearing in Dashboard
+
+. Verify `feoConfigEnabled: true` is set on the Frontend resource
+. Check the ConfigMap was generated:
++
+[source,bash]
+----
+kubectl get configmap -n <namespace> | grep widget
+----
+
+. Inspect the ConfigMap content:
++
+[source,bash]
+----
+kubectl get configmap <env-name>-widget-registry -n <namespace> -o jsonpath='{.data.widget-registry\.json}' | python3 -m json.tool
+----
+
+. Confirm the widget's `i` value in the base layout matches a registered widget
+
+=== Layout Template Not Showing
+
+. Check the base templates ConfigMap:
++
+[source,bash]
+----
+kubectl get configmap <env-name>-base-widget-dashboard-templates -n <namespace> -o jsonpath='{.data.base-widget-dashboard-templates\.json}' | python3 -m json.tool
+----
+
+. Remember template names are auto-prefixed with the Frontend name
+
+=== YAML Parsing Errors
+
+If you see unexpected boolean values, ensure you are using `cx` and `cy` instead of `x` and `y` for grid coordinates. In YAML 1.1, bare `y` is parsed as `true`.
+
+== Next Steps
+
+* xref:api_reference.adoc[API Reference] for complete field documentation
+* xref:frontendenvironment-guide.adoc[FrontendEnvironment Guide] for environment-level configuration
+* https://github.com/RedHatInsights/widget-layout[widget-layout] repository for the dashboard UI that consumes these templates
+* https://github.com/RedHatInsights/insights-chrome[insights-chrome] for how Chrome loads and renders widgets

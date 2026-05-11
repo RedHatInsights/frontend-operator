@@ -69,6 +69,7 @@ The operator generates a single ConfigMap per FrontendEnvironment containing agg
 | `search-index.json` | Search entries for chrome search | `Frontend.Spec.SearchEntries` |
 | `service-tiles.json` | Service dropdown tiles | `Frontend.Spec.ServiceTiles` + `FrontendEnvironment.Spec.ServiceCategories` |
 | `widget-registry.json` | Widget metadata | `Frontend.Spec.WidgetRegistry` |
+| `base-widget-dashboard-templates.json` | Base dashboard layout templates | `Frontend.Spec.BaseWidgetLayouts` |
 
 ConfigMaps are propagated to `targetNamespaces` listed in the FrontendEnvironment.
 

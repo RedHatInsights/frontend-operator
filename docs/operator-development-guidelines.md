@@ -68,6 +68,7 @@ The operator generates several ConfigMap keys from aggregated Frontend data:
 | `search-index.json` | Search entries | `Frontend.Spec.SearchEntries` |
 | `service-tiles.json` | Service dropdown tiles | `Frontend.Spec.ServiceTiles` + `FrontendEnvironment.Spec.ServiceCategories` |
 | `widget-registry.json` | Widget metadata | `Frontend.Spec.WidgetRegistry` |
+| `base-widget-dashboard-templates.json` | Base dashboard layout templates | `Frontend.Spec.BaseWidgetLayouts` |
 
 ConfigMaps are created in the FrontendEnvironment's target namespace and optionally propagated to `targetNamespaces`.
 
