@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Widget Layout Templates Guide :: Frontend Operator Documentation</title>
+    <link rel="canonical" href="https://redhatinsights.github.io/frontend-operator/frontend-operator/dev/widget-layout-templates-guide.html">
+    <meta name="generator" content="Antora 3.1.14">
+    <link rel="stylesheet" href="../../ui/css/site.css">
+  </head>
+  <body class="article">
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="https://redhatinsights.github.io/frontend-operator">Frontend Operator Documentation</a>
+      <button class="navbar-burger" aria-controls="topbar-nav" aria-expanded="false" aria-label="Toggle main menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        <a class="navbar-item" href="#">Home</a>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Products</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Product A</a>
+            <a class="navbar-item" href="#">Product B</a>
+            <a class="navbar-item" href="#">Product C</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#">Services</a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="#">Service A</a>
+            <a class="navbar-item" href="#">Service B</a>
+            <a class="navbar-item" href="#">Service C</a>
+          </div>
+        </div>
+        <div class="navbar-item">
+          <span class="control">
+            <a class="button is-primary" href="#">Download</a>
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>
+<div class="body">
+<div class="nav-container" data-component="frontend-operator" data-version="dev">
+  <aside class="nav">
+    <div class="panels">
+<div class="nav-panel-menu is-active" data-panel="menu">
+  <nav class="nav-menu">
+    <button class="nav-menu-toggle" aria-label="Toggle expand/collapse all" style="display: none"></button>
+    <h3 class="title"><a href="index.html">Frontend Operator</a></h3>
+<ul class="nav-list">
+  <li class="nav-item" data-depth="0">
+<ul class="nav-list">
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="frontendenvironment-guide.html">FrontendEnvironment Configuration Guide</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="widget-registry-guide.html">Widget Registry Configuration Guide</a>
+  </li>
+  <li class="nav-item" data-depth="1">
+    <a class="nav-link" href="api_reference.html">API Reference</a>
+  </li>
+</ul>
+  </li>
+</ul>
+  </nav>
+</div>
+<div class="nav-panel-explore" data-panel="explore">
+  <div class="context">
+    <span class="title">Frontend Operator</span>
+    <span class="version">dev</span>
+  </div>
+  <ul class="components">
+    <li class="component is-current">
+      <div class="title"><a href="index.html">Frontend Operator</a></div>
+      <ul class="versions">
+        <li class="version is-current is-latest">
+          <a href="index.html">dev</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</div>
+    </div>
+  </aside>
+</div>
+<main class="article">
+<div class="toolbar" role="navigation">
+<button class="nav-toggle"></button>
+  <a href="index.html" class="home-link"></a>
+<nav class="breadcrumbs" aria-label="breadcrumbs">
+  <ul>
+    <li><a href="index.html">Frontend Operator</a></li>
+    <li><a href="widget-layout-templates-guide.html">Widget Layout Templates Guide</a></li>
+  </ul>
+</nav>
+<div class="edit-this-page"><a href="https://github.com/RedHatInsights/frontend-operator/edit/main/docs/antora/modules/ROOT/pages/widget-layout-templates-guide.adoc">Edit this Page</a></div>
+</div>
+  <div class="content">
+<aside class="toc sidebar" data-title="Contents" data-levels="2">
+  <div class="toc-menu"></div>
+</aside>
+<article class="doc">
+<h1 class="page">Widget Layout Templates Guide</h1>
+<div id="toc" class="toc">
+<div id="toctitle">Table of Contents</div>
+<ul class="sectlevel1">
+<li><a href="#_overview">Overview</a>
+<ul class="sectlevel2">
+<li><a href="#_key_concepts">Key Concepts</a></li>
+<li><a href="#_how_it_works">How It Works</a></li>
+</ul>
+</li>
+<li><a href="#_prerequisites">Prerequisites</a></li>
+<li><a href="#_defining_a_widget_registry_entry">Defining a Widget Registry Entry</a>
+<ul class="sectlevel2">
+<li><a href="#_minimal_widget">Minimal Widget</a></li>
+<li><a href="#_full_widget_example">Full Widget Example</a></li>
+<li><a href="#_widget_registry_field_reference">Widget Registry Field Reference</a></li>
+</ul>
+</li>
+<li><a href="#_defining_base_widget_layout_templates">Defining Base Widget Layout Templates</a>
+<ul class="sectlevel2">
+<li><a href="#_minimal_layout">Minimal Layout</a></li>
+<li><a href="#_multi_widget_layout">Multi-Widget Layout</a></li>
+<li><a href="#_base_layout_field_reference">Base Layout Field Reference</a>
+<ul class="sectlevel3">
+<li><a href="#_widget_grid_item_fields">Widget Grid Item Fields</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#_complete_example">Complete Example</a></li>
+<li><a href="#_generated_output">Generated Output</a>
+<ul class="sectlevel2">
+<li><a href="#_widget_registry_configmap">Widget Registry ConfigMap</a></li>
+<li><a href="#_base_widget_dashboard_templates_configmap">Base Widget Dashboard Templates ConfigMap</a></li>
+</ul>
+</li>
+<li><a href="#_configmap_propagation">ConfigMap Propagation</a></li>
+<li><a href="#_multi_frontend_aggregation">Multi-Frontend Aggregation</a></li>
+<li><a href="#_permissions">Permissions</a></li>
+<li><a href="#_troubleshooting">Troubleshooting</a>
+<ul class="sectlevel2">
+<li><a href="#_widget_not_appearing_in_dashboard">Widget Not Appearing in Dashboard</a></li>
+<li><a href="#_layout_template_not_showing">Layout Template Not Showing</a></li>
+<li><a href="#_yaml_parsing_errors">YAML Parsing Errors</a></li>
+</ul>
+</li>
+<li><a href="#_next_steps">Next Steps</a></li>
+</ul>
+</div>
+<div class="sect1">
+<h2 id="_overview"><a class="anchor" href="#_overview"></a>Overview</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The frontend-operator supports a widget dashboard system that allows app teams to register widgets and define base layout templates. These are aggregated across all Frontend resources in an environment and served to <a href="https://github.com/RedHatInsights/insights-chrome">insights-chrome</a> as JSON ConfigMaps, enabling users to customize their dashboards.</p>
+</div>
+<div class="sect2">
+<h3 id="_key_concepts"><a class="anchor" href="#_key_concepts"></a>Key Concepts</h3>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">Widget Registry</dt>
+<dd>
+<p>A catalog of available widgets that users can add to their dashboards. Each entry defines the widget&#8217;s module federation metadata, display configuration, default dimensions, and optional access controls.</p>
+</dd>
+<dt class="hdlist1">Base Widget Layout Templates</dt>
+<dd>
+<p>Pre-built dashboard layouts that users can fork and customize. Each template defines widget positions and sizes across four responsive breakpoints (small, medium, large, extra-large).</p>
+</dd>
+<dt class="hdlist1">FEO Config</dt>
+<dd>
+<p>The <code>feoConfigEnabled: true</code> flag on a Frontend resource enables widget processing. Without it, widget registry entries and base layouts are ignored by the operator even if they are defined.</p>
+</dd>
+</dl>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_how_it_works"><a class="anchor" href="#_how_it_works"></a>How It Works</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>App teams define <code>widgetRegistry</code> and <code>baseWidgetLayouts</code> in their Frontend custom resources</p>
+</li>
+<li>
+<p>The operator collects entries from <strong>all</strong> Frontends in the same FrontendEnvironment that have <code>feoConfigEnabled: true</code></p>
+</li>
+<li>
+<p>Widget registry entries are aggregated into a single <code>widget-registry.json</code> ConfigMap</p>
+</li>
+<li>
+<p>Base layout templates are aggregated into a single <code>base-widget-dashboard-templates.json</code> ConfigMap</p>
+</li>
+<li>
+<p>Template names are auto-prefixed with the Frontend name (e.g., <code>my-app-dashboard</code> becomes <code>my-app-my-app-dashboard</code>) to prevent collisions across teams</p>
+</li>
+<li>
+<p>ConfigMaps are propagated to all <code>targetNamespaces</code> defined in the FrontendEnvironment</p>
+</li>
+<li>
+<p>insights-chrome reads these ConfigMaps to render widget dashboards</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_prerequisites"><a class="anchor" href="#_prerequisites"></a>Prerequisites</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p>A Frontend custom resource deployed in a namespace with the frontend-operator running</p>
+</li>
+<li>
+<p>The FrontendEnvironment referenced by <code>spec.envName</code> must exist</p>
+</li>
+<li>
+<p><code>spec.feoConfigEnabled: true</code> must be set on the Frontend resource</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_defining_a_widget_registry_entry"><a class="anchor" href="#_defining_a_widget_registry_entry"></a>Defining a Widget Registry Entry</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Add widgets to <code>spec.widgetRegistry</code> in your Frontend resource. Each entry describes a module federation remote that Chrome can load at runtime.</p>
+</div>
+<div class="sect2">
+<h3 id="_minimal_widget"><a class="anchor" href="#_minimal_widget"></a>Minimal Widget</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: my-app
+  namespace: my-team
+spec:
+  envName: production
+  title: My App
+  feoConfigEnabled: true  # Required
+  widgetRegistry:
+    - scope: "my-app"
+      module: "./DashboardWidget"
+      config:
+        title: "My Dashboard Widget"
+      defaults:
+        w: 1
+        h: 1
+  # ... other spec fields ...</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_full_widget_example"><a class="anchor" href="#_full_widget_example"></a>Full Widget Example</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">widgetRegistry:
+  - scope: "my-app"
+    module: "./ActiveAlerts"
+    importName: "ActiveAlertsWidget"
+    featureFlag: "platform.my-app.alerts-widget"
+    config:
+      title: "Active Alerts"
+      icon: "BellIcon"
+      headerLink:
+        title: "View all alerts"
+        href: "/insights/my-app/alerts"
+      permissions:
+        - method: "withEmail"
+          apps: ["my-app"]
+          args: ["@redhat.com"]
+    defaults:
+      w: 2
+      h: 2
+      maxH: 4
+      minH: 1</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_widget_registry_field_reference"><a class="anchor" href="#_widget_registry_field_reference"></a>Widget Registry Field Reference</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 50%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>scope</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">string</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Module federation scope. Typically matches your app name.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>module</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">string</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Module path within the scope (e.g., <code>"./MyWidget"</code>).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>importName</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">string</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Named export to use. If omitted, the default export is used.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>featureFlag</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">string</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Feature flag name. When set, the widget is only available if the flag is enabled.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>defaults.w</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">int</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Default grid width.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>defaults.h</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">int</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Default grid height.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>defaults.maxH</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">int</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Maximum allowed height.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>defaults.minH</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">int</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Minimum allowed height.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>config.title</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">string</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Display title shown in the widget header and widget picker.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>config.icon</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">string</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">PatternFly icon name (e.g., <code>"CogIcon"</code>, <code>"BellIcon"</code>).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>config.headerLink.title</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">string</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Text for an optional link in the widget header.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>config.headerLink.href</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">string</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">URL for the header link.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>config.permissions</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">array</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Access control rules. Each entry has <code>method</code>, <code>apps</code>, and <code>args</code> fields.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_defining_base_widget_layout_templates"><a class="anchor" href="#_defining_base_widget_layout_templates"></a>Defining Base Widget Layout Templates</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Add layout templates to <code>spec.baseWidgetLayouts</code> in your Frontend resource. Each template defines a grid layout that users can fork and customize.</p>
+</div>
+<div class="sect2">
+<h3 id="_minimal_layout"><a class="anchor" href="#_minimal_layout"></a>Minimal Layout</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: my-app
+  namespace: my-team
+spec:
+  envName: production
+  title: My App
+  feoConfigEnabled: true
+  baseWidgetLayouts:
+    - name: "default"
+      displayName: "Default Dashboard"
+      templateConfig:
+        sm:
+          - { w: 1, h: 2, cx: 0, cy: 0, i: "alerts-widget" }
+        md:
+          - { w: 2, h: 2, cx: 0, cy: 0, i: "alerts-widget" }
+        lg:
+          - { w: 3, h: 2, cx: 0, cy: 0, i: "alerts-widget" }
+        xl:
+          - { w: 4, h: 2, cx: 0, cy: 0, i: "alerts-widget" }</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_multi_widget_layout"><a class="anchor" href="#_multi_widget_layout"></a>Multi-Widget Layout</h3>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">baseWidgetLayouts:
+  - name: "operations"
+    displayName: "Operations Dashboard"
+    templateConfig:
+      sm:
+        - { w: 1, h: 2, cx: 0, cy: 0, i: "alerts-widget" }
+        - { w: 1, h: 2, cx: 0, cy: 2, i: "status-widget" }
+      md:
+        - { w: 2, h: 2, cx: 0, cy: 0, i: "alerts-widget" }
+        - { w: 2, h: 2, cx: 2, cy: 0, i: "status-widget" }
+      lg:
+        - { w: 3, h: 2, cx: 0, cy: 0, i: "alerts-widget" }
+        - { w: 3, h: 2, cx: 3, cy: 0, i: "status-widget" }
+      xl:
+        - { w: 4, h: 2, cx: 0, cy: 0, i: "alerts-widget" }
+        - { w: 4, h: 2, cx: 4, cy: 0, i: "status-widget" }
+  - name: "overview"
+    displayName: "Overview"
+    templateConfig:
+      sm:
+        - { w: 1, h: 3, cx: 0, cy: 0, i: "summary-widget", static: true }
+      md:
+        - { w: 4, h: 3, cx: 0, cy: 0, i: "summary-widget", static: true }
+      lg:
+        - { w: 6, h: 3, cx: 0, cy: 0, i: "summary-widget", static: true }
+      xl:
+        - { w: 8, h: 3, cx: 0, cy: 0, i: "summary-widget", static: true }</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_base_layout_field_reference"><a class="anchor" href="#_base_layout_field_reference"></a>Base Layout Field Reference</h3>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 50%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>name</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">string</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Template identifier. Auto-prefixed with the Frontend name by the operator (e.g., <code>my-app-operations</code>).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>displayName</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">string</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">User-visible name shown in the dashboard template picker.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>templateConfig</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">object</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Grid configurations for each responsive breakpoint.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>templateConfig.sm</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">array</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Widget layout items for small screens (phones).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>templateConfig.md</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">array</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Widget layout items for medium screens (tablets).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>templateConfig.lg</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">array</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Widget layout items for large screens (desktops).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>templateConfig.xl</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">array</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Widget layout items for extra-large screens.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="sect3">
+<h4 id="_widget_grid_item_fields"><a class="anchor" href="#_widget_grid_item_fields"></a>Widget Grid Item Fields</h4>
+<div class="paragraph">
+<p>Each item in a breakpoint array defines a widget&#8217;s position and size in the grid:</p>
+</div>
+<table class="tableblock frame-all grid-all stretch">
+<colgroup>
+<col style="width: 25%;">
+<col style="width: 12.5%;">
+<col style="width: 12.5%;">
+<col style="width: 50%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Field</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Required</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>w</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">int</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Grid width (number of columns the widget spans).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>h</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">int</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Grid height (number of rows the widget spans).</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cx</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">int</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">X position (column) in the grid. Starts at 0.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>cy</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">int</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Y position (row) in the grid. Starts at 0.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>i</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">string</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Widget identifier. Must match a widget registered in the widget registry.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>maxH</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">int</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Maximum height the user can resize this widget to.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>minH</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">int</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Minimum height the user can resize this widget to.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>static</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">bool</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">No</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">When <code>true</code>, the widget is locked in place and cannot be moved or resized by the user.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+The fields <code>cx</code> and <code>cy</code> are used instead of <code>x</code> and <code>y</code> because some YAML parsers treat bare <code>y</code> as a boolean (<code>true</code>). This is a known YAML 1.1 quirk. Always use <code>cx</code> and <code>cy</code> for grid coordinates.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_complete_example"><a class="anchor" href="#_complete_example"></a>Complete Example</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>A full Frontend resource with both widget registry and base layout templates:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: advisor
+  namespace: advisor-team
+spec:
+  envName: stage-environment
+  title: Advisor
+  deploymentRepo: https://github.com/RedHatInsights/insights-advisor-frontend
+  image: "quay.io/cloudservices/insights-advisor-frontend:latest"
+  frontend:
+    paths:
+      - /apps/advisor
+  module:
+    manifestLocation: /apps/advisor/fed-mods.json
+    modules: []
+    moduleID: advisor
+  feoConfigEnabled: true
+
+  widgetRegistry:
+    - scope: "advisor"
+      module: "./RecommendationsWidget"
+      config:
+        title: "Recommendations"
+        icon: "LightbulbIcon"
+        headerLink:
+          title: "View all"
+          href: "/insights/advisor/recommendations"
+      defaults:
+        w: 2
+        h: 2
+        maxH: 4
+        minH: 1
+    - scope: "advisor"
+      module: "./SystemsAtRiskWidget"
+      config:
+        title: "Systems at Risk"
+        icon: "ExclamationTriangleIcon"
+      defaults:
+        w: 1
+        h: 1
+
+  baseWidgetLayouts:
+    - name: "recommended"
+      displayName: "Recommended Layout"
+      templateConfig:
+        sm:
+          - { w: 1, h: 2, cx: 0, cy: 0, i: "recommendations" }
+          - { w: 1, h: 1, cx: 0, cy: 2, i: "systems-at-risk" }
+        md:
+          - { w: 2, h: 2, cx: 0, cy: 0, i: "recommendations" }
+          - { w: 2, h: 1, cx: 2, cy: 0, i: "systems-at-risk" }
+        lg:
+          - { w: 4, h: 2, cx: 0, cy: 0, i: "recommendations" }
+          - { w: 2, h: 1, cx: 4, cy: 0, i: "systems-at-risk" }
+        xl:
+          - { w: 6, h: 2, cx: 0, cy: 0, i: "recommendations" }
+          - { w: 2, h: 1, cx: 6, cy: 0, i: "systems-at-risk" }</code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_generated_output"><a class="anchor" href="#_generated_output"></a>Generated Output</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The operator produces two ConfigMaps from the widget data.</p>
+</div>
+<div class="sect2">
+<h3 id="_widget_registry_configmap"><a class="anchor" href="#_widget_registry_configmap"></a>Widget Registry ConfigMap</h3>
+<div class="paragraph">
+<p>Name pattern: <code>&lt;environment-name&gt;-widget-registry</code></p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">[
+  {
+    "scope": "advisor",
+    "module": "./RecommendationsWidget",
+    "defaults": { "w": 2, "h": 2, "maxH": 4, "minH": 1 },
+    "config": {
+      "title": "Recommendations",
+      "icon": "LightbulbIcon",
+      "headerLink": { "title": "View all", "href": "/insights/advisor/recommendations" }
+    },
+    "frontendRef": "advisor"
+  }
+]</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_base_widget_dashboard_templates_configmap"><a class="anchor" href="#_base_widget_dashboard_templates_configmap"></a>Base Widget Dashboard Templates ConfigMap</h3>
+<div class="paragraph">
+<p>Name pattern: <code>&lt;environment-name&gt;-base-widget-dashboard-templates</code></p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-json hljs" data-lang="json">[
+  {
+    "name": "advisor-recommended",
+    "displayName": "Recommended Layout",
+    "templateConfig": {
+      "sm": [{ "w": 1, "h": 2, "cx": 0, "cy": 0, "i": "recommendations" }],
+      "md": [{ "w": 2, "h": 2, "cx": 0, "cy": 0, "i": "recommendations" }],
+      "lg": [{ "w": 4, "h": 2, "cx": 0, "cy": 0, "i": "recommendations" }],
+      "xl": [{ "w": 6, "h": 2, "cx": 0, "cy": 0, "i": "recommendations" }]
+    },
+    "frontendRef": "advisor"
+  }
+]</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note: The template <code>name</code> was auto-prefixed from <code>recommended</code> to <code>advisor-recommended</code> by the operator.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_configmap_propagation"><a class="anchor" href="#_configmap_propagation"></a>ConfigMap Propagation</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Both ConfigMaps are created in:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>The Frontend&#8217;s own namespace</p>
+</li>
+<li>
+<p>Every namespace listed in <code>FrontendEnvironment.spec.targetNamespaces</code></p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>In the default namespace, ConfigMap names follow the pattern <code>&lt;envName&gt;-widget-registry</code> and <code>&lt;envName&gt;-base-widget-dashboard-templates</code>. In target namespaces, they use the pattern <code>widget-registry-cfg</code> and <code>base-widget-dashboard-templates-cfg</code>.</p>
+</div>
+<div class="paragraph">
+<p>All ConfigMaps include the <code>qontract.recycle: "true"</code> annotation, which signals app-interface to restart consuming pods when the ConfigMap content changes.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_multi_frontend_aggregation"><a class="anchor" href="#_multi_frontend_aggregation"></a>Multi-Frontend Aggregation</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>When multiple Frontend resources in the same environment define widgets and layouts, the operator merges them into shared ConfigMaps:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-text hljs" data-lang="text">Frontend "advisor" (feoConfigEnabled: true)
+  widgetRegistry: [RecommendationsWidget, SystemsAtRiskWidget]
+  baseWidgetLayouts: [{name: "recommended", ...}]
+
+Frontend "vulnerability" (feoConfigEnabled: true)
+  widgetRegistry: [CriticalCVEsWidget]
+  baseWidgetLayouts: [{name: "security-overview", ...}]
+                        |
+                        v
+        Operator aggregates + sorts alphabetically
+                        |
+                        v
+  widget-registry.json:
+    [advisor/RecommendationsWidget, advisor/SystemsAtRiskWidget, vulnerability/CriticalCVEsWidget]
+
+  base-widget-dashboard-templates.json:
+    [advisor-recommended, vulnerability-security-overview]</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Each entry retains a <code>frontendRef</code> field so consumers can trace which Frontend owns the widget or template.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_permissions"><a class="anchor" href="#_permissions"></a>Permissions</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Widgets can be restricted to specific users or roles using the <code>permissions</code> field:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">widgetRegistry:
+  - scope: "admin"
+    module: "./AdminWidget"
+    config:
+      title: "Admin Controls"
+      permissions:
+        - method: "withEmail"
+          apps: ["admin-panel"]
+          args: ["@redhat.com"]
+        - method: "isOrgAdmin"
+    defaults:
+      w: 2
+      h: 1</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>permissions</code> array is passed to insights-chrome, which evaluates the rules at runtime to determine widget visibility. Available methods depend on the Chrome permission framework.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_troubleshooting"><a class="anchor" href="#_troubleshooting"></a>Troubleshooting</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_widget_not_appearing_in_dashboard"><a class="anchor" href="#_widget_not_appearing_in_dashboard"></a>Widget Not Appearing in Dashboard</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Verify <code>feoConfigEnabled: true</code> is set on the Frontend resource</p>
+</li>
+<li>
+<p>Check the ConfigMap was generated:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">kubectl get configmap -n &lt;namespace&gt; | grep widget</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Inspect the ConfigMap content:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">kubectl get configmap &lt;env-name&gt;-widget-registry -n &lt;namespace&gt; -o jsonpath='{.data.widget-registry\.json}' | python3 -m json.tool</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Confirm the widget&#8217;s <code>i</code> value in the base layout matches a registered widget</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_layout_template_not_showing"><a class="anchor" href="#_layout_template_not_showing"></a>Layout Template Not Showing</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Check the base templates ConfigMap:</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-bash hljs" data-lang="bash">kubectl get configmap &lt;env-name&gt;-base-widget-dashboard-templates -n &lt;namespace&gt; -o jsonpath='{.data.base-widget-dashboard-templates\.json}' | python3 -m json.tool</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Remember template names are auto-prefixed with the Frontend name</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_yaml_parsing_errors"><a class="anchor" href="#_yaml_parsing_errors"></a>YAML Parsing Errors</h3>
+<div class="paragraph">
+<p>If you see unexpected boolean values, ensure you are using <code>cx</code> and <code>cy</code> instead of <code>x</code> and <code>y</code> for grid coordinates. In YAML 1.1, bare <code>y</code> is parsed as <code>true</code>.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_next_steps"><a class="anchor" href="#_next_steps"></a>Next Steps</h2>
+<div class="sectionbody">
+<div class="ulist">
+<ul>
+<li>
+<p><a href="api_reference.html" class="xref page">API Reference</a> for complete field documentation</p>
+</li>
+<li>
+<p><a href="frontendenvironment-guide.html" class="xref page">FrontendEnvironment Guide</a> for environment-level configuration</p>
+</li>
+<li>
+<p><a href="https://github.com/RedHatInsights/widget-layout">widget-layout</a> repository for the dashboard UI that consumes these templates</p>
+</li>
+<li>
+<p><a href="https://github.com/RedHatInsights/insights-chrome">insights-chrome</a> for how Chrome loads and renders widgets</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</article>
+  </div>
+</main>
+</div>
+<footer class="footer">
+  <p>This page was built using the Antora default UI.</p>
+  <p>The source code for this UI is licensed under the terms of the MPL-2.0 license.</p>
+</footer>
+<script id="site-script" src="../../ui/js/site.js" data-ui-root-path="../../ui"></script>
+<script async src="../../ui/js/vendor/highlight.js"></script>
+  </body>
+</html>
