@@ -36,8 +36,7 @@ spec:
   - name: prefetch-input
     value: gomod
   - name: build-args
-    value:
-    - GOTOOLCHAIN_MODE=local
+    value: []
   pipelineSpec:
     description: |
       This pipeline is ideal for building container images from a Containerfile while maintaining trust after pipeline customization.
@@ -270,14 +269,14 @@ spec:
           computeResources: {}
           image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:9b180776a41d9a22a1c51539f1647c60defbbd55b44bbebdd4130e33512d8b0d
           name: use-trusted-artifact
-        - image: registry.access.redhat.com/ubi9/go-toolset:latest
+        - image: registry.access.redhat.com/ubi9/go-toolset:1.25.9-1778504036@sha256:2c17ce45c735ad308240139d807eeb22f4499fd90e883634ba5a191779f1ff94
           name: checks
           workingDir: /var/workdir/source
           securityContext:
             runAsUser: 0
           env:
           - name: GOTOOLCHAIN
-            value: local
+            value: auto
           - name: GOPATH
             value: /tmp/go
           computeResources:

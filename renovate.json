@@ -3,5 +3,12 @@
   "baseBranches": ["main"],
   "tekton": {
     "schedule": ["at any time"]
-  }
+  },
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "all minor and patch dependencies",
+      "groupSlug": "all-minor-patch"
+    }
+  ]
 }
