@@ -187,6 +187,8 @@ spec:
         value: $(params.output-image).prefetch
       - name: ociArtifactExpiresAfter
         value: $(params.image-expires-after)
+      - name: enable-package-registry-proxy
+        value: $(params.enable-package-registry-proxy)
       runAfter:
       - clone-repository
       taskRef:
@@ -194,7 +196,7 @@ spec:
         - name: name
           value: prefetch-dependencies-oci-ta
         - name: bundle
-          value: quay.io/konflux-ci/tekton-catalog/task-prefetch-dependencies-oci-ta:0.2@sha256:e60b74fe2b587b3309ce242ba7a7249743bbf3c18a86d03462e54188caee5a0d
+          value: quay.io/konflux-ci/tekton-catalog/task-prefetch-dependencies-oci-ta:0.3@sha256:a2efbcdcecfa5293a622eb356a18f5c88e5714046b214fe8730b43b1a7dbb77d
         - name: kind
           value: task
         resolver: bundles
@@ -558,7 +560,7 @@ spec:
         - name: name
           value: rpms-signature-scan
         - name: bundle
-          value: quay.io/konflux-ci/tekton-catalog/task-rpms-signature-scan:0.2@sha256:cfdb76c67f27bc498132431f5a24fbc17dac1981d6f6e3da5cf5964ac5abdd20
+          value: quay.io/konflux-ci/tekton-catalog/task-rpms-signature-scan:0.2@sha256:feeabf9f3995143d9e0ba91c3255ea608bfe16cd3fca4d9a2520aeaaf1ae5670
         - name: kind
           value: task
         resolver: bundles
