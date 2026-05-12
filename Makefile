@@ -25,8 +25,8 @@ endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.28
-ENVTEST_VERSION = release-0.19
+ENVTEST_K8S_VERSION = 1.32
+ENVTEST_VERSION = release-0.20
 
 # IMAGE_TAG_BASE defines the docker.io namespace and part of the image name for remote images.
 # This variable is used to construct full image tags for bundle and catalog images.
@@ -204,7 +204,7 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.5.0
-CONTROLLER_TOOLS_VERSION ?= v0.16.4
+CONTROLLER_TOOLS_VERSION ?= v0.18.0
 GO_TEST_SUM_VERSION ?= v1.8.1
 
 .PHONY: controller-gen
