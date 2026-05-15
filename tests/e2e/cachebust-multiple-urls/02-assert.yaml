@@ -90,7 +90,13 @@ spec:
             - /bin/bash
             - '-c'
             - 'sleep 120; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete https://console.doesntexist.redhat.com/config/chrome/fed-modules.json https://console.doesntexist.redhat.com/apps/chrome/index.html https://app.company.com https://us.console.doesntexist.redhat.com/config/chrome/fed-modules.json https://us.console.doesntexist.redhat.com/apps/chrome/index.html'
-          resources: {}
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
           volumeMounts:
             - name: akamai-edgerc
               mountPath: /opt/app-root/edgerc
@@ -100,7 +106,7 @@ spec:
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: chrome-test-defaults-frontend 
+  name: chrome-test-defaults-frontend
   namespace: test-cachebust-multiple-urls
   labels:
     frontend: chrome-test-defaults
@@ -189,7 +195,13 @@ spec:
             - /bin/bash
             - '-c'
             - 'sleep 120; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete https://console.doesntexist.redhat.com/apps/chrome-test-defaults/fed-mods.json https://us.console.doesntexist.redhat.com/apps/chrome-test-defaults/fed-mods.json'
-          resources: {}
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
           volumeMounts:
             - name: akamai-edgerc
               mountPath: /opt/app-root/edgerc
@@ -199,7 +211,7 @@ spec:
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name:  chrome-test-optout-frontend 
+  name:  chrome-test-optout-frontend
   namespace: test-cachebust-multiple-urls
   labels:
     frontend: chrome-test-optout

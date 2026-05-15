@@ -30,6 +30,13 @@ spec:
             - /bin/sh
             - '-c'
             - 'cp -r /srv/dist/* /assets/'
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
           volumeMounts:
             - name: frontend-assets
               mountPath: /assets
@@ -40,7 +47,13 @@ spec:
             - /bin/bash
             - '-c'
             - 'valpop populate -r chrome-test-cutoff -s /assets -i quay.io/cloudservices/insights-chrome-frontend:720317c --valpop-image quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop:9843de0 --timeout 172800 --bucket frontend --hostname minio-service.minio-env.svc.cluster.local --port 9000 --username minioadmin --password minioadmin'
-          resources: {}
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
           volumeMounts:
             - name: pushcache-volume
               mountPath: /opt/pushcache-volume

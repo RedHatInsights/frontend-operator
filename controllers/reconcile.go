@@ -434,6 +434,16 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 		},
 		// Run the akamai cache bust script
 		Command: []string{"/bin/bash", "-c", command},
+		Resources: v1.ResourceRequirements{
+			Requests: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("50m"),
+				v1.ResourceMemory: resource.MustParse("64Mi"),
+			},
+			Limits: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("100m"),
+				v1.ResourceMemory: resource.MustParse("128Mi"),
+			},
+		},
 	}
 	// add the container to the spec containers
 	j.Spec.Template.Spec.Containers = []v1.Container{cacheBustContainer}
@@ -546,6 +556,16 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 				MountPath: assetsPath,
 			},
 		},
+		Resources: v1.ResourceRequirements{
+			Requests: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("50m"),
+				v1.ResourceMemory: resource.MustParse("64Mi"),
+			},
+			Limits: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("100m"),
+				v1.ResourceMemory: resource.MustParse("128Mi"),
+			},
+		},
 	}
 	j.Spec.Template.Spec.InitContainers = []v1.Container{initContainer}
 
@@ -559,6 +579,16 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 		VolumeMounts: volumeMounts,
 		// Run the pushcache startup command
 		Command: []string{"/bin/bash", "-c", command},
+		Resources: v1.ResourceRequirements{
+			Requests: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("100m"),
+				v1.ResourceMemory: resource.MustParse("128Mi"),
+			},
+			Limits: v1.ResourceList{
+				v1.ResourceCPU:    resource.MustParse("200m"),
+				v1.ResourceMemory: resource.MustParse("256Mi"),
+			},
+		},
 	}
 	// add the container to the spec containers
 	j.Spec.Template.Spec.Containers = []v1.Container{pushCacheContainer}
