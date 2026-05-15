@@ -16,7 +16,21 @@ spec:
       initContainers:
         - name: copy-frontend-assets
           image: quay.io/cloudservices/insights-chrome-frontend:720317c
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
       containers:
         - name: valpop-pushcache
           image: quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop:9843de0
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
       restartPolicy: Never
