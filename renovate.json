@@ -1,14 +1,4 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "baseBranches": ["main"],
-  "tekton": {
-    "schedule": ["at any time"]
-  },
-  "packageRules": [
-    {
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "all minor and patch dependencies",
-      "groupSlug": "all-minor-patch"
-    }
-  ]
+  "extends": ["github>RedHatInsights/shared-workflows//renovate/backend"]
 }
