@@ -1,14 +1,14 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: chrome-test-cutoff-frontend-pushcache
-  namespace: test-pushcache-cutoff
+  name: chrome-test-min-assets-frontend-pushcache
+  namespace: test-pushcache-min-assets
   labels:
-    frontend: chrome-test-cutoff
+    frontend: chrome-test-min-assets
   ownerReferences:
     - apiVersion: cloud.redhat.com/v1alpha1
       kind: Frontend
-      name: chrome-test-cutoff
+      name: chrome-test-min-assets
 spec:
   template:
     metadata:
@@ -19,7 +19,7 @@ spec:
       volumes:
         - name: pushcache-volume
           configMap:
-            name: test-pushcache-cutoff-environment
+            name: test-pushcache-min-assets
             defaultMode: 420
         - name: frontend-assets
           emptyDir: {}
@@ -46,7 +46,7 @@ spec:
           command:
             - /bin/bash
             - '-c'
-            - 'valpop populate -r chrome-test-cutoff -s /assets -i quay.io/cloudservices/insights-chrome-frontend:720317c --valpop-image quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop:9843de0 --timeout 172800 --min-asset-records 3 --bucket frontend --hostname minio-service.minio-env.svc.cluster.local --port 9000 --username minioadmin --password minioadmin'
+            - 'valpop populate -r chrome-test-min-assets -s /assets -i quay.io/cloudservices/insights-chrome-frontend:720317c --valpop-image quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop:9843de0 --timeout 172800 --min-asset-records 10 --bucket frontend --hostname minio-service.minio-env.svc.cluster.local --port 9000 --username minioadmin --password minioadmin'
           resources:
             requests:
               cpu: 100m
