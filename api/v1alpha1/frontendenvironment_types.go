@@ -134,6 +134,9 @@ type FrontendEnvironmentSpec struct {
 	// Valpop Image for Push Cache Jobs
 	// If not set, falls back to using the frontend container image
 	ValpopImage string `json:"valpopImage,omitempty"`
+	// Minimum number of asset records to keep in push cache (default: 3)
+	// Valpop will always preserve at least this many versions of each asset
+	MinAssetRecords *int `json:"minAssetRecords,omitempty"`
 	// Reverse Proxy Container Image
 	ReverseProxyImage string `json:"reverseProxyImage,omitempty"`
 	// SPA entrypoint path for reverse proxy

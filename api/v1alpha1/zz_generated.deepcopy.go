@@ -632,6 +632,11 @@ func (in *FrontendEnvironmentSpec) DeepCopyInto(out *FrontendEnvironmentSpec) {
 			(*out)[key] = val
 		}
 	}
+	if in.MinAssetRecords != nil {
+		in, out := &in.MinAssetRecords, &out.MinAssetRecords
+		*out = new(int)
+		**out = **in
+	}
 	if in.DefaultReplicas != nil {
 		in, out := &in.DefaultReplicas, &out.DefaultReplicas
 		*out = new(int32)

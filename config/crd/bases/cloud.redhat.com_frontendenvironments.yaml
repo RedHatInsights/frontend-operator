@@ -135,6 +135,11 @@ spec:
                   x-kubernetes-int-or-string: true
                 description: ResourceList is a set of (resource name, quantity) pairs.
                 type: object
+              minAssetRecords:
+                description: |-
+                  Minimum number of asset records to keep in push cache (default: 3)
+                  Valpop will always preserve at least this many versions of each asset
+                type: integer
               monitoring:
                 description: |-
                   MonitorMode determines where a ServiceMonitor object will be placed

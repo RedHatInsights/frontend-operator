@@ -533,6 +533,12 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 		return fmt.Errorf("ValpopImage must be specified in the FrontendEnvironment when PushCache is enabled")
 	}
 
+	// Determine minimum asset records to keep (default: 3)
+	minAssetRecords := 3
+	if r.FrontendEnvironment.Spec.MinAssetRecords != nil {
+		minAssetRecords = *r.FrontendEnvironment.Spec.MinAssetRecords
+	}
+
 	// Setup volume mounts - always include both volumes
 	volumeMounts := []v1.VolumeMount{
 		{
@@ -570,7 +576,7 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 	j.Spec.Template.Spec.InitContainers = []v1.Container{initContainer}
 
 	// Construct the pushcache startup command; removing the sleep command will result in the pushcache job being spin up continously, without delay, and uploading the assets to s3
-	command := fmt.Sprintf("valpop populate -r %s -s %s -i %s --valpop-image %s --timeout 172800 --bucket %s --hostname %s --port %s --username %s --password %s", r.Frontend.Name, assetsPath, r.Frontend.Spec.Image, valpopImage, *bucketName, *hostname, *port, *awsUsername, *awsPassword)
+	command := fmt.Sprintf("valpop populate -r %s -s %s -i %s --valpop-image %s --timeout 172800 --min-asset-records %d --bucket %s --hostname %s --port %s --username %s --password %s", r.Frontend.Name, assetsPath, r.Frontend.Spec.Image, valpopImage, minAssetRecords, *bucketName, *hostname, *port, *awsUsername, *awsPassword)
 
 	// Modify the object to set the things we care about
 	pushCacheContainer := v1.Container{
