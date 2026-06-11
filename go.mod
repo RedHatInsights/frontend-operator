@@ -2,8 +2,6 @@ module github.com/RedHatInsights/frontend-operator
 
 go 1.25.9
 
-toolchain go1.26.4
-
 require (
 	github.com/RedHatInsights/clowder v0.100.0
 	github.com/RedHatInsights/rhc-osdk-utils v0.15.1
