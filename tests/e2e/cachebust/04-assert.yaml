@@ -268,3 +268,21 @@ spec:
             - name: config-chrome
               mountPath: /srv/dist/operator-generated/fed-modules.json
               subPath: fed-modules.json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: akamai-edgerc
+  namespace: test-cachebust
+data:
+  edgerc: |
+    [default]
+    host = new_host
+    access_token = new_access_token
+    client_token = new_client_token
+    client_secret = new_client_secret
+    [ccu]
+    host = new_host
+    access_token = new_access_token
+    client_token = new_client_token
+    client_secret = new_client_secret

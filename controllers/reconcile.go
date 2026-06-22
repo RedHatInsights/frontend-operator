@@ -394,9 +394,17 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 		"edgerc": edgercFile,
 	}
 
-	// Create the configmap with the Client if it doesn't already exist
+	// Create the configmap with the Client if it doesn't already exist or update the existing one
 	if err := r.Client.Create(r.Ctx, configMap); err != nil {
 		if !k8serr.IsAlreadyExists(err) {
+			return err
+		}
+		existing := &v1.ConfigMap{}
+		if err := r.Client.Get(r.Ctx, nn, existing); err != nil {
+			return err
+		}
+		existing.Data = configMap.Data
+		if err := r.Client.Update(r.Ctx, existing); err != nil {
 			return err
 		}
 	}
