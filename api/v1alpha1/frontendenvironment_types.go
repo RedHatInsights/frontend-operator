@@ -70,6 +70,20 @@ type FrontendServiceCategoryGenerated struct {
 	Groups []FrontendServiceCategoryGroupGenerated `json:"groups" yaml:"groups"`
 }
 
+// ExportResource defines a resource available for export within an application
+type ExportResource struct {
+	ID       string   `json:"id" yaml:"id"`
+	Resource string   `json:"resource" yaml:"resource"`
+	Format   []string `json:"format" yaml:"format"`
+}
+
+// ExportApp defines an application and its resources available for scheduled exports
+type ExportApp struct {
+	ID          string           `json:"id" yaml:"id"`
+	Application string           `json:"application" yaml:"application"`
+	Resources   []ExportResource `json:"resources" yaml:"resources"`
+}
+
 // FrontendEnvironmentSpec defines the desired state of FrontendEnvironment
 type FrontendEnvironmentSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
@@ -153,6 +167,9 @@ type FrontendEnvironmentSpec struct {
 	DefaultReplicas *int32 `json:"defaultReplicas,omitempty" yaml:"defaultReplicas,omitempty"`
 	// For the ChromeUI to render navigation bundles
 	Bundles *[]FrontendBundles `json:"bundles,omitempty" yaml:"bundles,omitempty"`
+
+	// Available export applications and their resources for the scheduler feature
+	Exports *[]ExportApp `json:"exports,omitempty" yaml:"exports,omitempty"`
 
 	Requests v1.ResourceList `json:"requests,omitempty" yaml:"requests,omitempty"`
 	Limits   v1.ResourceList `json:"limits,omitempty" yaml:"limits,omitempty"`
