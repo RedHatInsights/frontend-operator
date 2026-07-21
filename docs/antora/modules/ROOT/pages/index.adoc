@@ -10,6 +10,7 @@ Welcome to the Frontend Operator documentation. The Frontend Operator is a Kuber
 == Guides
 
 * xref:widget-layout-templates-guide.adoc[Widget Layout Templates Guide] - Define widget registries and base dashboard layout templates for your Frontend
+* xref:self-service-search.adoc[Self-Service Search Guide] - Add your frontend pages to Chrome's global search
 
 == Reference Documentation
 

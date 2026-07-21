@@ -1,4 +1,16 @@
 ---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: akamai
+  namespace: test-cachebust
+data:
+  access_token: "bmV3X2FjY2Vzc190b2tlbg=="
+  client_secret: "bmV3X2NsaWVudF9zZWNyZXQ="
+  client_token: "bmV3X2NsaWVudF90b2tlbg=="
+  host: "bmV3X2hvc3Q="
+type: Opaque
+---
 apiVersion: cloud.redhat.com/v1alpha1
 kind: FrontendEnvironment
 metadata:

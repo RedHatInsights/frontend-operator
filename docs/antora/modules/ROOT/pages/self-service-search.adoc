@@ -1,0 +1,255 @@
+= Self-Service Search Guide
+:toc: left
+:toclevels: 3
+
+== Overview
+
+The Hybrid Cloud Console features a global search bar powered by https://github.com/RedHatInsights/insights-chrome[insights-chrome]. Teams can make their frontend pages discoverable in this search by adding `searchEntries` to their Frontend custom resource (CR). The frontend-operator aggregates all search entries from all Frontends in the environment into a single `search-index.json` ConfigMap, which Chrome reads at runtime to populate search results.
+
+=== How It Works
+
+1. You define `searchEntries` in your Frontend CR spec.
+2. The operator collects entries from every Frontend that has `feoConfigEnabled: true`.
+3. Each entry's `id` is prefixed with `<frontend-name>-<environment-name>-` to ensure uniqueness across the environment.
+4. The operator sets `frontendRef` on each entry automatically -- you do not need to set it.
+5. All entries are serialized into a `search-index.json` key inside the environment's ConfigMap.
+6. Chrome loads the ConfigMap and uses it to serve search results.
+
+=== Prerequisites
+
+* A Frontend resource deployed in a FrontendEnvironment
+* `feoConfigEnabled: true` set on your Frontend resource -- without this, the operator ignores `searchEntries` entirely
+
+== SearchEntry Fields
+
+Each search entry supports the following fields:
+
+[cols="1,1,1,3"]
+|===
+| Field | Type | Required | Description
+
+| `id`
+| string
+| Yes
+| Unique identifier for the search entry within your Frontend. The operator prefixes it with `<frontend-name>-<environment-name>-` in the generated index.
+
+| `href`
+| string
+| Yes
+| URL path the search result links to (e.g., `/insights/inventory`).
+
+| `title`
+| string
+| Yes
+| Display title shown in search results.
+
+| `description`
+| string
+| Yes
+| Description shown below the title in search results.
+
+| `alt_title`
+| string array
+| No
+| Alternative titles for improved discoverability. Users searching for any of these terms will find the entry.
+
+| `isExternal`
+| boolean
+| No
+| Set to `true` if the link points to an external site outside the Hybrid Cloud Console.
+
+| `permissions`
+| array
+| No
+| RBAC permissions that control visibility of the entry. Only users matching these permissions will see the search result. See <<Permissions>>.
+|===
+
+=== Permissions
+
+The `permissions` array restricts which users can see a search entry. Each element has:
+
+[cols="1,1,1,3"]
+|===
+| Field | Type | Required | Description
+
+| `method`
+| string
+| Yes
+| The permission-checking method to call (e.g., `isOrgAdmin`, `hasPermissions`).
+
+| `apps`
+| string array
+| No
+| Application identifiers to check permissions against.
+
+| `args`
+| JSON array
+| No
+| Arguments passed to the permission method. Format depends on the method.
+|===
+
+== Example Frontend CR
+
+A minimal Frontend CR with search entries:
+
+[source,yaml]
+----
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: my-app
+  namespace: my-namespace
+spec:
+  envName: my-environment
+  title: My Application
+  deploymentRepo: https://github.com/RedHatInsights/my-app-frontend
+  frontend:
+    paths:
+      - /apps/my-app
+  image: quay.io/cloudservices/my-app-frontend:latest
+  feoConfigEnabled: true  # Required -- without this, searchEntries are ignored
+  module:
+    manifestLocation: /apps/my-app/fed-mods.json
+    modules:
+      - id: my-app
+        module: ./RootApp
+        routes:
+          - pathname: /my-app
+  searchEntries:
+    - id: "overview"
+      title: "My App Overview"
+      href: /my-app
+      description: "View the main dashboard for My App"
+      alt_title:
+        - My App Home
+        - My App Dashboard
+    - id: "settings"
+      title: "My App Settings"
+      href: /my-app/settings
+      description: "Configure My App preferences"
+----
+
+This produces two entries in `search-index.json`:
+
+[source,json]
+----
+[
+  {
+    "id": "my-app-my-environment-overview",
+    "href": "/my-app",
+    "title": "My App Overview",
+    "description": "View the main dashboard for My App",
+    "alt_title": ["My App Home", "My App Dashboard"],
+    "frontendRef": "my-app"
+  },
+  {
+    "id": "my-app-my-environment-settings",
+    "href": "/my-app/settings",
+    "title": "My App Settings",
+    "description": "Configure My App preferences",
+    "frontendRef": "my-app"
+  }
+]
+----
+
+=== Search Entry with Permissions
+
+Restrict a search result to organization administrators:
+
+[source,yaml]
+----
+  searchEntries:
+    - id: "admin-panel"
+      title: "Admin Panel"
+      href: /my-app/admin
+      description: "Organization administration settings"
+      permissions:
+        - method: "isOrgAdmin"
+----
+
+=== Search Entry with External Link
+
+Link to documentation hosted outside the console:
+
+[source,yaml]
+----
+  searchEntries:
+    - id: "docs"
+      title: "My App Documentation"
+      href: https://docs.example.com/my-app
+      description: "Official documentation for My App"
+      isExternal: true
+----
+
+== How the Operator Processes Search Entries
+
+Understanding the processing pipeline helps when troubleshooting:
+
+1. The operator lists all Frontend resources in the FrontendEnvironment.
+2. For each Frontend with `feoConfigEnabled: true` and a non-empty `searchEntries` field, it reads the entries.
+3. For each entry, the operator:
+   a. Prefixes `id` with `<frontend-name>-<environment-name>-` to guarantee uniqueness.
+   b. Sets `frontendRef` to the Frontend resource name.
+4. All entries are collected into a single array.
+5. The array is serialized to JSON and stored in the environment's ConfigMap under the key `search-index.json`.
+6. If `targetNamespaces` is configured on the FrontendEnvironment, the ConfigMap is propagated to those namespaces.
+
+== Testing Your Search Entries
+
+After applying your Frontend CR, verify the entries appear in the ConfigMap:
+
+[source,bash]
+----
+# 1. Apply your Frontend CR
+oc apply -f my-frontend.yaml -n <namespace>
+
+# 2. Wait for reconciliation (typically a few seconds)
+
+# 3. Check the ConfigMap for your search entries
+oc get configmap <environment-name> -n <namespace> \
+  -o jsonpath='{.data.search-index\.json}' | python3 -m json.tool
+----
+
+You should see your entries in the JSON output with the prefixed `id` and the `frontendRef` set to your Frontend name.
+
+To verify from the Chrome UI, open the Hybrid Cloud Console, click on the search bar, and type one of your entry titles or alternative titles.
+
+== Common Pitfalls
+
+=== Missing `feoConfigEnabled`
+
+*Problem*: Search entries are defined in the Frontend CR but do not appear in `search-index.json`.
+
+*Cause*: `feoConfigEnabled: true` is not set on the Frontend resource. The operator skips `searchEntries` entirely when this flag is `false` or missing.
+
+*Fix*: Add `feoConfigEnabled: true` to your Frontend spec.
+
+=== Duplicate IDs
+
+*Problem*: A search entry silently overwrites another entry.
+
+*Cause*: Two entries in the same Frontend share the same `id` value. The operator prefixes IDs with `<frontend-name>-<environment-name>-`, so IDs only need to be unique within a single Frontend resource.
+
+*Fix*: Ensure each entry's `id` is unique within your Frontend's `searchEntries` array.
+
+=== Missing Required Fields
+
+*Problem*: Search entries appear in the ConfigMap but do not show up in Chrome's search results.
+
+*Cause*: One or more required fields (`id`, `href`, `title`, `description`) are empty or missing. Chrome may silently skip malformed entries.
+
+*Fix*: Ensure all required fields are populated. Check the ConfigMap JSON output to verify the entry data looks correct.
+
+=== Permissions Misconfiguration
+
+*Problem*: A search entry is not visible to any users, or visible to the wrong users.
+
+*Cause*: The `permissions` array uses an incorrect `method` name or `args` format.
+
+*Fix*: Check the permission method name matches one supported by Chrome (e.g., `isOrgAdmin`, `hasPermissions`). Verify `args` format matches the method's expected input -- for example, `hasPermissions` expects args like `["inventory:hosts:read"]`.
+
+== Next Steps
+
+* Review the xref:api_reference.adoc#k8s-api-github-com-redhatinsights-frontend-operator-api-v1alpha1-searchentry[SearchEntry API reference] for the complete field specification
+* Learn about xref:frontendenvironment-guide.adoc[FrontendEnvironment configuration]
+* See the https://github.com/RedHatInsights/landing-page-frontend/blob/master/frontend.yml[landing-page-frontend] for a production example of search entries in use
