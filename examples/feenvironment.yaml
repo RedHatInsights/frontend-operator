@@ -48,3 +48,14 @@ spec:
     - id: segmented-bundle
       title: Segmented bundle
       description: ""
+  exports:
+    - id: export-1
+      displayName: My Application
+      application: my-app
+      resources:
+        - id: resource-1
+          displayName: Resource One
+          resource: /api/v1/exports/resource1
+          format:
+            - json
+            - csv

@@ -109,6 +109,8 @@ spec:
                   properties:
                     application:
                       type: string
+                    displayName:
+                      type: string
                     id:
                       type: string
                     resources:
@@ -116,6 +118,8 @@ spec:
                         description: ExportResource defines a resource available for
                           export within an application
                         properties:
+                          displayName:
+                            type: string
                           format:
                             items:
                               type: string
