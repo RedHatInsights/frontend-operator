@@ -2040,6 +2040,14 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 		cfgMap.Data["api-specs.json"] = string(apiSpecsJSONData)
 	}
 
+	if r.FrontendEnvironment.Spec.Exports != nil && len(*r.FrontendEnvironment.Spec.Exports) > 0 {
+		exportsJSONData, err := json.Marshal(*r.FrontendEnvironment.Spec.Exports)
+		if err != nil {
+			return err
+		}
+		cfgMap.Data["exports.json"] = string(exportsJSONData)
+	}
+
 	// Generate SSO configuration
 	ssoConfig := setupSSOConfig(r.FrontendEnvironment)
 	ssoConfigJSONData, err := json.Marshal(ssoConfig)
