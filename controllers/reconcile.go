@@ -521,7 +521,7 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 		return err
 	}
 
-	objectStoreInfo, err := ExtractBucketConfigFromEnv()
+	objectStoreInfo, err := getObjectStoreConfig(r.Ctx, r.Client, r.Frontend.Namespace)
 	if err != nil {
 		return err
 	}
@@ -734,6 +734,51 @@ func ExtractBucketConfigFromEnv() (*ObjectStoreBucket, error) {
 	}
 
 	return bucketConfig, nil
+}
+
+func extractBucketConfigFromSecret(ctx context.Context, c client.Client, namespace string) (*ObjectStoreBucket, error) {
+	// Clowder creates the MinIO Secret with name "<clowdenv>-minio" in the target namespace.
+	// The ClowdEnvironment name follows the convention "env-<namespace>".
+	clowdEnvName := "env-" + namespace
+	secretName := clowdEnvName + "-minio"
+	secret := &v1.Secret{}
+	if err := c.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace}, secret); err != nil {
+		return nil, fmt.Errorf("failed to get MinIO secret %q in namespace %q: %w", secretName, namespace, err)
+	}
+
+	accessKey := string(secret.Data["accessKey"])
+	secretKey := string(secret.Data["secretKey"])
+	hostname := string(secret.Data["hostname"])
+	port := string(secret.Data["port"])
+
+	if accessKey == "" || secretKey == "" || hostname == "" {
+		return nil, fmt.Errorf("MinIO secret %q is missing required keys (accessKey, secretKey, hostname)", secretName)
+	}
+
+	if port == "" {
+		port = "9000"
+	}
+
+	bucketName := "frontend-pushcache"
+	region := "us-east-1"
+
+	return &ObjectStoreBucket{
+		AccessKey: &accessKey,
+		SecretKey: &secretKey,
+		Name:      &bucketName,
+		Region:    &region,
+		Endpoint:  &hostname,
+		Port:      &port,
+		TLS:       utils.FalsePtr(),
+	}, nil
+}
+
+func getObjectStoreConfig(ctx context.Context, c client.Client, namespace string) (*ObjectStoreBucket, error) {
+	config, err := ExtractBucketConfigFromEnv()
+	if err == nil {
+		return config, nil
+	}
+	return extractBucketConfigFromSecret(ctx, c, namespace)
 }
 
 // Add the env vars if eny are set
