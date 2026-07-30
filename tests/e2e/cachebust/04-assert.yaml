@@ -80,8 +80,8 @@ spec:
     spec:
       volumes:
         - name: akamai-edgerc
-          configMap:
-            name: akamai-edgerc
+          secret:
+            secretName: akamai-edgerc
             defaultMode: 420
       containers:
         - name: akamai-cache-bust
@@ -185,8 +185,8 @@ spec:
     spec:
       volumes:
         - name: akamai-edgerc
-          configMap:
-            name: akamai-edgerc
+          secret:
+            secretName: akamai-edgerc
             defaultMode: 420
       containers:
         - name: akamai-cache-bust
@@ -270,19 +270,9 @@ spec:
               subPath: fed-modules.json
 ---
 apiVersion: v1
-kind: ConfigMap
+kind: Secret
 metadata:
   name: akamai-edgerc
   namespace: test-cachebust
 data:
-  edgerc: |
-    [default]
-    host = new_host
-    access_token = new_access_token
-    client_token = new_client_token
-    client_secret = new_client_secret
-    [ccu]
-    host = new_host
-    access_token = new_access_token
-    client_token = new_client_token
-    client_secret = new_client_secret
+  edgerc: W2RlZmF1bHRdCmhvc3QgPSBuZXdfaG9zdAphY2Nlc3NfdG9rZW4gPSBuZXdfYWNjZXNzX3Rva2VuCmNsaWVudF90b2tlbiA9IG5ld19jbGllbnRfdG9rZW4KY2xpZW50X3NlY3JldCA9IG5ld19jbGllbnRfc2VjcmV0CltjY3VdCmhvc3QgPSBuZXdfaG9zdAphY2Nlc3NfdG9rZW4gPSBuZXdfYWNjZXNzX3Rva2VuCmNsaWVudF90b2tlbiA9IG5ld19jbGllbnRfdG9rZW4KY2xpZW50X3NlY3JldCA9IG5ld19jbGllbnRfc2VjcmV0Cg==

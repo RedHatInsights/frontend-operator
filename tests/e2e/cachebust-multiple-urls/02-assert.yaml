@@ -80,8 +80,8 @@ spec:
     spec:
       volumes:
         - name: akamai-edgerc
-          configMap:
-            name: akamai-edgerc
+          secret:
+            secretName: akamai-edgerc
             defaultMode: 420
       containers:
         - name: akamai-cache-bust
@@ -185,8 +185,8 @@ spec:
     spec:
       volumes:
         - name: akamai-edgerc
-          configMap:
-            name: akamai-edgerc
+          secret:
+            secretName: akamai-edgerc
             defaultMode: 420
       containers:
         - name: akamai-cache-bust

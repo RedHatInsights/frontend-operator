@@ -375,9 +375,9 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 	// Make the akamai file from the secret
 	edgercFile := makeAkamaiEdgercFileFromSecret(secret)
 
-	configMap := &v1.ConfigMap{}
-	configMap.SetName("akamai-edgerc")
-	configMap.SetNamespace(r.Frontend.Namespace)
+	edgercSecret := &v1.Secret{}
+	edgercSecret.SetName("akamai-edgerc")
+	edgercSecret.SetNamespace(r.Frontend.Namespace)
 
 	nn := types.NamespacedName{
 		Name:      "akamai-edgerc",
@@ -385,25 +385,25 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 	}
 	labels := r.FrontendEnvironment.GetLabels()
 	labler := utils.GetCustomLabeler(labels, nn, r.FrontendEnvironment)
-	labler(configMap)
+	labler(edgercSecret)
 
-	configMap.SetOwnerReferences([]metav1.OwnerReference{r.Frontend.MakeOwnerReference()})
+	edgercSecret.SetOwnerReferences([]metav1.OwnerReference{r.Frontend.MakeOwnerReference()})
 
-	// Add the akamai edgerc file to the configmap
-	configMap.Data = map[string]string{
+	// Add the akamai edgerc file to the secret
+	edgercSecret.StringData = map[string]string{
 		"edgerc": edgercFile,
 	}
 
-	// Create the configmap with the Client if it doesn't already exist or update the existing one
-	if err := r.Client.Create(r.Ctx, configMap); err != nil {
+	// Create the secret with the Client if it doesn't already exist or update the existing one
+	if err := r.Client.Create(r.Ctx, edgercSecret); err != nil {
 		if !k8serr.IsAlreadyExists(err) {
 			return err
 		}
-		existing := &v1.ConfigMap{}
+		existing := &v1.Secret{}
 		if err := r.Client.Get(r.Ctx, nn, existing); err != nil {
 			return err
 		}
-		existing.Data = configMap.Data
+		existing.StringData = edgercSecret.StringData
 		if err := r.Client.Update(r.Ctx, existing); err != nil {
 			return err
 		}
@@ -412,10 +412,8 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 	akamaiVolume := v1.Volume{
 		Name: "akamai-edgerc",
 		VolumeSource: v1.VolumeSource{
-			ConfigMap: &v1.ConfigMapVolumeSource{
-				LocalObjectReference: v1.LocalObjectReference{
-					Name: "akamai-edgerc",
-				},
+			Secret: &v1.SecretVolumeSource{
+				SecretName: "akamai-edgerc",
 			},
 		},
 	}
@@ -432,7 +430,7 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 	cacheBustContainer := v1.Container{
 		Name:  "akamai-cache-bust",
 		Image: r.FrontendEnvironment.Spec.AkamaiCacheBustImage,
-		// Mount the akamai edgerc file from the configmap
+		// Mount the akamai edgerc file from the secret
 		VolumeMounts: []v1.VolumeMount{
 			{
 				Name:      "akamai-edgerc",
@@ -467,7 +465,7 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 
 	j.Spec.Template.ObjectMeta.SetAnnotations(annotations)
 
-	// Add the akamai edgerc configmap to the deployment
+	// Add the akamai edgerc secret to the deployment
 
 	return nil
 }
