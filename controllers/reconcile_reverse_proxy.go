@@ -132,20 +132,41 @@ func (r *ReverseProxyReconciliation) updateReverseProxyDeployment(existing *apps
 	return r.Client.Update(r.Ctx, desired)
 }
 
-// compareEnvVars compares two environment variable slices for equality
+// compareEnvVars compares two environment variable slices for equality.
+// Handles both literal Value and ValueFrom (secretKeyRef) env vars.
 func (r *ReverseProxyReconciliation) compareEnvVars(existing, desired []v1.EnvVar) bool {
 	if len(existing) != len(desired) {
 		return false
 	}
 
-	existingMap := make(map[string]string)
+	existingByName := make(map[string]v1.EnvVar)
 	for _, env := range existing {
-		existingMap[env.Name] = env.Value
+		existingByName[env.Name] = env
 	}
 
-	for _, env := range desired {
-		if value, exists := existingMap[env.Name]; !exists || value != env.Value {
+	for _, d := range desired {
+		e, exists := existingByName[d.Name]
+		if !exists {
 			return false
+		}
+		// Compare literal values
+		if d.Value != e.Value {
+			return false
+		}
+		// Compare ValueFrom references
+		if (d.ValueFrom == nil) != (e.ValueFrom == nil) {
+			return false
+		}
+		if d.ValueFrom != nil && e.ValueFrom != nil {
+			if (d.ValueFrom.SecretKeyRef == nil) != (e.ValueFrom.SecretKeyRef == nil) {
+				return false
+			}
+			if d.ValueFrom.SecretKeyRef != nil && e.ValueFrom.SecretKeyRef != nil {
+				if d.ValueFrom.SecretKeyRef.Name != e.ValueFrom.SecretKeyRef.Name ||
+					d.ValueFrom.SecretKeyRef.Key != e.ValueFrom.SecretKeyRef.Key {
+					return false
+				}
+			}
 		}
 	}
 
@@ -403,19 +424,23 @@ func (r *ReverseProxyReconciliation) createReverseProxyService() error {
 
 // createReverseProxyContainer configures the reverse proxy container
 func (r *ReverseProxyReconciliation) createReverseProxyContainer() (v1.Container, error) {
-	// Get object store configuration from environment variables (same as push cache)
-	objectStoreInfo, err := ExtractBucketConfigFromEnv()
+	// Get object store configuration (env vars first, then Clowder secret)
+	objectStoreInfo, err := getObjectStoreConfig(r.Ctx, r.Client, r.Namespace)
 	if err != nil {
+		return v1.Container{}, err
+	}
+
+	// Ensure the S3 credentials Secret exists so that the Deployment can
+	// reference them via valueFrom.secretKeyRef instead of literal values.
+	if err := ensurePushCacheCredentialsSecret(r.Ctx, r.Client, r.Namespace, *objectStoreInfo.AccessKey, *objectStoreInfo.SecretKey); err != nil {
 		return v1.Container{}, err
 	}
 
 	// Get default values
 	minioPort := *objectStoreInfo.Port
-	minioEndpoint := *objectStoreInfo.Endpoint    // PUSHCACHE_AWS_ENDPOINT
-	bucketPathPrefix := *objectStoreInfo.Name     // PUSHCACHE_AWS_BUCKET_NAME
-	accessKeyID := *objectStoreInfo.AccessKey     // PUSHCACHE_AWS_ACCESS_KEY_ID
-	secretAccessKey := *objectStoreInfo.SecretKey // PUSHCACHE_AWS_SECRET_ACCESS_KEY
-	region := *objectStoreInfo.Region             // PUSHCACHE_AWS_REGION
+	minioEndpoint := *objectStoreInfo.Endpoint // PUSHCACHE_AWS_ENDPOINT
+	bucketPathPrefix := *objectStoreInfo.Name  // PUSHCACHE_AWS_BUCKET_NAME
+	region := *objectStoreInfo.Region          // PUSHCACHE_AWS_REGION
 	var minioUpstreamURL string
 	var protocol string
 	// Construct upstream URL with appropriate scheme based on port
@@ -464,15 +489,10 @@ func (r *ReverseProxyReconciliation) createReverseProxyContainer() (v1.Container
 			Name:  "LOG_LEVEL",
 			Value: logLevel,
 		},
-		{
-			Name:  "PUSHCACHE_AWS_ACCESS_KEY_ID",
-			Value: accessKeyID,
-		},
-		{
-			Name:  "PUSHCACHE_AWS_SECRET_ACCESS_KEY",
-			Value: secretAccessKey,
-		},
 	}
+
+	// S3 credentials are sourced from Secret via secretKeyRef, not literal values
+	envVars = append(envVars, pushCacheCredentialEnvVars()...)
 
 	// Add SSL environment variables if SSL is enabled (similar to main reconciler)
 	if r.FrontendEnvironment.Spec.SSL {
