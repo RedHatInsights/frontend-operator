@@ -239,8 +239,8 @@ func TestUpdateReverseProxyDeployment(t *testing.T) {
 				{Name: "BUCKET_PATH_PREFIX", Value: "frontend"},
 				{Name: "SPA_ENTRYPOINT_PATH", Value: "/index.html"},
 				{Name: "AWS_REGION", Value: "us-east-1"},
-				{Name: "PUSHCACHE_AWS_ACCESS_KEY_ID", Value: "test-access-key"},
-				{Name: "PUSHCACHE_AWS_SECRET_ACCESS_KEY", Value: "test-secret-key"},
+				{Name: "PUSHCACHE_AWS_ACCESS_KEY_ID", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: PushCacheCredentialsSecretName}, Key: "aws-access-key-id"}}},
+				{Name: "PUSHCACHE_AWS_SECRET_ACCESS_KEY", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: PushCacheCredentialsSecretName}, Key: "aws-secret-access-key"}}},
 				{Name: "LOG_LEVEL", Value: "DEBUG"},
 			},
 			expectUpdate:       false,
@@ -505,6 +505,36 @@ func TestEnvVarsEqual(t *testing.T) {
 			existing: []v1.EnvVar{},
 			desired:  []v1.EnvVar{},
 			expected: true,
+		},
+		{
+			name: "Equal secretKeyRef env vars",
+			existing: []v1.EnvVar{
+				{Name: "SECRET_VAR", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: "my-secret"}, Key: "my-key"}}},
+			},
+			desired: []v1.EnvVar{
+				{Name: "SECRET_VAR", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: "my-secret"}, Key: "my-key"}}},
+			},
+			expected: true,
+		},
+		{
+			name: "Different secretKeyRef name",
+			existing: []v1.EnvVar{
+				{Name: "SECRET_VAR", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: "old-secret"}, Key: "my-key"}}},
+			},
+			desired: []v1.EnvVar{
+				{Name: "SECRET_VAR", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: "new-secret"}, Key: "my-key"}}},
+			},
+			expected: false,
+		},
+		{
+			name: "Value vs ValueFrom mismatch",
+			existing: []v1.EnvVar{
+				{Name: "VAR1", Value: "literal"},
+			},
+			desired: []v1.EnvVar{
+				{Name: "VAR1", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: "my-secret"}, Key: "my-key"}}},
+			},
+			expected: false,
 		},
 	}
 

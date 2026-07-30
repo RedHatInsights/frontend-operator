@@ -2001,9 +2001,15 @@ objects:
           - /manager
           env:
           - name: PUSHCACHE_AWS_ACCESS_KEY_ID
-            value: ${PUSHCACHE_AWS_ACCESS_KEY_ID}
+            valueFrom:
+              secretKeyRef:
+                name: ${PUSHCACHE_AWS_SECRET_NAME}
+                key: aws-access-key-id
           - name: PUSHCACHE_AWS_SECRET_ACCESS_KEY
-            value: ${PUSHCACHE_AWS_SECRET_ACCESS_KEY}
+            valueFrom:
+              secretKeyRef:
+                name: ${PUSHCACHE_AWS_SECRET_NAME}
+                key: aws-secret-access-key
           - name: PUSHCACHE_AWS_BUCKET_NAME
             value: ${PUSHCACHE_AWS_BUCKET_NAME}
           - name: PUSHCACHE_AWS_REGION
@@ -2049,10 +2055,8 @@ parameters:
   required: true
 - name: IMAGE
   value: quay.io/cloudservices/frontend-operator
-- name: PUSHCACHE_AWS_ACCESS_KEY_ID
-  value: ''
-- name: PUSHCACHE_AWS_SECRET_ACCESS_KEY
-  value: ''
+- name: PUSHCACHE_AWS_SECRET_NAME
+  value: pushcache-aws-credentials
 - name: PUSHCACHE_AWS_BUCKET_NAME
   value: ''
 - name: PUSHCACHE_AWS_REGION

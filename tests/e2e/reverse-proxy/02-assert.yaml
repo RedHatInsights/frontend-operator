@@ -51,9 +51,15 @@ spec:
         - name: LOG_LEVEL
           value: INFO
         - name: PUSHCACHE_AWS_ACCESS_KEY_ID
-          value: minioadmin
+          valueFrom:
+            secretKeyRef:
+              name: pushcache-s3-credentials
+              key: aws-access-key-id
         - name: PUSHCACHE_AWS_SECRET_ACCESS_KEY
-          value: minioadmin
+          valueFrom:
+            secretKeyRef:
+              name: pushcache-s3-credentials
+              key: aws-secret-access-key
         resources:
           limits:
             cpu: 500m
