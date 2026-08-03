@@ -110,7 +110,7 @@ data:
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "kube_job_status_failed{namespace=\"frontends\", job_name=~\".*-frontend-pushcache\"} and on(job_name, namespace) (time() - kube_job_created{namespace=\"frontends\", job_name=~\".*-frontend-pushcache\"} < 7200)",
+              "expr": "kube_job_status_failed{namespace=\"frontends\", job_name=~\".*-frontend-pushcache\"} > 0 and on(job_name, namespace) (time() - kube_job_status_start_time{namespace=\"frontends\", job_name=~\".*-frontend-pushcache\"} < 172800)",
               "instant": true,
               "legendFormat": "{{job_name}}",
               "refId": "A"
