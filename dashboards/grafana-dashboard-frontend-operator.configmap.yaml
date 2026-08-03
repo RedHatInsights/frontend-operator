@@ -77,6 +77,7 @@ data:
                   }
                 ]
               },
+              "noValue": "No recent failures",
               "unit": "none"
             },
             "overrides": []
