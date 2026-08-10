@@ -412,7 +412,7 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 	akamaiVolume := v1.Volume{
 		Name: "akamai-edgerc",
 		VolumeSource: v1.VolumeSource{
-			Secret: &v1.SecretVolumeSource{
+			Secret: &v1.SecretVolumeSource{ //nolint:gosec
 				SecretName: "akamai-edgerc",
 			},
 		},
