@@ -38,7 +38,7 @@ import (
 const (
 	RoutePrefixDefault             = "apps"
 	AkamaiSecretNameDefault        = "akamai"
-	PushCacheCredentialsSecretName = "pushcache-s3-credentials"
+	PushCacheCredentialsSecretName = "pushcache-s3-credentials" //nolint:gosec // G101: not a credential, just the Secret resource name
 )
 
 type FrontendReconciliation struct {
