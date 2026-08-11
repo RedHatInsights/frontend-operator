@@ -20,8 +20,10 @@ fi
 DOCKER_CONF="$PWD/.docker"
 mkdir -p "$DOCKER_CONF"
 
-docker login -u="$QUAY_USER" -p="$QUAY_TOKEN" quay.io
-docker login -u="$RH_REGISTRY_USER" -p="$RH_REGISTRY_TOKEN" registry.redhat.io
+set +x
+echo "$QUAY_TOKEN" | docker login --password-stdin -u="$QUAY_USER" quay.io
+echo "$RH_REGISTRY_TOKEN" | docker login --password-stdin -u="$RH_REGISTRY_USER" registry.redhat.io
+set -x
 
 # Check if the multiarchbuilder exists
 if docker buildx ls | grep -q "multiarchbuilder"; then
