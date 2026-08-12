@@ -68,7 +68,8 @@ func createNewScheme() *runtime.Scheme {
 var scheme = createNewScheme()
 
 var CoreDeployment = resCache.NewSingleResourceIdent("main", "deployment", &apps.Deployment{})
-var CoreJob = resCache.NewSingleResourceIdent("main", "job", &batchv1.Job{})
+var CacheBustJob = resCache.NewSingleResourceIdent("main", "cachebust_job", &batchv1.Job{})
+var PushCacheJob = resCache.NewSingleResourceIdent("main", "pushcache_job", &batchv1.Job{})
 var CoreService = resCache.NewSingleResourceIdent("main", "service", &v1.Service{})
 var CoreConfig = resCache.NewSingleResourceIdent("main", "config", &v1.ConfigMap{})
 var SSOConfig = resCache.NewSingleResourceIdent("main", "sso_config", &v1.ConfigMap{})
@@ -207,6 +208,8 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			SSOConfig,
 			WebIngress,
 			MetricsServiceMonitor,
+			CacheBustJob,
+			PushCacheJob,
 		)
 
 		reconciliation := FrontendReconciliation{

@@ -1,0 +1,47 @@
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: chrome
+  namespace: test-disable-deployments
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: Frontend
+      name: chrome
+spec:
+  rules:
+    - host: foo.redhat.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: chrome
+                port:
+                  number: 8000
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: test-disable-deployments-environment
+  namespace: test-disable-deployments
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      name: test-disable-deployments-environment
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+commands:
+  - script: |
+      if kubectl get deployment chrome-frontend -n test-disable-deployments 2>/dev/null; then
+        echo "FAIL: Deployment should not exist when disableContainerDeployments is true"
+        exit 1
+      fi
+      echo "PASS: Deployment does not exist"
+  - script: |
+      if kubectl get service chrome -n test-disable-deployments 2>/dev/null; then
+        echo "FAIL: Service should not exist when disableContainerDeployments is true"
+        exit 1
+      fi
+      echo "PASS: Service does not exist"

@@ -94,6 +94,11 @@ spec:
                   Any jobs with creation timestamp before this value will be deleted and recreated
                   Example: "2026-01-13T10:30:00Z"
                 type: string
+              disableContainerDeployments:
+                description: |-
+                  Disable creation of Deployments, Services, Jobs, and ServiceMonitors for all Frontends in this environment.
+                  ConfigMaps and Ingress resources are still created normally.
+                type: boolean
               enableAkamaiCacheBust:
                 description: Enable Akamai Cache Bust
                 type: boolean

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -14,11 +15,14 @@ import (
 	"github.com/onsi/gomega"
 	prom "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	apps "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func intPtr(i int) *int {
@@ -2347,6 +2351,1023 @@ var _ = ginkgo.Describe("APIInfo Schema Validation", func() {
 			ginkgo.By("API validation is handled by Kubernetes CRD validation")
 
 			gomega.Expect(k8sClient.Create(ctx, validFrontend)).Should(gomega.Succeed())
+		})
+	})
+})
+
+var _ = ginkgo.Describe("DisableContainerDeployments", func() {
+	const (
+		FrontendName      = "test-frontend-disable"
+		FrontendNamespace = "default"
+		FrontendEnvName   = "test-env-disable"
+		BundleName        = "test-bundle-disable"
+
+		timeout  = time.Second * 10
+		interval = time.Millisecond * 250
+	)
+
+	ginkgo.Context("When DisableContainerDeployments is true from the start", func() {
+		ginkgo.It("Should create ConfigMap and Ingress but not Deployment or Service", func() {
+			ctx := context.Background()
+
+			frontendEnvironment := &crd.FrontendEnvironment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "FrontendEnvironment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendEnvName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendEnvironmentSpec{
+					SSO:                         "https://something-auth",
+					Hostname:                    "something",
+					GenerateNavJSON:             true,
+					DisableContainerDeployments: true,
+					Monitoring: &crd.MonitoringConfig{
+						Mode: "app-interface",
+					},
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
+
+			frontend := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FrontendName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName: FrontendEnvName,
+					Title:   "Disable Test",
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/things/disable-test"},
+					},
+					Image:   "my-image:version",
+					Service: "external-disable-service",
+					Module: &crd.FedModule{
+						ManifestLocation: "/apps/disable-test/fed-mods.json",
+						Modules: []crd.Module{{
+							ID:     "test",
+							Module: "./RootApp",
+							Routes: []crd.Route{{
+								Pathname: "/things/disable-test",
+							}},
+						}},
+					},
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
+
+			bundle := &crd.Bundle{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Bundle",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      BundleName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.BundleSpec{
+					ID:      BundleName,
+					Title:   "",
+					AppList: []string{FrontendName},
+					EnvName: FrontendEnvName,
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, bundle)).Should(gomega.Succeed())
+
+			ginkgo.By("Verifying Ingress is created")
+			ingressLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
+			createdIngress := &networking.Ingress{}
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, ingressLookupKey, createdIngress)
+				return err == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+			gomega.Expect(createdIngress.Name).Should(gomega.Equal(FrontendName))
+
+			ginkgo.By("Verifying Ingress backend points to Spec.Service, not operator-managed service")
+			gomega.Expect(createdIngress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).Should(gomega.Equal("external-disable-service"))
+
+			ginkgo.By("Verifying ConfigMap is created")
+			configMapLookupKey := types.NamespacedName{Name: frontendEnvironment.Name, Namespace: FrontendNamespace}
+			createdConfigMap := &v1.ConfigMap{}
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, configMapLookupKey, createdConfigMap)
+				return err == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying Deployment is NOT created")
+			deploymentLookupKey := types.NamespacedName{Name: frontend.Name + "-frontend", Namespace: FrontendNamespace}
+			gomega.Consistently(func() bool {
+				err := k8sClient.Get(ctx, deploymentLookupKey, &apps.Deployment{})
+				return k8serrors.IsNotFound(err)
+			}, time.Second*3, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying Service is NOT created")
+			serviceLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: FrontendNamespace}
+			gomega.Consistently(func() bool {
+				err := k8sClient.Get(ctx, serviceLookupKey, &v1.Service{})
+				return k8serrors.IsNotFound(err)
+			}, time.Second*3, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying ServiceMonitor is NOT created when container deployments disabled")
+			monitorLookupKey := types.NamespacedName{Name: frontend.Name, Namespace: "openshift-customer-monitoring"}
+			gomega.Consistently(func() bool {
+				err := k8sClient.Get(ctx, monitorLookupKey, &prom.ServiceMonitor{})
+				return k8serrors.IsNotFound(err)
+			}, time.Second*3, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying Frontend status shows successful reconciliation")
+			updatedFrontend := &crd.Frontend{}
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: FrontendName, Namespace: FrontendNamespace}, updatedFrontend)
+				if err != nil {
+					return false
+				}
+				for _, c := range updatedFrontend.Status.Conditions {
+					if c.Type == "ReconciliationSuccessful" && c.Status == "True" {
+						return true
+					}
+				}
+				return false
+			}, timeout, interval).Should(gomega.BeTrue())
+		})
+	})
+
+	ginkgo.Context("When DisableContainerDeployments is toggled true after initial deployment", func() {
+		ginkgo.It("Should clean up existing Deployment and Service", func() {
+			ctx := context.Background()
+
+			const (
+				ToggleFrontendName = "test-frontend-toggle"
+				ToggleEnvName      = "test-env-toggle"
+				ToggleBundleName   = "test-bundle-toggle"
+			)
+
+			frontendEnvironment := &crd.FrontendEnvironment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "FrontendEnvironment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      ToggleEnvName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendEnvironmentSpec{
+					SSO:             "https://something-auth",
+					Hostname:        "something",
+					GenerateNavJSON: true,
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
+
+			frontend := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      ToggleFrontendName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName: ToggleEnvName,
+					Title:   "Toggle Test",
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/things/toggle-test"},
+					},
+					Image:   "my-image:version",
+					Service: "external-toggle-service",
+					Module: &crd.FedModule{
+						ManifestLocation: "/apps/toggle-test/fed-mods.json",
+						Modules: []crd.Module{{
+							ID:     "test",
+							Module: "./RootApp",
+							Routes: []crd.Route{{
+								Pathname: "/things/toggle-test",
+							}},
+						}},
+					},
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
+
+			bundle := &crd.Bundle{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Bundle",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      ToggleBundleName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.BundleSpec{
+					ID:      ToggleBundleName,
+					Title:   "",
+					AppList: []string{ToggleFrontendName},
+					EnvName: ToggleEnvName,
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, bundle)).Should(gomega.Succeed())
+
+			ginkgo.By("Verifying Deployment exists initially")
+			deploymentLookupKey := types.NamespacedName{Name: ToggleFrontendName + "-frontend", Namespace: FrontendNamespace}
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, deploymentLookupKey, &apps.Deployment{})
+				return err == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying Service exists initially")
+			serviceLookupKey := types.NamespacedName{Name: ToggleFrontendName, Namespace: FrontendNamespace}
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, serviceLookupKey, &v1.Service{})
+				return err == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Toggling DisableContainerDeployments to true")
+			updatedEnv := &crd.FrontendEnvironment{}
+			gomega.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ToggleEnvName}, updatedEnv)).Should(gomega.Succeed())
+			updatedEnv.Spec.DisableContainerDeployments = true
+			gomega.Expect(k8sClient.Update(ctx, updatedEnv)).Should(gomega.Succeed())
+
+			ginkgo.By("Verifying Deployment is cleaned up")
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, deploymentLookupKey, &apps.Deployment{})
+				return k8serrors.IsNotFound(err)
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying Service is cleaned up")
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, serviceLookupKey, &v1.Service{})
+				return k8serrors.IsNotFound(err)
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying Ingress still exists and backend switches to Spec.Service")
+			ingressLookupKey := types.NamespacedName{Name: ToggleFrontendName, Namespace: FrontendNamespace}
+			createdIngress := &networking.Ingress{}
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, ingressLookupKey, createdIngress)
+				if err != nil {
+					return false
+				}
+				return createdIngress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name == "external-toggle-service"
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Re-enabling container deployments")
+			gomega.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ToggleEnvName}, updatedEnv)).Should(gomega.Succeed())
+			updatedEnv.Spec.DisableContainerDeployments = false
+			gomega.Expect(k8sClient.Update(ctx, updatedEnv)).Should(gomega.Succeed())
+
+			ginkgo.By("Verifying Deployment is recreated")
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, deploymentLookupKey, &apps.Deployment{})
+				return err == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying Service is recreated")
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, serviceLookupKey, &v1.Service{})
+				return err == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying Ingress backend switches back to operator-managed Service")
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, ingressLookupKey, createdIngress)
+				if err != nil {
+					return false
+				}
+				return createdIngress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name == ToggleFrontendName
+			}, timeout, interval).Should(gomega.BeTrue())
+		})
+	})
+
+	ginkgo.Context("When DisableContainerDeployments is true with cache bust and push cache enabled", func() {
+		ginkgo.It("Should not create Jobs, Deployment, or Service", func() {
+			ctx := context.Background()
+
+			const (
+				JobsFrontendName = "test-frontend-jobs"
+				JobsEnvName      = "test-env-jobs"
+				JobsBundleName   = "test-bundle-jobs"
+			)
+
+			frontendEnvironment := &crd.FrontendEnvironment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "FrontendEnvironment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      JobsEnvName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendEnvironmentSpec{
+					SSO:                         "https://something-auth",
+					Hostname:                    "something",
+					GenerateNavJSON:             true,
+					DisableContainerDeployments: true,
+					EnableAkamaiCacheBust:       true,
+					AkamaiCacheBustImage:        "quay.io/cachebust:latest",
+					EnablePushCache:             true,
+					ValpopImage:                 "quay.io/valpop:latest",
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
+
+			frontend := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      JobsFrontendName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName: JobsEnvName,
+					Title:   "Jobs Test",
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/things/jobs-test"},
+					},
+					Image:   "my-image:version",
+					Service: "external-jobs-service",
+					Module: &crd.FedModule{
+						ManifestLocation: "/apps/jobs-test/fed-mods.json",
+						Modules: []crd.Module{{
+							ID:     "test",
+							Module: "./RootApp",
+							Routes: []crd.Route{{
+								Pathname: "/things/jobs-test",
+							}},
+						}},
+					},
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
+
+			bundle := &crd.Bundle{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Bundle",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      JobsBundleName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.BundleSpec{
+					ID:      JobsBundleName,
+					Title:   "",
+					AppList: []string{JobsFrontendName},
+					EnvName: JobsEnvName,
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, bundle)).Should(gomega.Succeed())
+
+			ginkgo.By("Waiting for reconciliation to succeed")
+			updatedFrontend := &crd.Frontend{}
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: JobsFrontendName, Namespace: FrontendNamespace}, updatedFrontend)
+				if err != nil {
+					return false
+				}
+				for _, c := range updatedFrontend.Status.Conditions {
+					if c.Type == "ReconciliationSuccessful" && c.Status == "True" {
+						return true
+					}
+				}
+				return false
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying cache bust Job is NOT created")
+			cacheBustJobKey := types.NamespacedName{Name: JobsFrontendName + "-frontend-cachebust", Namespace: FrontendNamespace}
+			gomega.Consistently(func() bool {
+				err := k8sClient.Get(ctx, cacheBustJobKey, &batchv1.Job{})
+				return k8serrors.IsNotFound(err)
+			}, time.Second*3, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying push cache Job is NOT created")
+			pushCacheJobKey := types.NamespacedName{Name: JobsFrontendName + "-frontend-pushcache", Namespace: FrontendNamespace}
+			gomega.Consistently(func() bool {
+				err := k8sClient.Get(ctx, pushCacheJobKey, &batchv1.Job{})
+				return k8serrors.IsNotFound(err)
+			}, time.Second*3, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying Deployment is NOT created")
+			deploymentKey := types.NamespacedName{Name: JobsFrontendName + "-frontend", Namespace: FrontendNamespace}
+			gomega.Consistently(func() bool {
+				err := k8sClient.Get(ctx, deploymentKey, &apps.Deployment{})
+				return k8serrors.IsNotFound(err)
+			}, time.Second*3, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying Service is NOT created")
+			serviceKey := types.NamespacedName{Name: JobsFrontendName, Namespace: FrontendNamespace}
+			gomega.Consistently(func() bool {
+				err := k8sClient.Get(ctx, serviceKey, &v1.Service{})
+				return k8serrors.IsNotFound(err)
+			}, time.Second*3, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying Ingress IS created despite disable flag")
+			ingressKey := types.NamespacedName{Name: JobsFrontendName, Namespace: FrontendNamespace}
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, ingressKey, &networking.Ingress{})
+				return err == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+		})
+	})
+
+	ginkgo.Context("When toggling DisableContainerDeployments with cache bust and push cache enabled", func() {
+		ginkgo.It("Should clean up Jobs when disabled and recreate when re-enabled", func() {
+			ctx := context.Background()
+
+			const (
+				ToggleJobsFrontendName = "test-frontend-toggle-jobs"
+				ToggleJobsEnvName      = "test-env-toggle-jobs"
+				ToggleJobsBundleName   = "test-bundle-toggle-jobs"
+			)
+
+			os.Setenv("PUSHCACHE_AWS_ACCESS_KEY_ID", "test-access-key")
+			os.Setenv("PUSHCACHE_AWS_SECRET_ACCESS_KEY", "test-secret-key")
+			os.Setenv("PUSHCACHE_AWS_REGION", "us-east-1")
+			os.Setenv("PUSHCACHE_AWS_ENDPOINT", "minio-service.minio-env.svc.cluster.local")
+			os.Setenv("PUSHCACHE_AWS_PORT", "9000")
+			os.Setenv("PUSHCACHE_AWS_BUCKET_NAME", "frontend")
+			defer func() {
+				os.Unsetenv("PUSHCACHE_AWS_ACCESS_KEY_ID")
+				os.Unsetenv("PUSHCACHE_AWS_SECRET_ACCESS_KEY")
+				os.Unsetenv("PUSHCACHE_AWS_REGION")
+				os.Unsetenv("PUSHCACHE_AWS_ENDPOINT")
+				os.Unsetenv("PUSHCACHE_AWS_PORT")
+				os.Unsetenv("PUSHCACHE_AWS_BUCKET_NAME")
+			}()
+
+			akamaiSecret := &v1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "akamai",
+					Namespace: FrontendNamespace,
+				},
+				Data: map[string][]byte{
+					"host":          []byte("test.purge.akamai.net"),
+					"access_token":  []byte("test-access-token"),
+					"client_token":  []byte("test-client-token"),
+					"client_secret": []byte("test-client-secret"),
+				},
+			}
+			err := k8sClient.Create(ctx, akamaiSecret)
+			if err != nil && !k8serrors.IsAlreadyExists(err) {
+				gomega.Expect(err).ShouldNot(gomega.HaveOccurred())
+			}
+
+			frontendEnvironment := &crd.FrontendEnvironment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "FrontendEnvironment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      ToggleJobsEnvName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendEnvironmentSpec{
+					SSO:                   "https://something-auth",
+					Hostname:              "something",
+					GenerateNavJSON:       true,
+					EnableAkamaiCacheBust: true,
+					AkamaiCacheBustImage:  "quay.io/cachebust:latest",
+					EnablePushCache:       true,
+					ValpopImage:           "quay.io/valpop:latest",
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
+
+			frontend := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      ToggleJobsFrontendName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName: ToggleJobsEnvName,
+					Title:   "Toggle Jobs Test",
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/things/toggle-jobs-test"},
+					},
+					Image:   "my-image:version",
+					Service: "external-toggle-jobs-service",
+					Module: &crd.FedModule{
+						ManifestLocation: "/apps/toggle-jobs-test/fed-mods.json",
+						Modules: []crd.Module{{
+							ID:     "test",
+							Module: "./RootApp",
+							Routes: []crd.Route{{
+								Pathname: "/things/toggle-jobs-test",
+							}},
+						}},
+					},
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
+
+			bundle := &crd.Bundle{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Bundle",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      ToggleJobsBundleName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.BundleSpec{
+					ID:      ToggleJobsBundleName,
+					Title:   "",
+					AppList: []string{ToggleJobsFrontendName},
+					EnvName: ToggleJobsEnvName,
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, bundle)).Should(gomega.Succeed())
+
+			jobGoneOrDeleting := func(key types.NamespacedName) bool {
+				j := &batchv1.Job{}
+				err := k8sClient.Get(ctx, key, j)
+				if k8serrors.IsNotFound(err) {
+					return true
+				}
+				if err != nil {
+					return false
+				}
+				return j.DeletionTimestamp != nil
+			}
+
+			ginkgo.By("Verifying cache bust and push cache Jobs exist initially")
+			cacheBustJobKey := types.NamespacedName{Name: ToggleJobsFrontendName + "-frontend-cachebust", Namespace: FrontendNamespace}
+			pushCacheJobKey := types.NamespacedName{Name: ToggleJobsFrontendName + "-frontend-pushcache", Namespace: FrontendNamespace}
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, cacheBustJobKey, &batchv1.Job{})
+				return err == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, pushCacheJobKey, &batchv1.Job{})
+				return err == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Toggling DisableContainerDeployments to true")
+			updatedEnv := &crd.FrontendEnvironment{}
+			gomega.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ToggleJobsEnvName}, updatedEnv)).Should(gomega.Succeed())
+			updatedEnv.Spec.DisableContainerDeployments = true
+			gomega.Expect(k8sClient.Update(ctx, updatedEnv)).Should(gomega.Succeed())
+
+			ginkgo.By("Verifying cache bust Job is marked for deletion or removed")
+			gomega.Eventually(func() bool {
+				return jobGoneOrDeleting(cacheBustJobKey)
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying push cache Job is marked for deletion or removed")
+			gomega.Eventually(func() bool {
+				return jobGoneOrDeleting(pushCacheJobKey)
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			// envtest can leave Jobs stuck terminating; clear finalizers so recreate can proceed
+			ginkgo.By("Force-removing terminating Jobs before re-enable")
+			for _, key := range []types.NamespacedName{cacheBustJobKey, pushCacheJobKey} {
+				gomega.Eventually(func() error {
+					j := &batchv1.Job{}
+					err := k8sClient.Get(ctx, key, j)
+					if k8serrors.IsNotFound(err) {
+						return nil
+					}
+					if err != nil {
+						return err
+					}
+					if len(j.Finalizers) > 0 {
+						j.Finalizers = nil
+						if err := k8sClient.Update(ctx, j); err != nil {
+							return err
+						}
+					}
+					propagation := metav1.DeletePropagationBackground
+					grace := int64(0)
+					return k8sClient.Delete(ctx, j, &client.DeleteOptions{
+						PropagationPolicy:  &propagation,
+						GracePeriodSeconds: &grace,
+					})
+				}, timeout, interval).Should(gomega.Succeed())
+			}
+
+			ginkgo.By("Re-enabling container deployments")
+			gomega.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ToggleJobsEnvName}, updatedEnv)).Should(gomega.Succeed())
+			updatedEnv.Spec.DisableContainerDeployments = false
+			gomega.Expect(k8sClient.Update(ctx, updatedEnv)).Should(gomega.Succeed())
+
+			ginkgo.By("Verifying cache bust Job is recreated")
+			gomega.Eventually(func() bool {
+				j := &batchv1.Job{}
+				err := k8sClient.Get(ctx, cacheBustJobKey, j)
+				return err == nil && j.DeletionTimestamp == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying push cache Job is recreated")
+			gomega.Eventually(func() bool {
+				j := &batchv1.Job{}
+				err := k8sClient.Get(ctx, pushCacheJobKey, j)
+				return err == nil && j.DeletionTimestamp == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+		})
+	})
+
+	ginkgo.Context("When DisableContainerDeployments is true with image but no Spec.Service", func() {
+		ginkgo.It("Should fall back Ingress backend to Frontend name", func() {
+			ctx := context.Background()
+
+			const (
+				FallbackFrontendName = "test-frontend-fallback"
+				FallbackEnvName      = "test-env-fallback"
+				FallbackBundleName   = "test-bundle-fallback"
+			)
+
+			frontendEnvironment := &crd.FrontendEnvironment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "FrontendEnvironment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FallbackEnvName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendEnvironmentSpec{
+					SSO:                         "https://something-auth",
+					Hostname:                    "something",
+					GenerateNavJSON:             true,
+					DisableContainerDeployments: true,
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
+
+			frontend := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FallbackFrontendName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName: FallbackEnvName,
+					Title:   "Fallback Test",
+					Image:   "my-image:version",
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/things/fallback-test"},
+					},
+					Module: &crd.FedModule{
+						ManifestLocation: "/apps/fallback-test/fed-mods.json",
+						Modules: []crd.Module{{
+							ID:     "test",
+							Module: "./RootApp",
+							Routes: []crd.Route{{
+								Pathname: "/things/fallback-test",
+							}},
+						}},
+					},
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
+
+			bundle := &crd.Bundle{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Bundle",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      FallbackBundleName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.BundleSpec{
+					ID:      FallbackBundleName,
+					Title:   "",
+					AppList: []string{FallbackFrontendName},
+					EnvName: FallbackEnvName,
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, bundle)).Should(gomega.Succeed())
+
+			ginkgo.By("Verifying Ingress backend falls back to Frontend name")
+			createdIngress := &networking.Ingress{}
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: FallbackFrontendName, Namespace: FrontendNamespace}, createdIngress)
+				return err == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+			gomega.Expect(createdIngress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).Should(gomega.Equal(FallbackFrontendName))
+		})
+	})
+
+	ginkgo.Context("When DisableContainerDeployments is true with no image set", func() {
+		ginkgo.It("Should reconcile successfully without creating container resources", func() {
+			ctx := context.Background()
+
+			const (
+				NoImgFrontendName = "test-frontend-noimg"
+				NoImgEnvName      = "test-env-noimg"
+				NoImgBundleName   = "test-bundle-noimg"
+			)
+
+			frontendEnvironment := &crd.FrontendEnvironment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "FrontendEnvironment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      NoImgEnvName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendEnvironmentSpec{
+					SSO:                         "https://something-auth",
+					Hostname:                    "something",
+					GenerateNavJSON:             true,
+					DisableContainerDeployments: true,
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
+
+			frontend := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      NoImgFrontendName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName: NoImgEnvName,
+					Title:   "No Image Test",
+					Service: "external-noimg-service",
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/things/noimg-test"},
+					},
+					Module: &crd.FedModule{
+						ManifestLocation: "/apps/noimg-test/fed-mods.json",
+						Modules: []crd.Module{{
+							ID:     "test",
+							Module: "./RootApp",
+							Routes: []crd.Route{{
+								Pathname: "/things/noimg-test",
+							}},
+						}},
+					},
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
+
+			bundle := &crd.Bundle{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Bundle",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      NoImgBundleName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.BundleSpec{
+					ID:      NoImgBundleName,
+					Title:   "",
+					AppList: []string{NoImgFrontendName},
+					EnvName: NoImgEnvName,
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, bundle)).Should(gomega.Succeed())
+
+			ginkgo.By("Verifying reconciliation succeeds")
+			updatedFrontend := &crd.Frontend{}
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: NoImgFrontendName, Namespace: FrontendNamespace}, updatedFrontend)
+				if err != nil {
+					return false
+				}
+				for _, c := range updatedFrontend.Status.Conditions {
+					if c.Type == "ReconciliationSuccessful" && c.Status == "True" {
+						return true
+					}
+				}
+				return false
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying no Deployment exists")
+			gomega.Consistently(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: NoImgFrontendName + "-frontend", Namespace: FrontendNamespace}, &apps.Deployment{})
+				return k8serrors.IsNotFound(err)
+			}, time.Second*3, interval).Should(gomega.BeTrue())
+		})
+	})
+
+	ginkgo.Context("When DisableContainerDeployments is toggled with monitoring enabled", func() {
+		ginkgo.It("Should clean up existing ServiceMonitor", func() {
+			ctx := context.Background()
+
+			const (
+				SMToggleFrontendName = "test-frontend-sm-toggle"
+				SMToggleEnvName      = "test-env-sm-toggle"
+				SMToggleBundleName   = "test-bundle-sm-toggle"
+			)
+
+			frontendEnvironment := &crd.FrontendEnvironment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "FrontendEnvironment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      SMToggleEnvName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendEnvironmentSpec{
+					SSO:             "https://something-auth",
+					Hostname:        "something",
+					GenerateNavJSON: true,
+					Monitoring: &crd.MonitoringConfig{
+						Mode: "app-interface",
+					},
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
+
+			frontend := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      SMToggleFrontendName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName: SMToggleEnvName,
+					Title:   "SM Toggle Test",
+					Image:   "my-image:version",
+					Service: "external-sm-toggle-service",
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/things/sm-toggle-test"},
+					},
+					Module: &crd.FedModule{
+						ManifestLocation: "/apps/sm-toggle-test/fed-mods.json",
+						Modules: []crd.Module{{
+							ID:     "test",
+							Module: "./RootApp",
+							Routes: []crd.Route{{
+								Pathname: "/things/sm-toggle-test",
+							}},
+						}},
+					},
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
+
+			bundle := &crd.Bundle{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Bundle",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      SMToggleBundleName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.BundleSpec{
+					ID:      SMToggleBundleName,
+					Title:   "",
+					AppList: []string{SMToggleFrontendName},
+					EnvName: SMToggleEnvName,
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, bundle)).Should(gomega.Succeed())
+
+			monitorLookupKey := types.NamespacedName{Name: SMToggleFrontendName, Namespace: MonitoringNamespace}
+			ginkgo.By("Verifying ServiceMonitor exists initially")
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, monitorLookupKey, &prom.ServiceMonitor{})
+				return err == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Toggling DisableContainerDeployments to true")
+			updatedEnv := &crd.FrontendEnvironment{}
+			gomega.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: SMToggleEnvName}, updatedEnv)).Should(gomega.Succeed())
+			updatedEnv.Spec.DisableContainerDeployments = true
+			gomega.Expect(k8sClient.Update(ctx, updatedEnv)).Should(gomega.Succeed())
+
+			ginkgo.By("Verifying ServiceMonitor is cleaned up")
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, monitorLookupKey, &prom.ServiceMonitor{})
+				return k8serrors.IsNotFound(err)
+			}, timeout, interval).Should(gomega.BeTrue())
+		})
+	})
+
+	ginkgo.Context("When Frontend.Spec.Disabled and DisableContainerDeployments are both true", func() {
+		ginkgo.It("Should let Frontend.Spec.Disabled take precedence and skip reconciliation", func() {
+			ctx := context.Background()
+
+			const (
+				DisabledFrontendName = "test-frontend-disabled-precedence"
+				DisabledEnvName      = "test-env-disabled-precedence"
+				DisabledBundleName   = "test-bundle-disabled-precedence"
+			)
+
+			frontendEnvironment := &crd.FrontendEnvironment{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "FrontendEnvironment",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      DisabledEnvName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendEnvironmentSpec{
+					SSO:                         "https://something-auth",
+					Hostname:                    "something",
+					GenerateNavJSON:             true,
+					DisableContainerDeployments: true,
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
+
+			frontend := &crd.Frontend{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Frontend",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      DisabledFrontendName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.FrontendSpec{
+					EnvName:  DisabledEnvName,
+					Title:    "Disabled Precedence Test",
+					Disabled: true,
+					Image:    "my-image:version",
+					Service:  "external-disabled-service",
+					Frontend: crd.FrontendInfo{
+						Paths: []string{"/things/disabled-test"},
+					},
+					Module: &crd.FedModule{
+						ManifestLocation: "/apps/disabled-test/fed-mods.json",
+						Modules: []crd.Module{{
+							ID:     "test",
+							Module: "./RootApp",
+							Routes: []crd.Route{{
+								Pathname: "/things/disabled-test",
+							}},
+						}},
+					},
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
+
+			bundle := &crd.Bundle{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "cloud.redhat.com/v1",
+					Kind:       "Bundle",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      DisabledBundleName,
+					Namespace: FrontendNamespace,
+				},
+				Spec: crd.BundleSpec{
+					ID:      DisabledBundleName,
+					Title:   "",
+					AppList: []string{DisabledFrontendName},
+					EnvName: DisabledEnvName,
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, bundle)).Should(gomega.Succeed())
+
+			// DisableContainerDeployments alone would still create Ingress; Disabled skips all reconcile.
+			ginkgo.By("Verifying Ingress is NOT created when Frontend is disabled")
+			gomega.Consistently(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: DisabledFrontendName, Namespace: FrontendNamespace}, &networking.Ingress{})
+				return k8serrors.IsNotFound(err)
+			}, time.Second*3, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying Deployment is NOT created")
+			gomega.Consistently(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: DisabledFrontendName + "-frontend", Namespace: FrontendNamespace}, &apps.Deployment{})
+				return k8serrors.IsNotFound(err)
+			}, time.Second*3, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying ReconciliationSuccessful is not set")
+			gomega.Consistently(func() bool {
+				updatedFrontend := &crd.Frontend{}
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: DisabledFrontendName, Namespace: FrontendNamespace}, updatedFrontend)
+				if err != nil {
+					return false
+				}
+				for _, c := range updatedFrontend.Status.Conditions {
+					if c.Type == "ReconciliationSuccessful" && c.Status == "True" {
+						return false
+					}
+				}
+				return true
+			}, time.Second*3, interval).Should(gomega.BeTrue())
 		})
 	})
 })
