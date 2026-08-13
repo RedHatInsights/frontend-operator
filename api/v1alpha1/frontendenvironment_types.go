@@ -179,7 +179,7 @@ type FrontendEnvironmentSpec struct {
 	DeployCutoffTimestampPushCache string `json:"deployCutoffTimestampPushCache,omitempty"`
 
 	// Disable creation of Deployments, Services, Jobs, and ServiceMonitors for all Frontends in this environment.
-	// ConfigMaps and Ingress resources are still created normally.
+	// When disabled, ConfigMaps remain; Ingresses require an explicit Frontend.spec.service because no operator-managed Service exists.
 	DisableContainerDeployments bool `json:"disableContainerDeployments,omitempty"`
 
 	DefaultReplicas *int32 `json:"defaultReplicas,omitempty" yaml:"defaultReplicas,omitempty"`

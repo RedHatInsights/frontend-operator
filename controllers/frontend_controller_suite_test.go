@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -22,7 +23,6 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func intPtr(i int) *int {
@@ -2769,12 +2769,14 @@ var _ = ginkgo.Describe("DisableContainerDeployments", func() {
 				return k8serrors.IsNotFound(err)
 			}, time.Second*3, interval).Should(gomega.BeTrue())
 
-			ginkgo.By("Verifying Ingress IS created despite disable flag")
+			ginkgo.By("Verifying Ingress IS created with backend pointing at Spec.Service")
 			ingressKey := types.NamespacedName{Name: JobsFrontendName, Namespace: FrontendNamespace}
+			createdIngress := &networking.Ingress{}
 			gomega.Eventually(func() bool {
-				err := k8sClient.Get(ctx, ingressKey, &networking.Ingress{})
+				err := k8sClient.Get(ctx, ingressKey, createdIngress)
 				return err == nil
 			}, timeout, interval).Should(gomega.BeTrue())
+			gomega.Expect(createdIngress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).Should(gomega.Equal("external-jobs-service"))
 		})
 	})
 
@@ -2890,29 +2892,26 @@ var _ = ginkgo.Describe("DisableContainerDeployments", func() {
 			}
 			gomega.Expect(k8sClient.Create(ctx, bundle)).Should(gomega.Succeed())
 
-			jobGoneOrDeleting := func(key types.NamespacedName) bool {
-				j := &batchv1.Job{}
-				err := k8sClient.Get(ctx, key, j)
-				if k8serrors.IsNotFound(err) {
-					return true
-				}
-				if err != nil {
-					return false
-				}
-				return j.DeletionTimestamp != nil
-			}
-
 			ginkgo.By("Verifying cache bust and push cache Jobs exist initially")
 			cacheBustJobKey := types.NamespacedName{Name: ToggleJobsFrontendName + "-frontend-cachebust", Namespace: FrontendNamespace}
 			pushCacheJobKey := types.NamespacedName{Name: ToggleJobsFrontendName + "-frontend-pushcache", Namespace: FrontendNamespace}
-			gomega.Eventually(func() bool {
-				err := k8sClient.Get(ctx, cacheBustJobKey, &batchv1.Job{})
-				return err == nil
-			}, timeout, interval).Should(gomega.BeTrue())
-			gomega.Eventually(func() bool {
-				err := k8sClient.Get(ctx, pushCacheJobKey, &batchv1.Job{})
-				return err == nil
-			}, timeout, interval).Should(gomega.BeTrue())
+			jobKeys := []types.NamespacedName{cacheBustJobKey, pushCacheJobKey}
+			const testJobFinalizer = "frontend-operator.test/hold-deletion"
+			originalJobUIDs := map[types.NamespacedName]types.UID{}
+			for _, key := range jobKeys {
+				gomega.Eventually(func() error {
+					j := &batchv1.Job{}
+					if err := k8sClient.Get(ctx, key, j); err != nil {
+						return err
+					}
+					originalJobUIDs[key] = j.UID
+					if !slices.Contains(j.Finalizers, testJobFinalizer) {
+						j.Finalizers = append(j.Finalizers, testJobFinalizer)
+						return k8sClient.Update(ctx, j)
+					}
+					return nil
+				}, timeout, interval).Should(gomega.Succeed())
+			}
 
 			ginkgo.By("Toggling DisableContainerDeployments to true")
 			updatedEnv := &crd.FrontendEnvironment{}
@@ -2920,66 +2919,76 @@ var _ = ginkgo.Describe("DisableContainerDeployments", func() {
 			updatedEnv.Spec.DisableContainerDeployments = true
 			gomega.Expect(k8sClient.Update(ctx, updatedEnv)).Should(gomega.Succeed())
 
-			ginkgo.By("Verifying cache bust Job is marked for deletion or removed")
-			gomega.Eventually(func() bool {
-				return jobGoneOrDeleting(cacheBustJobKey)
-			}, timeout, interval).Should(gomega.BeTrue())
-
-			ginkgo.By("Verifying push cache Job is marked for deletion or removed")
-			gomega.Eventually(func() bool {
-				return jobGoneOrDeleting(pushCacheJobKey)
-			}, timeout, interval).Should(gomega.BeTrue())
-
-			// envtest can leave Jobs stuck terminating; clear finalizers so recreate can proceed
-			ginkgo.By("Force-removing terminating Jobs before re-enable")
-			for _, key := range []types.NamespacedName{cacheBustJobKey, pushCacheJobKey} {
-				gomega.Eventually(func() error {
+			ginkgo.By("Verifying both Jobs remain terminating behind the test finalizer")
+			for _, key := range jobKeys {
+				gomega.Eventually(func() bool {
 					j := &batchv1.Job{}
 					err := k8sClient.Get(ctx, key, j)
-					if k8serrors.IsNotFound(err) {
-						return nil
-					}
-					if err != nil {
-						return err
-					}
-					if len(j.Finalizers) > 0 {
-						j.Finalizers = nil
-						if err := k8sClient.Update(ctx, j); err != nil {
-							return err
-						}
-					}
-					propagation := metav1.DeletePropagationBackground
-					grace := int64(0)
-					return k8sClient.Delete(ctx, j, &client.DeleteOptions{
-						PropagationPolicy:  &propagation,
-						GracePeriodSeconds: &grace,
-					})
-				}, timeout, interval).Should(gomega.Succeed())
+					return err == nil && !j.GetDeletionTimestamp().IsZero() && slices.Contains(j.Finalizers, testJobFinalizer)
+				}, timeout, interval).Should(gomega.BeTrue())
 			}
 
-			ginkgo.By("Re-enabling container deployments")
+			// Re-enable WHILE the Jobs are still terminating. This exercises the
+			// terminating-Job guard in manageExistingJob: the reconcile must not
+			// treat the terminating Job as up-to-date (which would succeed-and-skip
+			// and never recreate); it should error and requeue until the Job is gone.
+			ginkgo.By("Re-enabling container deployments while Jobs are terminating")
 			gomega.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ToggleJobsEnvName}, updatedEnv)).Should(gomega.Succeed())
 			updatedEnv.Spec.DisableContainerDeployments = false
 			gomega.Expect(k8sClient.Update(ctx, updatedEnv)).Should(gomega.Succeed())
+
+			ginkgo.By("Verifying the terminating-Job guard fails reconciliation before deletion completes")
+			gomega.Eventually(func() bool {
+				updatedFrontend := &crd.Frontend{}
+				if err := k8sClient.Get(ctx, types.NamespacedName{Name: ToggleJobsFrontendName, Namespace: FrontendNamespace}, updatedFrontend); err != nil {
+					return false
+				}
+				for _, condition := range updatedFrontend.Status.Conditions {
+					if condition.Type == crd.ReconciliationFailed && condition.Status == metav1.ConditionTrue {
+						return strings.Contains(condition.Message, "is terminating, will retry")
+					}
+				}
+				return false
+			}, timeout, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Simulating garbage collection so deletion can complete")
+			for _, key := range jobKeys {
+				gomega.Eventually(func() error {
+					j := &batchv1.Job{}
+					if err := k8sClient.Get(ctx, key, j); err != nil {
+						return err
+					}
+					// envtest has no Job controller or garbage collector. Clear the
+					// finalizers and repeat the delete request to simulate their work.
+					j.Finalizers = nil
+					if err := k8sClient.Update(ctx, j); err != nil {
+						return err
+					}
+					if err := k8sClient.Delete(ctx, j); err != nil && !k8serrors.IsNotFound(err) {
+						return err
+					}
+					return nil
+				}, timeout, interval).Should(gomega.Succeed())
+			}
 
 			ginkgo.By("Verifying cache bust Job is recreated")
 			gomega.Eventually(func() bool {
 				j := &batchv1.Job{}
 				err := k8sClient.Get(ctx, cacheBustJobKey, j)
-				return err == nil && j.DeletionTimestamp == nil
+				return err == nil && j.DeletionTimestamp == nil && j.UID != originalJobUIDs[cacheBustJobKey]
 			}, timeout, interval).Should(gomega.BeTrue())
 
 			ginkgo.By("Verifying push cache Job is recreated")
 			gomega.Eventually(func() bool {
 				j := &batchv1.Job{}
 				err := k8sClient.Get(ctx, pushCacheJobKey, j)
-				return err == nil && j.DeletionTimestamp == nil
+				return err == nil && j.DeletionTimestamp == nil && j.UID != originalJobUIDs[pushCacheJobKey]
 			}, timeout, interval).Should(gomega.BeTrue())
 		})
 	})
 
-	ginkgo.Context("When DisableContainerDeployments is true with image but no Spec.Service", func() {
-		ginkgo.It("Should fall back Ingress backend to Frontend name", func() {
+	ginkgo.Context("When toggling DisableContainerDeployments with image but no Spec.Service", func() {
+		ginkgo.It("Should delete the existing Ingress when no backing Service remains", func() {
 			ctx := context.Background()
 
 			const (
@@ -2998,10 +3007,9 @@ var _ = ginkgo.Describe("DisableContainerDeployments", func() {
 					Namespace: FrontendNamespace,
 				},
 				Spec: crd.FrontendEnvironmentSpec{
-					SSO:                         "https://something-auth",
-					Hostname:                    "something",
-					GenerateNavJSON:             true,
-					DisableContainerDeployments: true,
+					SSO:             "https://something-auth",
+					Hostname:        "something",
+					GenerateNavJSON: true,
 				},
 			}
 			gomega.Expect(k8sClient.Create(ctx, frontendEnvironment)).Should(gomega.Succeed())
@@ -3054,13 +3062,27 @@ var _ = ginkgo.Describe("DisableContainerDeployments", func() {
 			}
 			gomega.Expect(k8sClient.Create(ctx, bundle)).Should(gomega.Succeed())
 
-			ginkgo.By("Verifying Ingress backend falls back to Frontend name")
-			createdIngress := &networking.Ingress{}
+			ingressKey := types.NamespacedName{Name: FallbackFrontendName, Namespace: FrontendNamespace}
+			ginkgo.By("Verifying the initial Ingress points to the operator-managed Service")
 			gomega.Eventually(func() bool {
-				err := k8sClient.Get(ctx, types.NamespacedName{Name: FallbackFrontendName, Namespace: FrontendNamespace}, createdIngress)
-				return err == nil
+				createdIngress := &networking.Ingress{}
+				if err := k8sClient.Get(ctx, ingressKey, createdIngress); err != nil {
+					return false
+				}
+				return createdIngress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name == FallbackFrontendName
 			}, timeout, interval).Should(gomega.BeTrue())
-			gomega.Expect(createdIngress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).Should(gomega.Equal(FallbackFrontendName))
+
+			ginkgo.By("Disabling container deployments without providing Spec.Service")
+			updatedEnv := &crd.FrontendEnvironment{}
+			gomega.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: FallbackEnvName}, updatedEnv)).Should(gomega.Succeed())
+			updatedEnv.Spec.DisableContainerDeployments = true
+			gomega.Expect(k8sClient.Update(ctx, updatedEnv)).Should(gomega.Succeed())
+
+			ginkgo.By("Verifying the Ingress is deleted with its backing Service")
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, ingressKey, &networking.Ingress{})
+				return k8serrors.IsNotFound(err)
+			}, timeout, interval).Should(gomega.BeTrue())
 		})
 	})
 
@@ -3160,6 +3182,14 @@ var _ = ginkgo.Describe("DisableContainerDeployments", func() {
 				err := k8sClient.Get(ctx, types.NamespacedName{Name: NoImgFrontendName + "-frontend", Namespace: FrontendNamespace}, &apps.Deployment{})
 				return k8serrors.IsNotFound(err)
 			}, time.Second*3, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying Ingress is created with backend pointing at Spec.Service")
+			createdIngress := &networking.Ingress{}
+			gomega.Eventually(func() bool {
+				err := k8sClient.Get(ctx, types.NamespacedName{Name: NoImgFrontendName, Namespace: FrontendNamespace}, createdIngress)
+				return err == nil
+			}, timeout, interval).Should(gomega.BeTrue())
+			gomega.Expect(createdIngress.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name).Should(gomega.Equal("external-noimg-service"))
 		})
 	})
 

@@ -1006,6 +1006,12 @@ func (r *FrontendReconciliation) manageExistingJob(jobName string) (bool, error)
 		return false, nil
 	}
 
+	// A terminating Job cannot be updated or recreated under the same name.
+	// Return an error so the controller requeues until deletion completes.
+	if !j.GetDeletionTimestamp().IsZero() {
+		return false, fmt.Errorf("job %s is terminating, will retry", jobName)
+	}
+
 	// If it exists but is not from the current frontend image, valpop image, or is behind the cutoff timestamp, we delete it
 	if !r.isJobFromCurrentFrontendImage(j) || !r.isJobFromCurrentValpopImage(j) || r.isJobBehindCutoffTimestamp(j, jobName, r.FrontendEnvironment.Spec.DeployCutoffTimestampPushCache) {
 		backgroundDeletion := metav1.DeletePropagationBackground
@@ -1118,6 +1124,19 @@ func (r *FrontendReconciliation) createFrontendService() error {
 }
 
 func (r *FrontendReconciliation) createFrontendIngress() error {
+	// When container deployments are disabled (or the Frontend has no image),
+	// the operator does not create a per-frontend Service. If no external
+	// Spec.Service is provided, skip the Ingress rather than emitting one with
+	// a dangling backend that would 502.
+	if r.FrontendEnvironment.Spec.DisableContainerDeployments || r.Frontend.Spec.Image == "" {
+		if r.Frontend.Spec.Service == "" {
+			r.Log.Info("Skipping per-frontend Ingress: no backing Service",
+				"frontend", r.Frontend.Name,
+				"environment", r.FrontendEnvironment.Name)
+			return nil
+		}
+	}
+
 	netobj := &networking.Ingress{}
 
 	nn := types.NamespacedName{
@@ -1179,13 +1198,13 @@ func (r *FrontendReconciliation) createAnnotationsAndPopulate(nn types.Namespace
 	}
 
 	// Default to the Frontend name (operator-managed Service). When container
-	// deployments are disabled or no image is set, prefer Spec.Service if
-	// provided; otherwise keep Frontend.Name so the Ingress backend is never empty.
+	// deployments are disabled or no image is set, the operator does not create
+	// that Service, so point at the external Spec.Service instead.
+	// createFrontendIngress guarantees Spec.Service is non-empty in that case
+	// (otherwise no Ingress is created).
 	serviceName := nn.Name
 	if r.FrontendEnvironment.Spec.DisableContainerDeployments || r.Frontend.Spec.Image == "" {
-		if r.Frontend.Spec.Service != "" {
-			serviceName = r.Frontend.Spec.Service
-		}
+		serviceName = r.Frontend.Spec.Service
 	}
 	r.populateConsoleDotIngress(netobj, ingressClass, serviceName)
 }

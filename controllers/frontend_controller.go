@@ -300,6 +300,10 @@ func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&apps.Deployment{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Owns(&networking.Ingress{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Owns(&prom.ServiceMonitor{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		// Watch Jobs (cachebust/pushcache) so a completed deletion re-enqueues the
+		// Frontend and recreates them, e.g. after a disable->enable toggle. Delete
+		// events pass GenerationChangedPredicate.
+		Owns(&batchv1.Job{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
 }
 

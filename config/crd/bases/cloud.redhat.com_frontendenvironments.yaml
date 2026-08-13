@@ -97,7 +97,7 @@ spec:
               disableContainerDeployments:
                 description: |-
                   Disable creation of Deployments, Services, Jobs, and ServiceMonitors for all Frontends in this environment.
-                  ConfigMaps and Ingress resources are still created normally.
+                  When disabled, ConfigMaps remain; Ingresses require an explicit Frontend.spec.service because no operator-managed Service exists.
                 type: boolean
               enableAkamaiCacheBust:
                 description: Enable Akamai Cache Bust
