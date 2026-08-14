@@ -394,6 +394,17 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 		"edgerc": edgercFile,
 	}
 
+	// Clean up the legacy ConfigMap that previously held edgerc credentials in plaintext.
+	// The ConfigMap is owned by the Frontend CR and would eventually be garbage-collected
+	// on CR deletion, but we remove it proactively to avoid leaving plaintext credentials
+	// in the namespace longer than necessary.
+	legacyCM := &v1.ConfigMap{}
+	if err := r.Client.Get(r.Ctx, nn, legacyCM); err == nil {
+		if err := r.Client.Delete(r.Ctx, legacyCM); err != nil && !k8serr.IsNotFound(err) {
+			return err
+		}
+	}
+
 	// Create the secret with the Client if it doesn't already exist or update the existing one
 	if err := r.Client.Create(r.Ctx, edgercSecret); err != nil {
 		if !k8serr.IsAlreadyExists(err) {
@@ -404,6 +415,8 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 			return err
 		}
 		existing.StringData = edgercSecret.StringData
+		existing.SetLabels(edgercSecret.GetLabels())
+		existing.SetOwnerReferences(edgercSecret.GetOwnerReferences())
 		if err := r.Client.Update(r.Ctx, existing); err != nil {
 			return err
 		}
