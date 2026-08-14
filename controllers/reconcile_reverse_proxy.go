@@ -158,12 +158,42 @@ func (r *ReverseProxyReconciliation) compareEnvVars(existing, desired []v1.EnvVa
 			return false
 		}
 		if d.ValueFrom != nil && e.ValueFrom != nil {
+			// SecretKeyRef
 			if (d.ValueFrom.SecretKeyRef == nil) != (e.ValueFrom.SecretKeyRef == nil) {
 				return false
 			}
 			if d.ValueFrom.SecretKeyRef != nil && e.ValueFrom.SecretKeyRef != nil {
 				if d.ValueFrom.SecretKeyRef.Name != e.ValueFrom.SecretKeyRef.Name ||
 					d.ValueFrom.SecretKeyRef.Key != e.ValueFrom.SecretKeyRef.Key {
+					return false
+				}
+			}
+			// ConfigMapKeyRef
+			if (d.ValueFrom.ConfigMapKeyRef == nil) != (e.ValueFrom.ConfigMapKeyRef == nil) {
+				return false
+			}
+			if d.ValueFrom.ConfigMapKeyRef != nil && e.ValueFrom.ConfigMapKeyRef != nil {
+				if d.ValueFrom.ConfigMapKeyRef.Name != e.ValueFrom.ConfigMapKeyRef.Name ||
+					d.ValueFrom.ConfigMapKeyRef.Key != e.ValueFrom.ConfigMapKeyRef.Key {
+					return false
+				}
+			}
+			// FieldRef
+			if (d.ValueFrom.FieldRef == nil) != (e.ValueFrom.FieldRef == nil) {
+				return false
+			}
+			if d.ValueFrom.FieldRef != nil && e.ValueFrom.FieldRef != nil {
+				if d.ValueFrom.FieldRef.FieldPath != e.ValueFrom.FieldRef.FieldPath {
+					return false
+				}
+			}
+			// ResourceFieldRef
+			if (d.ValueFrom.ResourceFieldRef == nil) != (e.ValueFrom.ResourceFieldRef == nil) {
+				return false
+			}
+			if d.ValueFrom.ResourceFieldRef != nil && e.ValueFrom.ResourceFieldRef != nil {
+				if d.ValueFrom.ResourceFieldRef.ContainerName != e.ValueFrom.ResourceFieldRef.ContainerName ||
+					d.ValueFrom.ResourceFieldRef.Resource != e.ValueFrom.ResourceFieldRef.Resource {
 					return false
 				}
 			}

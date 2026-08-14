@@ -2003,13 +2003,13 @@ objects:
           - name: PUSHCACHE_AWS_ACCESS_KEY_ID
             valueFrom:
               secretKeyRef:
-                name: ${PUSHCACHE_AWS_SECRET_NAME}
                 key: aws-access-key-id
+                name: ${PUSHCACHE_AWS_SECRET_NAME}
           - name: PUSHCACHE_AWS_SECRET_ACCESS_KEY
             valueFrom:
               secretKeyRef:
-                name: ${PUSHCACHE_AWS_SECRET_NAME}
                 key: aws-secret-access-key
+                name: ${PUSHCACHE_AWS_SECRET_NAME}
           - name: PUSHCACHE_AWS_BUCKET_NAME
             value: ${PUSHCACHE_AWS_BUCKET_NAME}
           - name: PUSHCACHE_AWS_REGION
