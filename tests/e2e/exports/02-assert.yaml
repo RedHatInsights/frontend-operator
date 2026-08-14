@@ -1,0 +1,15 @@
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: test-exports-environment
+  namespace: test-exports
+  labels:
+    frontendenv: test-exports-environment
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      controller: true
+      kind: FrontendEnvironment
+      name: test-exports-environment
+data:
+  exports.json: '[{"id":"export-1","displayName":"My Application","application":"my-app","resources":[{"id":"resource-1","displayName":"Resource One","resource":"/api/v1/exports/resource1","format":["json","csv"]}]}]'

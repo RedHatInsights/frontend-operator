@@ -72,14 +72,16 @@ type FrontendServiceCategoryGenerated struct {
 
 // ExportResource defines a resource available for export within an application
 type ExportResource struct {
-	ID       string   `json:"id" yaml:"id"`
-	Resource string   `json:"resource" yaml:"resource"`
-	Format   []string `json:"format" yaml:"format"`
+	ID          string   `json:"id" yaml:"id"`
+	DisplayName string   `json:"displayName,omitempty" yaml:"displayName,omitempty"`
+	Resource    string   `json:"resource" yaml:"resource"`
+	Format      []string `json:"format" yaml:"format"`
 }
 
 // ExportApp defines an application and its resources available for scheduled exports
 type ExportApp struct {
 	ID          string           `json:"id" yaml:"id"`
+	DisplayName string           `json:"displayName,omitempty" yaml:"displayName,omitempty"`
 	Application string           `json:"application" yaml:"application"`
 	Resources   []ExportResource `json:"resources" yaml:"resources"`
 }
