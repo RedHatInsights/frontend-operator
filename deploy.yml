@@ -361,6 +361,15 @@ objects:
                           properties:
                             displayName:
                               type: string
+                            filters:
+                              additionalProperties:
+                                type: string
+                              description: 'Filters are arbitrary key/value pairs
+                                applied to the referenced resource
+
+                                when scheduling an export. Keys are free-form (e.g.
+                                metric_id, product_id).'
+                              type: object
                             format:
                               items:
                                 type: string

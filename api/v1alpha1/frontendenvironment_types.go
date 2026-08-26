@@ -76,6 +76,7 @@ type ExportResource struct {
 	DisplayName string   `json:"displayName,omitempty" yaml:"displayName,omitempty"`
 	Resource    string   `json:"resource" yaml:"resource"`
 	Format      []string `json:"format" yaml:"format"`
+	Filters map[string]string `json:"filters,omitempty" yaml:"filters,omitempty"`
 }
 
 // ExportApp defines an application and its resources available for scheduled exports

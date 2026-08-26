@@ -19,6 +19,9 @@ spec:
           format:
             - json
             - csv
+          filters:
+            metric_id: Sockets
+            product_id: RHEL for IBM
 ---
 apiVersion: cloud.redhat.com/v1alpha1
 kind: Frontend
