@@ -70,13 +70,24 @@ type FrontendServiceCategoryGenerated struct {
 	Groups []FrontendServiceCategoryGroupGenerated `json:"groups" yaml:"groups"`
 }
 
+// ExportVariant defines a named product variant whose selection determines the
+// filters sent when scheduling an export of the parent resource.
+type ExportVariant struct {
+	ID          string `json:"id" yaml:"id"`
+	DisplayName string `json:"displayName,omitempty" yaml:"displayName,omitempty"`
+	// Filters are arbitrary key/value pairs (e.g. metric_id, product_id) applied
+	// to the referenced resource when this variant is selected. Keys are free-form
+	// and may differ between variants.
+	Filters map[string]string `json:"filters" yaml:"filters"`
+}
+
 // ExportResource defines a resource available for export within an application
 type ExportResource struct {
-	ID          string   `json:"id" yaml:"id"`
-	DisplayName string   `json:"displayName,omitempty" yaml:"displayName,omitempty"`
-	Resource    string   `json:"resource" yaml:"resource"`
-	Format      []string `json:"format" yaml:"format"`
-	Filters map[string]string `json:"filters,omitempty" yaml:"filters,omitempty"`
+	ID          string          `json:"id" yaml:"id"`
+	DisplayName string          `json:"displayName,omitempty" yaml:"displayName,omitempty"`
+	Resource    string          `json:"resource" yaml:"resource"`
+	Format      []string        `json:"format" yaml:"format"`
+	Variants    []ExportVariant `json:"variants,omitempty" yaml:"variants,omitempty"`
 }
 
 // ExportApp defines an application and its resources available for scheduled exports
