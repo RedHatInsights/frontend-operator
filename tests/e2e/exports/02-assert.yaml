@@ -12,4 +12,4 @@ metadata:
       kind: FrontendEnvironment
       name: test-exports-environment
 data:
-  exports.json: '[{"id":"export-1","displayName":"My Application","application":"my-app","resources":[{"id":"resource-1","displayName":"Resource One","resource":"/api/v1/exports/resource1","format":["json","csv"]}]}]'
+  exports.json: '[{"id":"export-1","displayName":"My Application","application":"my-app","resources":[{"id":"resource-1","displayName":"Resource One","resource":"/api/v1/exports/resource1","format":["json","csv"],"variants":[{"id":"rhel-arm","displayName":"RHEL for ARM","filters":{"metric_id":"Sockets","product_id":"RHEL for IBM z"}},{"id":"satellite-capsule","displayName":"Satellite Capsule","filters":{"product_id":"Satellite Capsule"}}]}]}]'

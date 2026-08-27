@@ -59,3 +59,13 @@ spec:
           format:
             - json
             - csv
+          variants:
+            - id: rhel-arm
+              displayName: RHEL for ARM
+              filters:
+                metric_id: Sockets
+                product_id: RHEL for IBM z
+            - id: satellite-capsule
+              displayName: Satellite Capsule
+              filters:
+                product_id: Satellite Capsule
