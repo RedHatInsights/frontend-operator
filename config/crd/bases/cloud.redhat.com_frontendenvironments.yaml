@@ -128,6 +128,29 @@ spec:
                             type: string
                           resource:
                             type: string
+                          variants:
+                            items:
+                              description: |-
+                                ExportVariant defines a named product variant whose selection determines the
+                                filters sent when scheduling an export of the parent resource.
+                              properties:
+                                displayName:
+                                  type: string
+                                filters:
+                                  additionalProperties:
+                                    type: string
+                                  description: |-
+                                    Filters are arbitrary key/value pairs (e.g. metric_id, product_id) applied
+                                    to the referenced resource when this variant is selected. Keys are free-form
+                                    and may differ between variants.
+                                  type: object
+                                id:
+                                  type: string
+                              required:
+                              - filters
+                              - id
+                              type: object
+                            type: array
                         required:
                         - format
                         - id
