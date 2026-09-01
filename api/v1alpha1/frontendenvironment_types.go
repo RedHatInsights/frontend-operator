@@ -178,6 +178,10 @@ type FrontendEnvironmentSpec struct {
 	// Example: "2026-01-13T10:30:00Z"
 	DeployCutoffTimestampPushCache string `json:"deployCutoffTimestampPushCache,omitempty"`
 
+	// Disable creation of Deployments, Services, Jobs, and ServiceMonitors for all Frontends in this environment.
+	// When disabled, ConfigMaps remain; Ingresses require an explicit Frontend.spec.service because no operator-managed Service exists.
+	DisableContainerDeployments bool `json:"disableContainerDeployments,omitempty"`
+
 	DefaultReplicas *int32 `json:"defaultReplicas,omitempty" yaml:"defaultReplicas,omitempty"`
 	// For the ChromeUI to render navigation bundles
 	Bundles *[]FrontendBundles `json:"bundles,omitempty" yaml:"bundles,omitempty"`
