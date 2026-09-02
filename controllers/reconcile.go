@@ -95,7 +95,11 @@ func (r *FrontendReconciliation) run() error {
 	var annotationHashes []map[string]string
 	annotationHashes = append(annotationHashes, map[string]string{"configHash": configHash})
 
-	if r.Frontend.Spec.Image != "" {
+	if r.FrontendEnvironment.Spec.DisableContainerDeployments {
+		r.Log.Info("Container deployments disabled by FrontendEnvironment",
+			"frontend", r.Frontend.Name,
+			"environment", r.FrontendEnvironment.Name)
+	} else if r.Frontend.Spec.Image != "" {
 		if err := r.createFrontendDeployment(annotationHashes); err != nil {
 			return err
 		}
@@ -104,13 +108,13 @@ func (r *FrontendReconciliation) run() error {
 		}
 		// If cache busting is enabled for the environment, add the akamai cache bust container
 		if r.FrontendEnvironment.Spec.EnableAkamaiCacheBust && r.FrontendEnvironment.Spec.AkamaiCacheBustImage != "" && !r.Frontend.Spec.AkamaiCacheBustDisable {
-			if err := r.createOrUpdateJob(r.generateCacheBustJobName, r.populateCacheBustContainer); err != nil {
+			if err := r.createOrUpdateJob(CacheBustJob, r.generateCacheBustJobName, r.populateCacheBustContainer); err != nil {
 				return err
 			}
 		}
 		// If push cache is enabled for the environment, add the push cache container
 		if r.FrontendEnvironment.Spec.EnablePushCache && r.Frontend.Spec.Image != "" {
-			if err := r.createOrUpdateJob(r.generatePushCacheJobName, r.populatePushCacheContainer); err != nil {
+			if err := r.createOrUpdateJob(PushCacheJob, r.generatePushCacheJobName, r.populatePushCacheContainer); err != nil {
 				return err
 			}
 		}
@@ -120,7 +124,7 @@ func (r *FrontendReconciliation) run() error {
 		return err
 	}
 
-	if r.FrontendEnvironment.Spec.Monitoring != nil && !r.Frontend.Spec.ServiceMonitor.Disabled && !r.FrontendEnvironment.Spec.Monitoring.Disabled {
+	if r.FrontendEnvironment.Spec.Monitoring != nil && !r.Frontend.Spec.ServiceMonitor.Disabled && !r.FrontendEnvironment.Spec.Monitoring.Disabled && !r.FrontendEnvironment.Spec.DisableContainerDeployments {
 		if err := r.createServiceMonitor(); err != nil {
 			return err
 		}
@@ -1002,6 +1006,12 @@ func (r *FrontendReconciliation) manageExistingJob(jobName string) (bool, error)
 		return false, nil
 	}
 
+	// A terminating Job cannot be updated or recreated under the same name.
+	// Return an error so the controller requeues until deletion completes.
+	if !j.GetDeletionTimestamp().IsZero() {
+		return false, fmt.Errorf("job %s is terminating, will retry", jobName)
+	}
+
 	// If it exists but is not from the current frontend image, valpop image, or is behind the cutoff timestamp, we delete it
 	if !r.isJobFromCurrentFrontendImage(j) || !r.isJobFromCurrentValpopImage(j) || r.isJobBehindCutoffTimestamp(j, jobName, r.FrontendEnvironment.Spec.DeployCutoffTimestampPushCache) {
 		backgroundDeletion := metav1.DeletePropagationBackground
@@ -1017,7 +1027,7 @@ func (r *FrontendReconciliation) manageExistingJob(jobName string) (bool, error)
 // createOrUpdateJob will create a new job if it doesn't exist
 // If it does exist and is from the current frontend image it will return
 // If it does exist and is not from the current frontend image it will delete it and create a new one
-func (r *FrontendReconciliation) createOrUpdateJob(generateJobName func() string, populateContainer func(*batchv1.Job) error) error {
+func (r *FrontendReconciliation) createOrUpdateJob(ident resCache.ResourceIdentSingle, generateJobName func() string, populateContainer func(*batchv1.Job) error) error {
 	jobName := generateJobName()
 
 	// If the job exists and is from the current frontend image we can return
@@ -1027,26 +1037,23 @@ func (r *FrontendReconciliation) createOrUpdateJob(generateJobName func() string
 	if err != nil {
 		return err
 	}
-	if skipUpdate {
-		return nil
-	}
 
-	// Create job
-	j := &batchv1.Job{}
-
-	// Set name
-	j.SetName(jobName)
-	// Set namespace
-	j.SetNamespace(r.Frontend.Namespace)
-
-	// Label with the right labels
-	labels := r.Frontend.GetLabels()
-
-	// Define name of resource
 	nn := types.NamespacedName{
 		Name:      jobName,
 		Namespace: r.Frontend.Namespace,
 	}
+
+	j := &batchv1.Job{}
+
+	if err := r.Cache.Create(ident, nn, j); err != nil {
+		return err
+	}
+
+	if skipUpdate {
+		return r.Cache.Update(ident, j)
+	}
+
+	labels := r.Frontend.GetLabels()
 
 	labeler := utils.GetCustomLabeler(labels, nn, r.Frontend)
 	labeler(j)
@@ -1057,7 +1064,6 @@ func (r *FrontendReconciliation) createOrUpdateJob(generateJobName func() string
 
 	j.Spec.Completions = utils.Int32Ptr(1)
 
-	// Set the image frontend image annotation
 	annotations := j.Spec.Template.ObjectMeta.Annotations
 	if annotations == nil {
 		annotations = make(map[string]string)
@@ -1067,12 +1073,11 @@ func (r *FrontendReconciliation) createOrUpdateJob(generateJobName func() string
 
 	j.Spec.Template.ObjectMeta.SetAnnotations(annotations)
 
-	errr := populateContainer(j)
-	if errr != nil {
-		return errr
+	if err := populateContainer(j); err != nil {
+		return err
 	}
 
-	return r.Client.Create(r.Ctx, j)
+	return r.Cache.Update(ident, j)
 }
 
 // Will need to create a service resource ident in provider like CoreDeployment
@@ -1119,6 +1124,19 @@ func (r *FrontendReconciliation) createFrontendService() error {
 }
 
 func (r *FrontendReconciliation) createFrontendIngress() error {
+	// When container deployments are disabled (or the Frontend has no image),
+	// the operator does not create a per-frontend Service. If no external
+	// Spec.Service is provided, skip the Ingress rather than emitting one with
+	// a dangling backend that would 502.
+	if r.FrontendEnvironment.Spec.DisableContainerDeployments || r.Frontend.Spec.Image == "" {
+		if r.Frontend.Spec.Service == "" {
+			r.Log.Info("Skipping per-frontend Ingress: no backing Service",
+				"frontend", r.Frontend.Name,
+				"environment", r.FrontendEnvironment.Name)
+			return nil
+		}
+	}
+
 	netobj := &networking.Ingress{}
 
 	nn := types.NamespacedName{
@@ -1179,11 +1197,16 @@ func (r *FrontendReconciliation) createAnnotationsAndPopulate(nn types.Namespace
 		netobj.SetAnnotations(annotations)
 	}
 
-	if r.Frontend.Spec.Image != "" {
-		r.populateConsoleDotIngress(netobj, ingressClass, nn.Name)
-	} else {
-		r.populateConsoleDotIngress(netobj, ingressClass, r.Frontend.Spec.Service)
+	// Default to the Frontend name (operator-managed Service). When container
+	// deployments are disabled or no image is set, the operator does not create
+	// that Service, so point at the external Spec.Service instead.
+	// createFrontendIngress guarantees Spec.Service is non-empty in that case
+	// (otherwise no Ingress is created).
+	serviceName := nn.Name
+	if r.FrontendEnvironment.Spec.DisableContainerDeployments || r.Frontend.Spec.Image == "" {
+		serviceName = r.Frontend.Spec.Service
 	}
+	r.populateConsoleDotIngress(netobj, ingressClass, serviceName)
 }
 
 func (r *FrontendReconciliation) getFrontendPaths() []string {
