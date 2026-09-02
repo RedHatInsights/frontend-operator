@@ -70,12 +70,24 @@ type FrontendServiceCategoryGenerated struct {
 	Groups []FrontendServiceCategoryGroupGenerated `json:"groups" yaml:"groups"`
 }
 
+// ExportVariant defines a named product variant whose selection determines the
+// filters sent when scheduling an export of the parent resource.
+type ExportVariant struct {
+	ID          string `json:"id" yaml:"id"`
+	DisplayName string `json:"displayName,omitempty" yaml:"displayName,omitempty"`
+	// Filters are arbitrary key/value pairs (e.g. metric_id, product_id) applied
+	// to the referenced resource when this variant is selected. Keys are free-form
+	// and may differ between variants.
+	Filters map[string]string `json:"filters" yaml:"filters"`
+}
+
 // ExportResource defines a resource available for export within an application
 type ExportResource struct {
-	ID          string   `json:"id" yaml:"id"`
-	DisplayName string   `json:"displayName,omitempty" yaml:"displayName,omitempty"`
-	Resource    string   `json:"resource" yaml:"resource"`
-	Format      []string `json:"format" yaml:"format"`
+	ID          string          `json:"id" yaml:"id"`
+	DisplayName string          `json:"displayName,omitempty" yaml:"displayName,omitempty"`
+	Resource    string          `json:"resource" yaml:"resource"`
+	Format      []string        `json:"format" yaml:"format"`
+	Variants    []ExportVariant `json:"variants,omitempty" yaml:"variants,omitempty"`
 }
 
 // ExportApp defines an application and its resources available for scheduled exports
@@ -165,6 +177,10 @@ type FrontendEnvironmentSpec struct {
 	// Any jobs with creation timestamp before this value will be deleted and recreated
 	// Example: "2026-01-13T10:30:00Z"
 	DeployCutoffTimestampPushCache string `json:"deployCutoffTimestampPushCache,omitempty"`
+
+	// Disable creation of Deployments, Services, Jobs, and ServiceMonitors for all Frontends in this environment.
+	// When disabled, ConfigMaps remain; Ingresses require an explicit Frontend.spec.service because no operator-managed Service exists.
+	DisableContainerDeployments bool `json:"disableContainerDeployments,omitempty"`
 
 	DefaultReplicas *int32 `json:"defaultReplicas,omitempty" yaml:"defaultReplicas,omitempty"`
 	// For the ChromeUI to render navigation bundles

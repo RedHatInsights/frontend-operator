@@ -41,18 +41,6 @@ data:
               "color": {
                 "mode": "thresholds"
               },
-              "custom": {
-                "axisPlacement": "auto",
-                "fillOpacity": 70,
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "insertNulls": false,
-                "lineWidth": 0,
-                "spanNulls": false
-              },
               "mappings": [
                 {
                   "options": {
@@ -89,17 +77,10 @@ data:
                   }
                 ]
               },
+              "noValue": "No recent failures",
               "unit": "none"
             },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byRegexp",
-                  "options": "/(.*)-frontend-pushcache/"
-                },
-                "properties": []
-              }
-            ]
+            "overrides": []
           },
           "gridPos": {
             "h": 8,
@@ -109,20 +90,18 @@ data:
           },
           "id": 20,
           "options": {
-            "alignValue": "left",
-            "legend": {
-              "displayMode": "list",
-              "placement": "bottom",
-              "showLegend": false
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "auto",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
             },
-            "mergeValues": true,
-            "rowHeight": 0.9,
-            "showValue": "never",
-            "tooltip": {
-              "hideZeros": false,
-              "mode": "single",
-              "sort": "none"
-            }
+            "textMode": "value_and_name"
           },
           "pluginVersion": "11.6.3",
           "targets": [
@@ -132,14 +111,14 @@ data:
                 "uid": "${datasource}"
               },
               "editorMode": "code",
-              "expr": "kube_job_status_failed{namespace=\"frontends\", job_name=~\".*-frontend-pushcache\"} > 0",
+              "expr": "kube_job_status_failed{namespace=\"frontends\", job_name=~\".*-frontend-pushcache\"} > 0 and on(job_name, namespace) (time() - kube_job_status_start_time{namespace=\"frontends\", job_name=~\".*-frontend-pushcache\"} < 172800)",
+              "instant": true,
               "legendFormat": "{{job_name}}",
-              "range": true,
               "refId": "A"
             }
           ],
-          "title": "Failed push cache jobs",
-          "type": "state-timeline"
+          "title": "Push cache job status",
+          "type": "stat"
         },
         {
           "datasource": {
