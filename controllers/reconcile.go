@@ -106,10 +106,14 @@ func (r *FrontendReconciliation) run() error {
 		if err := r.createFrontendService(); err != nil {
 			return err
 		}
-		// If cache busting is enabled for the environment, add the akamai cache bust container
+		// If cache busting is enabled for the environment, add the akamai cache bust container.
+		// Skip the job entirely when there are no valid paths to purge, otherwise akamai-purge
+		// would run with zero arguments (a no-op or CrashLoop) on every reconcile.
 		if r.FrontendEnvironment.Spec.EnableAkamaiCacheBust && r.FrontendEnvironment.Spec.AkamaiCacheBustImage != "" && !r.Frontend.Spec.AkamaiCacheBustDisable {
-			if err := r.createOrUpdateJob(CacheBustJob, r.generateCacheBustJobName, r.populateCacheBustContainer); err != nil {
-				return err
+			if len(createCachePurgePathList(r.Frontend, r.FrontendEnvironment, r.Log)) > 0 {
+				if err := r.createOrUpdateJob(CacheBustJob, r.generateCacheBustJobName, r.populateCacheBustContainer); err != nil {
+					return err
+				}
 			}
 		}
 		// If push cache is enabled for the environment, add the push cache container
@@ -305,8 +309,18 @@ func makeAkamaiEdgercFileFromSecret(secret *v1.Secret) string {
 	return edgercFile
 }
 
-func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment) []string {
+// cacheBustPurgeScript runs akamai-purge with paths supplied via bash "$@" (Container.Args).
+const cacheBustPurgeScript = `sleep 120; exec /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete "$@"`
+
+// cacheBustContainerCommandArgs returns the container Command and Args used for Akamai cache bust.
+// Paths are never interpolated into the shell script; they are passed as separate argv entries.
+func cacheBustContainerCommandArgs(paths []string) (command []string, args []string) {
+	return []string{"/bin/bash", "-c", cacheBustPurgeScript, "--"}, paths
+}
+
+func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.FrontendEnvironment, log logr.Logger) []string {
 	var purgePaths []string
+	loggedInvalid := map[string]struct{}{}
 
 	// Helper function to check if a path is already in the list
 	contains := func(slice []string, item string) bool {
@@ -318,7 +332,9 @@ func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.F
 		return false
 	}
 
-	cacheBustUrls := frontendEnvironment.Spec.AkamaiCacheBustURLs
+	// Copy into a fresh slice so appending the deprecated single URL below can
+	// never mutate the FrontendEnvironment spec's backing array via aliasing.
+	cacheBustUrls := append([]string(nil), frontendEnvironment.Spec.AkamaiCacheBustURLs...)
 
 	if frontendEnvironment.Spec.AkamaiCacheBustURL != "" {
 		cacheBustUrls = append(cacheBustUrls, frontendEnvironment.Spec.AkamaiCacheBustURL)
@@ -344,6 +360,14 @@ func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.F
 
 		// Append paths based on AkamaiCacheBustPaths
 		for _, path := range frontend.Spec.AkamaiCacheBustPaths {
+			if !localUtil.IsValidCacheBustPath(path) {
+				if _, seen := loggedInvalid[path]; !seen {
+					log.Info("skipping invalid akamaiCacheBustPath", "path", path, "frontend", frontend.Name)
+					loggedInvalid[path] = struct{}{}
+				}
+				continue
+			}
+
 			var fullPath string
 
 			if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
@@ -427,10 +451,8 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 	j.Spec.Template.Spec.Volumes = []v1.Volume{akamaiVolume}
 
 	// Get the paths to cache bust
-	pathsToCacheBust := createCachePurgePathList(r.Frontend, r.FrontendEnvironment)
-
-	// Construct the akamai cache bust command
-	command := fmt.Sprintf("sleep 120; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete %s", strings.Join(pathsToCacheBust, " "))
+	pathsToCacheBust := createCachePurgePathList(r.Frontend, r.FrontendEnvironment, r.Log)
+	command, args := cacheBustContainerCommandArgs(pathsToCacheBust)
 
 	// Modify the obejct to set the things we care about
 	cacheBustContainer := v1.Container{
@@ -444,8 +466,9 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 				SubPath:   "edgerc",
 			},
 		},
-		// Run the akamai cache bust script
-		Command: []string{"/bin/bash", "-c", command},
+		// Paths are passed as positional args via "$@" to prevent shell injection.
+		Command: command,
+		Args:    args,
 		Resources: v1.ResourceRequirements{
 			Requests: v1.ResourceList{
 				v1.ResourceCPU:    resource.MustParse("50m"),

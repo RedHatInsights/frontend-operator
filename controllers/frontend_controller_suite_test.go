@@ -2837,6 +2837,7 @@ var _ = ginkgo.Describe("DisableContainerDeployments", func() {
 					GenerateNavJSON:       true,
 					EnableAkamaiCacheBust: true,
 					AkamaiCacheBustImage:  "quay.io/cachebust:latest",
+					AkamaiCacheBustURL:    "console.redhat.com",
 					EnablePushCache:       true,
 					ValpopImage:           "quay.io/valpop:latest",
 				},
