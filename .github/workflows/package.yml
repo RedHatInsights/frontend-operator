@@ -7,7 +7,7 @@ name: Run Unit Tests
 jobs:
 
   testing:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/setup-go@v5
         name: Set up golang 1.25
