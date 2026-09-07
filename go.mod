@@ -1,8 +1,6 @@
 module github.com/RedHatInsights/frontend-operator
 
-go 1.24.0
-
-toolchain go1.24.6
+go 1.27
 
 require (
 	github.com/RedHatInsights/clowder v0.100.0
@@ -93,7 +91,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20250905212525-66792eed8611 // indirect
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
