@@ -105,7 +105,10 @@ type FrontendSpec struct {
 	AssetsPrefix       string               `json:"assetsPrefix,omitempty" yaml:"assetsPrefix,omitempty"`
 	// Akamai cache bust opt-out
 	AkamaiCacheBustDisable bool `json:"akamaiCacheBustDisable,omitempty" yaml:"akamaiCacheBustDisable,omitempty"`
-	// Files to cache bust
+	// Files to cache bust. Each item must be a URL-safe path or full URL.
+	// The pattern below MUST stay in sync with utils.CacheBustPathPattern
+	// (enforced by TestCacheBustPatternMatchesCRDMarker).
+	// +kubebuilder:validation:items:Pattern=`^[a-zA-Z0-9\-._~:/?#\[\]@!&*+,;=%]+$`
 	AkamaiCacheBustPaths []string `json:"akamaiCacheBustPaths,omitempty" yaml:"akamaiCacheBustPaths,omitempty"`
 	// The search index partials for the resource
 	SearchEntries []*SearchEntry `json:"searchEntries,omitempty" yaml:"searchEntries,omitempty"`

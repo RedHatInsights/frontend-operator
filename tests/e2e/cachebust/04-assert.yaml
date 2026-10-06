@@ -89,7 +89,11 @@ spec:
           command:
             - /bin/bash
             - '-c'
-            - 'sleep 120; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete https://console.doesntexist.redhat.com/config/chrome/fed-modules.json https://console.doesntexist.redhat.com/apps/chrome/index.html'
+            - 'sleep 120; exec /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete "$@"'
+            - '--'
+          args:
+            - https://console.doesntexist.redhat.com/config/chrome/fed-modules.json
+            - https://console.doesntexist.redhat.com/apps/chrome/index.html
           resources:
             requests:
               cpu: 50m
@@ -194,7 +198,10 @@ spec:
           command:
             - /bin/bash
             - '-c'
-            - 'sleep 120; /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete https://console.doesntexist.redhat.com/apps/chrome-test-defaults/fed-mods.json'
+            - 'sleep 120; exec /cli/.akamai-cli/src/cli-purge/bin/akamai-purge --edgerc /opt/app-root/edgerc delete "$@"'
+            - '--'
+          args:
+            - https://console.doesntexist.redhat.com/apps/chrome-test-defaults/fed-mods.json
           resources:
             requests:
               cpu: 50m
