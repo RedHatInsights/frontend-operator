@@ -1,0 +1,7 @@
+---
+# With the feature disabled, the config upload job must no longer exist.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-config-assets-environment-config-assets
+  namespace: test-config-assets

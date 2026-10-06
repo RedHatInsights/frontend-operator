@@ -178,6 +178,20 @@ type FrontendEnvironmentSpec struct {
 	// Example: "2026-01-13T10:30:00Z"
 	DeployCutoffTimestampPushCache string `json:"deployCutoffTimestampPushCache,omitempty"`
 
+	// EnableConfigAssets enables the env-level valpop Job that uploads the
+	// operator-generated config assets (fed-modules.json, bundles.json, search-index.json,
+	// api-specs.json, service-tiles.json, sso-config.json) to S3. This replaces
+	// chrome-service as the source of generated frontend configuration. Requires ValpopImage.
+	// Independent of DisableContainerDeployments so config can be published in clusters
+	// that run no per-Frontend Deployments.
+	EnableConfigAssets bool `json:"enableConfigAssets,omitempty"`
+
+	// Redeploy the config assets upload job created before this date (RFC3339 format).
+	// Any job with a creation timestamp before this value is deleted and recreated,
+	// giving operators a manual force-refresh lever independent of content changes.
+	// Example: "2026-01-13T10:30:00Z"
+	DeployCutoffTimestampConfigAssets string `json:"deployCutoffTimestampConfigAssets,omitempty"`
+
 	// Disable creation of Deployments, Services, Jobs, and ServiceMonitors for all Frontends in this environment.
 	// When disabled, ConfigMaps remain; Ingresses require an explicit Frontend.spec.service because no operator-managed Service exists.
 	DisableContainerDeployments bool `json:"disableContainerDeployments,omitempty"`

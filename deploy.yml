@@ -326,6 +326,18 @@ objects:
                 defaultReplicas:
                   format: int32
                   type: integer
+                deployCutoffTimestampConfigAssets:
+                  description: 'Redeploy the config assets upload job created before
+                    this date (RFC3339 format).
+
+                    Any job with a creation timestamp before this value is deleted
+                    and recreated,
+
+                    giving operators a manual force-refresh lever independent of content
+                    changes.
+
+                    Example: "2026-01-13T10:30:00Z"'
+                  type: string
                 deployCutoffTimestampPushCache:
                   description: 'Redeploy pushcache jobs created before this date (RFC3339
                     format)
@@ -344,6 +356,24 @@ objects:
                   type: boolean
                 enableAkamaiCacheBust:
                   description: Enable Akamai Cache Bust
+                  type: boolean
+                enableConfigAssets:
+                  description: 'EnableConfigAssets enables the env-level valpop Job
+                    that uploads the
+
+                    operator-generated config assets (fed-modules.json, bundles.json,
+                    search-index.json,
+
+                    api-specs.json, service-tiles.json, sso-config.json) to S3. This
+                    replaces
+
+                    chrome-service as the source of generated frontend configuration.
+                    Requires ValpopImage.
+
+                    Independent of DisableContainerDeployments so config can be published
+                    in clusters
+
+                    that run no per-Frontend Deployments.'
                   type: boolean
                 enablePushCache:
                   description: Enable Push Cache Container
