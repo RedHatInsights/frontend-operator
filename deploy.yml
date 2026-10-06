@@ -683,8 +683,14 @@ objects:
                   description: Akamai cache bust opt-out
                   type: boolean
                 akamaiCacheBustPaths:
-                  description: Files to cache bust
+                  description: 'Files to cache bust. Each item must be a URL-safe
+                    path or full URL.
+
+                    The pattern below MUST stay in sync with utils.CacheBustPathPattern
+
+                    (enforced by TestCacheBustPatternMatchesCRDMarker).'
                   items:
+                    pattern: ^[a-zA-Z0-9\-._~:/?#\[\]@!&*+,;=%]+$
                     type: string
                   type: array
                 assetsPrefix:
