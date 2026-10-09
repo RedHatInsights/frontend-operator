@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"strconv"
 	"strings"
@@ -393,8 +394,26 @@ func (r *ReverseProxyReconciliation) buildReverseProxyDeployment() (*apps.Deploy
 	// Get consistent labels that won't conflict between frontends
 	labels := r.getReverseProxyLabels()
 
+	// Fetch object store configuration once and pass it to the container builder.
+	objectStoreInfo, err := getObjectStoreConfig(r.Ctx, r.Client, r.Namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure the S3 credentials Secret exists so that the Deployment can
+	// reference them via valueFrom.secretKeyRef instead of literal values.
+	if err := ensurePushCacheCredentialsSecret(r.Ctx, r.Client, r.Namespace, *objectStoreInfo.AccessKey, *objectStoreInfo.SecretKey); err != nil {
+		return nil, err
+	}
+
+	// Compute a checksum of the S3 credentials so that a credential rotation
+	// causes the Pod template to change, which triggers a rolling restart.
+	// Without this, Kubernetes does not refresh Secret-backed environment
+	// variables in running containers.
+	credentialChecksum := fmt.Sprintf("%x", sha256.Sum256([]byte(*objectStoreInfo.AccessKey+*objectStoreInfo.SecretKey)))
+
 	// Configure the reverse proxy container
-	container, err := r.createReverseProxyContainer()
+	container, err := r.createReverseProxyContainer(objectStoreInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -427,6 +446,9 @@ func (r *ReverseProxyReconciliation) buildReverseProxyDeployment() (*apps.Deploy
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labels,
+					Annotations: map[string]string{
+						"pushcache-credentials-checksum": credentialChecksum,
+					},
 				},
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{container},
@@ -452,20 +474,10 @@ func (r *ReverseProxyReconciliation) createReverseProxyService() error {
 	return r.Client.Create(r.Ctx, service)
 }
 
-// createReverseProxyContainer configures the reverse proxy container
-func (r *ReverseProxyReconciliation) createReverseProxyContainer() (v1.Container, error) {
-	// Get object store configuration (env vars first, then Clowder secret)
-	objectStoreInfo, err := getObjectStoreConfig(r.Ctx, r.Client, r.Namespace)
-	if err != nil {
-		return v1.Container{}, err
-	}
-
-	// Ensure the S3 credentials Secret exists so that the Deployment can
-	// reference them via valueFrom.secretKeyRef instead of literal values.
-	if err := ensurePushCacheCredentialsSecret(r.Ctx, r.Client, r.Namespace, *objectStoreInfo.AccessKey, *objectStoreInfo.SecretKey); err != nil {
-		return v1.Container{}, err
-	}
-
+// createReverseProxyContainer configures the reverse proxy container.
+// objectStoreInfo is fetched by the caller (buildReverseProxyDeployment) so that
+// the credential checksum can be computed at the deployment level.
+func (r *ReverseProxyReconciliation) createReverseProxyContainer(objectStoreInfo *ObjectStoreBucket) (v1.Container, error) {
 	// Get default values
 	minioPort := *objectStoreInfo.Port
 	minioEndpoint := *objectStoreInfo.Endpoint // PUSHCACHE_AWS_ENDPOINT
