@@ -1074,6 +1074,28 @@ func (r *FrontendReconciliation) isJobFromCurrentValpopImage(j *batchv1.Job) boo
 	return valpopImage == r.FrontendEnvironment.Spec.ValpopImage
 }
 
+// isJobUsingSecretKeyRef returns true if the Job's pushcache container sources
+// its S3 credential environment variables from a Secret via valueFrom.secretKeyRef.
+// Legacy Jobs created before the secretKeyRef migration use literal values and
+// must be deleted/recreated to stop exposing plaintext credentials.
+func isJobUsingSecretKeyRef(j *batchv1.Job) bool {
+	for _, container := range j.Spec.Template.Spec.Containers {
+		if container.Name != "valpop-pushcache" {
+			continue
+		}
+		for _, env := range container.Env {
+			if env.Name == "PUSHCACHE_AWS_ACCESS_KEY_ID" || env.Name == "PUSHCACHE_AWS_SECRET_ACCESS_KEY" {
+				if env.ValueFrom == nil || env.ValueFrom.SecretKeyRef == nil {
+					return false
+				}
+			}
+		}
+		return true
+	}
+	// No valpop-pushcache container found — not a pushcache Job, treat as OK.
+	return true
+}
+
 func (r *FrontendReconciliation) isJobBehindCutoffTimestamp(j *batchv1.Job, jobName, deployCutoffTimestamp string) bool {
 	if deployCutoffTimestamp == "" || !strings.Contains(jobName, "pushcache") {
 		return false
@@ -1103,8 +1125,10 @@ func (r *FrontendReconciliation) manageExistingJob(jobName string) (bool, error)
 		return false, fmt.Errorf("job %s is terminating, will retry", jobName)
 	}
 
+	// If the Job still uses plaintext credential values (legacy, pre-secretKeyRef
+	// migration), it must be deleted and recreated to remove exposed credentials.
 	// If it exists but is not from the current frontend image, valpop image, or is behind the cutoff timestamp, we delete it
-	if !r.isJobFromCurrentFrontendImage(j) || !r.isJobFromCurrentValpopImage(j) || r.isJobBehindCutoffTimestamp(j, jobName, r.FrontendEnvironment.Spec.DeployCutoffTimestampPushCache) {
+	if !isJobUsingSecretKeyRef(j) || !r.isJobFromCurrentFrontendImage(j) || !r.isJobFromCurrentValpopImage(j) || r.isJobBehindCutoffTimestamp(j, jobName, r.FrontendEnvironment.Spec.DeployCutoffTimestampPushCache) {
 		backgroundDeletion := metav1.DeletePropagationBackground
 		return false, r.Client.Delete(r.Ctx, j, &client.DeleteOptions{
 			PropagationPolicy: &backgroundDeletion,
