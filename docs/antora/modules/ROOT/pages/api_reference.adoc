@@ -488,7 +488,7 @@ Maps a locale identifier to the translated strings for that locale. Identifiers 
 
 _Underlying type:_ _object (keys:string, values:string)_
 
-Maps YAML-shaped catalog keys to translated strings for one locale. Keys are dot-separated paths of letters, digits, `_` and `-` (maximum 256 characters), for example `searchEntries.rbac-roles.title`. Values must be strings of at most 4096 characters. At most 2048 keys per locale.
+Maps catalog keys to translated strings for one locale. Keys are flat identifiers made of dot-separated segments of letters, digits, `_` and `-` (maximum 256 characters), for example `searchEntries.rbac-roles.title`. The dots are part of the key, not a nesting path, so `a.b` and `a.b.c` are independent keys. Values must be strings of at most 4096 characters. At most 2048 keys per locale.
 
 .Appears In:
 ****

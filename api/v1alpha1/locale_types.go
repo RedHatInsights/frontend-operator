@@ -20,8 +20,10 @@ package v1alpha1
 // +kubebuilder:validation:MaxLength=4096
 type LocaleMessage string
 
-// LocaleMessages maps YAML-shaped catalog keys to translated strings for one
-// locale. Keys are dot-separated paths such as `searchEntries.rbac-roles.title`.
+// LocaleMessages maps catalog keys to translated strings for one locale. Keys
+// are flat identifiers made of dot-separated segments, such as
+// `searchEntries.rbac-roles.title`. The dots are part of the key, not a nesting
+// path, so `a.b` and `a.b.c` are independent keys.
 // +kubebuilder:validation:MaxProperties=2048
 // +kubebuilder:validation:XValidation:rule="self.all(k, size(k) <= 256 && k.matches('^[A-Za-z0-9][A-Za-z0-9_-]*([.][A-Za-z0-9][A-Za-z0-9_-]*)*$'))",message="message keys must be dot-separated paths of letters, digits, '_' and '-' (e.g. searchEntries.rbac-roles.title)"
 type LocaleMessages map[string]LocaleMessage
