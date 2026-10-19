@@ -1,0 +1,43 @@
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: test-localization-environment
+spec:
+  generateNavJSON: false
+  ssl: false
+  hostname: foo.redhat.com
+  sso: https://sso.foo.redhat.com
+  enabledLocales:
+    - id: en
+      name: English
+      default: true
+    - id: fr
+      name: Français
+    - id: zh-CN
+      name: 简体中文
+  locales:
+    fr:
+      bundles.rhel.title: Red Hat Enterprise Linux
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: localization-frontend
+  namespace: test-localization
+spec:
+  envName: test-localization-environment
+  title: Localization Frontend
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  frontend:
+    paths:
+      - /apps/localization
+  image: quay.io/cloudservices/insights-chrome-frontend:720317c
+  module:
+    manifestLocation: /apps/localization/fed-mods.json
+    modules: []
+    moduleID: localization
+  feoConfigEnabled: true
+  locales:
+    fr:
+      module.defaultDocumentTitle: Frontend localisé

@@ -1,0 +1,25 @@
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: test-localization-environment
+  namespace: test-localization
+  labels:
+    frontendenv: test-localization-environment
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      controller: true
+      kind: FrontendEnvironment
+      name: test-localization-environment
+data:
+  locales.json: '[{"id":"en","name":"English","default":true},{"id":"fr","name":"Français"},{"id":"zh-CN","name":"简体中文"}]'
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: localization-frontend
+  namespace: test-localization
+spec:
+  locales:
+    fr:
+      module.defaultDocumentTitle: Frontend localisé
