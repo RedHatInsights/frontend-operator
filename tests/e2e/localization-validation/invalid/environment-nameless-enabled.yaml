@@ -1,0 +1,12 @@
+# expect: name: Required value
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: nameless-enabled
+spec:
+  sso: https://sso.foo.redhat.com
+  enabledLocales:
+    - id: en
+      name: English
+      default: true
+    - id: fr

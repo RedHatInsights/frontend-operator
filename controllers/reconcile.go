@@ -2139,6 +2139,14 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 		cfgMap.Data["exports.json"] = string(exportsJSONData)
 	}
 
+	if len(r.FrontendEnvironment.Spec.EnabledLocales) > 0 {
+		localesJSONData, err := json.Marshal(r.FrontendEnvironment.Spec.EnabledLocales)
+		if err != nil {
+			return err
+		}
+		cfgMap.Data["locales.json"] = string(localesJSONData)
+	}
+
 	// Generate SSO configuration
 	ssoConfig := setupSSOConfig(r.FrontendEnvironment)
 	ssoConfigJSONData, err := json.Marshal(ssoConfig)

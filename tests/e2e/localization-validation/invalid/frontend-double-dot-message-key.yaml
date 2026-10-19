@@ -1,0 +1,19 @@
+# expect: message keys must be dot-separated
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: double-dot-message-key
+  namespace: test-localization-validation
+spec:
+  envName: test-localization-validation-environment
+  title: double-dot-message-key
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  frontend:
+    paths:
+      - /apps/double-dot-message-key
+  module:
+    manifestLocation: /apps/double-dot-message-key/fed-mods.json
+    moduleID: double-dot-message-key
+  locales:
+    fr:
+      a..b: Bonjour
