@@ -189,11 +189,14 @@ type FrontendEnvironmentSpec struct {
 	// Available export applications and their resources for the scheduler feature
 	Exports *[]ExportApp `json:"exports,omitempty" yaml:"exports,omitempty"`
 
-	// Locales that are generated and offered, in addition to the English default.
-	// Each entry provides the id and display name that locales.json needs.
+	// Locales that are generated and offered to users, English (`en`) included.
+	// Each entry is written to locales.json. When set, `en` must be listed and
+	// exactly one entry must be marked as the default.
 	// +listType=map
 	// +listMapKey=id
 	// +kubebuilder:validation:MaxItems=32
+	// +kubebuilder:validation:XValidation:rule="self.exists(l, l.id == 'en')",message="English (en) must be listed when enabledLocales is set"
+	// +kubebuilder:validation:XValidation:rule="self.filter(l, has(l.default) && l.default).size() == 1",message="exactly one enabled locale must be marked as the default"
 	EnabledLocales []EnabledLocale `json:"enabledLocales,omitempty" yaml:"enabledLocales,omitempty"`
 
 	// Environment-owned translations (bundle and service category/group titles):

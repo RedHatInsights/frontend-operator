@@ -33,6 +33,8 @@ var _ = ginkgo.Describe("Localization API schema", func() {
 		"zh-CN": {"searchEntries.rbac-roles.title": "角色"},
 	}
 
+	english := crd.EnabledLocale{ID: "en", Name: "English", Default: true}
+
 	newFrontend := func(name string) *crd.Frontend {
 		return &crd.Frontend{
 			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "default"},
@@ -92,7 +94,7 @@ var _ = ginkgo.Describe("Localization API schema", func() {
 		ginkgo.It("rejects English as a translation", func() {
 			fe := newFrontend("locale-en")
 			fe.Spec.Locales = crd.LocaleCatalogs{"en": {"a.b": "x"}}
-			gomega.Expect(dryRun(fe)).To(gomega.MatchError(gomega.ContainSubstring("English is the default locale")))
+			gomega.Expect(dryRun(fe)).To(gomega.MatchError(gomega.ContainSubstring("English is the source language")))
 		})
 
 		ginkgo.DescribeTable("rejects malformed locale identifiers",
@@ -181,6 +183,7 @@ var _ = ginkgo.Describe("Localization API schema", func() {
 		ginkgo.It("accepts {id, name} entries", func() {
 			env := newEnv("locale-enabled-ok")
 			env.Spec.EnabledLocales = []crd.EnabledLocale{
+				english,
 				{ID: "fr", Name: "Français"},
 				{ID: "ko", Name: "한국어"},
 				{ID: "ja", Name: "日本語"},
@@ -189,34 +192,55 @@ var _ = ginkgo.Describe("Localization API schema", func() {
 			gomega.Expect(dryRun(env)).To(gomega.Succeed())
 		})
 
-		ginkgo.It("rejects English", func() {
-			env := newEnv("locale-enabled-en")
-			env.Spec.EnabledLocales = []crd.EnabledLocale{{ID: "en", Name: "English"}}
-			gomega.Expect(dryRun(env)).To(gomega.MatchError(gomega.ContainSubstring("English is the default locale")))
+		ginkgo.It("accepts a non-English default", func() {
+			env := newEnv("locale-enabled-fr-default")
+			env.Spec.EnabledLocales = []crd.EnabledLocale{
+				{ID: "en", Name: "English"},
+				{ID: "fr", Name: "Français", Default: true},
+			}
+			gomega.Expect(dryRun(env)).To(gomega.Succeed())
+		})
+
+		ginkgo.It("rejects a list without English", func() {
+			env := newEnv("locale-enabled-no-en")
+			env.Spec.EnabledLocales = []crd.EnabledLocale{{ID: "fr", Name: "Français", Default: true}}
+			gomega.Expect(dryRun(env)).To(gomega.MatchError(gomega.ContainSubstring("English (en) must be listed")))
+		})
+
+		ginkgo.It("rejects a list without a default", func() {
+			env := newEnv("locale-enabled-no-default")
+			env.Spec.EnabledLocales = []crd.EnabledLocale{{ID: "en", Name: "English"}, {ID: "fr", Name: "Français"}}
+			gomega.Expect(dryRun(env)).To(gomega.MatchError(gomega.ContainSubstring("exactly one enabled locale must be marked as the default")))
+		})
+
+		ginkgo.It("rejects more than one default", func() {
+			env := newEnv("locale-enabled-two-defaults")
+			env.Spec.EnabledLocales = []crd.EnabledLocale{english, {ID: "fr", Name: "Français", Default: true}}
+			gomega.Expect(dryRun(env)).To(gomega.MatchError(gomega.ContainSubstring("exactly one enabled locale must be marked as the default")))
 		})
 
 		ginkgo.It("rejects malformed ids", func() {
 			env := newEnv("locale-enabled-bad-id")
-			env.Spec.EnabledLocales = []crd.EnabledLocale{{ID: "zh-cn", Name: "简体中文"}}
+			env.Spec.EnabledLocales = []crd.EnabledLocale{english, {ID: "zh-cn", Name: "简体中文"}}
 			gomega.Expect(dryRun(env)).To(gomega.HaveOccurred())
 		})
 
 		ginkgo.It("rejects an empty display name", func() {
 			env := newEnv("locale-enabled-no-name")
-			env.Spec.EnabledLocales = []crd.EnabledLocale{{ID: "fr"}}
+			env.Spec.EnabledLocales = []crd.EnabledLocale{english, {ID: "fr"}}
 			gomega.Expect(dryRun(env)).To(gomega.HaveOccurred())
 		})
 
 		ginkgo.It("rejects duplicate ids", func() {
 			env := newEnv("locale-enabled-dup")
-			env.Spec.EnabledLocales = []crd.EnabledLocale{{ID: "fr", Name: "Français"}, {ID: "fr", Name: "French"}}
+			env.Spec.EnabledLocales = []crd.EnabledLocale{english, {ID: "fr", Name: "Français"}, {ID: "fr", Name: "French"}}
 			gomega.Expect(dryRun(env)).To(gomega.MatchError(gomega.ContainSubstring("Duplicate value")))
 		})
 
 		ginkgo.It("rejects bare string tags", func() {
 			u := unstructuredCR("FrontendEnvironment", "locale-enabled-strings", "", map[string]any{
 				"sso":            "https://sso.example.com/auth",
-				"enabledLocales": []any{"fr", "ko"},
+				"enabledLocales": []any{"en", "fr"},
 			})
 			gomega.Expect(dryRun(u)).To(gomega.HaveOccurred())
 		})
@@ -232,7 +256,7 @@ var _ = ginkgo.Describe("Localization API schema", func() {
 		ginkgo.It("rejects English as a translation", func() {
 			env := newEnv("locale-env-en")
 			env.Spec.Locales = crd.LocaleCatalogs{"en": {"bundles.rhel.title": "x"}}
-			gomega.Expect(dryRun(env)).To(gomega.MatchError(gomega.ContainSubstring("English is the default locale")))
+			gomega.Expect(dryRun(env)).To(gomega.MatchError(gomega.ContainSubstring("English is the source language")))
 		})
 
 		ginkgo.It("rejects malformed keys", func() {
@@ -287,7 +311,7 @@ var _ = ginkgo.Describe("Localization API schema", func() {
 
 		ginkgo.It("persists and returns localization fields unchanged", func() {
 			env := newEnv("locale-persist-env")
-			env.Spec.EnabledLocales = []crd.EnabledLocale{{ID: "fr", Name: "Français"}, {ID: "zh-CN", Name: "简体中文"}}
+			env.Spec.EnabledLocales = []crd.EnabledLocale{english, {ID: "fr", Name: "Français"}, {ID: "zh-CN", Name: "简体中文"}}
 			env.Spec.Locales = crd.LocaleCatalogs{"fr": {"bundles.rhel.title": "RHEL"}}
 			gomega.Expect(k8sClient.Create(ctx, env)).To(gomega.Succeed())
 			defer func() { gomega.Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, env))).To(gomega.Succeed()) }()
@@ -304,8 +328,11 @@ var _ = ginkgo.Describe("Localization API schema", func() {
 			name := "locale-ssa-env"
 			apply := func(owner, id, label string) {
 				obj := unstructuredCR("FrontendEnvironment", name, "", map[string]any{
-					"sso":            "https://sso.example.com/auth",
-					"enabledLocales": []any{map[string]any{"id": id, "name": label}},
+					"sso": "https://sso.example.com/auth",
+					"enabledLocales": []any{
+						map[string]any{"id": "en", "name": "English", "default": true},
+						map[string]any{"id": id, "name": label},
+					},
 				})
 				gomega.Expect(k8sClient.Patch(ctx, obj, client.Apply, client.FieldOwner(owner))).To(gomega.Succeed())
 			}
@@ -319,6 +346,7 @@ var _ = ginkgo.Describe("Localization API schema", func() {
 			got := &crd.FrontendEnvironment{}
 			gomega.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: name}, got)).To(gomega.Succeed())
 			gomega.Expect(got.Spec.EnabledLocales).To(gomega.ConsistOf(
+				english,
 				crd.EnabledLocale{ID: "fr", Name: "Français"},
 				crd.EnabledLocale{ID: "ko", Name: "한국어"},
 			))

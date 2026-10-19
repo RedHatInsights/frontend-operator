@@ -30,24 +30,25 @@ type LocaleMessages map[string]LocaleMessage
 
 // LocaleCatalogs maps a locale identifier to the translated strings for that
 // locale. Locale identifiers use canonical BCP 47 casing (`fr`, `ko`, `ja`,
-// `zh-CN`). English is the default and is never listed as a translation.
+// `zh-CN`). English is the source language and is never listed as a translation.
 // +kubebuilder:validation:MaxProperties=32
 // +kubebuilder:validation:XValidation:rule="self.all(l, size(l) <= 16 && l.matches('^[a-z]{2,3}(-[A-Z][a-z]{3})?(-([A-Z]{2}|[0-9]{3}))?$'))",message="locale identifiers must use canonical BCP 47 casing, e.g. fr, ko, ja, zh-CN, zh-Hant-TW"
-// +kubebuilder:validation:XValidation:rule="!('en' in self)",message="English is the default locale and must not be listed as a translation"
+// +kubebuilder:validation:XValidation:rule="!('en' in self)",message="English is the source language and must not be listed as a translation"
 type LocaleCatalogs map[string]LocaleMessages
 
 // EnabledLocale is a locale that an environment generates and offers to users.
-// It carries what the generated locales.json needs for each entry.
+// It is one entry of the generated locales.json.
 type EnabledLocale struct {
-	// Locale identifier in canonical BCP 47 casing (e.g. `fr`, `ko`, `ja`, `zh-CN`).
-	// English is the default and must not be listed.
+	// Locale identifier in canonical BCP 47 casing (e.g. `en`, `fr`, `ko`, `ja`, `zh-CN`).
 	// +kubebuilder:validation:MaxLength=16
 	// +kubebuilder:validation:Pattern=`^[a-z]{2,3}(-[A-Z][a-z]{3})?(-([A-Z]{2}|[0-9]{3}))?$`
-	// +kubebuilder:validation:XValidation:rule="self != 'en'",message="English is the default locale and must not be listed"
 	ID string `json:"id" yaml:"id"`
 	// Display name of the locale, shown to users in the locale picker
 	// (typically the native name, e.g. `Français`).
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=64
 	Name string `json:"name" yaml:"name"`
+	// Default marks the locale selected for users who have not chosen one.
+	// Exactly one entry must be the default.
+	Default bool `json:"default,omitempty" yaml:"default,omitempty"`
 }
