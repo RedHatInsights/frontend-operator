@@ -1,0 +1,22 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  # Every manifest under invalid/ must be rejected at admission by the CRD
+  # schema, with the message named on its first line, so it never reaches the
+  # reconciler.
+  - script: |
+      status=0
+      for f in invalid/*.yaml; do
+        [ -e "$f" ] || { echo "FAIL: no manifests under invalid/"; exit 1; }
+        expected=$(sed -n '1s/^# expect: //p' "$f")
+        if out=$(kubectl apply -f "$f" 2>&1); then
+          echo "FAIL: $f was accepted"
+          status=1
+        elif ! echo "$out" | grep -qF "$expected"; then
+          echo "FAIL: $f rejected without '$expected': $out"
+          status=1
+        else
+          echo "PASS: $f rejected"
+        fi
+      done
+      exit $status

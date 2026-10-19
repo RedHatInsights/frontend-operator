@@ -1,0 +1,11 @@
+# expect: English (en) must be listed
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: english-missing
+spec:
+  sso: https://sso.foo.redhat.com
+  enabledLocales:
+    - id: fr
+      name: Français
+      default: true
