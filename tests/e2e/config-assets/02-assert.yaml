@@ -1,0 +1,38 @@
+---
+# The env-level config upload job is created, owned by the FrontendEnvironment,
+# mounts the generated config ConfigMap, and invokes valpop with the app set to
+# "config" (reusing the pushcache upload path).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-config-assets-environment-config-assets
+  namespace: test-config-assets
+  labels:
+    frontendenv: test-config-assets-environment
+    component: frontend-config
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: FrontendEnvironment
+      name: test-config-assets-environment
+spec:
+  template:
+    metadata:
+      annotations:
+        valpop-image: quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop:9843de0
+    spec:
+      restartPolicy: Never
+      volumes:
+        - name: config-volume
+          configMap:
+            name: test-config-assets-environment
+            defaultMode: 420
+      containers:
+        - name: valpop-config
+          image: quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop:9843de0
+          command:
+            - /bin/bash
+            - '-c'
+            - 'valpop populate -r config -s /config -i quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop:9843de0 --valpop-image quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop:9843de0 --timeout 172800 --min-asset-records 3 --bucket frontend --hostname minio-service.minio-env.svc.cluster.local --port 9000 --username minioadmin --password minioadmin'
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config

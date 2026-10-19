@@ -133,6 +133,15 @@ func (r *FrontendReconciliation) run() error {
 			return err
 		}
 	}
+
+	// Config asset upload runs last and is independent of container deployments: it must
+	// run even when DisableContainerDeployments is set, so config can be published to S3
+	// in clusters that run no per-Frontend Deployments (replacing chrome-service). Placed
+	// after the deployment/ingress work so a stale-job requeue does not skip them.
+	if err := r.reconcileConfigAssetsJob(configHash); err != nil {
+		return err
+	}
+
 	return nil
 }
 
