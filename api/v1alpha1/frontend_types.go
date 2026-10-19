@@ -227,6 +227,11 @@ type ChromeNavItem struct {
 	SegmentRef       *SegmentRef `json:"segmentRef,omitempty" yaml:"segmentRef,omitempty"`
 	BundleSegmentRef string      `json:"bundleSegmentRef,omitempty" yaml:"bundleSegmentRef,omitempty"`
 	FrontendRef      string      `json:"frontendRef,omitempty" yaml:"frontendRef,omitempty"`
+	// Runtime translation key prefix of this item (e.g. `nav.rbac.iam.user-access.users`),
+	// set by the operator in generated bundles when the environment enables locales.
+	// Chrome looks up `<i18nKey>.title` and `<i18nKey>.product` in messages.<locale>.json.
+	// Output only: any value in a Frontend spec is ignored.
+	I18nKey string `json:"i18nKey,omitempty" yaml:"i18nKey,omitempty"`
 }
 
 func (navItem ChromeNavItem) HasSegmentRef() bool {
