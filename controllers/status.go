@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func SetFrontendConditions(ctx context.Context, client client.Client, o *crd.Frontend, state string, conditionErr error) error {
+func SetFrontendConditions(ctx context.Context, client client.Client, o *crd.Frontend, state string, conditionErr error, localeConditions ...*metav1.Condition) error {
 	// RetryOnConflict handles 409 conflicts caused by the Frontend CR's
 	// resourceVersion changing between the reconciler's initial Get and this
 	// status update (e.g. annotation changes, concurrent reconcilers).
@@ -76,6 +76,13 @@ func SetFrontendConditions(ctx context.Context, client client.Client, o *crd.Fro
 			innerCondition := condition
 			meta.SetStatusCondition(&o.Status.Conditions, innerCondition)
 		}
+		if len(localeConditions) > 0 {
+			if localeConditions[0] == nil {
+				meta.RemoveStatusCondition(&o.Status.Conditions, crd.LocalesValid)
+			} else {
+				meta.SetStatusCondition(&o.Status.Conditions, *localeConditions[0])
+			}
+		}
 
 		o.Status.Ready = frontendStatus
 		stats, _, err := GetFrontendFigures(ctx, client, o)
@@ -93,6 +100,39 @@ func SetFrontendConditions(ctx context.Context, client client.Client, o *crd.Fro
 		}
 		return nil
 	})
+}
+
+// SetFrontendLocalesCondition upserts the LocalesValid condition, or removes it
+// when condition is nil (localization not in use). LastTransitionTime only
+// moves when the status changes.
+func SetFrontendLocalesCondition(ctx context.Context, client client.Client, o *crd.Frontend, condition *metav1.Condition) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		if err := client.Get(ctx, types.NamespacedName{Name: o.Name, Namespace: o.Namespace}, o); err != nil {
+			return err
+		}
+		changed := false
+		if condition == nil {
+			changed = meta.RemoveStatusCondition(&o.Status.Conditions, crd.LocalesValid)
+		} else {
+			changed = meta.SetStatusCondition(&o.Status.Conditions, *condition)
+		}
+		if !changed {
+			return nil
+		}
+		return client.Status().Update(ctx, o)
+	})
+}
+
+// setPeerLocalesConditions sets the LocalesValid condition of other Frontends
+// of the environment, skipping those deleted meanwhile.
+func setPeerLocalesConditions(ctx context.Context, c client.Client, conditions map[types.NamespacedName]*metav1.Condition) error {
+	for nn, condition := range conditions {
+		peer := &crd.Frontend{ObjectMeta: metav1.ObjectMeta{Name: nn.Name, Namespace: nn.Namespace}}
+		if err := SetFrontendLocalesCondition(ctx, c, peer, condition); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func GetFrontendResources(ctx context.Context, client client.Client, o *crd.Frontend) (bool, error) {

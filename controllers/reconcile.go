@@ -11,6 +11,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	localUtil "github.com/RedHatInsights/frontend-operator/controllers/utils"
@@ -49,6 +50,13 @@ type FrontendReconciliation struct {
 	Frontend            *crd.Frontend
 	Ctx                 context.Context
 	Client              client.Client
+	// locales.json entries, set by setupLocaleConfigMaps before the base
+	// ConfigMaps are populated
+	localesJSON []localeEntry
+	// problems with the locale output, for the LocalesValid condition
+	localeReport localeReport
+	// when the locale output needs another reconcile (retry, pruning), 0 if not
+	requeueAfter time.Duration
 }
 
 // setupConfigMapWithLabels creates a ConfigMap with the specified name and namespace,
@@ -1714,7 +1722,7 @@ func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnviro
 			for _, navSegment := range frontend.Spec.NavigationSegments {
 				navSegmentsCache[frontend.Name][navSegment.SegmentID] = &NavSegmentCacheEntry{
 					IsFilled: false,
-					NavItems: *navSegment.NavItems,
+					NavItems: clearNavI18nKeys(*navSegment.NavItems),
 				}
 			}
 		}
@@ -1725,7 +1733,10 @@ func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnviro
 	for _, frontend := range feList.Items {
 		if frontend.Spec.FeoConfigEnabled && frontend.Spec.BundleSegments != nil {
 			for _, bundleNavSegment := range frontend.Spec.BundleSegments {
-				navItemsWithRefs := addRefsToNavItems(*bundleNavSegment.NavItems, bundleNavSegment.BundleID, frontend.Name, bundleNavSegment.SegmentID)
+				navItemsWithRefs := addRefsToNavItems(clearNavI18nKeys(*bundleNavSegment.NavItems), bundleNavSegment.BundleID, frontend.Name, bundleNavSegment.SegmentID)
+				if len(feEnvironment.Spec.EnabledLocales) > 0 {
+					navItemsWithRefs = stampNavI18nKeys(navItemsWithRefs, navKeyPrefix(frontend.Name, bundleNavSegment.BundleID, bundleNavSegment.SegmentID))
+				}
 				bundleNavSegment.NavItems = &navItemsWithRefs
 				bundleNavSegmentMap[bundleNavSegment.BundleID] = append(bundleNavSegmentMap[bundleNavSegment.BundleID], *bundleNavSegment)
 				skippedNavItemsMap[bundleNavSegment.BundleID] = append(skippedNavItemsMap[bundleNavSegment.BundleID], getNavItemPath(frontend.Name, bundleNavSegment.BundleID, bundleNavSegment.SegmentID))
@@ -1895,6 +1906,13 @@ func (r *FrontendReconciliation) setupConfigMaps() ([]*v1.ConfigMap, error) {
 			Namespace: n,
 		})
 	}
+
+	// Locale messages go out first, so locales.json only advertises files that exist.
+	localesJSON, err := r.setupLocaleConfigMaps(frontendList, frontendCFGContextName)
+	if err != nil {
+		return []*v1.ConfigMap{}, err
+	}
+	r.localesJSON = localesJSON
 
 	defaultCfgMap, err := r.createConfigMap(defaultNN, frontendList, true, nil)
 	if err != nil {
@@ -2139,8 +2157,8 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 		cfgMap.Data["exports.json"] = string(exportsJSONData)
 	}
 
-	if len(r.FrontendEnvironment.Spec.EnabledLocales) > 0 {
-		localesJSONData, err := json.Marshal(r.FrontendEnvironment.Spec.EnabledLocales)
+	if len(r.localesJSON) > 0 {
+		localesJSONData, err := json.Marshal(r.localesJSON)
 		if err != nil {
 			return err
 		}

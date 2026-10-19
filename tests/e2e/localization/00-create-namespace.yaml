@@ -6,3 +6,11 @@ metadata:
 spec:
   finalizers:
   - kubernetes
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-localization-target
+spec:
+  finalizers:
+  - kubernetes

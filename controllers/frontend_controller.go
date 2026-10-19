@@ -19,13 +19,16 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	apps "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -189,6 +192,9 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// against itself (Owns watch triggers, FrontendEnvironment/Bundle fan-out).
 	// Each retry re-fetches resources to get the latest resourceVersion.
 	var cache resCache.ObjectCache
+	var localesCondition *metav1.Condition
+	var peerLocalesConditions map[types.NamespacedName]*metav1.Condition
+	var requeueAfter time.Duration
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		// Re-fetch Frontend and FrontendEnvironment on each retry to get the
 		// latest resourceVersion, preventing stale-object 409 loops.
@@ -226,6 +232,9 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		if err := reconciliation.run(); err != nil {
 			return err
 		}
+		localesCondition = reconciliation.localesCondition()
+		peerLocalesConditions = reconciliation.peerLocalesConditions()
+		requeueAfter = reconciliation.requeueAfter
 
 		return cache.ApplyAll()
 	})
@@ -256,13 +265,18 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	managedFrontendsMetric.Set(float64(len(managedFrontends)))
 
 	log.Info("Reconciliation successful", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
-	if err = SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil); err != nil {
+	if err = SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil, localesCondition); err != nil {
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	if err = setPeerLocalesConditions(ctx, r.Client, peerLocalesConditions); err != nil {
+		log.Info("Cannot update LocalesValid of other Frontends", "error", err.Error())
 		return ctrl.Result{Requeue: true}, nil
 	}
 
 	log.Info("Finished reconcile")
 	r.reconciliationMetrics.stop()
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: requeueAfter}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -287,6 +301,16 @@ func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&crd.Frontend{}, builder.WithPredicates(defaultPredicate(r.Log, "frontend"))).
 		Watches(
+			&v1.ConfigMap{},
+			handler.EnqueueRequestsFromMapFunc(r.appsToEnqueueUponLocaleMessagesUpdate()),
+			builder.WithPredicates(localeMessagesPredicate()),
+		).
+		Watches(
+			&crd.Frontend{},
+			handler.EnqueueRequestsFromMapFunc(r.appsToEnqueueUponFrontendDeletion()),
+			builder.WithPredicates(frontendDeletionPredicate()),
+		).
+		Watches(
 			&crd.Bundle{},
 			handler.EnqueueRequestsFromMapFunc(r.appsToEnqueueUponBundleUpdate()),
 		).
@@ -307,6 +331,31 @@ func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
+func localeMessagesPredicate() predicate.Funcs {
+	isLocaleMessages := func(obj client.Object) bool {
+		return obj.GetLabels()[messagesLocaleLabel] != "" && obj.GetLabels()["frontendenv"] != ""
+	}
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return isLocaleMessages(e.Object)
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return isLocaleMessages(e.Object)
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldCM, oldOK := e.ObjectOld.(*v1.ConfigMap)
+			newCM, newOK := e.ObjectNew.(*v1.ConfigMap)
+			if !oldOK || !newOK || !isLocaleMessages(oldCM) && !isLocaleMessages(newCM) {
+				return false
+			}
+			return !equality.Semantic.DeepEqual(oldCM.Data, newCM.Data) || !equality.Semantic.DeepEqual(oldCM.BinaryData, newCM.BinaryData)
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return isLocaleMessages(e.Object)
+		},
+	}
+}
+
 func logMessage(logr logr.Logger, msg string, keysAndValues ...interface{}) {
 	logr.Info(msg, keysAndValues...)
 }
@@ -324,6 +373,13 @@ func defaultPredicate(logr logr.Logger, ctrlName string) predicate.Funcs {
 			return true
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldFrontend, oldOK := e.ObjectOld.(*crd.Frontend)
+			newFrontend, newOK := e.ObjectNew.(*crd.Frontend)
+			// Frontend status is written by this controller. Spec/metadata changes
+			// still pass through, and owned resources have their own watches.
+			if oldOK && newOK && isFrontendStatusOnlyUpdate(oldFrontend, newFrontend) {
+				return false
+			}
 			gvk, _ := utils.GetKindFromObj(scheme, e.ObjectOld)
 			logMessage(logr, "Reconciliation trigger", "ctrl", ctrlName, "type", "update", "resType", gvk.Kind, "name", e.ObjectNew.GetName(), "namespace", e.ObjectNew.GetNamespace(), "old", e.ObjectOld, "new", e.ObjectNew)
 			return true
@@ -332,6 +388,37 @@ func defaultPredicate(logr logr.Logger, ctrlName string) predicate.Funcs {
 			gvk, _ := utils.GetKindFromObj(scheme, e.Object)
 			logMessage(logr, "Reconciliation trigger", "ctrl", ctrlName, "type", "generic", "resType", gvk.Kind, "name", e.Object.GetName(), "namespace", e.Object.GetNamespace())
 			return true
+		},
+	}
+}
+
+func isFrontendStatusOnlyUpdate(oldFrontend, newFrontend *crd.Frontend) bool {
+	if equality.Semantic.DeepEqual(oldFrontend.Status, newFrontend.Status) {
+		return false
+	}
+	oldCopy := oldFrontend.DeepCopy()
+	newCopy := newFrontend.DeepCopy()
+	oldCopy.Status = newCopy.Status
+	oldCopy.ResourceVersion = newCopy.ResourceVersion
+	oldCopy.ManagedFields = newCopy.ManagedFields
+	return equality.Semantic.DeepEqual(oldCopy, newCopy)
+}
+
+func frontendDeletionPredicate() predicate.Funcs {
+	return predicate.Funcs{
+		CreateFunc: func(event.CreateEvent) bool {
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldFrontend, oldOK := e.ObjectOld.(*crd.Frontend)
+			newFrontend, newOK := e.ObjectNew.(*crd.Frontend)
+			return oldOK && newOK && oldFrontend.DeletionTimestamp == nil && newFrontend.DeletionTimestamp != nil
+		},
+		DeleteFunc: func(event.DeleteEvent) bool {
+			return true
+		},
+		GenericFunc: func(event.GenericEvent) bool {
+			return false
 		},
 	}
 }
@@ -425,6 +512,57 @@ func (r *FrontendReconciler) appsToEnqueueUponFrontendEnvironmentUpdate() handle
 
 		return reqs
 	}
+}
+
+func (r *FrontendReconciler) appsToEnqueueUponLocaleMessagesUpdate() handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		envName := obj.GetLabels()["frontendenv"]
+		if envName == "" {
+			return nil
+		}
+		return r.localeRepublishRequests(ctx, envName, nil)
+	}
+}
+
+func (r *FrontendReconciler) appsToEnqueueUponFrontendDeletion() handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		frontend, ok := obj.(*crd.Frontend)
+		if !ok || frontend.Spec.EnvName == "" {
+			return nil
+		}
+		return r.localeRepublishRequests(ctx, frontend.Spec.EnvName, frontend)
+	}
+}
+
+// localeRepublishRequests picks one live Frontend, other than skip, in each
+// namespace of the environment. A reconcile republishes the target messages
+// and all peer conditions, but writes the source messages only in its own
+// namespace, so every namespace needs one.
+func (r *FrontendReconciler) localeRepublishRequests(ctx context.Context, envName string, skip *crd.Frontend) []reconcile.Request {
+	frontends := &crd.FrontendList{}
+	if err := r.Client.List(ctx, frontends, client.MatchingFields{"spec.envName": envName}); err != nil {
+		r.Log.Error(err, "Failed to list Frontends to republish locale messages", "environment", envName)
+		return nil
+	}
+	sort.Slice(frontends.Items, func(i, j int) bool {
+		if frontends.Items[i].Namespace != frontends.Items[j].Namespace {
+			return frontends.Items[i].Namespace < frontends.Items[j].Namespace
+		}
+		return frontends.Items[i].Name < frontends.Items[j].Name
+	})
+	reqs := []reconcile.Request{}
+	seen := map[string]bool{}
+	for _, frontend := range frontends.Items {
+		if frontend.DeletionTimestamp != nil || frontend.Spec.Disabled || seen[frontend.Namespace] {
+			continue
+		}
+		if skip != nil && frontend.Namespace == skip.Namespace && frontend.Name == skip.Name {
+			continue
+		}
+		seen[frontend.Namespace] = true
+		reqs = append(reqs, reconcile.Request{NamespacedName: types.NamespacedName{Name: frontend.Name, Namespace: frontend.Namespace}})
+	}
+	return reqs
 }
 
 func (r *FrontendReconciler) finalizeApp(reqLogger logr.Logger, a *crd.Frontend) error {
