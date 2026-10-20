@@ -641,7 +641,6 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
-	annotations["valpop-image"] = valpopImage
 	annotations["kube-linter.io/ignore-all"] = "we don't need no any checking"
 
 	j.Spec.Template.ObjectMeta.SetAnnotations(annotations)
@@ -1092,6 +1091,11 @@ func (r *FrontendReconciliation) createOrUpdateJob(ident resCache.ResourceIdentS
 		annotations = make(map[string]string)
 	}
 	annotations["frontend-image"] = r.Frontend.Spec.Image
+	// Track the valpop image on every job (cachebust and pushcache alike) so both
+	// are recreated in lockstep when the environment's valpop image changes. Set
+	// unconditionally — including the empty string when no valpop image is
+	// configured — so the job is never treated as stale by isJobFromCurrentValpopImage.
+	annotations["valpop-image"] = r.FrontendEnvironment.Spec.ValpopImage
 	annotations["kube-linter.io/ignore-all"] = "we don't need no any checking"
 
 	j.Spec.Template.ObjectMeta.SetAnnotations(annotations)
