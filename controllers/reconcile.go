@@ -1720,9 +1720,14 @@ func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnviro
 				navSegmentsCache[frontend.Name] = make(map[string]*NavSegmentCacheEntry)
 			}
 			for _, navSegment := range frontend.Spec.NavigationSegments {
+				navItems := clearNavI18nKeys(*navSegment.NavItems)
+				if len(feEnvironment.Spec.EnabledLocales) > 0 {
+					// keyed by the owning Frontend, so a segment keeps its keys in every bundle that references it
+					navItems = stampNavI18nKeys(navItems, navSegmentKeyPrefix(frontend.Name, navSegment.SegmentID))
+				}
 				navSegmentsCache[frontend.Name][navSegment.SegmentID] = &NavSegmentCacheEntry{
 					IsFilled: false,
-					NavItems: clearNavI18nKeys(*navSegment.NavItems),
+					NavItems: navItems,
 				}
 			}
 		}

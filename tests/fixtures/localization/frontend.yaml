@@ -41,6 +41,37 @@ spec:
             - id: preferences
               title: Preferences
               href: /iam/user-access/preferences
+        - segmentRef:
+            frontendName: rbac
+            segmentId: shared-access
+  navigationSegments:
+    - segmentId: shared-access
+      navItems:
+        - id: workspaces
+          title: Workspaces
+          href: /iam/user-access/workspaces
+  widgetRegistry:
+    - scope: landing
+      module: ./RbacWidget
+      config:
+        title: My User Access
+        icon: UsersIcon
+        headerLink:
+          title: View access
+          href: /iam/user-access
+      defaults:
+        w: 1
+        h: 4
+        maxH: 10
+        minH: 1
+  baseWidgetLayouts:
+    - name: rbacLanding
+      displayName: Access overview
+      templateConfig:
+        sm: []
+        md: []
+        lg: []
+        xl: []
   searchEntries:
     - id: users
       title: Users
@@ -69,5 +100,10 @@ spec:
       bundleSegments.iam.user-access.navItems.access.routes.groups.title: Groupes
       bundleSegments.iam.user-access.navItems.access.routes.roles.title: Rôles
       bundleSegments.iam.user-access.navItems.access.routes.roles.product: Accès Red Hat
+      bundleSegments.iam.user-access.navItems.settings.navItems.preferences.title: Préférences
+      navigationSegments.shared-access.navItems.workspaces.title: Espaces de travail
+      widgetRegistry.landing.rbacwidget.default.title: Mon accès utilisateur
+      widgetRegistry.landing.rbacwidget.default.headerLink.title: Voir les accès
+      baseWidgetLayouts.rbacLanding.displayName: Vue d'ensemble des accès
       serviceTiles.security.access.user-access.title: Accès utilisateur
       serviceTiles.security.access.user-access.description: Gérer qui peut faire quoi

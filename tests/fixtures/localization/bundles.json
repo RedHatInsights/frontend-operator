@@ -51,13 +51,26 @@
             "title": "Preferences",
             "id": "preferences",
             "bundleSegmentRef": "user-access",
-            "frontendRef": "rbac"
+            "frontendRef": "rbac",
+            "i18nKey": "nav.rbac.iam.user-access.settings.navItems.preferences"
           }
         ],
         "position": 100,
         "bundleSegmentRef": "user-access",
         "frontendRef": "rbac",
         "i18nKey": "nav.rbac.iam.user-access.settings"
+      },
+      {
+        "href": "/iam/user-access/workspaces",
+        "title": "Workspaces",
+        "id": "workspaces",
+        "segmentRef": {
+          "frontendName": "rbac",
+          "segmentId": "shared-access"
+        },
+        "bundleSegmentRef": "user-access",
+        "frontendRef": "rbac",
+        "i18nKey": "navseg.rbac.shared-access.workspaces"
       }
     ]
   }

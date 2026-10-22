@@ -16,9 +16,19 @@ import (
 //	searchEntries.<id>.<field>                     -> search.<frontend>-<env>-<id>.<field>
 //	searchEntries.<id>.alt_title.<slug>            -> search.<frontend>-<env>-<id>.alt_title.<slug>
 //	serviceTiles.<section>.<group>.<id>.<field>    -> tile.<frontend>.<section>.<group>.<id>.<field>
-//	bundleSegments.<b>.<s>.navItems.<id>[.routes.<id>]*.<field>
-//	                                               -> nav.<frontend>.<b>.<s>.<id>[.routes.<id>]*.<field>
+//	bundleSegments.<b>.<s>.navItems.<id>[.routes.<id>|.navItems.<id>]*.<field>
+//	                                               -> nav.<frontend>.<b>.<s>.<id>[.routes.<id>|.navItems.<id>]*.<field>
+//	navigationSegments.<s>.navItems.<id>[.routes.<id>|.navItems.<id>]*.<field>
+//	                                               -> navseg.<frontend>.<s>.<id>[...].<field>
+//	widgetRegistry.<scope>.<module>.<import>.title -> widget.<frontend>.<scope>.<module>.<import>.title
+//	widgetRegistry.<scope>.<module>.<import>.headerLink.title
+//	                                               -> widget.<frontend>.<scope>.<module>.<import>.headerLink.title
+//	baseWidgetLayouts.<name>.displayName           -> widgetLayout.<frontend>.<name>.displayName
 //	module.defaultDocumentTitle                    -> module.<moduleName>.defaultDocumentTitle
+//
+// A navigation segment is keyed by the Frontend that defines it, so its items
+// keep one key in every bundle that references it. Widgets have no id: <module>
+// and <import> are aliasSlug of module and importName ("default" when unset).
 //
 // Environment keys:
 //
@@ -132,15 +142,40 @@ func frontendKeyTable(frontend *crd.Frontend) *localeKeyTable {
 			"bundleSegments."+segment.BundleID+"."+segment.SegmentID+".navItems",
 			navKeyPrefix(frontend.Name, segment.BundleID, segment.SegmentID))
 	}
+	for _, segment := range frontend.Spec.NavigationSegments {
+		if segment == nil || segment.NavItems == nil {
+			continue
+		}
+		addNavKeys(t, *segment.NavItems,
+			"navigationSegments."+segment.SegmentID+".navItems",
+			navSegmentKeyPrefix(frontend.Name, segment.SegmentID))
+	}
+	for _, widget := range frontend.Spec.WidgetRegistry {
+		if widget == nil {
+			continue
+		}
+		catalog, runtime, ok := widgetKeys(frontend.Name, widget)
+		if !ok {
+			continue
+		}
+		t.add(catalog+".title", runtime+".title")
+		t.add(catalog+".headerLink.title", runtime+".headerLink.title")
+	}
+	for _, layout := range frontend.Spec.BaseWidgetLayouts {
+		if layout == nil || layout.Name == "" {
+			continue
+		}
+		t.add("baseWidgetLayouts."+layout.Name+".displayName", "widgetLayout."+frontend.Name+"."+layout.Name+".displayName")
+	}
 	if frontend.Spec.Module != nil {
 		t.add(moduleTitleKey, "module."+moduleName(frontend)+".defaultDocumentTitle")
 	}
 	return t
 }
 
-// addNavKeys mirrors stampNavI18nKeys: items with an id and their nested
-// routes get keys; group children, segment references and items without an id
-// do not.
+// addNavKeys mirrors stampNavI18nKeys: items with an id, their nested routes
+// and their group children get keys; segment references and items without an
+// id do not.
 func addNavKeys(t *localeKeyTable, navItems []crd.ChromeNavItem, catalogPrefix, runtimePrefix string) {
 	for _, navItem := range navItems {
 		if navItem.ID == "" || navItem.HasSegmentRef() {
@@ -153,6 +188,9 @@ func addNavKeys(t *localeKeyTable, navItems []crd.ChromeNavItem, catalogPrefix, 
 		}
 		if navItem.Routes != nil {
 			addNavKeys(t, navItem.Routes, catalog+".routes", runtime+".routes")
+		}
+		if navItem.NavItems != nil {
+			addNavKeys(t, navItem.NavItems, catalog+".navItems", runtime+".navItems")
 		}
 	}
 }
@@ -211,9 +249,32 @@ func navKeyPrefix(frontendName, bundleID, segmentID string) string {
 	return strings.Join([]string{"nav", frontendName, bundleID, segmentID}, ".")
 }
 
-// stampNavI18nKeys sets i18nKey on the nav items of one bundle segment and on
-// their nested routes, mirroring the catalog key path the extractor uses. Group
-// children and items without an id have no catalog key and get none.
+func navSegmentKeyPrefix(frontendName, segmentID string) string {
+	return strings.Join([]string{"navseg", frontendName, segmentID}, ".")
+}
+
+// widgetKeys returns the catalog and runtime key bases of a widget, matching
+// the widgetRegistry keys of i18n-tooling's feo-template.ts. ok is false when
+// the extractor would reject the widget (a module or importName without an
+// ASCII letter or digit).
+func widgetKeys(frontendName string, widget *crd.WidgetModuleFederationMetadata) (catalog, runtime string, ok bool) {
+	importName := widget.ImportName
+	if importName == "" {
+		importName = "default"
+	}
+	module, imported := aliasSlug(widget.Module), aliasSlug(importName)
+	if widget.Scope == "" || module == "" || imported == "" {
+		return "", "", false
+	}
+	catalog = strings.Join([]string{"widgetRegistry", widget.Scope, module, imported}, ".")
+	runtime = strings.Join([]string{"widget", frontendName, widget.Scope, module, imported}, ".")
+	return catalog, runtime, true
+}
+
+// stampNavI18nKeys sets i18nKey on the nav items of one bundle or navigation
+// segment, their nested routes and their group children, mirroring the catalog
+// key path the extractor uses. Items without an id have no catalog key and get
+// none.
 func stampNavI18nKeys(navItems []crd.ChromeNavItem, prefix string) []crd.ChromeNavItem {
 	res := make([]crd.ChromeNavItem, 0, len(navItems))
 	for _, navItem := range navItems {
@@ -221,6 +282,9 @@ func stampNavI18nKeys(navItems []crd.ChromeNavItem, prefix string) []crd.ChromeN
 			navItem.I18nKey = prefix + "." + navItem.ID
 			if navItem.Routes != nil {
 				navItem.Routes = stampNavI18nKeys(navItem.Routes, navItem.I18nKey+".routes")
+			}
+			if navItem.NavItems != nil {
+				navItem.NavItems = stampNavI18nKeys(navItem.NavItems, navItem.I18nKey+".navItems")
 			}
 		}
 		res = append(res, navItem)

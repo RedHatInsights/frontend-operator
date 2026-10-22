@@ -64,6 +64,7 @@ func TestFrontendKeyTable(t *testing.T) {
 		"bundleSegments.iam.ua.navItems.access.routes.roles.product":           "nav.insights-rbac.iam.ua.access.routes.roles.product",
 		"bundleSegments.iam.ua.navItems.access.routes.roles.routes.deep.title": "nav.insights-rbac.iam.ua.access.routes.roles.routes.deep.title",
 		"bundleSegments.iam.ua.navItems.settings.title":                        "nav.insights-rbac.iam.ua.settings.title",
+		"bundleSegments.iam.ua.navItems.settings.navItems.grouped.title":       "nav.insights-rbac.iam.ua.settings.navItems.grouped.title",
 		// module name falls back to the camelCase Frontend name without a moduleID
 		"module.defaultDocumentTitle": "module.insightsRbac.defaultDocumentTitle",
 	})
@@ -72,7 +73,6 @@ func TestFrontendKeyTable(t *testing.T) {
 		"searchEntries.users.alt_title",
 		"searchEntries.nobody.title",
 		"bundleSegments.iam.ua.navItems.users.href",
-		"bundleSegments.iam.ua.navItems.settings.navItems.grouped.title",
 		"bundleSegments.iam.ua.navItems.ref.title",
 		"module.title",
 	} {
@@ -85,6 +85,44 @@ func TestFrontendKeyTable(t *testing.T) {
 	noModule.Spec.Module = nil
 	if _, known, _ := frontendKeyTable(&noModule).lookup("module.defaultDocumentTitle"); known {
 		t.Error("module key known for a Frontend without a module")
+	}
+}
+
+// Navigation segments are keyed by their owning Frontend; widgets, which have
+// no id, by scope and the slugs of module and importName, as feo extract does.
+func TestFrontendKeyTableSegmentsWidgetsLayouts(t *testing.T) {
+	fe := localeTestFrontend("vulnerability", true, nil)
+	segmentItems := []crd.ChromeNavItem{
+		{ID: "vulnerability", Expandable: true, Routes: []crd.ChromeNavItem{{ID: "cves"}}},
+		{ID: "group", GroupID: "g", NavItems: []crd.ChromeNavItem{{ID: "child"}}},
+		{ID: "ref", SegmentRef: &crd.SegmentRef{FrontendName: "other", SegmentID: "s"}},
+	}
+	fe.Spec.NavigationSegments = []*crd.NavigationSegment{{SegmentID: "vulnerability-nav", NavItems: &segmentItems}}
+	fe.Spec.WidgetRegistry = []*crd.WidgetModuleFederationMetadata{
+		{Scope: "landing", Module: "./OpenShiftWidget"},
+		{Scope: "landing", Module: "./OpenShiftWidget", ImportName: "AIWidget"},
+		{Scope: "landing", Module: "./--"},
+	}
+	fe.Spec.BaseWidgetLayouts = []*crd.BaseWidgetDashboardTemplate{{Name: "landingPage"}}
+
+	table := frontendKeyTable(&fe)
+	checkKeyTable(t, table, map[string]string{
+		"navigationSegments.vulnerability-nav.navItems.vulnerability.title":             "navseg.vulnerability.vulnerability-nav.vulnerability.title",
+		"navigationSegments.vulnerability-nav.navItems.vulnerability.routes.cves.title": "navseg.vulnerability.vulnerability-nav.vulnerability.routes.cves.title",
+		"navigationSegments.vulnerability-nav.navItems.group.navItems.child.product":    "navseg.vulnerability.vulnerability-nav.group.navItems.child.product",
+		"widgetRegistry.landing.openshiftwidget.default.title":                          "widget.vulnerability.landing.openshiftwidget.default.title",
+		"widgetRegistry.landing.openshiftwidget.default.headerLink.title":               "widget.vulnerability.landing.openshiftwidget.default.headerLink.title",
+		"widgetRegistry.landing.openshiftwidget.aiwidget.title":                         "widget.vulnerability.landing.openshiftwidget.aiwidget.title",
+		"baseWidgetLayouts.landingPage.displayName":                                     "widgetLayout.vulnerability.landingPage.displayName",
+	})
+	for _, catalogKey := range []string{
+		"navigationSegments.vulnerability-nav.navItems.ref.title",
+		"widgetRegistry.landing..default.title",
+		"baseWidgetLayouts.landingPage.name",
+	} {
+		if got, known, _ := table.lookup(catalogKey); known {
+			t.Errorf("%s: want unknown, got %q", catalogKey, got)
+		}
 	}
 }
 
@@ -250,8 +288,12 @@ func TestStampNavI18nKeysIgnoresSpecValues(t *testing.T) {
 		{ID: "a", I18nKey: "spoofed", Routes: []crd.ChromeNavItem{{ID: "b", I18nKey: "spoofed"}}},
 		{I18nKey: "spoofed"},
 		{SegmentRef: &crd.SegmentRef{SegmentID: "s"}, ID: "ref"},
+		{ID: "g", GroupID: "g", NavItems: []crd.ChromeNavItem{{ID: "c", I18nKey: "spoofed"}}},
 	})
 	stamped := stampNavI18nKeys(items, "nav.fe.b.s")
+	if got := stamped[3].NavItems[0].I18nKey; got != "nav.fe.b.s.g.navItems.c" {
+		t.Errorf("group child: got %q", got)
+	}
 	if got := stamped[0].I18nKey; got != "nav.fe.b.s.a" {
 		t.Errorf("item: got %q", got)
 	}
