@@ -1451,14 +1451,24 @@ func setupSearchIndex(feList *crd.FrontendList) []crd.SearchEntry {
 	return searchIndex
 }
 
-func setupWidgetRegistry(feList *crd.FrontendList) []crd.WidgetModuleFederationMetadata {
+// setupWidgetRegistry collects the widgets of FEO-enabled Frontends. With
+// localized set, each widget carries its runtime translation key prefix in
+// i18nKey; otherwise i18nKey is cleared.
+func setupWidgetRegistry(feList *crd.FrontendList, localized bool) []crd.WidgetModuleFederationMetadata {
 	widgetRegistry := []crd.WidgetModuleFederationMetadata{}
 
 	for _, frontend := range feList.Items {
 		if frontend.Spec.FeoConfigEnabled {
 			for _, widget := range frontend.Spec.WidgetRegistry {
-				widget.FrontendRef = frontend.Name
-				widgetRegistry = append(widgetRegistry, *widget)
+				generated := *widget
+				generated.FrontendRef = frontend.Name
+				generated.I18nKey = ""
+				if localized {
+					if _, runtime, ok := widgetKeys(frontend.Name, widget); ok {
+						generated.I18nKey = runtime
+					}
+				}
+				widgetRegistry = append(widgetRegistry, generated)
 			}
 		}
 	}
@@ -1471,16 +1481,25 @@ func setupWidgetRegistry(feList *crd.FrontendList) []crd.WidgetModuleFederationM
 	return widgetRegistry
 }
 
-func setupBaseWidgetDashboardTemplates(feList *crd.FrontendList) []crd.BaseWidgetDashboardTemplate {
+// setupBaseWidgetDashboardTemplates collects the layouts of FEO-enabled
+// Frontends. With localized set, each layout carries its runtime translation
+// key prefix in i18nKey, built from the name in the spec before it is made
+// unique; otherwise i18nKey is cleared.
+func setupBaseWidgetDashboardTemplates(feList *crd.FrontendList, localized bool) []crd.BaseWidgetDashboardTemplate {
 	baseWidgetDashboardTemplates := []crd.BaseWidgetDashboardTemplate{}
 
 	for _, frontend := range feList.Items {
 		if frontend.Spec.FeoConfigEnabled && frontend.Spec.BaseWidgetLayouts != nil {
 			for _, template := range frontend.Spec.BaseWidgetLayouts {
-				template.FrontendRef = frontend.Name
+				generated := *template
+				generated.FrontendRef = frontend.Name
+				generated.I18nKey = ""
+				if localized && template.Name != "" {
+					generated.I18nKey = widgetLayoutKeyPrefix(frontend.Name, template.Name)
+				}
 				// ensure bases are unique
-				template.Name = frontend.Name + "-" + template.Name
-				baseWidgetDashboardTemplates = append(baseWidgetDashboardTemplates, *template)
+				generated.Name = frontend.Name + "-" + template.Name
+				baseWidgetDashboardTemplates = append(baseWidgetDashboardTemplates, generated)
 			}
 		}
 	}
@@ -1980,7 +1999,7 @@ func (r *FrontendReconciliation) createBaseWidgetDashboardTemplatesConfigMap(nn 
 		r.Log.Info("Using data from existing config map", "targetConfigMapName", cfgMap.Name, "targetConfigMapNamespace", cfgMap.Namespace, "sourceConfigMapName", sourceConfigMap.Name, "sourceConfigMapNamespace", sourceConfigMap.Namespace)
 		cfgMap.Data = sourceConfigMap.Data
 	} else {
-		baseWidgetDashboardTemplates := setupBaseWidgetDashboardTemplates(frontendList)
+		baseWidgetDashboardTemplates := setupBaseWidgetDashboardTemplates(frontendList, len(r.FrontendEnvironment.Spec.EnabledLocales) > 0)
 
 		baseWidgetDashboardTemplatesJSONData, err := json.Marshal(baseWidgetDashboardTemplates)
 		if err != nil {
@@ -2018,7 +2037,7 @@ func (r *FrontendReconciliation) createWidgetRegistryConfigMap(nn types.Namespac
 		r.Log.Info("Using data from existing config map", "targetConfigMapName", cfgMap.Name, "targetConfigMapNamespace", cfgMap.Namespace, "sourceConfigMapName", sourceConfigMap.Name, "sourceConfigMapNamespace", sourceConfigMap.Namespace)
 		cfgMap.Data = sourceConfigMap.Data
 	} else {
-		widgetRegistry := setupWidgetRegistry(frontendList)
+		widgetRegistry := setupWidgetRegistry(frontendList, len(r.FrontendEnvironment.Spec.EnabledLocales) > 0)
 
 		widgetRegistryJSONData, err := json.Marshal(widgetRegistry)
 		if err != nil {

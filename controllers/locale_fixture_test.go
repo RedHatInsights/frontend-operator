@@ -63,6 +63,9 @@ func TestLocaleFixture(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkJSONFixture(t, "bundles.json", bundles)
+	localized := len(env.Spec.EnabledLocales) > 0
+	checkJSONFixture(t, "widget-registry.json", setupWidgetRegistry(feList, localized))
+	checkJSONFixture(t, "base-widget-dashboard-templates.json", setupBaseWidgetDashboardTemplates(feList, localized))
 
 	for _, locale := range []string{"fr", "ja"} {
 		built := buildLocaleMessages(locale, feList, env)

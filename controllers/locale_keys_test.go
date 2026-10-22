@@ -516,3 +516,41 @@ func TestLocaleKeysInsertionStability(t *testing.T) {
 		}
 	}
 }
+
+// Widgets and layouts carry their runtime key prefix, so Chrome never has to
+// rebuild the slug keys; spec values are ignored and nothing is stamped
+// without locales.
+func TestStampWidgetAndLayoutI18nKeys(t *testing.T) {
+	fe := localeTestFrontend("rbac", true, nil)
+	fe.Spec.WidgetRegistry = []*crd.WidgetModuleFederationMetadata{
+		{Scope: "landing", Module: "./RbacWidget", I18nKey: "spoofed"},
+		{Scope: "landing", Module: "./--"},
+	}
+	fe.Spec.BaseWidgetLayouts = []*crd.BaseWidgetDashboardTemplate{{Name: "rbacLanding", I18nKey: "spoofed"}}
+	feList := &crd.FrontendList{Items: []crd.Frontend{fe}}
+
+	widgets := setupWidgetRegistry(feList, true)
+	keys := map[string]string{}
+	for _, widget := range widgets {
+		keys[widget.Module] = widget.I18nKey
+	}
+	if keys["./RbacWidget"] != "widget.rbac.landing.rbacwidget.default" || keys["./--"] != "" {
+		t.Errorf("widget keys: %v", keys)
+	}
+	layouts := setupBaseWidgetDashboardTemplates(feList, true)
+	if len(layouts) != 1 || layouts[0].I18nKey != "widgetLayout.rbac.rbacLanding" || layouts[0].Name != "rbac-rbacLanding" {
+		t.Errorf("layout: %+v", layouts)
+	}
+	if fe.Spec.WidgetRegistry[0].I18nKey != "spoofed" || fe.Spec.WidgetRegistry[0].FrontendRef != "" {
+		t.Error("the Frontend spec was modified")
+	}
+
+	for _, widget := range setupWidgetRegistry(feList, false) {
+		if widget.I18nKey != "" {
+			t.Errorf("unlocalized widget got %q", widget.I18nKey)
+		}
+	}
+	if got := setupBaseWidgetDashboardTemplates(feList, false)[0].I18nKey; got != "" {
+		t.Errorf("unlocalized layout got %q", got)
+	}
+}

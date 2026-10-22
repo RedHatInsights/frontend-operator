@@ -165,7 +165,7 @@ func frontendKeyTable(frontend *crd.Frontend) *localeKeyTable {
 		if layout == nil || layout.Name == "" {
 			continue
 		}
-		t.add("baseWidgetLayouts."+layout.Name+".displayName", "widgetLayout."+frontend.Name+"."+layout.Name+".displayName")
+		t.add("baseWidgetLayouts."+layout.Name+".displayName", widgetLayoutKeyPrefix(frontend.Name, layout.Name)+".displayName")
 	}
 	if frontend.Spec.Module != nil {
 		t.add(moduleTitleKey, "module."+moduleName(frontend)+".defaultDocumentTitle")
@@ -247,6 +247,10 @@ func moduleName(frontend *crd.Frontend) string {
 
 func navKeyPrefix(frontendName, bundleID, segmentID string) string {
 	return strings.Join([]string{"nav", frontendName, bundleID, segmentID}, ".")
+}
+
+func widgetLayoutKeyPrefix(frontendName, name string) string {
+	return strings.Join([]string{"widgetLayout", frontendName, name}, ".")
 }
 
 func navSegmentKeyPrefix(frontendName, segmentID string) string {
