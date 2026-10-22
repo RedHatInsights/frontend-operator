@@ -6,6 +6,11 @@ type BaseWidgetDashboardTemplate struct {
 	DisplayName    string         `json:"displayName" yaml:"displayName"`                     // The display name of the dashboard template
 	TemplateConfig TemplateConfig `json:"templateConfig" yaml:"templateConfig"`               // The configuration of the dashboard template
 	FrontendRef    string         `json:"frontendRef,omitempty" yaml:"frontendRef,omitempty"` // The frontend reference for the dashboard template
+	// Runtime translation key prefix of this template (e.g. `widgetLayout.rbac.rbacLanding`),
+	// set by the operator in the generated templates when the environment enables locales.
+	// Chrome looks up `<i18nKey>.displayName` in messages.<locale>.json.
+	// Output only: any value in a Frontend spec is ignored.
+	I18nKey string `json:"i18nKey,omitempty" yaml:"i18nKey,omitempty"`
 }
 
 // TemplateConfig defines the configuration for different screen sizes.
@@ -57,4 +62,9 @@ type WidgetModuleFederationMetadata struct {
 	Defaults    WidgetBaseDimensions `json:"defaults"`
 	Config      WidgetConfiguration  `json:"config"`
 	FrontendRef string               `json:"frontendRef,omitempty" yaml:"frontendRef,omitempty"`
+	// Runtime translation key prefix of this widget (e.g. `widget.rbac.landing.rbacwidget.default`),
+	// set by the operator in the generated registry when the environment enables locales.
+	// Chrome looks up `<i18nKey>.title` and `<i18nKey>.headerLink.title` in messages.<locale>.json.
+	// Output only: any value in a Frontend spec is ignored.
+	I18nKey string `json:"i18nKey,omitempty" yaml:"i18nKey,omitempty"`
 }

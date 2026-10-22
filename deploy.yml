@@ -809,6 +809,17 @@ objects:
                         type: string
                       frontendRef:
                         type: string
+                      i18nKey:
+                        description: 'Runtime translation key prefix of this template
+                          (e.g. `widgetLayout.rbac.rbacLanding`),
+
+                          set by the operator in the generated templates when the
+                          environment enables locales.
+
+                          Chrome looks up `<i18nKey>.displayName` in messages.<locale>.json.
+
+                          Output only: any value in a Frontend spec is ignored.'
+                        type: string
                       name:
                         type: string
                       templateConfig:
@@ -1603,6 +1614,18 @@ objects:
                       featureFlag:
                         type: string
                       frontendRef:
+                        type: string
+                      i18nKey:
+                        description: 'Runtime translation key prefix of this widget
+                          (e.g. `widget.rbac.landing.rbacwidget.default`),
+
+                          set by the operator in the generated registry when the environment
+                          enables locales.
+
+                          Chrome looks up `<i18nKey>.title` and `<i18nKey>.headerLink.title`
+                          in messages.<locale>.json.
+
+                          Output only: any value in a Frontend spec is ignored.'
                         type: string
                       importName:
                         type: string
