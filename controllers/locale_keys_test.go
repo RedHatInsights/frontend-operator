@@ -554,3 +554,51 @@ func TestStampWidgetAndLayoutI18nKeys(t *testing.T) {
 		t.Errorf("unlocalized layout got %q", got)
 	}
 }
+
+// A navigation segment reaches the generated bundles when an enabled
+// Frontend's bundle references it, whatever its owner's feoConfigEnabled, so
+// its translations must too. The owner's other fields stay out.
+func TestBuildLocaleMessagesReferencedSegmentOfDisabledOwner(t *testing.T) {
+	env := &crd.FrontendEnvironment{ObjectMeta: metav1.ObjectMeta{Name: "stage"}}
+	owner := withSearch(localeTestFrontend("owner", false, crd.LocaleCatalogs{"fr": {
+		"navigationSegments.shared.navItems.item.title":  "Élément",
+		"navigationSegments.nested.navItems.deep.title":  "Profond",
+		"navigationSegments.unused.navItems.other.title": "Autre",
+		"searchEntries.s.title":                          "Recherche",
+	}}), "s")
+	sharedItems := []crd.ChromeNavItem{
+		{ID: "item", Title: "Item"},
+		{SegmentRef: &crd.SegmentRef{FrontendName: "owner", SegmentID: "nested"}},
+	}
+	nestedItems := []crd.ChromeNavItem{{ID: "deep", Title: "Deep"}}
+	unusedItems := []crd.ChromeNavItem{{ID: "other", Title: "Other"}}
+	owner.Spec.NavigationSegments = []*crd.NavigationSegment{
+		{SegmentID: "shared", NavItems: &sharedItems},
+		{SegmentID: "nested", NavItems: &nestedItems},
+		{SegmentID: "unused", NavItems: &unusedItems},
+	}
+	user := localeTestFrontend("user", true, nil)
+	refs := []crd.ChromeNavItem{{SegmentRef: &crd.SegmentRef{FrontendName: "owner", SegmentID: "shared"}}}
+	user.Spec.BundleSegments = []*crd.BundleSegment{{BundleID: "iam", SegmentID: "s", NavItems: &refs}}
+
+	built := buildLocaleMessages("fr", &crd.FrontendList{Items: []crd.Frontend{owner, user}}, env)
+	want := map[string]string{
+		"navseg.owner.shared.item.title": "Élément",
+		"navseg.owner.nested.deep.title": "Profond",
+	}
+	if len(built.Messages) != len(want) {
+		t.Errorf("messages: got %v, want %v", built.Messages, want)
+	}
+	for k, v := range want {
+		if built.Messages[k] != v {
+			t.Errorf("%s: got %q, want %q", k, built.Messages[k], v)
+		}
+	}
+	wantSkipped := []string{
+		"Frontend/console/owner: navigationSegments.unused.navItems.other.title",
+		"Frontend/console/owner: searchEntries.s.title",
+	}
+	if !slices.Equal(built.Skipped, wantSkipped) {
+		t.Errorf("skipped: got %v, want %v", built.Skipped, wantSkipped)
+	}
+}

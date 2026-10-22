@@ -131,11 +131,18 @@ func frontendSource(frontend *crd.Frontend) string {
 }
 
 type localeKeySource struct {
-	name       string
-	table      *localeKeyTable
-	locales    crd.LocaleCatalogs
-	moduleOnly bool
-	skipAll    bool
+	name    string
+	table   *localeKeyTable
+	locales crd.LocaleCatalogs
+	// allowed, when set, limits the source to these catalog keys: the parts of
+	// a Frontend without feoConfigEnabled that still reach the English output.
+	allowed map[string]bool
+	skipAll bool
+}
+
+// limited reports whether a catalog key of the source is left out.
+func (ks localeKeySource) limited(catalogKey string) bool {
+	return ks.allowed != nil && !ks.allowed[catalogKey]
 }
 
 func buildLocaleKeySources(feList *crd.FrontendList, env *crd.FrontendEnvironment) []localeKeySource {
@@ -145,6 +152,7 @@ func buildLocaleKeySources(feList *crd.FrontendList, env *crd.FrontendEnvironmen
 		locales: env.Spec.Locales,
 	}}
 	frontends := append([]crd.Frontend{}, feList.Items...)
+	referenced := referencedNavSegments(feList)
 	sort.Slice(frontends, func(i, j int) bool {
 		if frontends[i].Namespace != frontends[j].Namespace {
 			return frontends[i].Namespace < frontends[j].Namespace
@@ -157,13 +165,31 @@ func buildLocaleKeySources(feList *crd.FrontendList, env *crd.FrontendEnvironmen
 			continue
 		}
 		source := localeKeySource{name: frontendSource(frontend), locales: frontend.Spec.Locales}
-		if !frontend.Spec.FeoConfigEnabled && frontend.Name != "chrome" {
+		if frontend.Spec.FeoConfigEnabled {
+			source.table = frontendKeyTable(frontend)
+			keySources = append(keySources, source)
+			continue
+		}
+		// Without feoConfigEnabled, only chrome's document title and the
+		// navigation segments that enabled Frontends reference reach the output.
+		allowed := map[string]bool{}
+		if frontend.Name == "chrome" && frontend.Spec.Module != nil {
+			allowed[moduleTitleKey] = true
+		}
+		segments := newLocaleKeyTable()
+		addNavigationSegmentKeys(segments, frontend, func(segmentID string) bool {
+			return referenced[frontend.Name][segmentID]
+		})
+		for catalogKey := range segments.keys {
+			allowed[catalogKey] = true
+		}
+		if len(allowed) == 0 {
 			source.skipAll = true
 			keySources = append(keySources, source)
 			continue
 		}
 		source.table = frontendKeyTable(frontend)
-		source.moduleOnly = !frontend.Spec.FeoConfigEnabled
+		source.allowed = allowed
 		keySources = append(keySources, source)
 	}
 	return keySources
@@ -172,7 +198,8 @@ func buildLocaleKeySources(feList *crd.FrontendList, env *crd.FrontendEnvironmen
 // buildLocaleMessages merges the environment's strings with those of every
 // eligible Frontend for one locale, under runtime keys. Eligibility matches the
 // English output: search entries, tiles and nav come only from Frontends with
-// feoConfigEnabled, document titles also from chrome. Output is deterministic:
+// feoConfigEnabled, document titles also from chrome, and navigation segments
+// from any Frontend whose segment an enabled Frontend's bundle references. Output is deterministic:
 // Frontends are visited in name order and keys are sorted on marshal.
 func buildLocaleMessages(locale string, feList *crd.FrontendList, env *crd.FrontendEnvironment) localeMessages {
 	return buildLocaleMessagesFromSources(locale, buildLocaleKeySources(feList, env))
@@ -219,7 +246,7 @@ func buildLocaleMessagesFromSources(locale string, keySources []localeKeySource)
 			continue
 		}
 		for catalogKey, runtimeKeys := range ks.table.runtimeKeysByCatalog {
-			if ks.moduleOnly && catalogKey != moduleTitleKey {
+			if ks.limited(catalogKey) {
 				continue
 			}
 			for runtimeKey := range runtimeKeys {
@@ -237,7 +264,7 @@ func buildLocaleMessagesFromSources(locale string, keySources []localeKeySource)
 		}
 		catalog := ks.locales[locale]
 		for _, catalogKey := range slices.Sorted(maps.Keys(catalog)) {
-			if ks.moduleOnly && catalogKey != moduleTitleKey {
+			if ks.limited(catalogKey) {
 				out.Skipped = append(out.Skipped, ks.name+": "+catalogKey)
 				continue
 			}

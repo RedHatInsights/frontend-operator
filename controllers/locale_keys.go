@@ -142,14 +142,7 @@ func frontendKeyTable(frontend *crd.Frontend) *localeKeyTable {
 			"bundleSegments."+segment.BundleID+"."+segment.SegmentID+".navItems",
 			navKeyPrefix(frontend.Name, segment.BundleID, segment.SegmentID))
 	}
-	for _, segment := range frontend.Spec.NavigationSegments {
-		if segment == nil || segment.NavItems == nil {
-			continue
-		}
-		addNavKeys(t, *segment.NavItems,
-			"navigationSegments."+segment.SegmentID+".navItems",
-			navSegmentKeyPrefix(frontend.Name, segment.SegmentID))
-	}
+	addNavigationSegmentKeys(t, frontend, func(string) bool { return true })
 	for _, widget := range frontend.Spec.WidgetRegistry {
 		if widget == nil {
 			continue
@@ -171,6 +164,72 @@ func frontendKeyTable(frontend *crd.Frontend) *localeKeyTable {
 		t.add(moduleTitleKey, "module."+moduleName(frontend)+".defaultDocumentTitle")
 	}
 	return t
+}
+
+// addNavigationSegmentKeys adds the keys of a Frontend's navigation segments
+// that include accepts.
+func addNavigationSegmentKeys(t *localeKeyTable, frontend *crd.Frontend, include func(segmentID string) bool) {
+	for _, segment := range frontend.Spec.NavigationSegments {
+		if segment == nil || segment.NavItems == nil || !include(segment.SegmentID) {
+			continue
+		}
+		addNavKeys(t, *segment.NavItems,
+			"navigationSegments."+segment.SegmentID+".navItems",
+			navSegmentKeyPrefix(frontend.Name, segment.SegmentID))
+	}
+}
+
+// referencedNavSegments returns, by owning Frontend name, the navigation
+// segments that reach the generated bundles: those referenced from the bundle
+// segments of Frontends with feoConfigEnabled, and the segments those
+// segments reference in turn, as setupBundlesData resolves them.
+func referencedNavSegments(feList *crd.FrontendList) map[string]map[string]bool {
+	segments := map[string]map[string]*crd.NavigationSegment{}
+	for i := range feList.Items {
+		frontend := &feList.Items[i]
+		for _, segment := range frontend.Spec.NavigationSegments {
+			if segment == nil {
+				continue
+			}
+			if segments[frontend.Name] == nil {
+				segments[frontend.Name] = map[string]*crd.NavigationSegment{}
+			}
+			segments[frontend.Name][segment.SegmentID] = segment
+		}
+	}
+	referenced := map[string]map[string]bool{}
+	var visit func(items []crd.ChromeNavItem)
+	visit = func(items []crd.ChromeNavItem) {
+		for _, item := range items {
+			if ref := item.SegmentRef; ref != nil {
+				if referenced[ref.FrontendName][ref.SegmentID] {
+					continue
+				}
+				if referenced[ref.FrontendName] == nil {
+					referenced[ref.FrontendName] = map[string]bool{}
+				}
+				referenced[ref.FrontendName][ref.SegmentID] = true
+				if segment := segments[ref.FrontendName][ref.SegmentID]; segment != nil && segment.NavItems != nil {
+					visit(*segment.NavItems)
+				}
+				continue
+			}
+			visit(item.Routes)
+			visit(item.NavItems)
+		}
+	}
+	for i := range feList.Items {
+		frontend := &feList.Items[i]
+		if !frontend.Spec.FeoConfigEnabled {
+			continue
+		}
+		for _, segment := range frontend.Spec.BundleSegments {
+			if segment != nil && segment.NavItems != nil {
+				visit(*segment.NavItems)
+			}
+		}
+	}
+	return referenced
 }
 
 // addNavKeys mirrors stampNavI18nKeys: items with an id, their nested routes
