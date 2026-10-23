@@ -53,8 +53,6 @@ type FrontendReconciliation struct {
 	// locales.json entries, set by setupLocaleConfigMaps before the base
 	// ConfigMaps are populated
 	localesJSON []localeEntry
-	// problems with the locale output, for the LocalesValid condition
-	localeReport localeReport
 	// when the locale output needs another reconcile (retry, pruning), 0 if not
 	requeueAfter time.Duration
 }

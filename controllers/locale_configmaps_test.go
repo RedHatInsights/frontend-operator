@@ -8,13 +8,11 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"unicode/utf8"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -274,10 +272,6 @@ func TestLocaleConfigMapFailedWriteNotAdvertised(t *testing.T) {
 	if r.requeueAfter != localeRetryInterval {
 		t.Errorf("want a retry after %v, got %v", localeRetryInterval, r.requeueAfter)
 	}
-	cond := r.localesCondition()
-	if cond == nil || cond.Status != metav1.ConditionFalse || cond.Reason != "LocaleNotAdvertised" || !strings.Contains(cond.Message, "locale fr not advertised") {
-		t.Errorf("condition: got %+v", cond)
-	}
 }
 
 // A conflict is a stale read, not a bad locale: the reconcile is retried rather
@@ -314,9 +308,6 @@ func TestLocaleConfigMapOversizeNotAdvertised(t *testing.T) {
 	}
 	if _, err := getConfigMap(t, c, "console", messagesConfigMapName(localeTestBase, "fr")); !k8serr.IsNotFound(err) {
 		t.Errorf("oversize messages were written: %v", err)
-	}
-	if cond := r.localesCondition(); cond == nil || cond.Reason != "LocaleNotAdvertised" || !strings.Contains(cond.Message, "limit") {
-		t.Errorf("condition: got %+v", cond)
 	}
 }
 
@@ -432,132 +423,6 @@ func TestLocaleConfigMapNamespaceIsolation(t *testing.T) {
 	}
 }
 
-func TestLocalesCondition(t *testing.T) {
-	c := fake.NewClientBuilder().WithScheme(scheme).Build()
-
-	r := newLocaleReconciliation(c, localeConfigMapTestEnv(nil))
-	if cond := r.localesCondition(); cond != nil {
-		t.Errorf("no localization: want no condition, got %+v", cond)
-	}
-
-	r.Frontend.Spec.Locales = crd.LocaleCatalogs{"fr": {"module.defaultDocumentTitle": "App"}}
-	if cond := r.localesCondition(); cond == nil || cond.Status != metav1.ConditionTrue || cond.Reason != "NotEnabled" {
-		t.Errorf("staged translations: got %+v", cond)
-	}
-
-	env := localeConfigMapTestEnv([]string{"console"}, english, crd.EnabledLocale{ID: "fr", Name: "Français"})
-	r = newLocaleReconciliation(c, env)
-	fe := withSearch(localeTestFrontend("app", true, crd.LocaleCatalogs{"fr": {"searchEntries.x.href": "nope", "searchEntries.x.title": "X"}}), "x")
-	fe.Namespace = "boot"
-	r.Frontend = &fe
-	setupLocales(t, r, &crd.FrontendList{Items: []crd.Frontend{fe}})
-	if cond := r.localesCondition(); cond == nil || cond.Status != metav1.ConditionFalse || cond.Reason != "KeysDropped" || !strings.Contains(cond.Message, "searchEntries.x.href") {
-		t.Errorf("own unknown key: got %+v", cond)
-	}
-
-	r = newLocaleReconciliation(c, env)
-	setupLocales(t, r, nil)
-	if cond := r.localesCondition(); cond == nil || cond.Status != metav1.ConditionTrue || cond.Reason != "Valid" {
-		t.Errorf("valid: got %+v", cond)
-	}
-}
-
-func TestLocalesConditionSkippedTranslations(t *testing.T) {
-	cases := []struct {
-		name       string
-		frontend   crd.Frontend
-		skippedKey string
-	}{
-		{
-			name:       "frontend without feo config",
-			frontend:   withSearch(localeTestFrontend("app", false, crd.LocaleCatalogs{"fr": {"searchEntries.x.title": "X"}}), "x"),
-			skippedKey: "searchEntries.x.title",
-		},
-		{
-			name: "chrome fields beyond its title",
-			frontend: withSearch(localeTestFrontend("chrome", false, crd.LocaleCatalogs{"fr": {
-				moduleTitleKey: "Console", "searchEntries.x.title": "X",
-			}}), "x"),
-			skippedKey: "searchEntries.x.title",
-		},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			env := localeConfigMapTestEnv([]string{"console"}, english, crd.EnabledLocale{ID: "fr", Name: "Français"})
-			tc.frontend.Namespace = "boot"
-			r := newLocaleReconciliation(fake.NewClientBuilder().WithScheme(scheme).Build(), env)
-			r.Frontend = &tc.frontend
-			setupLocales(t, r, &crd.FrontendList{Items: []crd.Frontend{tc.frontend}})
-			condition := r.localesCondition()
-			if condition == nil || condition.Status != metav1.ConditionFalse || condition.Reason != "KeysDropped" || !strings.Contains(condition.Message, tc.skippedKey) {
-				t.Errorf("skipped translation condition: got %+v", condition)
-			}
-		})
-	}
-}
-
-// A reconcile that changes which keys collide also gives the other Frontends
-// of the environment their conditions: here only the reconciling Frontend
-// changed, but the peer's translation is the one that is dropped.
-func TestPeerLocalesConditions(t *testing.T) {
-	env := localeConfigMapTestEnv([]string{"console"}, english, crd.EnabledLocale{ID: "fr", Name: "Français"})
-	reconciling := withSearch(localeTestFrontend("app", true, nil), "x")
-	reconciling.Namespace = "boot"
-	peer := withSearch(localeTestFrontend("app", true, crd.LocaleCatalogs{"fr": {"searchEntries.x.title": "X"}}), "x")
-	peer.Namespace = "ns2"
-	other := withSearch(localeTestFrontend("other", true, nil), "y")
-	otherEnv := localeTestFrontend("prod-app", true, nil)
-	otherEnv.Spec.EnvName = "prod"
-
-	r := newLocaleReconciliation(fake.NewClientBuilder().WithScheme(scheme).Build(), env)
-	r.Frontend = &reconciling
-	setupLocales(t, r, &crd.FrontendList{Items: []crd.Frontend{reconciling, peer, other, otherEnv}})
-
-	if cond := r.localesCondition(); cond == nil || cond.Reason != "KeysDropped" {
-		t.Errorf("reconciling Frontend owns a colliding key: want KeysDropped, got %+v", cond)
-	}
-	peers := r.peerLocalesConditions()
-	if len(peers) != 2 {
-		t.Fatalf("want conditions for the two other Frontends of the environment, got %v", peers)
-	}
-	if cond := peers[types.NamespacedName{Namespace: "ns2", Name: "app"}]; cond == nil || cond.Reason != "KeysDropped" {
-		t.Errorf("peer whose translation collides: want KeysDropped, got %+v", cond)
-	}
-	if cond := peers[types.NamespacedName{Namespace: "console", Name: "other"}]; cond == nil || cond.Reason != "Valid" {
-		t.Errorf("unaffected peer: want Valid, got %+v", cond)
-	}
-
-	// without enabled locales a condition depends only on its own Frontend
-	r = newLocaleReconciliation(fake.NewClientBuilder().WithScheme(scheme).Build(), localeConfigMapTestEnv([]string{"console"}))
-	r.Frontend = &reconciling
-	setupLocales(t, r, &crd.FrontendList{Items: []crd.Frontend{reconciling, peer}})
-	if peers := r.peerLocalesConditions(); peers != nil {
-		t.Errorf("no enabled locales: want no peer updates, got %v", peers)
-	}
-}
-
-func TestSetPeerLocalesConditions(t *testing.T) {
-	ctx := context.Background()
-	peer := &crd.Frontend{ObjectMeta: metav1.ObjectMeta{Name: "app", Namespace: "ns2"}}
-	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(peer).WithStatusSubresource(&crd.Frontend{}).Build()
-	dropped := &metav1.Condition{Type: crd.LocalesValid, Status: metav1.ConditionFalse, Reason: "KeysDropped", Message: "x"}
-
-	err := setPeerLocalesConditions(ctx, c, map[types.NamespacedName]*metav1.Condition{
-		{Namespace: "ns2", Name: "app"}:  dropped,
-		{Namespace: "ns3", Name: "gone"}: dropped,
-	})
-	if err != nil {
-		t.Fatalf("a deleted peer must not fail the update: %v", err)
-	}
-	got := &crd.Frontend{}
-	if err := c.Get(ctx, client.ObjectKeyFromObject(peer), got); err != nil {
-		t.Fatal(err)
-	}
-	if cond := meta.FindStatusCondition(got.Status.Conditions, crd.LocalesValid); cond == nil || cond.Reason != "KeysDropped" {
-		t.Errorf("peer condition: got %+v", cond)
-	}
-}
-
 // With several pending prunes, the reconcile is requeued for the earliest
 // deadline.
 func TestLocaleConfigMapRequeuesForEarliestDeadline(t *testing.T) {
@@ -574,88 +439,6 @@ func TestLocaleConfigMapRequeuesForEarliestDeadline(t *testing.T) {
 	setupLocales(t, r, nil)
 	if r.requeueAfter <= 2*time.Minute || r.requeueAfter > 3*time.Minute {
 		t.Errorf("want a requeue at the earliest deadline (~3m), got %v", r.requeueAfter)
-	}
-}
-
-// The condition message stays under the metav1.Condition limit however many
-// problems there are.
-func TestLocalesConditionMessageBounded(t *testing.T) {
-	env := localeConfigMapTestEnv([]string{"console"}, english)
-	catalogs := crd.LocaleCatalogs{}
-	for i := 0; i < 13; i++ {
-		locale := fmt.Sprintf("l%c", 'a'+i)
-		env.Spec.EnabledLocales = append(env.Spec.EnabledLocales, crd.EnabledLocale{ID: locale, Name: locale})
-		catalogs[locale] = crd.LocaleMessages{}
-		for k := 0; k < 10; k++ {
-			catalogs[locale][fmt.Sprintf("unknown%d.%s", k, strings.Repeat("k", 240))] = "x"
-		}
-	}
-	fe := localeTestFrontend("app", true, catalogs)
-	fe.Namespace = "boot"
-	r := newLocaleReconciliation(fake.NewClientBuilder().WithScheme(scheme).Build(), env)
-	r.Frontend = &fe
-	setupLocales(t, r, &crd.FrontendList{Items: []crd.Frontend{fe}})
-
-	cond := r.localesCondition()
-	if cond == nil || cond.Reason != "KeysDropped" {
-		t.Fatalf("condition: got %+v", cond)
-	}
-	if len(cond.Message) > maxConditionMessageBytes || !strings.Contains(cond.Message, "more") {
-		t.Errorf("message is %d bytes, limit %d; ends %q", len(cond.Message), maxConditionMessageBytes, cond.Message[max(0, len(cond.Message)-40):])
-	}
-}
-
-func TestJoinBounded(t *testing.T) {
-	if got := joinBounded([]string{"a", "b"}, 100); got != "a; b" {
-		t.Errorf("fits: got %q", got)
-	}
-	if got := joinBounded([]string{"aaaa", "bbbb", "cccc"}, 22); got != "aaaa; … and 2 more" {
-		t.Errorf("cut: got %q", got)
-	}
-	got := joinBounded([]string{strings.Repeat("é", 100)}, 50)
-	if len(got) > 50 || !strings.HasSuffix(got, "… and 1 more") || !utf8.ValidString(got) {
-		t.Errorf("oversized first problem: got %q (%d bytes)", got, len(got))
-	}
-}
-
-// The stored condition is set, recovers, is left alone when unchanged, and is
-// removed when localization stops.
-func TestSetFrontendLocalesCondition(t *testing.T) {
-	ctx := context.Background()
-	fe := &crd.Frontend{ObjectMeta: metav1.ObjectMeta{Name: "app", Namespace: "boot"}}
-	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(fe).WithStatusSubresource(&crd.Frontend{}).Build()
-	stored := func() (*metav1.Condition, string) {
-		got := &crd.Frontend{}
-		if err := c.Get(ctx, client.ObjectKeyFromObject(fe), got); err != nil {
-			t.Fatal(err)
-		}
-		return meta.FindStatusCondition(got.Status.Conditions, crd.LocalesValid), got.ResourceVersion
-	}
-	set := func(cond *metav1.Condition) {
-		t.Helper()
-		if err := SetFrontendLocalesCondition(ctx, c, fe.DeepCopy(), cond); err != nil {
-			t.Fatal(err)
-		}
-	}
-	failing := &metav1.Condition{Type: crd.LocalesValid, Status: metav1.ConditionFalse, Reason: "LocaleNotAdvertised", Message: "locale fr not advertised"}
-	valid := &metav1.Condition{Type: crd.LocalesValid, Status: metav1.ConditionTrue, Reason: "Valid"}
-
-	set(failing)
-	if cond, _ := stored(); cond == nil || cond.Status != metav1.ConditionFalse {
-		t.Fatalf("set: got %+v", cond)
-	}
-	set(valid)
-	cond, rv := stored()
-	if cond == nil || cond.Status != metav1.ConditionTrue || cond.Message != "" {
-		t.Fatalf("recovered: got %+v", cond)
-	}
-	set(valid.DeepCopy())
-	if _, again := stored(); again != rv {
-		t.Errorf("unchanged condition rewrote the status: %s -> %s", rv, again)
-	}
-	set(nil)
-	if cond, _ := stored(); cond != nil {
-		t.Errorf("removed: got %+v", cond)
 	}
 }
 

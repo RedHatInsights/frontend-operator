@@ -8,111 +8,11 @@ import (
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
-
-func TestFrontendPredicateFiltersStatusOnlyUpdates(t *testing.T) {
-	predicate := defaultPredicate(logr.Discard(), "frontend")
-	oldFrontend := &crd.Frontend{ObjectMeta: metav1.ObjectMeta{Name: "app", Namespace: "boot", ResourceVersion: "1"}}
-	newFrontend := oldFrontend.DeepCopy()
-	newFrontend.ResourceVersion = "2"
-	newFrontend.Status.Conditions = []metav1.Condition{{
-		Type:   crd.LocalesValid,
-		Status: metav1.ConditionTrue,
-		Reason: "Valid",
-	}}
-	newFrontend.ManagedFields = []metav1.ManagedFieldsEntry{{Manager: "status-writer"}}
-
-	if predicate.UpdateFunc(event.UpdateEvent{ObjectOld: oldFrontend, ObjectNew: newFrontend}) {
-		t.Fatal("status-only Frontend update triggered reconciliation")
-	}
-
-	specChanged := newFrontend.DeepCopy()
-	specChanged.Spec.Image = "image:v2"
-	if !predicate.UpdateFunc(event.UpdateEvent{ObjectOld: oldFrontend, ObjectNew: specChanged}) {
-		t.Fatal("spec change did not trigger reconciliation")
-	}
-
-	metadataChanged := newFrontend.DeepCopy()
-	metadataChanged.Annotations = map[string]string{"test/touch": "true"}
-	if !predicate.UpdateFunc(event.UpdateEvent{ObjectOld: oldFrontend, ObjectNew: metadataChanged}) {
-		t.Fatal("metadata change did not trigger reconciliation")
-	}
-}
-
-type statusUpdateCountingClient struct {
-	client.Client
-	updates int
-}
-
-func (c *statusUpdateCountingClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-	if obj, ok := list.(*unstructured.Unstructured); ok && obj.GetKind() == "Deployment" {
-		obj.Object["kind"] = "DeploymentList"
-		obj.Object["items"] = []interface{}{}
-		return nil
-	}
-	return c.Client.List(ctx, list, opts...)
-}
-
-func (c *statusUpdateCountingClient) Status() client.SubResourceWriter {
-	return statusUpdateCountingWriter{SubResourceWriter: c.Client.Status(), updates: &c.updates}
-}
-
-type statusUpdateCountingWriter struct {
-	client.SubResourceWriter
-	updates *int
-}
-
-func (w statusUpdateCountingWriter) Update(ctx context.Context, obj client.Object, opts ...client.SubResourceUpdateOption) error {
-	*w.updates++
-	return w.SubResourceWriter.Update(ctx, obj, opts...)
-}
-
-func TestSetFrontendConditionsWritesLocalesInSameStatusUpdate(t *testing.T) {
-	ctx := context.Background()
-	env := &crd.FrontendEnvironment{ObjectMeta: metav1.ObjectMeta{Name: "stage"}}
-	frontend := &crd.Frontend{
-		ObjectMeta: metav1.ObjectMeta{Name: "app", Namespace: "boot"},
-		Spec:       crd.FrontendSpec{EnvName: env.Name},
-	}
-	baseClient := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithObjects(env, frontend).
-		WithStatusSubresource(&crd.Frontend{}).
-		WithIndex(&crd.Frontend{}, "spec.envName", func(obj client.Object) []string {
-			return []string{obj.(*crd.Frontend).Spec.EnvName}
-		}).Build()
-	c := &statusUpdateCountingClient{Client: baseClient}
-	localeCondition := &metav1.Condition{
-		Type:   crd.LocalesValid,
-		Status: metav1.ConditionTrue,
-		Reason: "Valid",
-	}
-
-	if err := SetFrontendConditions(ctx, c, frontend.DeepCopy(), crd.ReconciliationSuccessful, nil, localeCondition); err != nil {
-		t.Fatal(err)
-	}
-	if c.updates != 1 {
-		t.Fatalf("status updates: got %d, want 1", c.updates)
-	}
-
-	got := &crd.Frontend{}
-	if err := c.Get(ctx, client.ObjectKeyFromObject(frontend), got); err != nil {
-		t.Fatal(err)
-	}
-	if cond := meta.FindStatusCondition(got.Status.Conditions, crd.ReconciliationSuccessful); cond == nil || cond.Status != metav1.ConditionTrue {
-		t.Errorf("ReconciliationSuccessful condition: got %+v", cond)
-	}
-	if cond := meta.FindStatusCondition(got.Status.Conditions, crd.LocalesValid); cond == nil || cond.Status != metav1.ConditionTrue {
-		t.Errorf("LocalesValid condition: got %+v", cond)
-	}
-}
 
 // Each reconcile writes the source messages only in its own namespace, so a
 // messages change or a Frontend deletion must reach one Frontend per namespace.

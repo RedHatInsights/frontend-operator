@@ -11,7 +11,6 @@ import (
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -180,19 +179,6 @@ var _ = ginkgo.Describe("Locale output", func() {
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		gomega.Expect(sourceZH.Data).To(gomega.Equal(zh.Data))
 
-		ginkgo.By("the Frontend reports its translations as published")
-		gomega.Eventually(func() *metav1.Condition {
-			got := &crd.Frontend{}
-			if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(fe), got); err != nil {
-				return nil
-			}
-			return meta.FindStatusCondition(got.Status.Conditions, crd.LocalesValid)
-		}, timeout, interval).Should(gomega.And(
-			gomega.Not(gomega.BeNil()),
-			gomega.HaveField("Status", metav1.ConditionTrue),
-			gomega.HaveField("Reason", "Valid"),
-		))
-
 		ginkgo.By("a translation-only change updates the messages, not the base ConfigMap or the Deployment")
 		before := baseData(env.Name)()
 		deploymentHash := func() string {
@@ -279,7 +265,6 @@ var _ = ginkgo.Describe("Locale output", func() {
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		gomega.Expect(entries).To(gomega.ContainElement(gomega.HaveField("ID", "fr")))
 		gomega.Expect(reconciliation.requeueAfter).To(gomega.Equal(localeRetryInterval))
-		gomega.Expect(reconciliation.localesCondition()).To(gomega.HaveField("Reason", "Valid"))
 		for _, get := range []func() (*v1.ConfigMap, error){
 			messagesConfigMapWithBase(namespace, env.Name, "fr"),
 			messagesConfigMap("locale-transient-target", "fr"),
@@ -392,22 +377,21 @@ var _ = ginkgo.Describe("Locale output", func() {
 		}, timeout, interval).Should(gomega.Equal(`{"bundle.iam.title":"IAM"}`))
 	})
 
-	ginkgo.It("updates the condition of a Frontend whose keys start or stop colliding with another's", func() {
+	ginkgo.It("drops a key that collides with another Frontend's and republishes it once the other is gone", func() {
 		createNamespace("locale-peer-target")
 		createNamespace("locale-peer-owner")
 		env := mockFrontendEnv("test-locale-peer-env", namespace)
 		env.Spec.TargetNamespaces = []string{"locale-peer-target"}
 		env.Spec.EnabledLocales = []crd.EnabledLocale{english, {ID: "fr", Name: "Français"}}
-		translated := createEnv(env, crd.LocaleCatalogs{"fr": {"module.defaultDocumentTitle": "Application"}})
-		conditionFor := func(frontend *crd.Frontend) *metav1.Condition {
-			got := &crd.Frontend{}
-			if err := k8sClient.Get(ctx, client.ObjectKeyFromObject(frontend), got); err != nil {
-				return nil
+		createEnv(env, crd.LocaleCatalogs{"fr": {"module.defaultDocumentTitle": "Application"}})
+		messages := func() string {
+			cm, err := messagesConfigMap("locale-peer-target", "fr")()
+			if err != nil {
+				return ""
 			}
-			return meta.FindStatusCondition(got.Status.Conditions, crd.LocalesValid)
+			return cm.Data[messagesFileName("fr")]
 		}
-		condition := func() *metav1.Condition { return conditionFor(translated) }
-		gomega.Eventually(condition, timeout, interval).Should(gomega.HaveField("Reason", "Valid"))
+		gomega.Eventually(messages, timeout, interval).Should(gomega.Equal(`{"module.app.defaultDocumentTitle":"Application"}`))
 
 		ginkgo.By("another Frontend with the same moduleID makes the translated title collide")
 		other := &crd.Frontend{
@@ -422,25 +406,11 @@ var _ = ginkgo.Describe("Locale output", func() {
 		}
 		gomega.Expect(k8sClient.Create(ctx, other)).To(gomega.Succeed())
 		ginkgo.DeferCleanup(func() { gomega.Expect(client.IgnoreNotFound(k8sClient.Delete(ctx, other))).To(gomega.Succeed()) })
-		gomega.Eventually(condition, timeout, interval).Should(gomega.And(
-			gomega.HaveField("Status", metav1.ConditionFalse),
-			gomega.HaveField("Reason", "KeysDropped"),
-		))
-		gomega.Eventually(func() *metav1.Condition { return conditionFor(other) }, timeout, interval).Should(gomega.And(
-			gomega.HaveField("Status", metav1.ConditionFalse),
-			gomega.HaveField("Reason", "KeysDropped"),
-		))
+		gomega.Eventually(messages, timeout, interval).Should(gomega.Equal(`{}`))
 
 		ginkgo.By("deleting the other Frontend republishes the surviving title")
 		gomega.Expect(k8sClient.Delete(ctx, other)).To(gomega.Succeed())
-		gomega.Eventually(condition, timeout, interval).Should(gomega.HaveField("Reason", "Valid"))
-		gomega.Eventually(func() string {
-			cm, err := messagesConfigMap("locale-peer-target", "fr")()
-			if err != nil {
-				return ""
-			}
-			return cm.Data[messagesFileName("fr")]
-		}, timeout, interval).Should(gomega.Equal(`{"module.app.defaultDocumentTitle":"Application"}`))
+		gomega.Eventually(messages, timeout, interval).Should(gomega.Equal(`{"module.app.defaultDocumentTitle":"Application"}`))
 	})
 
 	ginkgo.It("advertises only English when there is no target namespace to write messages to", func() {

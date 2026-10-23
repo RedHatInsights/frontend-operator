@@ -28,7 +28,6 @@ import (
 	networking "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -192,8 +191,6 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// against itself (Owns watch triggers, FrontendEnvironment/Bundle fan-out).
 	// Each retry re-fetches resources to get the latest resourceVersion.
 	var cache resCache.ObjectCache
-	var localesCondition *metav1.Condition
-	var peerLocalesConditions map[types.NamespacedName]*metav1.Condition
 	var requeueAfter time.Duration
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		// Re-fetch Frontend and FrontendEnvironment on each retry to get the
@@ -232,8 +229,6 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		if err := reconciliation.run(); err != nil {
 			return err
 		}
-		localesCondition = reconciliation.localesCondition()
-		peerLocalesConditions = reconciliation.peerLocalesConditions()
 		requeueAfter = reconciliation.requeueAfter
 
 		return cache.ApplyAll()
@@ -265,12 +260,7 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	managedFrontendsMetric.Set(float64(len(managedFrontends)))
 
 	log.Info("Reconciliation successful", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
-	if err = SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil, localesCondition); err != nil {
-		return ctrl.Result{Requeue: true}, nil
-	}
-
-	if err = setPeerLocalesConditions(ctx, r.Client, peerLocalesConditions); err != nil {
-		log.Info("Cannot update LocalesValid of other Frontends", "error", err.Error())
+	if err = SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil); err != nil {
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -373,13 +363,6 @@ func defaultPredicate(logr logr.Logger, ctrlName string) predicate.Funcs {
 			return true
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			oldFrontend, oldOK := e.ObjectOld.(*crd.Frontend)
-			newFrontend, newOK := e.ObjectNew.(*crd.Frontend)
-			// Frontend status is written by this controller. Spec/metadata changes
-			// still pass through, and owned resources have their own watches.
-			if oldOK && newOK && isFrontendStatusOnlyUpdate(oldFrontend, newFrontend) {
-				return false
-			}
 			gvk, _ := utils.GetKindFromObj(scheme, e.ObjectOld)
 			logMessage(logr, "Reconciliation trigger", "ctrl", ctrlName, "type", "update", "resType", gvk.Kind, "name", e.ObjectNew.GetName(), "namespace", e.ObjectNew.GetNamespace(), "old", e.ObjectOld, "new", e.ObjectNew)
 			return true
@@ -390,18 +373,6 @@ func defaultPredicate(logr logr.Logger, ctrlName string) predicate.Funcs {
 			return true
 		},
 	}
-}
-
-func isFrontendStatusOnlyUpdate(oldFrontend, newFrontend *crd.Frontend) bool {
-	if equality.Semantic.DeepEqual(oldFrontend.Status, newFrontend.Status) {
-		return false
-	}
-	oldCopy := oldFrontend.DeepCopy()
-	newCopy := newFrontend.DeepCopy()
-	oldCopy.Status = newCopy.Status
-	oldCopy.ResourceVersion = newCopy.ResourceVersion
-	oldCopy.ManagedFields = newCopy.ManagedFields
-	return equality.Semantic.DeepEqual(oldCopy, newCopy)
 }
 
 func frontendDeletionPredicate() predicate.Funcs {

@@ -129,10 +129,6 @@ var ReconciliationSuccessful = "ReconciliationSuccessful"
 var ReconciliationFailed = "ReconciliationFailed"
 var FrontendsReady = "FrontendsReady"
 
-// LocalesValid reports whether the Frontend's translations and its
-// environment's enabled locales are published (RHCLOUD-52085).
-var LocalesValid = "LocalesValid"
-
 // FrontendStatus defines the observed state of Frontend
 type FrontendStatus struct {
 	Deployments FrontendDeployments `json:"deployments,omitempty"`

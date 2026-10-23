@@ -69,19 +69,6 @@ type localeMessages struct {
 	Skipped []string
 }
 
-// localeReport collects what a reconcile found wrong with the locale output,
-// for the Frontend's LocalesValid condition and for events.
-type localeReport struct {
-	// notAdvertised explains each enabled locale left out of locales.json.
-	notAdvertised []string
-	// keyProblems are the unknown or colliding keys of each Frontend, by
-	// frontendSource.
-	keyProblems map[string][]string
-	// frontends are the Frontends of the environment, whose conditions all
-	// depend on this report.
-	frontends []crd.Frontend
-}
-
 func messagesFileName(locale string) string {
 	return "messages." + locale + ".json"
 }
@@ -290,12 +277,6 @@ func buildLocaleMessagesFromSources(locale string, keySources []localeKeySource)
 // at the end of the reconcile, after the base ConfigMap.
 func (r *FrontendReconciliation) setupLocaleConfigMaps(feList *crd.FrontendList, baseName string) ([]localeEntry, error) {
 	env := r.FrontendEnvironment
-	r.localeReport = localeReport{keyProblems: map[string][]string{}}
-	for _, frontend := range feList.Items {
-		if frontend.Spec.EnvName == env.Name && frontend.DeletionTimestamp == nil {
-			r.localeReport.frontends = append(r.localeReport.frontends, frontend)
-		}
-	}
 	advertised := map[string]bool{}
 	if len(env.Spec.EnabledLocales) > 0 {
 		advertised[sourceLocale] = true
@@ -312,18 +293,18 @@ func (r *FrontendReconciliation) setupLocaleConfigMaps(feList *crd.FrontendList,
 			continue
 		}
 		built := buildLocaleMessagesFromSources(enabled.ID, keySources)
-		r.reportLocaleKeys(enabled.ID, built)
+		r.logLocaleKeys(enabled.ID, built)
 
 		data, err := json.Marshal(built.Messages)
 		if err != nil {
 			return nil, err
 		}
 		if len(data) > maxLocaleMessagesBytes {
-			r.notAdvertised("LocaleMessagesOversize", "locale %s not advertised: messages are %d bytes, limit %d", enabled.ID, len(data), maxLocaleMessagesBytes)
+			r.logLocale("locale %s not advertised: messages are %d bytes, limit %d", enabled.ID, len(data), maxLocaleMessagesBytes)
 			continue
 		}
 		if len(env.Spec.TargetNamespaces) == 0 {
-			r.notAdvertised("LocaleMessagesNoTarget", "locale %s not advertised: the environment has no targetNamespaces to write messages to", enabled.ID)
+			r.logLocale("locale %s not advertised: the environment has no targetNamespaces to write messages to", enabled.ID)
 			continue
 		}
 
@@ -341,10 +322,10 @@ func (r *FrontendReconciliation) setupLocaleConfigMaps(feList *crd.FrontendList,
 				r.requeueLocalesAfter(localeRetryInterval)
 				written = false
 				if r.localeWasPublished(enabled.ID, locations) {
-					r.localeEvent("LocaleMessagesWriteFailed", "%s; retaining previously published messages", message)
+					r.Log.Info(message + "; retaining previously published messages")
 					advertised[enabled.ID] = true
 				} else {
-					r.notAdvertised("LocaleMessagesWriteFailed", "locale %s not advertised: writing messages to namespace %s failed: %v", enabled.ID, location.messages.Namespace, err)
+					r.logLocale("locale %s not advertised: writing messages to namespace %s failed: %v", enabled.ID, location.messages.Namespace, err)
 				}
 				break
 			}
@@ -585,140 +566,23 @@ func (r *FrontendReconciliation) requeueLocalesAfter(d time.Duration) {
 	}
 }
 
-// reportLocaleKeys records the unknown and colliding keys of one locale: all
-// of them as events, and those of each Frontend for its condition.
-func (r *FrontendReconciliation) reportLocaleKeys(locale string, built localeMessages) {
+// logLocaleKeys logs the keys of one locale that were left out of its
+// messages, like the other generators log what they skip.
+func (r *FrontendReconciliation) logLocaleKeys(locale string, built localeMessages) {
 	if len(built.Collisions) > 0 {
-		r.localeEvent("LocaleKeyCollision", "locale %s: %d keys produced by more than one source were left out: %s", locale, len(built.Collisions), truncateList(built.Collisions))
+		r.logLocale("locale %s: %d keys produced by more than one source were left out: %s (sources: %s)", locale, len(built.Collisions), truncateList(built.Collisions), truncateList(built.CollidingSources))
 	}
 	if len(built.Unknown) > 0 {
-		r.localeEvent("LocaleKeyUnknown", "locale %s: %d catalog keys outside the runtime key scheme were dropped: %s", locale, len(built.Unknown), truncateList(built.Unknown))
+		r.logLocale("locale %s: %d catalog keys outside the runtime key scheme were dropped: %s", locale, len(built.Unknown), truncateList(built.Unknown))
 	}
 	if len(built.Skipped) > 0 {
-		r.localeEvent("LocaleKeySkipped", "locale %s: %d catalog keys without English output were skipped: %s", locale, len(built.Skipped), truncateList(built.Skipped))
+		r.logLocale("locale %s: %d catalog keys without English output were skipped: %s", locale, len(built.Skipped), truncateList(built.Skipped))
 	}
 	r.Log.Info("Locale messages built", "locale", locale, "keys", len(built.Messages))
-
-	recordKeyProblems := func(problems []string, format string) {
-		keysBySource := map[string][]string{}
-		sources := []string{}
-		for _, problem := range problems {
-			source, key, _ := strings.Cut(problem, ": ")
-			if _, seen := keysBySource[source]; !seen {
-				sources = append(sources, source)
-			}
-			keysBySource[source] = append(keysBySource[source], key)
-		}
-		for _, source := range sources {
-			r.localeReport.keyProblems[source] = append(r.localeReport.keyProblems[source], fmt.Sprintf(format, locale, len(keysBySource[source]), truncateList(keysBySource[source])))
-		}
-	}
-	recordKeyProblems(built.Unknown, "locale %s: %d keys outside the runtime key scheme were dropped: %s")
-	recordKeyProblems(built.Skipped, "locale %s: %d catalog keys without English output were skipped: %s")
-	for _, source := range built.CollidingSources {
-		r.localeReport.keyProblems[source] = append(r.localeReport.keyProblems[source], fmt.Sprintf("locale %s: keys produced by more than one source or spec item were left out", locale))
-	}
 }
 
-func (r *FrontendReconciliation) notAdvertised(reason, format string, args ...any) {
-	r.localeReport.notAdvertised = append(r.localeReport.notAdvertised, fmt.Sprintf(format, args...))
-	r.localeEvent(reason, format, args...)
-}
-
-func (r *FrontendReconciliation) localeEvent(reason, format string, args ...any) {
-	message := fmt.Sprintf(format, args...)
-	r.Log.Info(message, "reason", reason, "environment", r.FrontendEnvironment.Name)
-	if r.Recorder != nil {
-		r.Recorder.Event(r.FrontendEnvironment, v1.EventTypeWarning, reason, message)
-	}
-}
-
-// localesCondition is the LocalesValid condition for the reconciling Frontend,
-// or nil when neither it nor its environment uses localization.
-func (r *FrontendReconciliation) localesCondition() *metav1.Condition {
-	return r.localesConditionFor(r.Frontend)
-}
-
-// peerLocalesConditions are the LocalesValid conditions of the environment's
-// other Frontends. Keys of one Frontend can collide with those of another, so a
-// reconcile that changes the messages can change their conditions too; setting
-// them here keeps them current without reconciling every Frontend of the
-// environment. Without enabled locales a condition depends only on its own
-// Frontend, so there is nothing to update.
-func (r *FrontendReconciliation) peerLocalesConditions() map[types.NamespacedName]*metav1.Condition {
-	if len(r.FrontendEnvironment.Spec.EnabledLocales) == 0 {
-		return nil
-	}
-	conditions := map[types.NamespacedName]*metav1.Condition{}
-	for i := range r.localeReport.frontends {
-		frontend := &r.localeReport.frontends[i]
-		if frontend.Namespace == r.Frontend.Namespace && frontend.Name == r.Frontend.Name {
-			continue
-		}
-		conditions[types.NamespacedName{Namespace: frontend.Namespace, Name: frontend.Name}] = r.localesConditionFor(frontend)
-	}
-	return conditions
-}
-
-func (r *FrontendReconciliation) localesConditionFor(frontend *crd.Frontend) *metav1.Condition {
-	if len(r.FrontendEnvironment.Spec.EnabledLocales) == 0 && len(frontend.Spec.Locales) == 0 {
-		return nil
-	}
-	keyProblems := r.localeReport.keyProblems[frontendSource(frontend)]
-	condition := &metav1.Condition{
-		Type:   crd.LocalesValid,
-		Status: metav1.ConditionTrue,
-		Reason: "Valid",
-	}
-	switch {
-	case len(r.FrontendEnvironment.Spec.EnabledLocales) == 0:
-		condition.Reason = "NotEnabled"
-		condition.Message = "the environment enables no locales; translations are stored but not published"
-	case len(r.localeReport.notAdvertised) > 0:
-		condition.Status = metav1.ConditionFalse
-		condition.Reason = "LocaleNotAdvertised"
-		condition.Message = joinBounded(append(slices.Clone(r.localeReport.notAdvertised), keyProblems...), maxConditionMessageBytes)
-	case len(keyProblems) > 0:
-		condition.Status = metav1.ConditionFalse
-		condition.Reason = "KeysDropped"
-		condition.Message = joinBounded(keyProblems, maxConditionMessageBytes)
-	}
-	return condition
-}
-
-// maxConditionMessageBytes keeps the LocalesValid message well under the
-// 32768 byte limit of metav1.Condition; a longer one fails the status update.
-const maxConditionMessageBytes = 8 * 1024
-
-// joinBounded joins problems with "; " into at most limit bytes, ending with
-// "… and N more" when some are left out.
-func joinBounded(problems []string, limit int) string {
-	var b strings.Builder
-	for i, p := range problems {
-		sep := ""
-		if i > 0 {
-			sep = "; "
-		}
-		suffix := ""
-		if rest := len(problems) - i - 1; rest > 0 {
-			suffix = fmt.Sprintf("; … and %d more", rest)
-		}
-		if b.Len()+len(sep)+len(p)+len(suffix) > limit {
-			more := fmt.Sprintf("… and %d more", len(problems)-i)
-			if b.Len() == 0 {
-				// even the first problem does not fit: cut it on a rune boundary
-				cut := []rune(p)
-				for len(string(cut)) > limit-len(more)-2 {
-					cut = cut[:len(cut)-1]
-				}
-				return string(cut) + "; " + more
-			}
-			b.WriteString("; " + more)
-			return b.String()
-		}
-		b.WriteString(sep + p)
-	}
-	return b.String()
+func (r *FrontendReconciliation) logLocale(format string, args ...any) {
+	r.Log.Info(fmt.Sprintf(format, args...), "environment", r.FrontendEnvironment.Name)
 }
 
 func truncateList(items []string) string {
