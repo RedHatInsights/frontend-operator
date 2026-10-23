@@ -1121,6 +1121,9 @@ Reference to a bundle segment.
 
 | *`frontendRef`* __string__ |
 Reference to the Frontend resource that owns this navigation item.
+
+| *`i18nKey`* __string__ |
+Runtime translation key prefix of this item (e.g. `nav.rbac.iam.user-access.users`), set by the operator in generated bundles when the environment enables locales. Chrome looks up `<i18nKey>.title` and `<i18nKey>.product` in `messages.<locale>.json`. Output only: any value in a Frontend spec is ignored.
 |===
 
 

@@ -49,6 +49,8 @@ type FrontendReconciliation struct {
 	Frontend            *crd.Frontend
 	Ctx                 context.Context
 	Client              client.Client
+	// locales.json entries, set before the base ConfigMaps are populated
+	localesJSON []localeEntry
 }
 
 // setupConfigMapWithLabels creates a ConfigMap with the specified name and namespace,
@@ -1443,14 +1445,24 @@ func setupSearchIndex(feList *crd.FrontendList) []crd.SearchEntry {
 	return searchIndex
 }
 
-func setupWidgetRegistry(feList *crd.FrontendList) []crd.WidgetModuleFederationMetadata {
+// setupWidgetRegistry collects the widgets of FEO-enabled Frontends. With
+// localized set, each widget carries its runtime translation key prefix in
+// i18nKey; otherwise i18nKey is cleared.
+func setupWidgetRegistry(feList *crd.FrontendList, localized bool) []crd.WidgetModuleFederationMetadata {
 	widgetRegistry := []crd.WidgetModuleFederationMetadata{}
 
 	for _, frontend := range feList.Items {
 		if frontend.Spec.FeoConfigEnabled {
 			for _, widget := range frontend.Spec.WidgetRegistry {
-				widget.FrontendRef = frontend.Name
-				widgetRegistry = append(widgetRegistry, *widget)
+				generated := *widget
+				generated.FrontendRef = frontend.Name
+				generated.I18nKey = ""
+				if localized {
+					if _, runtime, ok := widgetKeys(frontend.Name, widget); ok {
+						generated.I18nKey = runtime
+					}
+				}
+				widgetRegistry = append(widgetRegistry, generated)
 			}
 		}
 	}
@@ -1463,16 +1475,25 @@ func setupWidgetRegistry(feList *crd.FrontendList) []crd.WidgetModuleFederationM
 	return widgetRegistry
 }
 
-func setupBaseWidgetDashboardTemplates(feList *crd.FrontendList) []crd.BaseWidgetDashboardTemplate {
+// setupBaseWidgetDashboardTemplates collects the layouts of FEO-enabled
+// Frontends. With localized set, each layout carries its runtime translation
+// key prefix in i18nKey, built from the name in the spec before it is made
+// unique; otherwise i18nKey is cleared.
+func setupBaseWidgetDashboardTemplates(feList *crd.FrontendList, localized bool) []crd.BaseWidgetDashboardTemplate {
 	baseWidgetDashboardTemplates := []crd.BaseWidgetDashboardTemplate{}
 
 	for _, frontend := range feList.Items {
 		if frontend.Spec.FeoConfigEnabled && frontend.Spec.BaseWidgetLayouts != nil {
 			for _, template := range frontend.Spec.BaseWidgetLayouts {
-				template.FrontendRef = frontend.Name
+				generated := *template
+				generated.FrontendRef = frontend.Name
+				generated.I18nKey = ""
+				if localized && template.Name != "" {
+					generated.I18nKey = widgetLayoutKeyPrefix(frontend.Name, template.Name)
+				}
 				// ensure bases are unique
-				template.Name = frontend.Name + "-" + template.Name
-				baseWidgetDashboardTemplates = append(baseWidgetDashboardTemplates, *template)
+				generated.Name = frontend.Name + "-" + template.Name
+				baseWidgetDashboardTemplates = append(baseWidgetDashboardTemplates, generated)
 			}
 		}
 	}
@@ -1712,9 +1733,14 @@ func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnviro
 				navSegmentsCache[frontend.Name] = make(map[string]*NavSegmentCacheEntry)
 			}
 			for _, navSegment := range frontend.Spec.NavigationSegments {
+				navItems := clearNavI18nKeys(*navSegment.NavItems)
+				if len(feEnvironment.Spec.EnabledLocales) > 0 {
+					// keyed by the owning Frontend, so a segment keeps its keys in every bundle that references it
+					navItems = stampNavI18nKeys(navItems, navSegmentKeyPrefix(frontend.Name, navSegment.SegmentID))
+				}
 				navSegmentsCache[frontend.Name][navSegment.SegmentID] = &NavSegmentCacheEntry{
 					IsFilled: false,
-					NavItems: *navSegment.NavItems,
+					NavItems: navItems,
 				}
 			}
 		}
@@ -1725,7 +1751,10 @@ func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnviro
 	for _, frontend := range feList.Items {
 		if frontend.Spec.FeoConfigEnabled && frontend.Spec.BundleSegments != nil {
 			for _, bundleNavSegment := range frontend.Spec.BundleSegments {
-				navItemsWithRefs := addRefsToNavItems(*bundleNavSegment.NavItems, bundleNavSegment.BundleID, frontend.Name, bundleNavSegment.SegmentID)
+				navItemsWithRefs := addRefsToNavItems(clearNavI18nKeys(*bundleNavSegment.NavItems), bundleNavSegment.BundleID, frontend.Name, bundleNavSegment.SegmentID)
+				if len(feEnvironment.Spec.EnabledLocales) > 0 {
+					navItemsWithRefs = stampNavI18nKeys(navItemsWithRefs, navKeyPrefix(frontend.Name, bundleNavSegment.BundleID, bundleNavSegment.SegmentID))
+				}
 				bundleNavSegment.NavItems = &navItemsWithRefs
 				bundleNavSegmentMap[bundleNavSegment.BundleID] = append(bundleNavSegmentMap[bundleNavSegment.BundleID], *bundleNavSegment)
 				skippedNavItemsMap[bundleNavSegment.BundleID] = append(skippedNavItemsMap[bundleNavSegment.BundleID], getNavItemPath(frontend.Name, bundleNavSegment.BundleID, bundleNavSegment.SegmentID))
@@ -1896,6 +1925,25 @@ func (r *FrontendReconciliation) setupConfigMaps() ([]*v1.ConfigMap, error) {
 		})
 	}
 
+	// Locale messages are not returned in configMaps: they stay out of the
+	// config hash, so a translation change restarts nothing.
+	localeMessages, err := r.setupLocaleMessages(frontendList)
+	if err != nil {
+		return []*v1.ConfigMap{}, err
+	}
+	r.localesJSON = r.advertisedLocales(localeMessages)
+	localeBases := append([]types.NamespacedName{defaultNN}, additionalNN...)
+	for _, locale := range slices.Sorted(maps.Keys(localeMessages)) {
+		for _, baseNN := range localeBases {
+			if err := r.createLocaleMessagesConfigMap(baseNN, locale, localeMessages[locale]); err != nil {
+				return []*v1.ConfigMap{}, err
+			}
+		}
+	}
+	if err := r.pruneLocaleConfigMaps(localeBases, localeMessages); err != nil {
+		return []*v1.ConfigMap{}, err
+	}
+
 	defaultCfgMap, err := r.createConfigMap(defaultNN, frontendList, true, nil)
 	if err != nil {
 		return []*v1.ConfigMap{}, err
@@ -1957,7 +2005,7 @@ func (r *FrontendReconciliation) createBaseWidgetDashboardTemplatesConfigMap(nn 
 		r.Log.Info("Using data from existing config map", "targetConfigMapName", cfgMap.Name, "targetConfigMapNamespace", cfgMap.Namespace, "sourceConfigMapName", sourceConfigMap.Name, "sourceConfigMapNamespace", sourceConfigMap.Namespace)
 		cfgMap.Data = sourceConfigMap.Data
 	} else {
-		baseWidgetDashboardTemplates := setupBaseWidgetDashboardTemplates(frontendList)
+		baseWidgetDashboardTemplates := setupBaseWidgetDashboardTemplates(frontendList, len(r.FrontendEnvironment.Spec.EnabledLocales) > 0)
 
 		baseWidgetDashboardTemplatesJSONData, err := json.Marshal(baseWidgetDashboardTemplates)
 		if err != nil {
@@ -1995,7 +2043,7 @@ func (r *FrontendReconciliation) createWidgetRegistryConfigMap(nn types.Namespac
 		r.Log.Info("Using data from existing config map", "targetConfigMapName", cfgMap.Name, "targetConfigMapNamespace", cfgMap.Namespace, "sourceConfigMapName", sourceConfigMap.Name, "sourceConfigMapNamespace", sourceConfigMap.Namespace)
 		cfgMap.Data = sourceConfigMap.Data
 	} else {
-		widgetRegistry := setupWidgetRegistry(frontendList)
+		widgetRegistry := setupWidgetRegistry(frontendList, len(r.FrontendEnvironment.Spec.EnabledLocales) > 0)
 
 		widgetRegistryJSONData, err := json.Marshal(widgetRegistry)
 		if err != nil {
@@ -2139,8 +2187,8 @@ func (r *FrontendReconciliation) populateConfigMap(cfgMap *v1.ConfigMap, cacheMa
 		cfgMap.Data["exports.json"] = string(exportsJSONData)
 	}
 
-	if len(r.FrontendEnvironment.Spec.EnabledLocales) > 0 {
-		localesJSONData, err := json.Marshal(r.FrontendEnvironment.Spec.EnabledLocales)
+	if len(r.localesJSON) > 0 {
+		localesJSONData, err := json.Marshal(r.localesJSON)
 		if err != nil {
 			return err
 		}

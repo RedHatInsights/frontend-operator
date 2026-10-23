@@ -1,0 +1,22 @@
+[
+  {
+    "scope": "landing",
+    "module": "./RbacWidget",
+    "defaults": {
+      "w": 1,
+      "h": 4,
+      "maxH": 10,
+      "minH": 1
+    },
+    "config": {
+      "title": "My User Access",
+      "icon": "UsersIcon",
+      "headerLink": {
+        "title": "View access",
+        "href": "/iam/user-access"
+      }
+    },
+    "frontendRef": "rbac",
+    "i18nKey": "widget.rbac.landing.rbacwidget.default"
+  }
+]
