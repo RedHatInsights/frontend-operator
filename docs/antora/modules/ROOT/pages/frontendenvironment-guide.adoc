@@ -284,7 +284,7 @@ This is typically enabled for ephemeral and development environments but disable
 
 === Localization
 
-NOTE: The operator turns these fields into `locales.json` in the environment ConfigMap and one `messages.<locale>.json` per enabled locale (see <<Generated locale output>>). Publishing the files and Chrome rendering them are separate work.
+NOTE: The operator turns these fields into `locales.json` in the environment ConfigMap and one `messages.<locale>.json` per locale (see <<Generated locale output>>). Publishing the files and Chrome rendering them are separate work.
 
 Three optional fields carry localization inputs. Environments and Frontends that do not set them behave exactly as before.
 
@@ -366,21 +366,21 @@ spec:
 
 ==== Staging translations ahead of enablement
 
-Translation maps may be staged for locales that are not yet in `enabledLocales`. Storing a map does not enable the locale, and enabling a locale does not by itself promise that its assets are published.
+Translation maps may be staged for locales that are not yet in `enabledLocales`. Storing a map does not enable the locale: its messages are generated, but `locales.json` lists only enabled locales.
 
 ==== Generated locale output
 
-When `enabledLocales` is set, each reconcile writes, in this order:
+Each reconcile generates, like the other environment files:
 
-. For every enabled locale except `en`, a messages ConfigMap beside the source environment ConfigMap in the Frontend's namespace (`<envName>-messages-<locale>`) and beside each target config (`feo-context-cfg-messages-<locale>`, with the `-beta` base name when used). Locale ids in ConfigMap names are lowercased. Each has one key, `messages.<locale>.json`, the label `frontend.cloud.redhat.com/messages-locale=<locale>`, and no `qontract.recycle` annotation. These ConfigMaps are not part of the frontend config hash, so a translation-only change updates them and restarts nothing. A locale with no strings gets `{}`.
-. `locales.json` in the source environment ConfigMap and each target config, last, as the activation point:
+* For every locale except `en` that is enabled or has strings in the FrontendEnvironment or any of its Frontends, a messages ConfigMap beside the source environment ConfigMap in the Frontend's namespace (`<envName>-messages-<locale>`) and beside each target config (`feo-context-cfg-messages-<locale>`, with the `-beta` base name when used). Locale ids in ConfigMap names are lowercased. Each has one key, `messages.<locale>.json`, the label `frontend.cloud.redhat.com/messages-locale=<locale>`, and no `qontract.recycle` annotation. These ConfigMaps are not part of the frontend config hash, so a translation-only change updates them and restarts nothing. An enabled locale with no strings gets `{}`. Strings staged for a locale that is not enabled are published too; consumers only request the files listed in `locales.json`.
+* When `enabledLocales` is set, `locales.json` in the source environment ConfigMap and each target config:
 +
 [source,json]
 ----
 [{"id":"en","name":"English","default":true},{"id":"fr","name":"Français","file":"messages.fr.json"}]
 ----
 +
-A locale is listed only when its messages were written beside the source and in every target namespace. It is left out when the environment has no `targetNamespaces` or when its messages exceed 900 KB. A failed write keeps an already-advertised locale listed while its previous valid files remain available; a locale that has never been published is left out. Failed writes are retried every minute. `en` is always listed; if the configured default is left out, `en` becomes the default. The operator watches message ConfigMaps: any change to their data reconciles one Frontend in each namespace of the environment, which repairs an external edit and carries a translation change to the messages beside every source ConfigMap.
+Every enabled locale is listed, in spec order, with its messages file. A locale whose messages exceed 900 KB gets no ConfigMap and is left out of `locales.json`; the operator logs it. `en` is always listed; if the configured default is left out, `en` becomes the default.
 
 `messages.<locale>.json` maps runtime keys to strings. Each runtime key starts with a namespace Chrome can rebuild from one object in the generated JSON, never from an array position:
 
@@ -423,9 +423,7 @@ Widgets have no id: `<module>` and `<importName>` in their keys are slugs with t
 
 Only strings that reach the English output contribute: everything from `feoConfigEnabled` Frontends, `chrome`'s document title, and the navigation segments of any Frontend that a `feoConfigEnabled` Frontend's bundle references through `segmentRef`, directly or through another segment. Other translations, and `chrome` fields beyond its document title, are skipped because they have no English output. Catalog keys outside this scheme are dropped, and a runtime key produced by more than one source is left out so English is shown, even if only one source translates it. Only that key is affected: the locale stays advertised in `locales.json`. Frontends with the same name in different namespaces share search, nav and tile prefixes, so their keys collide. As with the other generated files, unknown, skipped and colliding keys are logged by the operator; they are not reported on the Frontend.
 
-Deleting a Frontend reconciles one surviving Frontend in each namespace of the environment, which republishes the messages without the deleted Frontend's keys.
-
-When a locale is disabled, it disappears from `locales.json` first. A messages ConfigMap becomes a pruning candidate once neither the stored source base ConfigMap nor its namespace's target base lists the locale; if either cannot be read, nothing in that namespace is pruned. The candidate is stamped with `frontend.cloud.redhat.com/unadvertised-since` and deleted 15 minutes later (the reconcile is requeued for that time), so consumers holding the previous `locales.json` can still read the file. Only owned ConfigMaps beside this reconcile's source base and in current `targetNamespaces` are pruned; those left in a namespace removed from `targetNamespaces` go when the FrontendEnvironment is deleted.
+When a locale is neither enabled nor has strings any more, the next reconcile deletes its messages ConfigMaps owned by this FrontendEnvironment beside the source environment ConfigMap and in current `targetNamespaces`; those left in a namespace removed from `targetNamespaces` go when the FrontendEnvironment is deleted. Disabling a locale that still has strings only removes it from `locales.json`.
 
 The shared fixture under `tests/fixtures/localization/` (input Frontend and FrontendEnvironment, expected `bundles.json`, `messages.<locale>.json` and `locales.json`) is the contract for Chrome and chrome-service tests.
 

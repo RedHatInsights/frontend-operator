@@ -11,7 +11,6 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"time"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	localUtil "github.com/RedHatInsights/frontend-operator/controllers/utils"
@@ -50,11 +49,8 @@ type FrontendReconciliation struct {
 	Frontend            *crd.Frontend
 	Ctx                 context.Context
 	Client              client.Client
-	// locales.json entries, set by setupLocaleConfigMaps before the base
-	// ConfigMaps are populated
+	// locales.json entries, set before the base ConfigMaps are populated
 	localesJSON []localeEntry
-	// when the locale output needs another reconcile (retry, pruning), 0 if not
-	requeueAfter time.Duration
 }
 
 // setupConfigMapWithLabels creates a ConfigMap with the specified name and namespace,
@@ -1929,12 +1925,24 @@ func (r *FrontendReconciliation) setupConfigMaps() ([]*v1.ConfigMap, error) {
 		})
 	}
 
-	// Locale messages go out first, so locales.json only advertises files that exist.
-	localesJSON, err := r.setupLocaleConfigMaps(frontendList, frontendCFGContextName)
+	// Locale messages are not returned in configMaps: they stay out of the
+	// config hash, so a translation change restarts nothing.
+	localeMessages, err := r.setupLocaleMessages(frontendList)
 	if err != nil {
 		return []*v1.ConfigMap{}, err
 	}
-	r.localesJSON = localesJSON
+	r.localesJSON = r.advertisedLocales(localeMessages)
+	localeBases := append([]types.NamespacedName{defaultNN}, additionalNN...)
+	for _, locale := range slices.Sorted(maps.Keys(localeMessages)) {
+		for _, baseNN := range localeBases {
+			if err := r.createLocaleMessagesConfigMap(baseNN, locale, localeMessages[locale]); err != nil {
+				return []*v1.ConfigMap{}, err
+			}
+		}
+	}
+	if err := r.pruneLocaleConfigMaps(localeBases, localeMessages); err != nil {
+		return []*v1.ConfigMap{}, err
+	}
 
 	defaultCfgMap, err := r.createConfigMap(defaultNN, frontendList, true, nil)
 	if err != nil {

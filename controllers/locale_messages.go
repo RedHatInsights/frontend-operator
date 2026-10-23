@@ -7,12 +7,9 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"time"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
-	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,25 +21,12 @@ const (
 	sourceLocale = "en"
 	// moduleTitleKey is the catalog key of a Frontend's document title.
 	moduleTitleKey = "module.defaultDocumentTitle"
-	// messagesLocaleLabel marks the per-locale messages ConfigMaps so they can
-	// be found for pruning.
+	// messagesLocaleLabel marks the per-locale messages ConfigMaps, for
+	// consumers and for pruning.
 	messagesLocaleLabel = "frontend.cloud.redhat.com/messages-locale"
 	// maxLocaleMessagesBytes keeps a locale ConfigMap safely under the 1 MiB
 	// object limit.
 	maxLocaleMessagesBytes = 900 * 1024
-	// unadvertisedSinceAnnotation records when a messages ConfigMap was first
-	// found neither enabled nor advertised, to time its pruning.
-	unadvertisedSinceAnnotation = "frontend.cloud.redhat.com/unadvertised-since"
-)
-
-var (
-	// localePruneGrace is how long a messages ConfigMap outlives the last
-	// locales.json that advertised it, so consumers that still hold the old
-	// locales.json (kubelet ConfigMap refresh, cached clients) can read the file.
-	localePruneGrace = 15 * time.Minute
-	// localeRetryInterval is when a reconcile that could not publish a locale is
-	// retried; a failed write does not produce a ConfigMap event.
-	localeRetryInterval = time.Minute
 )
 
 // localeEntry is one entry of locales.json.
@@ -77,40 +61,6 @@ func messagesFileName(locale string) string {
 // ConfigMap named baseName. ConfigMap names are lowercase, locale ids are not.
 func messagesConfigMapName(baseName, locale string) string {
 	return baseName + "-messages-" + strings.ToLower(locale)
-}
-
-type localeConfigMapLocation struct {
-	base     types.NamespacedName
-	messages types.NamespacedName
-}
-
-func (r *FrontendReconciliation) localeConfigMapLocations(baseName, locale string) []localeConfigMapLocation {
-	bases := r.localeBaseConfigMaps(baseName)
-	locations := make([]localeConfigMapLocation, 0, len(bases))
-	for _, base := range bases {
-		locations = append(locations, localeConfigMapLocation{
-			base:     base,
-			messages: types.NamespacedName{Name: messagesConfigMapName(base.Name, locale), Namespace: base.Namespace},
-		})
-	}
-	return locations
-}
-
-func (r *FrontendReconciliation) localeBaseConfigMaps(baseName string) []types.NamespacedName {
-	bases := []types.NamespacedName{{Name: r.FrontendEnvironment.Name, Namespace: r.Frontend.Namespace}}
-	for _, namespace := range r.FrontendEnvironment.Spec.TargetNamespaces {
-		bases = append(bases, types.NamespacedName{Name: baseName, Namespace: namespace})
-	}
-	seen := map[types.NamespacedName]bool{}
-	unique := make([]types.NamespacedName, 0, len(bases))
-	for _, base := range bases {
-		if seen[base] {
-			continue
-		}
-		seen[base] = true
-		unique = append(unique, base)
-	}
-	return unique
 }
 
 func frontendSource(frontend *crd.Frontend) string {
@@ -268,81 +218,86 @@ func buildLocaleMessagesFromSources(locale string, keySources []localeKeySource)
 	return out
 }
 
-// setupLocaleConfigMaps writes one messages ConfigMap per enabled non-English
-// locale beside the source and target base ConfigMaps, and returns the locales.json
-// entries to advertise. It runs before the base ConfigMaps are written, and
-// advertises a locale only when its messages are written everywhere.
-//
-// It writes directly rather than through the resource cache: the cache applies
-// at the end of the reconcile, after the base ConfigMap.
-func (r *FrontendReconciliation) setupLocaleConfigMaps(feList *crd.FrontendList, baseName string) ([]localeEntry, error) {
-	env := r.FrontendEnvironment
-	advertised := map[string]bool{}
-	if len(env.Spec.EnabledLocales) > 0 {
-		advertised[sourceLocale] = true
-	}
-	var keySources []localeKeySource
+// publishedLocaleIDs lists, sorted, the non-English locales that get a
+// messages file: every enabled locale, so locales.json never lists a missing
+// file, and every locale that the environment or one of its Frontends has
+// strings for. Consumers only request the locales advertised in locales.json.
+func publishedLocaleIDs(feList *crd.FrontendList, env *crd.FrontendEnvironment) []string {
+	ids := map[string]bool{}
 	for _, enabled := range env.Spec.EnabledLocales {
-		if enabled.ID != sourceLocale {
-			keySources = buildLocaleKeySources(feList, env)
-			break
-		}
+		ids[enabled.ID] = true
 	}
-	for _, enabled := range env.Spec.EnabledLocales {
-		if enabled.ID == sourceLocale {
+	for id := range env.Spec.Locales {
+		ids[id] = true
+	}
+	for _, frontend := range feList.Items {
+		if frontend.Spec.EnvName != env.Name || frontend.DeletionTimestamp != nil {
 			continue
 		}
-		built := buildLocaleMessagesFromSources(enabled.ID, keySources)
-		r.logLocaleKeys(enabled.ID, built)
+		for id := range frontend.Spec.Locales {
+			ids[id] = true
+		}
+	}
+	delete(ids, sourceLocale)
+	return slices.Sorted(maps.Keys(ids))
+}
 
+// setupLocaleMessages builds the messages file of every published locale,
+// keyed by locale. A locale whose messages exceed maxLocaleMessagesBytes is
+// left out and logged: its ConfigMap would be rejected and fail the reconcile.
+func (r *FrontendReconciliation) setupLocaleMessages(feList *crd.FrontendList) (map[string]string, error) {
+	ids := publishedLocaleIDs(feList, r.FrontendEnvironment)
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	keySources := buildLocaleKeySources(feList, r.FrontendEnvironment)
+	messages := map[string]string{}
+	for _, id := range ids {
+		built := buildLocaleMessagesFromSources(id, keySources)
+		r.logLocaleKeys(id, built)
 		data, err := json.Marshal(built.Messages)
 		if err != nil {
 			return nil, err
 		}
 		if len(data) > maxLocaleMessagesBytes {
-			r.logLocale("locale %s not advertised: messages are %d bytes, limit %d", enabled.ID, len(data), maxLocaleMessagesBytes)
+			r.logLocale("locale %s left out: messages are %d bytes, limit %d", id, len(data), maxLocaleMessagesBytes)
 			continue
 		}
-		if len(env.Spec.TargetNamespaces) == 0 {
-			r.logLocale("locale %s not advertised: the environment has no targetNamespaces to write messages to", enabled.ID)
-			continue
-		}
+		messages[id] = string(data)
+	}
+	return messages, nil
+}
 
-		locations := r.localeConfigMapLocations(baseName, enabled.ID)
-		written := true
-		for _, location := range locations {
-			err := r.writeLocaleConfigMap(location.messages, enabled.ID, string(data))
-			if k8serr.IsConflict(err) {
-				// a stale read, not a bad locale: retry the reconcile instead of
-				// dropping the locale from locales.json and restarting consumers
-				return nil, err
-			}
-			if err != nil {
-				message := fmt.Sprintf("locale %s: writing messages to namespace %s failed: %v", enabled.ID, location.messages.Namespace, err)
-				r.requeueLocalesAfter(localeRetryInterval)
-				written = false
-				if r.localeWasPublished(enabled.ID, locations) {
-					r.Log.Info(message + "; retaining previously published messages")
-					advertised[enabled.ID] = true
-				} else {
-					r.logLocale("locale %s not advertised: writing messages to namespace %s failed: %v", enabled.ID, location.messages.Namespace, err)
-				}
-				break
-			}
-		}
-		if written {
-			advertised[enabled.ID] = true
-		}
+// advertisedLocales returns the locales.json entries for the published
+// messages, or nil when the environment enables no locales.
+func (r *FrontendReconciliation) advertisedLocales(messages map[string]string) []localeEntry {
+	enabled := r.FrontendEnvironment.Spec.EnabledLocales
+	if len(enabled) == 0 {
+		return nil
+	}
+	advertised := map[string]bool{sourceLocale: true}
+	for id := range messages {
+		advertised[id] = true
+	}
+	return localesJSONEntries(enabled, advertised)
+}
+
+// createLocaleMessagesConfigMap creates the ConfigMap holding one locale's
+// messages beside the base ConfigMap baseNN.
+func (r *FrontendReconciliation) createLocaleMessagesConfigMap(baseNN types.NamespacedName, locale, data string) error {
+	nn := types.NamespacedName{Name: messagesConfigMapName(baseNN.Name, locale), Namespace: baseNN.Namespace}
+	cfgMap := &v1.ConfigMap{}
+	if err := r.Cache.Create(CoreConfig, nn, cfgMap); err != nil {
+		return err
 	}
 
-	if err := r.pruneLocaleConfigMaps(baseName, advertised); err != nil {
-		return nil, err
-	}
+	// no recycle annotation: a translation change must not restart consumers
+	cfgMap = r.setupConfigMapWithLabels(nn, false)
+	cfgMap.Labels[messagesLocaleLabel] = locale
+	cfgMap.SetOwnerReferences([]metav1.OwnerReference{r.FrontendEnvironment.MakeOwnerReference()})
+	cfgMap.Data = map[string]string{messagesFileName(locale): data}
 
-	if len(env.Spec.EnabledLocales) == 0 {
-		return nil, nil
-	}
-	return localesJSONEntries(env.Spec.EnabledLocales, advertised), nil
+	return r.Cache.Update(CoreConfig, cfgMap)
 }
 
 // localesJSONEntries lists the enabled locales that are advertised, in spec
@@ -372,130 +327,11 @@ func localesJSONEntries(enabled []crd.EnabledLocale, advertised map[string]bool)
 	return entries
 }
 
-func (r *FrontendReconciliation) writeLocaleConfigMap(nn types.NamespacedName, locale, data string) error {
-	cfgMap := &v1.ConfigMap{}
-	err := r.Client.Get(r.Ctx, nn, cfgMap)
-	if k8serr.IsNotFound(err) {
-		cfgMap = &v1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: nn.Name, Namespace: nn.Namespace}}
-		r.setLocaleConfigMap(cfgMap, nn, locale, data)
-		err = r.Client.Create(r.Ctx, cfgMap)
-		if k8serr.IsAlreadyExists(err) {
-			return k8serr.NewConflict(v1.Resource("configmaps"), nn.Name, err)
-		}
-		return err
-	}
-	if err != nil {
-		return err
-	}
-
-	updated := cfgMap.DeepCopy()
-	r.setLocaleConfigMap(updated, nn, locale, data)
-	if equality.Semantic.DeepEqual(cfgMap, updated) {
-		return nil
-	}
-	return r.Client.Update(r.Ctx, updated)
-}
-
-func (r *FrontendReconciliation) setLocaleConfigMap(cfgMap *v1.ConfigMap, nn types.NamespacedName, locale, data string) {
-	// no recycle annotation: a translation change must not restart consumers
-	desired := r.setupConfigMapWithLabels(nn, false)
-	if cfgMap.Labels == nil {
-		cfgMap.Labels = map[string]string{}
-	}
-	for k, v := range desired.Labels {
-		cfgMap.Labels[k] = v
-	}
-	cfgMap.Labels[messagesLocaleLabel] = locale
-	// advertised again: cancel any pending pruning
-	delete(cfgMap.Annotations, unadvertisedSinceAnnotation)
-	cfgMap.SetOwnerReferences([]metav1.OwnerReference{r.FrontendEnvironment.MakeOwnerReference()})
-	// the key must not also be in BinaryData, or the write is rejected
-	cfgMap.BinaryData = nil
-	cfgMap.Data = map[string]string{messagesFileName(locale): data}
-}
-
-func (r *FrontendReconciliation) localeWasPublished(locale string, locations []localeConfigMapLocation) bool {
-	advertised := false
-	for _, location := range locations {
-		locales, ok := r.storedAdvertisedLocales(location.base)
-		if ok && locales[locale] {
-			advertised = true
-		}
-	}
-	if !advertised {
-		return false
-	}
-	for _, location := range locations {
-		cfgMap := &v1.ConfigMap{}
-		if err := r.Client.Get(r.Ctx, location.messages, cfgMap); err != nil {
-			return false
-		}
-		raw, ok := cfgMap.Data[messagesFileName(locale)]
-		if !ok || len(raw) > maxLocaleMessagesBytes {
-			return false
-		}
-		messages := map[string]string{}
-		if err := json.Unmarshal([]byte(raw), &messages); err != nil || messages == nil {
-			return false
-		}
-	}
-	return true
-}
-
-// storedAdvertisedLocales reads the locales listed by a stored base ConfigMap.
-// ok is false when the ConfigMap exists but cannot be read or parsed: the
-// caller must then assume any locale may still be advertised there.
-func (r *FrontendReconciliation) storedAdvertisedLocales(nn types.NamespacedName) (locales map[string]bool, ok bool) {
-	locales = map[string]bool{}
-	cfgMap := &v1.ConfigMap{}
-	err := r.Client.Get(r.Ctx, nn, cfgMap)
-	if k8serr.IsNotFound(err) {
-		return locales, true
-	}
-	if err != nil {
-		r.Log.Info("Cannot read advertised locales, not pruning", "namespace", nn.Namespace, "name", nn.Name, "error", err.Error())
-		return nil, false
-	}
-	raw, present := cfgMap.Data["locales.json"]
-	if !present {
-		return locales, true
-	}
-	entries := []localeEntry{}
-	if err := json.Unmarshal([]byte(raw), &entries); err != nil {
-		r.Log.Info("Unreadable locales.json, not pruning", "namespace", nn.Namespace, "name", nn.Name, "error", err.Error())
-		return nil, false
-	}
-	for _, e := range entries {
-		locales[e.ID] = true
-	}
-	return locales, true
-}
-
-// pruneLocaleConfigMaps deletes this environment's messages ConfigMaps for
-// locales that no locales.json lists any more. Only ConfigMaps next to a source
-// or target base ConfigMap that this FrontendEnvironment owns are considered. In each
-// namespace a locale is kept while it is advertised now, by the stored source
-// base ConfigMap, or by that namespace's stored base ConfigMap; if either stored
-// ConfigMap cannot be read, nothing in that namespace is touched and the
-// reconcile is retried after localeRetryInterval. The first
-// reconcile that finds a candidate stamps it with unadvertisedSinceAnnotation;
-// it is deleted once that is older than localePruneGrace, and the reconcile is
-// requeued for the earliest such deadline.
-func (r *FrontendReconciliation) pruneLocaleConfigMaps(baseName string, advertisedNow map[string]bool) error {
+// pruneLocaleConfigMaps deletes this environment's messages ConfigMaps beside
+// the given base ConfigMaps whose locale has no messages any more.
+func (r *FrontendReconciliation) pruneLocaleConfigMaps(bases []types.NamespacedName, messages map[string]string) error {
 	env := r.FrontendEnvironment
-	source, sourceOK := r.storedAdvertisedLocales(types.NamespacedName{Name: r.Frontend.Spec.EnvName, Namespace: r.Frontend.Namespace})
-	if !sourceOK {
-		// nothing else may trigger a reconcile once the base is readable again
-		r.requeueLocalesAfter(localeRetryInterval)
-		return nil
-	}
-	now := time.Now().UTC()
-	for _, baseNN := range r.localeBaseConfigMaps(baseName) {
-		target, ok := r.storedAdvertisedLocales(baseNN)
-		if !ok {
-			r.requeueLocalesAfter(localeRetryInterval)
-			continue
-		}
+	for _, baseNN := range bases {
 		list := &v1.ConfigMapList{}
 		if err := r.Client.List(r.Ctx, list, client.InNamespace(baseNN.Namespace), client.MatchingLabels{"frontendenv": env.GetLabels()["frontendenv"]}, client.HasLabels{messagesLocaleLabel}); err != nil {
 			return err
@@ -503,46 +339,11 @@ func (r *FrontendReconciliation) pruneLocaleConfigMaps(baseName string, advertis
 		for i := range list.Items {
 			cfgMap := &list.Items[i]
 			locale := cfgMap.Labels[messagesLocaleLabel]
-			if !strings.HasPrefix(cfgMap.Name, baseNN.Name+"-messages-") || !ownedBy(cfgMap, env) || advertisedNow[locale] {
+			if _, ok := messages[locale]; ok || cfgMap.Name != messagesConfigMapName(baseNN.Name, locale) || !ownedBy(cfgMap, env) {
 				continue
 			}
-			if source[locale] || target[locale] {
-				// no longer advertised by this reconcile, but a stored base still
-				// lists it until the cache applies; come back to start the grace
-				// period, since nothing else may trigger a reconcile
-				r.requeueLocalesAfter(localeRetryInterval)
-				continue
-			}
-			since, err := time.Parse(time.RFC3339, cfgMap.Annotations[unadvertisedSinceAnnotation])
-			if err != nil {
-				updated := cfgMap.DeepCopy()
-				if updated.Annotations == nil {
-					updated.Annotations = map[string]string{}
-				}
-				updated.Annotations[unadvertisedSinceAnnotation] = now.Format(time.RFC3339)
-				patch := client.MergeFromWithOptions(cfgMap.DeepCopy(), client.MergeFromWithOptimisticLock{})
-				if err := r.Client.Patch(r.Ctx, updated, patch); err != nil {
-					if k8serr.IsConflict(err) || k8serr.IsNotFound(err) {
-						r.requeueLocalesAfter(localeRetryInterval)
-						continue
-					}
-					return err
-				}
-				r.requeueLocalesAfter(localePruneGrace)
-				continue
-			}
-			if remaining := since.Add(localePruneGrace).Sub(now); remaining > 0 {
-				r.requeueLocalesAfter(remaining)
-				continue
-			}
-			r.Log.Info("Pruning locale messages", "namespace", cfgMap.Namespace, "name", cfgMap.Name, "unadvertisedSince", since)
-			resourceVersion := cfgMap.ResourceVersion
-			uid := cfgMap.UID
-			if err := r.Client.Delete(r.Ctx, cfgMap, client.Preconditions{ResourceVersion: &resourceVersion, UID: &uid}); err != nil {
-				if k8serr.IsConflict(err) || k8serr.IsNotFound(err) {
-					r.requeueLocalesAfter(localeRetryInterval)
-					continue
-				}
+			r.Log.Info("Pruning locale messages", "namespace", cfgMap.Namespace, "name", cfgMap.Name)
+			if err := r.Client.Delete(r.Ctx, cfgMap); client.IgnoreNotFound(err) != nil {
 				return err
 			}
 		}
@@ -557,13 +358,6 @@ func ownedBy(obj metav1.Object, env *crd.FrontendEnvironment) bool {
 		}
 	}
 	return false
-}
-
-// requeueLocalesAfter asks for the reconcile to run again within d.
-func (r *FrontendReconciliation) requeueLocalesAfter(d time.Duration) {
-	if d > 0 && (r.requeueAfter == 0 || d < r.requeueAfter) {
-		r.requeueAfter = d
-	}
 }
 
 // logLocaleKeys logs the keys of one locale that were left out of its
