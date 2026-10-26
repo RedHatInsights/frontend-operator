@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	apps "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -239,8 +240,8 @@ func TestUpdateReverseProxyDeployment(t *testing.T) {
 				{Name: "BUCKET_PATH_PREFIX", Value: "frontend"},
 				{Name: "SPA_ENTRYPOINT_PATH", Value: "/index.html"},
 				{Name: "AWS_REGION", Value: "us-east-1"},
-				{Name: "PUSHCACHE_AWS_ACCESS_KEY_ID", Value: "test-access-key"},
-				{Name: "PUSHCACHE_AWS_SECRET_ACCESS_KEY", Value: "test-secret-key"},
+				{Name: "PUSHCACHE_AWS_ACCESS_KEY_ID", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: PushCacheCredentialsSecretName}, Key: "aws-access-key-id"}}},
+				{Name: "PUSHCACHE_AWS_SECRET_ACCESS_KEY", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: PushCacheCredentialsSecretName}, Key: "aws-secret-access-key"}}},
 				{Name: "LOG_LEVEL", Value: "DEBUG"},
 			},
 			expectUpdate:       false,
@@ -505,6 +506,36 @@ func TestEnvVarsEqual(t *testing.T) {
 			existing: []v1.EnvVar{},
 			desired:  []v1.EnvVar{},
 			expected: true,
+		},
+		{
+			name: "Equal secretKeyRef env vars",
+			existing: []v1.EnvVar{
+				{Name: "SECRET_VAR", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: "my-secret"}, Key: "my-key"}}},
+			},
+			desired: []v1.EnvVar{
+				{Name: "SECRET_VAR", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: "my-secret"}, Key: "my-key"}}},
+			},
+			expected: true,
+		},
+		{
+			name: "Different secretKeyRef name",
+			existing: []v1.EnvVar{
+				{Name: "SECRET_VAR", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: "old-secret"}, Key: "my-key"}}},
+			},
+			desired: []v1.EnvVar{
+				{Name: "SECRET_VAR", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: "new-secret"}, Key: "my-key"}}},
+			},
+			expected: false,
+		},
+		{
+			name: "Value vs ValueFrom mismatch",
+			existing: []v1.EnvVar{
+				{Name: "VAR1", Value: "literal"},
+			},
+			desired: []v1.EnvVar{
+				{Name: "VAR1", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: "my-secret"}, Key: "my-key"}}},
+			},
+			expected: false,
 		},
 	}
 
@@ -1375,5 +1406,244 @@ func TestReverseProxyReconciliation_FullReconciliation(t *testing.T) {
 	}
 	if container.Resources.Limits == nil {
 		t.Error("Expected resource limits to be set for scaling")
+	}
+
+	// Verify credential checksum annotation exists on the Pod template
+	annotations := deployment.Spec.Template.ObjectMeta.Annotations
+	if annotations == nil {
+		t.Fatal("Expected pod template annotations to be set")
+	}
+	checksum, exists := annotations["pushcache-credentials-checksum"]
+	if !exists {
+		t.Error("Expected pushcache-credentials-checksum annotation on pod template")
+	}
+	if checksum == "" {
+		t.Error("Expected pushcache-credentials-checksum annotation to be non-empty")
+	}
+}
+
+// TestCredentialChecksumChangesOnRotation verifies that rotating S3 credentials
+// produces a different checksum annotation, which would trigger a rolling restart.
+func TestCredentialChecksumChangesOnRotation(t *testing.T) {
+	// Create scheme and add our types
+	scheme := runtime.NewScheme()
+	_ = v1.AddToScheme(scheme)
+	_ = apps.AddToScheme(scheme)
+	_ = networkingv1.AddToScheme(scheme)
+	_ = crd.AddToScheme(scheme)
+
+	frontendEnv := &crd.FrontendEnvironment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-env",
+		},
+		Spec: crd.FrontendEnvironmentSpec{
+			EnablePushCache:      true,
+			ReverseProxyImage:    "quay.io/test/reverse-proxy:latest",
+			Hostname:             "test.example.com",
+			ReverseProxyHostname: "reverse-proxy.cluster.local",
+		},
+	}
+
+	buildWithCreds := func(accessKey, secretKey string) (string, error) {
+		os.Setenv("PUSHCACHE_AWS_ACCESS_KEY_ID", accessKey)
+		os.Setenv("PUSHCACHE_AWS_SECRET_ACCESS_KEY", secretKey)
+		os.Setenv("PUSHCACHE_AWS_REGION", "us-east-1")
+		os.Setenv("PUSHCACHE_AWS_ENDPOINT", "minio.svc.local")
+		os.Setenv("PUSHCACHE_AWS_PORT", "9000")
+		os.Setenv("PUSHCACHE_AWS_BUCKET_NAME", "frontend")
+
+		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(frontendEnv).Build()
+		r := &ReverseProxyReconciliation{
+			Log:                 logr.Discard(),
+			Recorder:            &record.FakeRecorder{},
+			Client:              cl,
+			Ctx:                 context.Background(),
+			Namespace:           "test-ns",
+			FrontendEnvironment: frontendEnv,
+		}
+		dep, err := r.buildReverseProxyDeployment()
+		if err != nil {
+			return "", err
+		}
+		return dep.Spec.Template.ObjectMeta.Annotations["pushcache-credentials-checksum"], nil
+	}
+
+	checksum1, err := buildWithCreds("old-access-key", "old-secret-key")
+	if err != nil {
+		t.Fatalf("build with old creds failed: %v", err)
+	}
+
+	checksum2, err := buildWithCreds("new-access-key", "new-secret-key")
+	if err != nil {
+		t.Fatalf("build with new creds failed: %v", err)
+	}
+
+	if checksum1 == checksum2 {
+		t.Error("Expected different checksums for different credentials, but they matched")
+	}
+	if checksum1 == "" || checksum2 == "" {
+		t.Error("Expected non-empty checksums")
+	}
+
+	// Verify same creds produce same checksum (deterministic)
+	checksum3, err := buildWithCreds("old-access-key", "old-secret-key")
+	if err != nil {
+		t.Fatalf("build with repeated creds failed: %v", err)
+	}
+	if checksum1 != checksum3 {
+		t.Error("Expected same credentials to produce the same checksum")
+	}
+
+	// Clean up env vars
+	os.Unsetenv("PUSHCACHE_AWS_ACCESS_KEY_ID")
+	os.Unsetenv("PUSHCACHE_AWS_SECRET_ACCESS_KEY")
+	os.Unsetenv("PUSHCACHE_AWS_REGION")
+	os.Unsetenv("PUSHCACHE_AWS_ENDPOINT")
+	os.Unsetenv("PUSHCACHE_AWS_PORT")
+	os.Unsetenv("PUSHCACHE_AWS_BUCKET_NAME")
+}
+
+// TestIsJobUsingSecretKeyRef verifies that legacy Jobs with plaintext credentials
+// are detected so they can be deleted and recreated with secretKeyRef.
+func TestIsJobUsingSecretKeyRef(t *testing.T) {
+	tests := []struct {
+		name     string
+		job      *batchv1.Job
+		expected bool
+	}{
+		{
+			name: "Job with secretKeyRef - should return true",
+			job: &batchv1.Job{
+				Spec: batchv1.JobSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									Name: "valpop-pushcache",
+									Env: []v1.EnvVar{
+										{
+											Name: "PUSHCACHE_AWS_ACCESS_KEY_ID",
+											ValueFrom: &v1.EnvVarSource{
+												SecretKeyRef: &v1.SecretKeySelector{
+													LocalObjectReference: v1.LocalObjectReference{Name: PushCacheCredentialsSecretName},
+													Key:                  "aws-access-key-id",
+												},
+											},
+										},
+										{
+											Name: "PUSHCACHE_AWS_SECRET_ACCESS_KEY",
+											ValueFrom: &v1.EnvVarSource{
+												SecretKeyRef: &v1.SecretKeySelector{
+													LocalObjectReference: v1.LocalObjectReference{Name: PushCacheCredentialsSecretName},
+													Key:                  "aws-secret-access-key",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "Legacy Job with literal Value - should return false",
+			job: &batchv1.Job{
+				Spec: batchv1.JobSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									Name: "valpop-pushcache",
+									Env: []v1.EnvVar{
+										{Name: "PUSHCACHE_AWS_ACCESS_KEY_ID", Value: "fake-access-key-for-test"},
+										{Name: "PUSHCACHE_AWS_SECRET_ACCESS_KEY", Value: "fake-secret-key-for-test"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "Legacy Job with only access key literal - should return false",
+			job: &batchv1.Job{
+				Spec: batchv1.JobSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									Name: "valpop-pushcache",
+									Env: []v1.EnvVar{
+										{Name: "PUSHCACHE_AWS_ACCESS_KEY_ID", Value: "fake-access-key-for-test"},
+										{
+											Name: "PUSHCACHE_AWS_SECRET_ACCESS_KEY",
+											ValueFrom: &v1.EnvVarSource{
+												SecretKeyRef: &v1.SecretKeySelector{
+													LocalObjectReference: v1.LocalObjectReference{Name: PushCacheCredentialsSecretName},
+													Key:                  "aws-secret-access-key",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "Job without valpop-pushcache container - should return true (not a pushcache Job)",
+			job: &batchv1.Job{
+				Spec: batchv1.JobSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									Name: "some-other-container",
+									Env: []v1.EnvVar{
+										{Name: "FOO", Value: "bar"},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "Job with empty env vars on valpop container - should return true (no cred vars to check)",
+			job: &batchv1.Job{
+				Spec: batchv1.JobSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									Name: "valpop-pushcache",
+									Env:  []v1.EnvVar{},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isJobUsingSecretKeyRef(tt.job)
+			if result != tt.expected {
+				t.Errorf("Expected %v, got %v", tt.expected, result)
+			}
+		})
 	}
 }
