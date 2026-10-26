@@ -8,6 +8,8 @@ spec:
   ssl: false
   hostname: foo.redhat.com
   sso: https://sso.foo.redhat.com
+  targetNamespaces:
+    - test-localization-target
   enabledLocales:
     - id: en
       name: English
@@ -16,9 +18,12 @@ spec:
       name: Français
     - id: zh-CN
       name: 简体中文
+  bundles:
+    - id: iam
+      title: Identity and Access Management
   locales:
     fr:
-      bundles.rhel.title: Red Hat Enterprise Linux
+      bundles.iam.title: Gestion des identités et des accès
 ---
 apiVersion: cloud.redhat.com/v1alpha1
 kind: Frontend
@@ -38,6 +43,19 @@ spec:
     modules: []
     moduleID: localization
   feoConfigEnabled: true
+  bundleSegments:
+    - bundleId: iam
+      segmentId: user-access
+      position: 100
+      navItems:
+        - id: access
+          title: User Access
+          expandable: true
+          routes:
+            - id: roles
+              title: Roles
+              href: /iam/user-access/roles
   locales:
     fr:
       module.defaultDocumentTitle: Frontend localisé
+      bundleSegments.iam.user-access.navItems.access.routes.roles.title: Rôles

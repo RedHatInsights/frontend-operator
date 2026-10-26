@@ -284,7 +284,7 @@ This is typically enabled for ephemeral and development environments but disable
 
 === Localization
 
-NOTE: The fields below are accepted, validated and stored on the custom resources. The operator writes `FrontendEnvironment.spec.enabledLocales` to `locales.json` in the environment ConfigMap. It does not yet generate per-locale message files from the `locales` maps, and a publisher serving the files and Chrome rendering them are separate work.
+NOTE: The operator turns these fields into `locales.json` in the environment ConfigMap and one `messages.<locale>.json` per locale (see <<Generated locale output>>). Publishing the files and Chrome rendering them are separate work.
 
 Three optional fields carry localization inputs. Environments and Frontends that do not set them behave exactly as before.
 
@@ -335,7 +335,7 @@ spec:
       name: 简体中文
 ----
 
-The operator writes the list unchanged to the `locales.json` key of the environment ConfigMap, for example `[{"id":"en","name":"English","default":true},{"id":"fr","name":"Français"}]`. Changing `enabledLocales` changes the ConfigMap, so the environment's frontend pods restart once.
+The operator advertises the list in `locales.json` (see <<Generated locale output>>). Changing `enabledLocales` changes the environment ConfigMap, so the environment's frontend pods restart once.
 
 `enabledLocales` is the only field that declares which locales are available. A locale that has strings under `locales` but is not listed in `enabledLocales` is still accepted and stored; the API does not cross-check the two, because tenant strings may be deployed before an environment enables the locale.
 
@@ -366,7 +366,66 @@ spec:
 
 ==== Staging translations ahead of enablement
 
-Translation maps may be staged for locales that are not yet in `enabledLocales`. Storing a map does not enable the locale, and enabling a locale does not by itself promise that its assets are published.
+Translation maps may be staged for locales that are not yet in `enabledLocales`. Storing a map does not enable the locale: its messages are generated, but `locales.json` lists only enabled locales.
+
+==== Generated locale output
+
+Each reconcile generates, like the other environment files:
+
+* For every locale except `en` that is enabled or has strings in the FrontendEnvironment or any of its Frontends, a messages ConfigMap beside the source environment ConfigMap in the Frontend's namespace (`<envName>-messages-<locale>`) and beside each target config (`feo-context-cfg-messages-<locale>`, with the `-beta` base name when used). Locale ids in ConfigMap names are lowercased. Each has one key, `messages.<locale>.json`, the label `frontend.cloud.redhat.com/messages-locale=<locale>`, and no `qontract.recycle` annotation. These ConfigMaps are not part of the frontend config hash, so a translation-only change updates them and restarts nothing. An enabled locale with no strings gets `{}`. Strings staged for a locale that is not enabled are published too; consumers only request the files listed in `locales.json`.
+* When `enabledLocales` is set, `locales.json` in the source environment ConfigMap and each target config:
++
+[source,json]
+----
+[{"id":"en","name":"English","default":true},{"id":"fr","name":"Français","file":"messages.fr.json"}]
+----
++
+Every enabled locale is listed, in spec order, with its messages file. A locale whose messages exceed 900 KB gets no ConfigMap and is left out of `locales.json`; the operator logs it. `en` is always listed; if the configured default is left out, `en` becomes the default.
+
+`messages.<locale>.json` maps runtime keys to strings. Each runtime key starts with a namespace Chrome can rebuild from one object in the generated JSON, never from an array position:
+
+|===
+| Catalog key | Runtime key
+
+| `searchEntries.<id>.<field>`
+| `search.<frontend>-<env>-<id>.<field>` (the generated search entry `id`)
+
+| `serviceTiles.<section>.<group>.<id>.<field>`
+| `tile.<frontend>.<section>.<group>.<id>.<field>`
+
+| `bundleSegments.<bundle>.<segment>.navItems.<id>[.routes.<id>\|.navItems.<id>]*.<field>`
+| `nav.<frontend>.<bundle>.<segment>.<id>[.routes.<id>\|.navItems.<id>]*.<field>`
+
+| `navigationSegments.<segment>.navItems.<id>[.routes.<id>\|.navItems.<id>]*.<field>`
+| `navseg.<frontend>.<segment>.<id>[...].<field>`, where `<frontend>` defines the segment
+
+| `widgetRegistry.<scope>.<module>.<importName>.title`, `....headerLink.title`
+| `widget.<frontend>.<scope>.<module>.<importName>.title`, `....headerLink.title`
+
+| `baseWidgetLayouts.<name>.displayName`
+| `widgetLayout.<frontend>.<name>.displayName`
+
+| `module.defaultDocumentTitle`
+| `module.<moduleName>.defaultDocumentTitle` (the `fed-modules.json` key)
+
+| `bundles.<id>.<field>` (environment)
+| `bundle.<id>.<field>`
+
+| `serviceCategories.<id>.title`, `serviceCategories.<id>.groups.<gid>.title` (environment)
+| `serviceCategory.<id>.title`, `serviceCategory.<id>.group.<gid>.title`
+|===
+
+`alt_title` aliases are one key each (`search.<id>.alt_title.<slug>`, where the slug is the alias lowercased with every run of characters outside `a-z0-9` turned into `-`, as `feo extract` does); aliases with the same slug share one key and one translation. Chrome adds them to the entry's search terms alongside the English ones.
+
+Ids may contain dots (`RHEL.ros`), so the operator never parses a catalog key: it enumerates the translatable fields of each Frontend and FrontendEnvironment spec, as `feo extract` does, and looks the catalog keys up. A catalog key that no spec item produces is unknown. When two spec items of the same resource produce the same key (for example a nav item `x.routes.y` next to route `y` under `x`), the key is treated as a collision. Nav items in generated bundles carry their runtime key prefix in `i18nKey` (for example `nav.rbac.iam.user-access.users`), because chrome-service moves generated items into the legacy navigation tree and Chrome cannot rebuild the path. Children of a nav group are keyed below their group (`.navItems.<id>`). Items injected through `segmentRef` keep the `navseg` key of the Frontend that defines the segment, so one translation serves every bundle that references it. Items without an `id` have no key and stay English.
+
+Widgets have no id: `<module>` and `<importName>` in their keys are slugs with the `alt_title` rule, and `importName` defaults to `default` (so `./OpenShiftWidget` becomes `openshiftwidget`). Chrome never rebuilds these keys: generated widget registry entries carry their runtime key prefix in `i18nKey` (Chrome looks up `<i18nKey>.title` and `<i18nKey>.headerLink.title`), and generated base widget layouts carry theirs (`<i18nKey>.displayName`). Like nav items, the field is output only and set only when the environment enables locales.
+
+Only strings that reach the English output contribute: everything from `feoConfigEnabled` Frontends, `chrome`'s document title, and the navigation segments of any Frontend that a `feoConfigEnabled` Frontend's bundle references through `segmentRef`, directly or through another segment. Other translations, and `chrome` fields beyond its document title, are skipped because they have no English output. Catalog keys outside this scheme are dropped, and a runtime key produced by more than one source is left out so English is shown, even if only one source translates it. Only that key is affected: the locale stays advertised in `locales.json`. Frontends with the same name in different namespaces share search, nav and tile prefixes, so their keys collide. As with the other generated files, unknown, skipped and colliding keys are logged by the operator; they are not reported on the Frontend.
+
+When a locale is neither enabled nor has strings any more, the next reconcile deletes its messages ConfigMaps owned by this FrontendEnvironment beside the source environment ConfigMap and in current `targetNamespaces`; those left in a namespace removed from `targetNamespaces` go when the FrontendEnvironment is deleted. Disabling a locale that still has strings only removes it from `locales.json`.
+
+The shared fixture under `tests/fixtures/localization/` (input Frontend and FrontendEnvironment, expected `bundles.json`, `messages.<locale>.json` and `locales.json`) is the contract for Chrome and chrome-service tests.
 
 ==== Rollout order
 

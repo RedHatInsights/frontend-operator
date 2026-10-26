@@ -12,14 +12,81 @@ metadata:
       kind: FrontendEnvironment
       name: test-localization-environment
 data:
-  locales.json: '[{"id":"en","name":"English","default":true},{"id":"fr","name":"Français"},{"id":"zh-CN","name":"简体中文"}]'
+  locales.json: '[{"id":"en","name":"English","default":true},{"id":"fr","name":"Français","file":"messages.fr.json"},{"id":"zh-CN","name":"简体中文","file":"messages.zh-CN.json"}]'
+  bundles.json: '[{"id":"iam","title":"Identity and Access Management","navItems":[{"expandable":true,"title":"User Access","id":"access","routes":[{"href":"/iam/user-access/roles","title":"Roles","id":"roles","bundleSegmentRef":"user-access","frontendRef":"localization-frontend","i18nKey":"nav.localization-frontend.iam.user-access.access.routes.roles"}],"position":100,"bundleSegmentRef":"user-access","frontendRef":"localization-frontend","i18nKey":"nav.localization-frontend.iam.user-access.access"}]}]'
 ---
-apiVersion: cloud.redhat.com/v1alpha1
-kind: Frontend
+kind: ConfigMap
+apiVersion: v1
 metadata:
-  name: localization-frontend
+  name: test-localization-environment-messages-fr
   namespace: test-localization
-spec:
-  locales:
-    fr:
-      module.defaultDocumentTitle: Frontend localisé
+  labels:
+    frontendenv: test-localization-environment
+    frontend.cloud.redhat.com/messages-locale: fr
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      controller: true
+      kind: FrontendEnvironment
+      name: test-localization-environment
+data:
+  messages.fr.json: '{"bundle.iam.title":"Gestion des identités et des accès","module.localization.defaultDocumentTitle":"Frontend localisé","nav.localization-frontend.iam.user-access.access.routes.roles.title":"Rôles"}'
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: test-localization-environment-messages-zh-cn
+  namespace: test-localization
+  labels:
+    frontendenv: test-localization-environment
+    frontend.cloud.redhat.com/messages-locale: zh-CN
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      controller: true
+      kind: FrontendEnvironment
+      name: test-localization-environment
+data:
+  messages.zh-CN.json: '{}'
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: feo-context-cfg
+  namespace: test-localization-target
+data:
+  locales.json: '[{"id":"en","name":"English","default":true},{"id":"fr","name":"Français","file":"messages.fr.json"},{"id":"zh-CN","name":"简体中文","file":"messages.zh-CN.json"}]'
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: feo-context-cfg-messages-fr
+  namespace: test-localization-target
+  labels:
+    frontendenv: test-localization-environment
+    frontend.cloud.redhat.com/messages-locale: fr
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      controller: true
+      kind: FrontendEnvironment
+      name: test-localization-environment
+data:
+  messages.fr.json: '{"bundle.iam.title":"Gestion des identités et des accès","module.localization.defaultDocumentTitle":"Frontend localisé","nav.localization-frontend.iam.user-access.access.routes.roles.title":"Rôles"}'
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: feo-context-cfg-messages-zh-cn
+  namespace: test-localization-target
+  labels:
+    frontend.cloud.redhat.com/messages-locale: zh-CN
+data:
+  messages.zh-CN.json: '{}'
+---
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+commands:
+  # messages ConfigMaps must not restart their consumers
+  - script: |
+      if kubectl get cm feo-context-cfg-messages-fr -n test-localization-target -o jsonpath='{.metadata.annotations}' | grep -q qontract.recycle; then
+        echo "FAIL: messages ConfigMap carries qontract.recycle"
+        exit 1
+      fi

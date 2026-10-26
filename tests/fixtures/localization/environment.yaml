@@ -1,0 +1,35 @@
+# Shared localization fixture (RHCLOUD-52085, consumed by RHCLOUD-52084 and
+# RHCLOUD-52093). Input: this FrontendEnvironment and frontend.yaml.
+# Expected output: bundles.json, messages.fr.json and locales.json, checked by
+# controllers/locale_fixture_test.go.
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: stage
+spec:
+  sso: https://sso.example.com/auth
+  targetNamespaces:
+    - console
+  enabledLocales:
+    - id: en
+      name: English
+      default: true
+    - id: fr
+      name: Français
+    - id: ja
+      name: 日本語
+  bundles:
+    - id: iam
+      title: Identity & Access Management
+      description: Manage users, groups and roles
+  serviceCategories:
+    - id: security
+      title: Security
+      groups:
+        - id: access
+          title: Access
+  locales:
+    fr:
+      bundles.iam.title: Gestion des identités et des accès
+      serviceCategories.security.title: Sécurité
+      serviceCategories.security.groups.access.title: Accès
