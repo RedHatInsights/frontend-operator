@@ -1251,6 +1251,9 @@ objects:
                         - routes
                         type: object
                       type: array
+                    navStyle:
+                      description: NavStyle is populated automatically from FrontendSpec.NavStyle.
+                      type: string
                   required:
                   - manifestLocation
                   type: object
@@ -1366,6 +1369,13 @@ objects:
                     - title
                     type: object
                   type: array
+                navStyle:
+                  description: 'NavStyle selects the navigation layout in insights-chrome.
+                    "flat" requests
+
+                    horizontal navigation; omitted or empty preserves the default
+                    sidebar navigation.'
+                  type: string
                 navigationSegments:
                   items:
                     properties:

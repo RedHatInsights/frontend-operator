@@ -72,6 +72,27 @@ The operator generates several ConfigMap keys from aggregated Frontend data:
 
 ConfigMaps are created in the FrontendEnvironment's target namespace and optionally propagated to `targetNamespaces`.
 
+### Navigation style
+
+`Frontend.spec.navStyle` is an optional string passed to the application's entry
+in `fed-modules.json` as `navStyle`. For example, `spec.navStyle: "flat"` produces
+`"navStyle": "flat"` alongside `manifestLocation` and `modules`. The entry uses
+`spec.module.moduleID` when supplied, or the camel-cased Frontend name otherwise.
+Set the value on `spec.navStyle`; the generated module field is populated by the
+operator, just like `cdnPath`.
+
+An omitted or empty value is omitted from the generated JSON, preserving existing
+configuration and sidebar behavior. The operator passes other string values
+through for future navigation styles. Consumers should retain their existing
+layout for values they do not support.
+
+The existing module inclusion rules still apply: a module must be configured,
+and `feoConfigEnabled` must be true (except for the `chrome` Frontend). The field
+does not change bundle navigation items or enable a layout on its own. Support
+for rendering flat navigation in insights-chrome is tracked in RHCLOUD-50419;
+applications should opt in only when that support and their navigation items
+are ready.
+
 ## Pushcache (valpop) Jobs
 
 When `enablePushCache: true`, the operator creates a Kubernetes Job per Frontend:
