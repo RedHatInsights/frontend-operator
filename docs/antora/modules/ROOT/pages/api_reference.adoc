@@ -616,6 +616,16 @@ See xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha
 | *`navItems`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlenavitem[$$BundleNavItem$$] array__ |
 **Deprecated.** Legacy navigation items. Use `bundleSegments` or `navigationSegments` instead.
 
+| *`navStyle`* __string__ |
+Optional navigation style passed to this application's entry in `fed-modules.json`.
+Set to `flat` to request horizontal navigation in insights-chrome. Omitting the
+field or setting it to an empty string preserves the default sidebar behavior
+and omits the field from generated configuration. Other string values are passed
+through; consumers should retain their existing layout for unsupported values.
+
+Requires a configured `module` and `feoConfigEnabled: true` (except for the `chrome`
+Frontend). Rendering the requested style also requires support in insights-chrome.
+
 | *`bundleSegments`* __xref:{anchor_prefix}-github-com-redhatinsights-frontend-operator-api-v1alpha1-bundlesegment[$$BundleSegment$$] array__ |
 Navigation segments to inject into bundles defined in the FrontendEnvironment.
 
@@ -777,6 +787,11 @@ If `true`, requires full user profile data to be loaded.
 Default document title for pages in this module.
 
 *Example:* `Inventory Management`
+
+| *`navStyle`* __string__ |
+Populated by the operator from `Frontend.spec.navStyle` in generated configuration.
+Set `spec.navStyle` rather than this module field; any value supplied here is
+overwritten. Omitted from generated JSON when `spec.navStyle` is empty.
 
 | *`isFedramp`* __boolean__ |
 If `true`, indicates this module is FedRAMP compliant.

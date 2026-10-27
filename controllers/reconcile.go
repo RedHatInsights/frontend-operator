@@ -1315,6 +1315,7 @@ func setupFedModules(feEnv *crd.FrontendEnvironment, frontendList *crd.FrontendL
 			fedModules[modName] = *frontend.Spec.Module
 
 			module := fedModules[modName]
+			module.NavStyle = frontend.Spec.NavStyle
 
 			if frontend.Spec.Module.FullProfile == nil || !*frontend.Spec.Module.FullProfile {
 				module.FullProfile = crd.FalsePtr()

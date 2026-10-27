@@ -99,6 +99,9 @@ type FrontendSpec struct {
 	ServiceMonitor ServiceMonitorConfig `json:"serviceMonitor,omitempty" yaml:"serviceMontior,omitempty"`
 	Module         *FedModule           `json:"module,omitempty" yaml:"module,omitempty"`
 	NavItems       []*BundleNavItem     `json:"navItems,omitempty" yaml:"navItems,omitempty"`
+	// NavStyle selects the navigation layout in insights-chrome. "flat" requests
+	// horizontal navigation; omitted or empty preserves the default sidebar navigation.
+	NavStyle string `json:"navStyle,omitempty" yaml:"navStyle,omitempty"`
 	// navigation segments for the frontend
 	BundleSegments     []*BundleSegment     `json:"bundleSegments,omitempty" yaml:"bundleSegments,omitempty"`
 	NavigationSegments []*NavigationSegment `json:"navigationSegments,omitempty" yaml:"navigationSegments,omitempty"`
@@ -152,6 +155,8 @@ type FedModule struct {
 	IsFedramp            *bool               `json:"isFedramp,omitempty" yaml:"isFedramp,omitempty"`
 	Analytics            *Analytics          `json:"analytics,omitempty" yaml:"analytics,omitempty"`
 	CDNPath              string              `json:"cdnPath,omitempty" yaml:"cdnPath,omitempty"` // populated automatically from frontend.paths, used for modules with automated public path
+	// NavStyle is populated automatically from FrontendSpec.NavStyle.
+	NavStyle string `json:"navStyle,omitempty" yaml:"navStyle,omitempty"`
 }
 
 type Module struct {
