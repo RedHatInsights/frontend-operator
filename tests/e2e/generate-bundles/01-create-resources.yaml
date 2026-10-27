@@ -16,6 +16,7 @@ spec:
    - id: ansible
      title: Ansible
      description: "Create, manage, and scale automation across physical, cloud, virtual, and edge environments."
+     navStyle: flat
    - id: settings
      title: Settings
      description: "Alert users to events, using email and integrations such as webhooks and third-party tools."
