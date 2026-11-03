@@ -1,0 +1,10 @@
+# expect: locale identifiers must use canonical BCP 47 casing
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: malformed-env-locale-id
+spec:
+  sso: https://sso.foo.redhat.com
+  locales:
+    FR:
+      a.b: Bonjour

@@ -1,0 +1,19 @@
+# expect: locale identifiers must use canonical BCP 47 casing
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: malformed-locale-id
+  namespace: test-localization-validation
+spec:
+  envName: test-localization-validation-environment
+  title: malformed-locale-id
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  frontend:
+    paths:
+      - /apps/malformed-locale-id
+  module:
+    manifestLocation: /apps/malformed-locale-id/fed-mods.json
+    moduleID: malformed-locale-id
+  locales:
+    fr_CA:
+      a.b: Bonjour

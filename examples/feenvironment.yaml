@@ -20,6 +20,15 @@ spec:
   reverseProxyLogLevel: DEBUG
   targetNamespaces:
     - boot
+  # Locales offered to users, English included (see examples/localization.yaml)
+  enabledLocales:
+    - id: en
+      name: English
+      default: true
+    - id: fr
+      name: Français
+    - id: ja
+      name: 日本語
   monitoring:
     mode: "local"
     disabled: false

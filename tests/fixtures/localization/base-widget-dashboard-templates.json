@@ -1,0 +1,14 @@
+[
+  {
+    "name": "rbac-rbacLanding",
+    "displayName": "Access overview",
+    "templateConfig": {
+      "sm": [],
+      "md": [],
+      "lg": [],
+      "xl": []
+    },
+    "frontendRef": "rbac",
+    "i18nKey": "widgetLayout.rbac.rbacLanding"
+  }
+]

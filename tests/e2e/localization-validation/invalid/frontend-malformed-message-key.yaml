@@ -1,0 +1,19 @@
+# expect: message keys must be dot-separated
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: malformed-message-key
+  namespace: test-localization-validation
+spec:
+  envName: test-localization-validation-environment
+  title: malformed-message-key
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  frontend:
+    paths:
+      - /apps/malformed-message-key
+  module:
+    manifestLocation: /apps/malformed-message-key/fed-mods.json
+    moduleID: malformed-message-key
+  locales:
+    fr:
+      "bad key!": Bonjour

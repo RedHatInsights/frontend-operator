@@ -1,0 +1,19 @@
+# expect: English is the source language and must not be listed as a translation
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: english-translation
+  namespace: test-localization-validation
+spec:
+  envName: test-localization-validation-environment
+  title: english-translation
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  frontend:
+    paths:
+      - /apps/english-translation
+  module:
+    manifestLocation: /apps/english-translation/fed-mods.json
+    moduleID: english-translation
+  locales:
+    en:
+      a.b: Hello

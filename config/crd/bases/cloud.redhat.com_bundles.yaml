@@ -58,6 +58,13 @@ spec:
                       type: string
                     href:
                       type: string
+                    i18nKey:
+                      description: |-
+                        Runtime translation key prefix of this item (e.g. `nav.rbac.iam.user-access.users`),
+                        set by the operator in generated bundles when the environment enables locales.
+                        Chrome looks up `<i18nKey>.title` and `<i18nKey>.product` in messages.<locale>.json.
+                        Output only: any value in a Frontend spec is ignored.
+                      type: string
                     icon:
                       type: string
                     id:
@@ -132,6 +139,13 @@ spec:
                         groupId:
                           type: string
                         href:
+                          type: string
+                        i18nKey:
+                          description: |-
+                            Runtime translation key prefix of this item (e.g. `nav.rbac.iam.user-access.users`),
+                            set by the operator in generated bundles when the environment enables locales.
+                            Chrome looks up `<i18nKey>.title` and `<i18nKey>.product` in messages.<locale>.json.
+                            Output only: any value in a Frontend spec is ignored.
                           type: string
                         icon:
                           type: string
