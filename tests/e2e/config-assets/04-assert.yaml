@@ -1,0 +1,21 @@
+---
+# After the valpop image bump, the job is recreated referencing the new image in
+# both the container spec and the tracking annotation.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-config-assets-environment-config-assets
+  namespace: test-config-assets
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: FrontendEnvironment
+      name: test-config-assets-environment
+spec:
+  template:
+    metadata:
+      annotations:
+        valpop-image: quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop:newtag01
+    spec:
+      containers:
+        - name: valpop-config
+          image: quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop:newtag01

@@ -1,0 +1,16 @@
+---
+# Bump the valpop image. The config upload job tracks the valpop image via a pod
+# template annotation, so this change makes the existing job stale: the operator
+# deletes it and recreates it with the new image, validating the refresh path.
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: test-config-assets-environment
+spec:
+  generateNavJSON: false
+  ssl: false
+  hostname: foo.redhat.com
+  sso: https://sso.foo.redhat.com
+  overwriteCaddyConfig: true
+  enableConfigAssets: true
+  valpopImage: quay.io/redhat-user-workloads/hcc-platex-services-tenant/valpop:newtag01
