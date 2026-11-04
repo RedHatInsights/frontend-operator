@@ -246,6 +246,25 @@ spec:
 
 Bundles organize navigation items into logical groupings in the Chrome UI.
 
+Set `navStyle: flat` on a bundle to request horizontal navigation for all of its
+micro frontends:
+
+[source,yaml]
+----
+spec:
+  bundles:
+    - id: lightwell
+      title: Lightwell
+      navStyle: flat
+----
+
+The operator passes this setting to the bundle's entry in `bundles.json`.
+Omitting `navStyle` or setting it to an empty string preserves the default sidebar
+behavior. Enable it once insights-chrome supports the requested layout and the
+bundle's navigation items are ready. Navigation style belongs to the bundle
+declaration in `FrontendEnvironment`, so individual Frontend resources cannot
+override it.
+
 ==== Service Categories
 
 Create service categories and groups for the service dropdown in Chrome:

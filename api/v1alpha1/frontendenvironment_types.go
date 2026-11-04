@@ -31,6 +31,9 @@ type FrontendBundles struct {
 	ID          string `json:"id" yaml:"id"`
 	Title       string `json:"title" yaml:"title"`
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+	// NavStyle selects the navigation layout for the entire bundle in insights-chrome.
+	// "flat" requests horizontal navigation; omitted or empty preserves the default sidebar navigation.
+	NavStyle string `json:"navStyle,omitempty" yaml:"navStyle,omitempty"`
 }
 
 // The frontend bundles but with the nav items filled with chrome nav items
@@ -39,6 +42,7 @@ type FrontendBundlesGenerated struct {
 	Title       string          `json:"title" yaml:"title"`
 	Description string          `json:"description,omitempty" yaml:"description,omitempty"`
 	NavItems    []ChromeNavItem `json:"navItems" yaml:"navItems"`
+	NavStyle    string          `json:"navStyle,omitempty" yaml:"navStyle,omitempty"`
 }
 
 type FrontendServiceCategoryGroup struct {

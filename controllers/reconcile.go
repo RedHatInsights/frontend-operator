@@ -1796,6 +1796,7 @@ func setupBundlesData(feList *crd.FrontendList, feEnvironment crd.FrontendEnviro
 			Title:       bundle.Title,
 			Description: bundle.Description,
 			NavItems:    navItems,
+			NavStyle:    bundle.NavStyle,
 		}
 		bundles = append(bundles, newBundle)
 	}

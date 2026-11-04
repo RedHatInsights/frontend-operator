@@ -64,6 +64,7 @@ The operator generates several ConfigMap keys from aggregated Frontend data:
 | Key | Content | Source |
 |-----|---------|--------|
 | `fed-modules.json` | Module federation manifests | `Frontend.Spec.Module` |
+| `bundles.json` | Bundles, navigation trees, and navigation styles | `FrontendEnvironment.Spec.Bundles` + `Frontend.Spec.BundleSegments` |
 | `<bundle-id>-navigation.json` | Navigation trees | `Frontend.Spec.NavItems` + `BundleSegments` |
 | `search-index.json` | Search entries | `Frontend.Spec.SearchEntries` |
 | `service-tiles.json` | Service dropdown tiles | `Frontend.Spec.ServiceTiles` + `FrontendEnvironment.Spec.ServiceCategories` |
@@ -71,6 +72,38 @@ The operator generates several ConfigMap keys from aggregated Frontend data:
 | `base-widget-dashboard-templates.json` | Base dashboard layout templates | `Frontend.Spec.BaseWidgetLayouts` |
 
 ConfigMaps are created in the FrontendEnvironment's target namespace and optionally propagated to `targetNamespaces`.
+
+### Navigation style
+
+`FrontendEnvironment.spec.bundles[].navStyle` is an optional string passed to the
+corresponding entry in `bundles.json`. For example:
+
+```yaml
+spec:
+  bundles:
+    - id: lightwell
+      title: Lightwell
+      navStyle: flat
+```
+
+This produces `"navStyle": "flat"` alongside the bundle's `id`, `title`, and
+`navItems`. The environment owns the setting for the entire bundle, so multiple
+micro frontends can contribute navigation items without competing navigation
+styles. A frontend can also contribute to bundles with different styles.
+The setting is emitted even when a bundle has no navigation items yet.
+
+An omitted or empty value is omitted from the generated JSON, preserving existing
+configuration and sidebar behavior. The operator passes other string values
+through for future navigation styles. Consumers should retain their existing
+layout for values they do not support.
+
+`Frontend` and `fed-modules.json` do not carry a navigation style. Updating or
+removing a bundle's setting triggers reconciliation through the existing
+FrontendEnvironment watch. Support for rendering flat navigation in
+insights-chrome is tracked in RHCLOUD-50419; bundles should opt in only when that
+support and their navigation items are ready. When served through chrome-service,
+existing legacy bundles must use the fully onboarded generated-bundle path to
+retain bundle metadata such as `navStyle`.
 
 ## Pushcache (valpop) Jobs
 

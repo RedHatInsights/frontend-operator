@@ -340,6 +340,13 @@ objects:
                         type: string
                       id:
                         type: string
+                      navStyle:
+                        description: 'NavStyle selects the navigation layout for the
+                          entire bundle in insights-chrome.
+
+                          "flat" requests horizontal navigation; omitted or empty
+                          preserves the default sidebar navigation.'
+                        type: string
                       title:
                         type: string
                     required:
