@@ -36,9 +36,10 @@ import (
 )
 
 const (
-	RoutePrefixDefault             = "apps"
-	AkamaiSecretNameDefault        = "akamai"
-	PushCacheCredentialsSecretName = "pushcache-s3-credentials" //nolint:gosec // G101: not a credential, just the Secret resource name
+	RoutePrefixDefault                     = "apps"
+	AkamaiSecretNameDefault                = "akamai"
+	PushCacheCredentialsSecretName         = "pushcache-s3-credentials"       //nolint:gosec // G101: not a credential, just the Secret resource name
+	PushCacheCredentialsChecksumAnnotation = "pushcache-credentials-checksum" //nolint:gosec // G101: annotation key, not a credential
 )
 
 type FrontendReconciliation struct {
@@ -123,14 +124,18 @@ func (r *FrontendReconciliation) run() error {
 				if err := r.ensureAkamaiEdgercSecret(); err != nil {
 					return err
 				}
-				if err := r.createOrUpdateJob(CacheBustJob, r.generateCacheBustJobName, r.populateCacheBustContainer); err != nil {
+				if err := r.createOrUpdateJob(CacheBustJob, r.generateCacheBustJobName, r.populateCacheBustContainer, ""); err != nil {
 					return err
 				}
 			}
 		}
 		// If push cache is enabled for the environment, add the push cache container
 		if r.FrontendEnvironment.Spec.EnablePushCache && r.Frontend.Spec.Image != "" {
-			if err := r.createOrUpdateJob(PushCacheJob, r.generatePushCacheJobName, r.populatePushCacheContainer); err != nil {
+			credentialChecksum, err := r.ensurePushCacheCredentials()
+			if err != nil {
+				return err
+			}
+			if err := r.createOrUpdateJob(PushCacheJob, r.generatePushCacheJobName, r.populatePushCacheContainer, credentialChecksum); err != nil {
 				return err
 			}
 		}
@@ -638,12 +643,6 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 	hostname := objectStoreInfo.Endpoint
 	port := objectStoreInfo.Port
 
-	// Ensure the S3 credentials Secret exists so that the Job can reference
-	// them via valueFrom.secretKeyRef instead of embedding literal values.
-	if err := ensurePushCacheCredentialsSecret(r.Ctx, r.Client, r.Frontend.Namespace, *objectStoreInfo.AccessKey, *objectStoreInfo.SecretKey); err != nil {
-		return err
-	}
-
 	// Determine which image to use for the valpop container
 	// Use ValpopImage if specified, otherwise fall back to frontend image
 	assetsPath := "/assets"
@@ -958,16 +957,34 @@ func ensurePushCacheCredentialsSecret(ctx context.Context, c client.Client, name
 		if err := c.Get(ctx, nn, existing); err != nil {
 			return err
 		}
-		existing.StringData = map[string]string{
-			"aws-access-key-id":     accessKey,
-			"aws-secret-access-key": secretKey,
+		existing.Data = map[string][]byte{
+			"aws-access-key-id":     []byte(accessKey),
+			"aws-secret-access-key": []byte(secretKey),
 		}
+		existing.StringData = nil
 		if err := c.Update(ctx, existing); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// ensurePushCacheCredentials reconciles the managed credential Secret separately
+// from Job population, which may be skipped when an existing Job is unchanged.
+func (r *FrontendReconciliation) ensurePushCacheCredentials() (string, error) {
+	objectStoreInfo, err := getObjectStoreConfig(r.Ctx, r.Client, r.Frontend.Namespace)
+	if err != nil {
+		return "", err
+	}
+	if err := ensurePushCacheCredentialsSecret(r.Ctx, r.Client, r.Frontend.Namespace, *objectStoreInfo.AccessKey, *objectStoreInfo.SecretKey); err != nil {
+		return "", err
+	}
+	return objectStoreCredentialChecksum(objectStoreInfo), nil
+}
+
+func objectStoreCredentialChecksum(info *ObjectStoreBucket) string {
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(*info.AccessKey+"\x00"+*info.SecretKey)))
 }
 
 // pushCacheCredentialEnvVars returns env vars that reference the S3 credentials
@@ -1235,7 +1252,7 @@ func (r *FrontendReconciliation) isJobBehindCutoffTimestamp(j *batchv1.Job, jobN
 
 // manageExistingJob will delete the existing job if it exists and is not from the current frontend/valpop image
 // It will return true if the job exists and is from the current images
-func (r *FrontendReconciliation) manageExistingJob(jobName string) (bool, error) {
+func (r *FrontendReconciliation) manageExistingJob(jobName string, credentialChecksum string) (bool, error) {
 	j, exists, err := r.getExistingJob(jobName)
 	if err != nil {
 		return false, err
@@ -1255,7 +1272,9 @@ func (r *FrontendReconciliation) manageExistingJob(jobName string) (bool, error)
 	// If the Job still uses plaintext credential values (legacy, pre-secretKeyRef
 	// migration), it must be deleted and recreated to remove exposed credentials.
 	// If it exists but is not from the current frontend image, valpop image, or is behind the cutoff timestamp, we delete it
-	if !isJobUsingSecretKeyRef(j) || !r.isJobFromCurrentFrontendImage(j) || !r.isJobFromCurrentValpopImage(j) || r.isJobBehindCutoffTimestamp(j, jobName, r.FrontendEnvironment.Spec.DeployCutoffTimestampPushCache) {
+	credentialRotationRequired := credentialChecksum != "" &&
+		j.Spec.Template.Annotations[PushCacheCredentialsChecksumAnnotation] != credentialChecksum && !isJobFinished(j)
+	if !isJobUsingSecretKeyRef(j) || !r.isJobFromCurrentFrontendImage(j) || !r.isJobFromCurrentValpopImage(j) || r.isJobBehindCutoffTimestamp(j, jobName, r.FrontendEnvironment.Spec.DeployCutoffTimestampPushCache) || credentialRotationRequired {
 		backgroundDeletion := metav1.DeletePropagationBackground
 		return false, r.Client.Delete(r.Ctx, j, &client.DeleteOptions{
 			PropagationPolicy: &backgroundDeletion,
@@ -1266,16 +1285,25 @@ func (r *FrontendReconciliation) manageExistingJob(jobName string) (bool, error)
 	return true, nil
 }
 
+func isJobFinished(job *batchv1.Job) bool {
+	for _, condition := range job.Status.Conditions {
+		if condition.Status == v1.ConditionTrue && (condition.Type == batchv1.JobComplete || condition.Type == batchv1.JobFailed) {
+			return true
+		}
+	}
+	return false
+}
+
 // createOrUpdateJob will create a new job if it doesn't exist
 // If it does exist and is from the current frontend image it will return
 // If it does exist and is not from the current frontend image it will delete it and create a new one
-func (r *FrontendReconciliation) createOrUpdateJob(ident resCache.ResourceIdentSingle, generateJobName func() string, populateContainer func(*batchv1.Job) error) error {
+func (r *FrontendReconciliation) createOrUpdateJob(ident resCache.ResourceIdentSingle, generateJobName func() string, populateContainer func(*batchv1.Job) error, credentialChecksum string) error {
 	jobName := generateJobName()
 
 	// If the job exists and is from the current frontend image we can return
 	// If the job exists and is not from the current frontend image we delete it
 	// If the job doesn't exist we create it
-	skipUpdate, err := r.manageExistingJob(jobName)
+	skipUpdate, err := r.manageExistingJob(jobName, credentialChecksum)
 	if err != nil {
 		return err
 	}
@@ -1316,6 +1344,9 @@ func (r *FrontendReconciliation) createOrUpdateJob(ident resCache.ResourceIdentS
 	// unconditionally — including the empty string when no valpop image is
 	// configured — so the job is never treated as stale by isJobFromCurrentValpopImage.
 	annotations["valpop-image"] = r.FrontendEnvironment.Spec.ValpopImage
+	if credentialChecksum != "" {
+		annotations[PushCacheCredentialsChecksumAnnotation] = credentialChecksum
+	}
 	annotations["kube-linter.io/ignore-all"] = "we don't need no any checking"
 
 	j.Spec.Template.ObjectMeta.SetAnnotations(annotations)

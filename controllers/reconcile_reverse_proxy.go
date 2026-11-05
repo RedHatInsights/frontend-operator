@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"strconv"
 	"strings"
@@ -470,7 +469,7 @@ func (r *ReverseProxyReconciliation) buildReverseProxyDeployment() (*apps.Deploy
 	// causes the Pod template to change, which triggers a rolling restart.
 	// Without this, Kubernetes does not refresh Secret-backed environment
 	// variables in running containers.
-	credentialChecksum := fmt.Sprintf("%x", sha256.Sum256([]byte(*objectStoreInfo.AccessKey+*objectStoreInfo.SecretKey)))
+	credentialChecksum := objectStoreCredentialChecksum(objectStoreInfo)
 
 	// Configure the reverse proxy container
 	container, err := r.createReverseProxyContainer(objectStoreInfo)
@@ -508,7 +507,7 @@ func (r *ReverseProxyReconciliation) buildReverseProxyDeployment() (*apps.Deploy
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labels,
 					Annotations: map[string]string{
-						"pushcache-credentials-checksum": credentialChecksum,
+						PushCacheCredentialsChecksumAnnotation: credentialChecksum,
 					},
 				},
 				Spec: v1.PodSpec{

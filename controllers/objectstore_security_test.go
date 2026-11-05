@@ -8,13 +8,19 @@ import (
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
+	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 	apps "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/yaml"
 )
 
 func setObjectStoreTestEnv(t *testing.T, values map[string]string) {
@@ -134,7 +140,7 @@ func TestCommandOnlyLegacyPushcacheJobMigratesToManagedSecret(t *testing.T) {
 	environment := &crd.FrontendEnvironment{Spec: crd.FrontendEnvironmentSpec{ValpopImage: "valpop:v1"}}
 	r := &FrontendReconciliation{Client: c, Ctx: context.Background(), Frontend: frontend, FrontendEnvironment: environment}
 
-	managed, err := r.manageExistingJob(legacyJob.Name)
+	managed, err := r.manageExistingJob(legacyJob.Name, "")
 	if err != nil {
 		t.Fatalf("manage legacy Job: %v", err)
 	}
@@ -145,6 +151,9 @@ func TestCommandOnlyLegacyPushcacheJobMigratesToManagedSecret(t *testing.T) {
 		t.Fatal("legacy Job still exists after migration was requested")
 	}
 
+	if _, err := r.ensurePushCacheCredentials(); err != nil {
+		t.Fatalf("ensure credentials before populating replacement Job: %v", err)
+	}
 	replacement := &batchv1.Job{}
 	if err := r.populatePushCacheContainer(replacement); err != nil {
 		t.Fatalf("populate replacement Job: %v", err)
@@ -171,6 +180,106 @@ func TestCommandOnlyLegacyPushcacheJobMigratesToManagedSecret(t *testing.T) {
 	}
 	if strings.Contains(strings.Join(container.Command, " "), "current-access") || strings.Contains(strings.Join(container.Command, " "), "current-secret") {
 		t.Fatal("replacement Job command contains literal credentials")
+	}
+}
+
+func TestUnchangedPushcacheJobCredentialRotationPreservesFinishedUploads(t *testing.T) {
+	setObjectStoreTestEnv(t, map[string]string{
+		"PUSHCACHE_AWS_ACCESS_KEY_ID":     "stale-access",
+		"PUSHCACHE_AWS_SECRET_ACCESS_KEY": "stale-secret",
+		"PUSHCACHE_AWS_BUCKET_NAME":       "frontend",
+		"PUSHCACHE_AWS_REGION":            "us-east-1",
+		"PUSHCACHE_AWS_ENDPOINT":          "minio.example.test",
+		"PUSHCACHE_AWS_PORT":              "9000",
+		"PUSHCACHE_AWS_SECRET_NAME":       "source-credentials",
+		"POD_NAMESPACE":                   "operator-system",
+	})
+
+	scheme := runtime.NewScheme()
+	if err := v1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	if err := batchv1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	inputSecret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "source-credentials", Namespace: "operator-system"},
+		Data: map[string][]byte{
+			"aws-access-key-id":     []byte("rotated-access"),
+			"aws-secret-access-key": []byte("rotated-secret"),
+		},
+	}
+	managedSecret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: PushCacheCredentialsSecretName, Namespace: "frontend-ns"},
+		Data: map[string][]byte{
+			"aws-access-key-id":     []byte("stale-access"),
+			"aws-secret-access-key": []byte("stale-secret"),
+		},
+	}
+	makeJob := func(name string, completed bool) *batchv1.Job {
+		job := &batchv1.Job{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "frontend-ns"},
+			Spec: batchv1.JobSpec{Template: v1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{
+					"frontend-image":                       "frontend:v1",
+					"valpop-image":                         "valpop:v1",
+					PushCacheCredentialsChecksumAnnotation: "old-checksum",
+				}},
+				Spec: v1.PodSpec{Containers: []v1.Container{{Name: "valpop-pushcache", Env: pushCacheCredentialEnvVars()}}},
+			}},
+		}
+		if completed {
+			job.Status.Conditions = []batchv1.JobCondition{{Type: batchv1.JobComplete, Status: v1.ConditionTrue}}
+		}
+		return job
+	}
+	unfinishedJob := makeJob("frontend-pushcache-pending", false)
+	completedJob := makeJob("frontend-pushcache-completed", true)
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(inputSecret, managedSecret, unfinishedJob, completedJob).Build()
+	frontend := &crd.Frontend{ObjectMeta: metav1.ObjectMeta{Name: "frontend", Namespace: "frontend-ns"}, Spec: crd.FrontendSpec{Image: "frontend:v1"}}
+	environment := &crd.FrontendEnvironment{Spec: crd.FrontendEnvironmentSpec{ValpopImage: "valpop:v1"}}
+	r := &FrontendReconciliation{Client: c, Ctx: context.Background(), Frontend: frontend, FrontendEnvironment: environment}
+
+	checksum, err := r.ensurePushCacheCredentials()
+	if err != nil {
+		t.Fatalf("reconcile managed credentials independently of Job population: %v", err)
+	}
+	updatedSecret := &v1.Secret{}
+	if err := c.Get(context.Background(), types.NamespacedName{Name: PushCacheCredentialsSecretName, Namespace: frontend.Namespace}, updatedSecret); err != nil {
+		t.Fatalf("get managed credential Secret after rotation: %v", err)
+	}
+	accessKey := string(updatedSecret.Data["aws-access-key-id"])
+	if accessKey == "" {
+		accessKey = updatedSecret.StringData["aws-access-key-id"]
+	}
+	secretKey := string(updatedSecret.Data["aws-secret-access-key"])
+	if secretKey == "" {
+		secretKey = updatedSecret.StringData["aws-secret-access-key"]
+	}
+	if accessKey != "rotated-access" || secretKey != "rotated-secret" {
+		t.Fatal("unchanged Job path did not refresh the managed credential Secret")
+	}
+
+	managed, err := r.manageExistingJob(unfinishedJob.Name, checksum)
+	if err != nil {
+		t.Fatalf("manage unfinished Job after credential rotation: %v", err)
+	}
+	if managed {
+		t.Fatal("unfinished Job with a stale credential checksum was treated as current")
+	}
+	if err := c.Get(context.Background(), types.NamespacedName{Name: unfinishedJob.Name, Namespace: unfinishedJob.Namespace}, &batchv1.Job{}); err == nil {
+		t.Fatal("unfinished Job was not deleted for recreation with rotated credentials")
+	}
+
+	managed, err = r.manageExistingJob(completedJob.Name, checksum)
+	if err != nil {
+		t.Fatalf("manage completed Job after credential rotation: %v", err)
+	}
+	if !managed {
+		t.Fatal("completed upload was scheduled for needless recreation after credential rotation")
+	}
+	if err := c.Get(context.Background(), types.NamespacedName{Name: completedJob.Name, Namespace: completedJob.Namespace}, &batchv1.Job{}); err != nil {
+		t.Fatalf("completed upload Job was removed: %v", err)
 	}
 }
 
@@ -282,3 +391,81 @@ func TestRemoveObsoleteCredentialReplicaSetsWaitsForSafeRollout(t *testing.T) {
 func int32Ptr(value int32) *int32 { return &value }
 
 func boolPtr(value bool) *bool { return &value }
+
+var _ = ginkgo.Describe("ReplicaSet credential cleanup RBAC", func() {
+	ginkgo.It("watches and deletes ReplicaSets using the deployed manager role", func(ctx context.Context) {
+		const namespace = "replicaset-rbac-test"
+		const username = "restricted-replicaset-cleanup"
+		const roleName = "replicaset-rbac-test-manager"
+
+		user, err := testEnv.AddUser(envtest.User{Name: username}, testEnv.Config)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+		roleData, err := os.ReadFile("../config/rbac/role.yaml")
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		role := &rbacv1.ClusterRole{}
+		gomega.Expect(yaml.Unmarshal(roleData, role)).To(gomega.Succeed())
+		role.Name = roleName
+		gomega.Expect(k8sClient.Create(ctx, role)).To(gomega.Succeed())
+		defer func() { _ = k8sClient.Delete(context.Background(), role) }()
+
+		ns := &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
+		gomega.Expect(k8sClient.Create(ctx, ns)).To(gomega.Succeed())
+		defer func() { _ = k8sClient.Delete(context.Background(), ns) }()
+		binding := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "replicaset-rbac-test", Namespace: namespace},
+			RoleRef:    rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: roleName},
+			Subjects:   []rbacv1.Subject{{Kind: "User", APIGroup: rbacv1.GroupName, Name: username}},
+		}
+		gomega.Expect(k8sClient.Create(ctx, binding)).To(gomega.Succeed())
+
+		restrictedClient, err := client.NewWithWatch(user.Config(), client.Options{Scheme: scheme})
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		deployment := &apps.Deployment{
+			ObjectMeta: metav1.ObjectMeta{Name: "reverse-proxy", Namespace: namespace, UID: types.UID("restricted-rbac-deployment"), Generation: 1},
+			Spec: apps.DeploymentSpec{
+				Replicas: int32Ptr(0),
+				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "reverse-proxy"}},
+				Template: v1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "reverse-proxy"}},
+					Spec:       v1.PodSpec{Containers: []v1.Container{{Name: "reverse-proxy", Image: "proxy:v1"}}},
+				},
+			},
+		}
+		gomega.Expect(k8sClient.Create(ctx, deployment)).To(gomega.Succeed())
+		deployment.Status.ObservedGeneration = deployment.Generation
+
+		owner := metav1.OwnerReference{APIVersion: "apps/v1", Kind: "Deployment", Name: deployment.Name, UID: deployment.UID, Controller: boolPtr(true)}
+		legacyReplicaSet := &apps.ReplicaSet{
+			ObjectMeta: metav1.ObjectMeta{Name: "reverse-proxy-old", Namespace: namespace, OwnerReferences: []metav1.OwnerReference{owner}},
+			Spec: apps.ReplicaSetSpec{
+				Replicas: int32Ptr(0),
+				Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "reverse-proxy"}},
+				Template: v1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "reverse-proxy"}},
+					Spec: v1.PodSpec{Containers: []v1.Container{{
+						Name:  "reverse-proxy",
+						Image: "proxy:v0",
+						Env: []v1.EnvVar{
+							{Name: "PUSHCACHE_AWS_ACCESS_KEY_ID", Value: "old-access"},
+							{Name: "PUSHCACHE_AWS_SECRET_ACCESS_KEY", Value: "old-secret"},
+						},
+					}}},
+				},
+			},
+		}
+		gomega.Expect(k8sClient.Create(ctx, legacyReplicaSet)).To(gomega.Succeed())
+
+		listed := &apps.ReplicaSetList{}
+		gomega.Expect(restrictedClient.List(ctx, listed, client.InNamespace(namespace))).To(gomega.Succeed())
+		watcher, err := restrictedClient.Watch(ctx, &apps.ReplicaSetList{}, client.InNamespace(namespace))
+		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "manager cache needs watch permission, not just initial list permission")
+		watcher.Stop()
+
+		reconciliation := &ReverseProxyReconciliation{Client: restrictedClient, Ctx: ctx, Namespace: namespace}
+		pending, err := reconciliation.removeObsoleteCredentialReplicaSets(deployment)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		gomega.Expect(pending).To(gomega.BeFalse())
+		gomega.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: legacyReplicaSet.Name, Namespace: namespace}, &apps.ReplicaSet{})).To(gomega.HaveOccurred())
+	})
+})
