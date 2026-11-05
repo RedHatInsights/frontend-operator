@@ -297,6 +297,10 @@ func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&crd.FrontendEnvironment{},
 			handler.EnqueueRequestsFromMapFunc(r.appsToEnqueueUponFrontendEnvironmentUpdate()),
 		).
+		Watches(
+			&v1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(r.frontendsToEnqueueUponObjectStoreSecretUpdate()),
+		).
 		// GenerationChangedPredicate filters out status-only updates (e.g. pod
 		// readiness) that don't change metadata.generation, preventing unnecessary
 		// reconciliations and 409 conflicts (RHCLOUD-46492).
@@ -427,6 +431,34 @@ func (r *FrontendReconciler) appsToEnqueueUponFrontendEnvironmentUpdate() handle
 		}
 
 		return reqs
+	}
+}
+
+func (r *FrontendReconciler) frontendsToEnqueueUponObjectStoreSecretUpdate() handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		secret, ok := obj.(*v1.Secret)
+		if !ok || !isObjectStoreCredentialSecret(secret) {
+			return nil
+		}
+
+		frontends := &crd.FrontendList{}
+		if err := r.Client.List(ctx, frontends); err != nil {
+			r.Log.Error(err, "Failed to list Frontends for object store Secret update")
+			return nil
+		}
+
+		clowderSecret := secret.Name == "env-"+secret.Namespace+"-minio"
+		requests := make([]reconcile.Request, 0, len(frontends.Items))
+		for i := range frontends.Items {
+			frontend := &frontends.Items[i]
+			if clowderSecret && frontend.Namespace != secret.Namespace && frontend.Spec.EnvName != secret.Namespace {
+				continue
+			}
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{
+				Name: frontend.Name, Namespace: frontend.Namespace,
+			}})
+		}
+		return requests
 	}
 }
 
