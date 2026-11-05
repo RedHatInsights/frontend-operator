@@ -113,6 +113,9 @@ func (r *FrontendReconciliation) run() error {
 		// would run with zero arguments (a no-op or CrashLoop) on every reconcile.
 		if r.FrontendEnvironment.Spec.EnableAkamaiCacheBust && r.FrontendEnvironment.Spec.AkamaiCacheBustImage != "" && !r.Frontend.Spec.AkamaiCacheBustDisable {
 			if len(createCachePurgePathList(r.Frontend, r.FrontendEnvironment, r.Log)) > 0 {
+				if err := r.reconcileAkamaiEdgercSecret(); err != nil {
+					return err
+				}
 				if err := r.createOrUpdateJob(CacheBustJob, r.generateCacheBustJobName, r.populateCacheBustContainer); err != nil {
 					return err
 				}
@@ -393,9 +396,11 @@ func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.F
 	return purgePaths
 }
 
-// populateCacheBustContainer adds the akamai cache bust container to the deployment
-func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) error {
-
+// reconcileAkamaiEdgercSecret ensures cache-bust credentials are available in
+// a Secret, then removes legacy ConfigMap-backed Jobs before deleting the
+// credential-bearing ConfigMap. The Secret belongs to the FrontendEnvironment
+// because it is shared by every Frontend in that environment's namespace.
+func (r *FrontendReconciliation) reconcileAkamaiEdgercSecret() error {
 	// Get the akamai secret
 	akamaiSecretName := getAkamaiSecretName(r.FrontendEnvironment)
 	secret, err := getAkamaiSecret(r.Ctx, r.Client, r.Frontend, akamaiSecretName)
@@ -417,22 +422,11 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 	labler := utils.GetCustomLabeler(labels, nn, r.FrontendEnvironment)
 	labler(edgercSecret)
 
-	edgercSecret.SetOwnerReferences([]metav1.OwnerReference{r.Frontend.MakeOwnerReference()})
+	edgercSecret.SetOwnerReferences([]metav1.OwnerReference{r.FrontendEnvironment.MakeOwnerReference()})
 
 	// Add the akamai edgerc file to the secret
 	edgercSecret.StringData = map[string]string{
 		"edgerc": edgercFile,
-	}
-
-	// Clean up the legacy ConfigMap that previously held edgerc credentials in plaintext.
-	// The ConfigMap is owned by the Frontend CR and would eventually be garbage-collected
-	// on CR deletion, but we remove it proactively to avoid leaving plaintext credentials
-	// in the namespace longer than necessary.
-	legacyCM := &v1.ConfigMap{}
-	if err := r.Client.Get(r.Ctx, nn, legacyCM); err == nil {
-		if err := r.Client.Delete(r.Ctx, legacyCM); err != nil && !k8serr.IsNotFound(err) {
-			return err
-		}
 	}
 
 	// Create the secret with the Client if it doesn't already exist or update the existing one
@@ -451,6 +445,59 @@ func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) erro
 			return err
 		}
 	}
+
+	// The old cache-bust Job mounted this ConfigMap. Delete those Jobs with
+	// foreground propagation and wait for them to disappear before removing the
+	// ConfigMap, so no legacy Pod can retain a dependency on it.
+	legacyCM := &v1.ConfigMap{}
+	if err := r.Client.Get(r.Ctx, nn, legacyCM); err != nil {
+		if k8serr.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	jobs := &batchv1.JobList{}
+	if err := r.Client.List(r.Ctx, jobs, client.InNamespace(r.Frontend.Namespace)); err != nil {
+		return err
+	}
+	legacyJobsFound := false
+	for i := range jobs.Items {
+		job := &jobs.Items[i]
+		if !jobReferencesConfigMap(job, legacyCM.Name) {
+			continue
+		}
+		legacyJobsFound = true
+		propagation := metav1.DeletePropagationForeground
+		if err := r.Client.Delete(r.Ctx, job, &client.DeleteOptions{PropagationPolicy: &propagation}); err != nil && !k8serr.IsNotFound(err) {
+			return err
+		}
+	}
+	if legacyJobsFound {
+		return fmt.Errorf("waiting for legacy cache-bust Jobs mounting ConfigMap %s to be deleted", legacyCM.Name)
+	}
+
+	// No Job can still be using the plaintext credentials. Ignore only a
+	// concurrent NotFound; other API errors must retry reconciliation.
+	if err := r.Client.Delete(r.Ctx, legacyCM); err != nil && !k8serr.IsNotFound(err) {
+		return err
+	}
+	return nil
+}
+
+func jobReferencesConfigMap(job *batchv1.Job, configMapName string) bool {
+	for _, volume := range job.Spec.Template.Spec.Volumes {
+		if volume.ConfigMap != nil && volume.ConfigMap.Name == configMapName {
+			return true
+		}
+	}
+	return false
+}
+
+// populateCacheBustContainer adds the akamai cache bust container to the deployment.
+// Credential migration is performed separately so it also runs when an existing
+// Job is otherwise up to date and createOrUpdateJob skips population.
+func (r *FrontendReconciliation) populateCacheBustContainer(j *batchv1.Job) error {
 
 	akamaiVolume := v1.Volume{
 		Name: "akamai-edgerc",
