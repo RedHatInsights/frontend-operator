@@ -890,9 +890,49 @@ func extractBucketConfigFromSecret(ctx context.Context, c client.Client, namespa
 func getObjectStoreConfig(ctx context.Context, c client.Client, namespace string) (*ObjectStoreBucket, error) {
 	config, err := ExtractBucketConfigFromEnv()
 	if err == nil {
+		// The manager's environment variables are snapshots taken when its Pod
+		// starts. Read the referenced Secret through the API so reconciliations
+		// observe rotations without waiting for an operator restart.
+		if secretName := os.Getenv("PUSHCACHE_AWS_SECRET_NAME"); secretName != "" {
+			secretNamespace := os.Getenv("POD_NAMESPACE")
+			if secretNamespace == "" {
+				secretNamespace = namespace
+			}
+			accessKey, secretKey, err := readObjectStoreCredentials(ctx, c, secretNamespace, secretName, "aws-access-key-id", "aws-secret-access-key")
+			if err != nil {
+				return nil, err
+			}
+			config.AccessKey = &accessKey
+			config.SecretKey = &secretKey
+		}
 		return config, nil
 	}
 	return extractBucketConfigFromSecret(ctx, c, namespace)
+}
+
+func readObjectStoreCredentials(ctx context.Context, c client.Client, namespace, secretName, accessKeyName, secretKeyName string) (string, string, error) {
+	secret := &v1.Secret{}
+	if err := c.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace}, secret); err != nil {
+		return "", "", fmt.Errorf("failed to get object store credentials Secret %q in namespace %q: %w", secretName, namespace, err)
+	}
+
+	accessKey := string(secret.Data[accessKeyName])
+	secretKey := string(secret.Data[secretKeyName])
+	if accessKey == "" || secretKey == "" {
+		return "", "", fmt.Errorf("object store credentials Secret %q is missing required keys (%s, %s)", secretName, accessKeyName, secretKeyName)
+	}
+	return accessKey, secretKey, nil
+}
+
+func isObjectStoreCredentialSecret(secret *v1.Secret) bool {
+	if secret == nil {
+		return false
+	}
+
+	if os.Getenv("PUSHCACHE_AWS_SECRET_NAME") != "" {
+		return secret.Name == os.Getenv("PUSHCACHE_AWS_SECRET_NAME") && secret.Namespace == os.Getenv("POD_NAMESPACE")
+	}
+	return secret.Name == "env-"+secret.Namespace+"-minio"
 }
 
 // ensurePushCacheCredentialsSecret creates or updates an opaque Secret containing
@@ -1162,14 +1202,22 @@ func isJobUsingSecretKeyRef(j *batchv1.Job) bool {
 		if container.Name != "valpop-pushcache" {
 			continue
 		}
-		for _, env := range container.Env {
-			if env.Name == "PUSHCACHE_AWS_ACCESS_KEY_ID" || env.Name == "PUSHCACHE_AWS_SECRET_ACCESS_KEY" {
-				if env.ValueFrom == nil || env.ValueFrom.SecretKeyRef == nil {
-					return false
-				}
-			}
+		credentialRefs := map[string]string{ //nolint:gosec // G101: entries identify Secret refs, not credentials.
+			"PUSHCACHE_AWS_ACCESS_KEY_ID":     "aws-access-key-id",
+			"PUSHCACHE_AWS_SECRET_ACCESS_KEY": "aws-secret-access-key",
 		}
-		return true
+		for _, env := range container.Env {
+			key, expected := credentialRefs[env.Name]
+			if !expected {
+				continue
+			}
+			if env.ValueFrom == nil || env.ValueFrom.SecretKeyRef == nil ||
+				env.ValueFrom.SecretKeyRef.Name != PushCacheCredentialsSecretName || env.ValueFrom.SecretKeyRef.Key != key {
+				return false
+			}
+			delete(credentialRefs, env.Name)
+		}
+		return len(credentialRefs) == 0
 	}
 	// No valpop-pushcache container found — not a pushcache Job, treat as OK.
 	return true

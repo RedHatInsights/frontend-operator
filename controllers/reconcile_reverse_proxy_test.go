@@ -1398,6 +1398,9 @@ func TestReverseProxyReconciliation_FullReconciliation(t *testing.T) {
 	if deployment.Spec.Replicas == nil || *deployment.Spec.Replicas != ReverseProxyReplicas {
 		t.Errorf("Expected deployment replicas=%d, got replicas=%v", ReverseProxyReplicas, deployment.Spec.Replicas)
 	}
+	if deployment.Spec.RevisionHistoryLimit == nil || *deployment.Spec.RevisionHistoryLimit != 0 {
+		t.Errorf("Expected old ReplicaSet history to be pruned after rollout, got revisionHistoryLimit=%v", deployment.Spec.RevisionHistoryLimit)
+	}
 
 	// Verify container has proper resource limits for scaling
 	container := deployment.Spec.Template.Spec.Containers[0]
@@ -1619,7 +1622,7 @@ func TestIsJobUsingSecretKeyRef(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "Job with empty env vars on valpop container - should return true (no cred vars to check)",
+			name: "Job with empty env vars on valpop container - should return false (missing credential refs)",
 			job: &batchv1.Job{
 				Spec: batchv1.JobSpec{
 					Template: v1.PodTemplateSpec{
@@ -1634,7 +1637,23 @@ func TestIsJobUsingSecretKeyRef(t *testing.T) {
 					},
 				},
 			},
-			expected: true,
+			expected: false,
+		},
+		{
+			name: "Original command-only Job with embedded credentials - should return false",
+			job: &batchv1.Job{
+				Spec: batchv1.JobSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{{
+								Name:    "valpop-pushcache",
+								Command: []string{"/bin/bash", "-c", "valpop populate --username legacy-access --password legacy-secret"},
+							}},
+						},
+					},
+				},
+			},
+			expected: false,
 		},
 	}
 

@@ -46,12 +46,13 @@ const (
 
 // ReverseProxyReconciliation handles the reconciliation logic for reverse proxy resources
 type ReverseProxyReconciliation struct {
-	Log                 logr.Logger
-	Recorder            record.EventRecorder
-	Client              client.Client
-	Ctx                 context.Context
-	Namespace           string
-	FrontendEnvironment *crd.FrontendEnvironment
+	Log                      logr.Logger
+	Recorder                 record.EventRecorder
+	Client                   client.Client
+	Ctx                      context.Context
+	Namespace                string
+	FrontendEnvironment      *crd.FrontendEnvironment
+	credentialHistoryPending bool
 }
 
 // run executes the reverse proxy reconciliation logic
@@ -90,8 +91,67 @@ func (r *ReverseProxyReconciliation) reconcileDeployment() error {
 		return err
 	}
 
-	// Deployment exists, ensure it's up to date
-	return r.updateReverseProxyDeployment(deployment)
+	// Deployment exists, ensure it's up to date.
+	if err := r.updateReverseProxyDeployment(deployment); err != nil {
+		return err
+	}
+	if err := r.Client.Get(r.Ctx, deploymentKey, deployment); err != nil {
+		return err
+	}
+	pending, err := r.removeObsoleteCredentialReplicaSets(deployment)
+	r.credentialHistoryPending = pending
+	return err
+}
+
+func (r *ReverseProxyReconciliation) removeObsoleteCredentialReplicaSets(deployment *apps.Deployment) (bool, error) {
+	replicaSets := &apps.ReplicaSetList{}
+	if err := r.Client.List(r.Ctx, replicaSets, client.InNamespace(r.Namespace)); err != nil {
+		return false, err
+	}
+
+	pending := false
+	rolloutComplete := reverseProxyRolloutComplete(deployment)
+	for i := range replicaSets.Items {
+		replicaSet := &replicaSets.Items[i]
+		if !metav1.IsControlledBy(replicaSet, deployment) || !podTemplateHasInlineObjectStoreCredentials(&replicaSet.Spec.Template) {
+			continue
+		}
+
+		if !rolloutComplete || replicaCount(replicaSet.Spec.Replicas) != 0 || replicaSet.Status.Replicas != 0 {
+			pending = true
+			continue
+		}
+		if err := r.Client.Delete(r.Ctx, replicaSet); err != nil && !k8serr.IsNotFound(err) {
+			return true, err
+		}
+	}
+	return pending, nil
+}
+
+func reverseProxyRolloutComplete(deployment *apps.Deployment) bool {
+	desiredReplicas := replicaCount(deployment.Spec.Replicas)
+	return deployment.Status.ObservedGeneration >= deployment.Generation &&
+		deployment.Status.UpdatedReplicas >= desiredReplicas &&
+		deployment.Status.AvailableReplicas >= desiredReplicas &&
+		deployment.Status.Replicas == desiredReplicas
+}
+
+func replicaCount(replicas *int32) int32 {
+	if replicas == nil {
+		return 1
+	}
+	return *replicas
+}
+
+func podTemplateHasInlineObjectStoreCredentials(template *v1.PodTemplateSpec) bool {
+	for _, container := range template.Spec.Containers {
+		for _, env := range container.Env {
+			if (env.Name == "PUSHCACHE_AWS_ACCESS_KEY_ID" || env.Name == "PUSHCACHE_AWS_SECRET_ACCESS_KEY") && env.Value != "" && env.ValueFrom == nil {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // reconcileService ensures the reverse proxy service exists and is up to date
@@ -432,7 +492,8 @@ func (r *ReverseProxyReconciliation) buildReverseProxyDeployment() (*apps.Deploy
 			},
 		},
 		Spec: apps.DeploymentSpec{
-			Replicas: utils.Int32Ptr(ReverseProxyReplicas),
+			Replicas:             utils.Int32Ptr(ReverseProxyReplicas),
+			RevisionHistoryLimit: utils.Int32Ptr(0),
 			Strategy: apps.DeploymentStrategy{
 				Type: apps.RollingUpdateDeploymentStrategyType,
 				RollingUpdate: &apps.RollingUpdateDeployment{
