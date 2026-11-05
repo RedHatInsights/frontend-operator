@@ -98,6 +98,7 @@ func (rm *ReconciliationMetrics) stop() {
 type FrontendReconciler struct {
 	client.Client
 	Log                   logr.Logger
+	APIReader             client.Reader
 	Scheme                *runtime.Scheme
 	Recorder              record.EventRecorder
 	reconciliationMetrics ReconciliationMetrics
@@ -221,6 +222,7 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			Ctx:                 ctx,
 			Frontend:            &frontend,
 			Client:              r.Client,
+			APIReader:           r.APIReader,
 		}
 
 		if err := reconciliation.run(); err != nil {
@@ -267,6 +269,7 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.APIReader = mgr.GetAPIReader()
 
 	cache := mgr.GetCache()
 

@@ -49,6 +49,7 @@ type FrontendReconciliation struct {
 	Frontend            *crd.Frontend
 	Ctx                 context.Context
 	Client              client.Client
+	APIReader           client.Reader
 	// locales.json entries, set before the base ConfigMaps are populated
 	localesJSON []localeEntry
 }
@@ -450,7 +451,11 @@ func (r *FrontendReconciliation) reconcileAkamaiEdgercSecret() error {
 	// foreground propagation and wait for them to disappear before removing the
 	// ConfigMap, so no legacy Pod can retain a dependency on it.
 	legacyCM := &v1.ConfigMap{}
-	if err := r.Client.Get(r.Ctx, nn, legacyCM); err != nil {
+	reader := r.APIReader
+	if reader == nil {
+		reader = r.Client
+	}
+	if err := reader.Get(r.Ctx, nn, legacyCM); err != nil {
 		if k8serr.IsNotFound(err) {
 			return nil
 		}
@@ -458,7 +463,7 @@ func (r *FrontendReconciliation) reconcileAkamaiEdgercSecret() error {
 	}
 
 	jobs := &batchv1.JobList{}
-	if err := r.Client.List(r.Ctx, jobs, client.InNamespace(r.Frontend.Namespace)); err != nil {
+	if err := reader.List(r.Ctx, jobs, client.InNamespace(r.Frontend.Namespace)); err != nil {
 		return err
 	}
 	legacyJobsFound := false

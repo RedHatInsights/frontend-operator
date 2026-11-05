@@ -220,7 +220,7 @@ var _ = ginkgo.Describe("Cachebust Job lifecycle", func() {
 		edgercSecretKey := types.NamespacedName{Name: "akamai-edgerc", Namespace: ns.Name}
 		gomega.Expect(k8sClient.Delete(ctx, &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: edgercSecretKey.Name, Namespace: edgercSecretKey.Namespace}})).Should(gomega.Succeed())
 
-		reconciler := &FrontendReconciler{Client: k8sManagerClient, Scheme: scheme}
+		reconciler := &FrontendReconciler{Client: k8sManagerClient, APIReader: k8sClient, Scheme: scheme}
 		_, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: secondName, Namespace: ns.Name}})
 		gomega.Expect(err).Should(gomega.HaveOccurred(), "migration must wait for legacy Job deletion")
 		gomega.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: legacyCM.Name, Namespace: ns.Name}, &v1.ConfigMap{})).Should(gomega.Succeed(), "ConfigMap must remain while a legacy Job still references it")
