@@ -1,4 +1,30 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>RedHatInsights/shared-workflows//renovate/backend"]
+  "extends": [
+    "github>RedHatInsights/shared-workflows//renovate/backend",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "prConcurrentLimit": 4,
+  "packageRules": [
+    {
+      "description": "Group Go digest updates with Go dependency updates",
+      "matchManagers": ["gomod"],
+      "matchUpdateTypes": ["digest"],
+      "groupName": "go dependencies",
+      "groupSlug": "go-deps"
+    },
+    {
+      "description": "Group GitHub Actions updates",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions",
+      "groupSlug": "github-actions"
+    },
+    {
+      "description": "Wait for Kubernetes dependencies before structured-merge-diff major migration",
+      "matchManagers": ["gomod"],
+      "matchPackageNames": ["sigs.k8s.io/structured-merge-diff/v6"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    }
+  ]
 }

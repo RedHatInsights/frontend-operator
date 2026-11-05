@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Go 1.25+ (matching `go.mod`)
+- Go 1.26+ (matching `go.mod`)
 - [podman](https://podman.io/) in rootless mode
 - [minikube](https://minikube.sigs.k8s.io/)
 - [oc](https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html) (OpenShift CLI)

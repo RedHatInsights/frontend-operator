@@ -7,6 +7,7 @@ import (
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
+	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -343,6 +344,57 @@ func TestShellInjectionViaCacheBustPaths(t *testing.T) {
 			if strings.Contains(joinedCommand, path) {
 				t.Errorf("path %q must not appear in Command, got: %v", path, command)
 			}
+		}
+	})
+}
+
+// TestIsJobFromCurrentValpopImage covers the valpop-image staleness check that
+// keeps cachebust and pushcache jobs in lockstep with the environment's valpop
+// image. Jobs carry the annotation (set in createOrUpdateJob) so a valpop image
+// change recreates both; a job missing the annotation is stale so it is recreated
+// once to pick the annotation up.
+func TestIsJobFromCurrentValpopImage(t *testing.T) {
+	makeJob := func(annotations map[string]string) *batchv1.Job {
+		j := &batchv1.Job{}
+		j.Spec.Template.ObjectMeta.Annotations = annotations
+		return j
+	}
+
+	reconciliation := func(valpopImage string) *FrontendReconciliation {
+		return &FrontendReconciliation{
+			FrontendEnvironment: &crd.FrontendEnvironment{
+				Spec: crd.FrontendEnvironmentSpec{ValpopImage: valpopImage},
+			},
+		}
+	}
+
+	t.Run("matching valpop-image is current", func(t *testing.T) {
+		r := reconciliation("quay.io/valpop:latest")
+		if !r.isJobFromCurrentValpopImage(makeJob(map[string]string{"valpop-image": "quay.io/valpop:latest"})) {
+			t.Fatal("job with matching valpop-image should be current")
+		}
+	})
+
+	t.Run("mismatched valpop-image is stale", func(t *testing.T) {
+		r := reconciliation("quay.io/valpop:latest")
+		if r.isJobFromCurrentValpopImage(makeJob(map[string]string{"valpop-image": "quay.io/valpop:old"})) {
+			t.Fatal("job with mismatched valpop-image should be stale")
+		}
+	})
+
+	t.Run("missing annotation is stale (one-time migration)", func(t *testing.T) {
+		r := reconciliation("quay.io/valpop:latest")
+		if r.isJobFromCurrentValpopImage(makeJob(nil)) {
+			t.Fatal("job without valpop-image annotation should be stale")
+		}
+	})
+
+	t.Run("empty env image with empty annotation is current", func(t *testing.T) {
+		// Pushcache disabled: ValpopImage is "" and createOrUpdateJob stamps "".
+		// The job must not be treated as stale, or cachebust jobs would churn.
+		r := reconciliation("")
+		if !r.isJobFromCurrentValpopImage(makeJob(map[string]string{"valpop-image": ""})) {
+			t.Fatal("empty valpop-image annotation must match empty env image")
 		}
 	})
 }

@@ -13,8 +13,8 @@ A Kubernetes operator that deploys and manages containerized frontend applicatio
 
 ## Tech Stack
 
-- **Language**: Go 1.25
-- **Framework**: controller-runtime v0.23, kubebuilder
+- **Language**: Go 1.26
+- **Framework**: controller-runtime v0.24, kubebuilder
 - **CRDs**: Frontend (namespaced), FrontendEnvironment (cluster-scoped), Bundle (namespaced)
 - **Testing**: Ginkgo v2 + Gomega (unit), kuttl (e2e)
 - **Linting**: golangci-lint with gocritic, gosec, revive, bodyclose
