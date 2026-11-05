@@ -77,6 +77,11 @@ func (r *FrontendReconciliation) setupConfigMapWithLabels(nn types.NamespacedNam
 var caddyFileTemplate string
 
 func (r *FrontendReconciliation) run() error {
+	// Retire plaintext credentials even when cache busting is disabled or no
+	// configured Frontend has valid cache-bust paths.
+	if err := r.retireLegacyAkamaiEdgercConfigMap(); err != nil {
+		return err
+	}
 
 	configMaps, err := r.setupConfigMaps()
 	if err != nil {
@@ -114,7 +119,7 @@ func (r *FrontendReconciliation) run() error {
 		// would run with zero arguments (a no-op or CrashLoop) on every reconcile.
 		if r.FrontendEnvironment.Spec.EnableAkamaiCacheBust && r.FrontendEnvironment.Spec.AkamaiCacheBustImage != "" && !r.Frontend.Spec.AkamaiCacheBustDisable {
 			if len(createCachePurgePathList(r.Frontend, r.FrontendEnvironment, r.Log)) > 0 {
-				if err := r.reconcileAkamaiEdgercSecret(); err != nil {
+				if err := r.ensureAkamaiEdgercSecret(); err != nil {
 					return err
 				}
 				if err := r.createOrUpdateJob(CacheBustJob, r.generateCacheBustJobName, r.populateCacheBustContainer); err != nil {
@@ -397,11 +402,10 @@ func createCachePurgePathList(frontend *crd.Frontend, frontendEnvironment *crd.F
 	return purgePaths
 }
 
-// reconcileAkamaiEdgercSecret ensures cache-bust credentials are available in
-// a Secret, then removes legacy ConfigMap-backed Jobs before deleting the
-// credential-bearing ConfigMap. The Secret belongs to the FrontendEnvironment
-// because it is shared by every Frontend in that environment's namespace.
-func (r *FrontendReconciliation) reconcileAkamaiEdgercSecret() error {
+// ensureAkamaiEdgercSecret makes cache-bust credentials available in a Secret.
+// The Secret belongs to the FrontendEnvironment because it is shared by every
+// Frontend in that environment's namespace.
+func (r *FrontendReconciliation) ensureAkamaiEdgercSecret() error {
 	// Get the akamai secret
 	akamaiSecretName := getAkamaiSecretName(r.FrontendEnvironment)
 	secret, err := getAkamaiSecret(r.Ctx, r.Client, r.Frontend, akamaiSecretName)
@@ -446,10 +450,21 @@ func (r *FrontendReconciliation) reconcileAkamaiEdgercSecret() error {
 			return err
 		}
 	}
+	return nil
+}
 
+// retireLegacyAkamaiEdgercConfigMap removes the plaintext credentials and any
+// legacy Jobs that still mount them. It is independent of current cache-bust
+// configuration, so disabled Frontends can complete credential retirement
+// without source credentials or a replacement Secret.
+func (r *FrontendReconciliation) retireLegacyAkamaiEdgercConfigMap() error {
 	// The old cache-bust Job mounted this ConfigMap. Delete those Jobs with
 	// foreground propagation and wait for them to disappear before removing the
 	// ConfigMap, so no legacy Pod can retain a dependency on it.
+	nn := types.NamespacedName{
+		Name:      "akamai-edgerc",
+		Namespace: r.Frontend.Namespace,
+	}
 	legacyCM := &v1.ConfigMap{}
 	reader := r.APIReader
 	if reader == nil {

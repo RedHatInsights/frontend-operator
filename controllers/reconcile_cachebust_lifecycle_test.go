@@ -279,4 +279,114 @@ var _ = ginkgo.Describe("Cachebust Job lifecycle", func() {
 			gomega.Expect(k8sClient.Delete(ctx, environment)).Should(gomega.Succeed())
 		})
 	})
+
+	ginkgo.It("retires legacy credentials when cache busting is disabled without creating a Secret", func() {
+		ctx := context.Background()
+		const (
+			timeout  = 10 * time.Second
+			interval = 100 * time.Millisecond
+		)
+		ns := &v1.Namespace{ObjectMeta: metav1.ObjectMeta{GenerateName: "cachebust-disabled-migration-"}}
+		gomega.Expect(k8sClient.Create(ctx, ns)).Should(gomega.Succeed())
+
+		environment := &crd.FrontendEnvironment{
+			ObjectMeta: metav1.ObjectMeta{GenerateName: "cachebust-disabled-migration-env-"},
+			Spec: crd.FrontendEnvironmentSpec{
+				SSO:                         "https://sso.example.com",
+				Hostname:                    "console.example.com",
+				DisableContainerDeployments: true,
+				EnableAkamaiCacheBust:       false,
+				AkamaiSecretName:            "missing-credentials",
+			},
+		}
+		gomega.Expect(k8sClient.Create(ctx, environment)).Should(gomega.Succeed())
+
+		frontend := &crd.Frontend{
+			ObjectMeta: metav1.ObjectMeta{GenerateName: "cachebust-disabled-migration-", Namespace: ns.Name},
+			Spec: crd.FrontendSpec{
+				EnvName: environment.Name,
+				Title:   "Cachebust disabled migration test",
+				Frontend: crd.FrontendInfo{
+					Paths: []string{"/apps/cachebust-disabled-migration"},
+				},
+			},
+		}
+		gomega.Expect(k8sClient.Create(ctx, frontend)).Should(gomega.Succeed())
+		frontendKey := types.NamespacedName{Name: frontend.Name, Namespace: ns.Name}
+		legacyCMKey := types.NamespacedName{Name: "akamai-edgerc", Namespace: ns.Name}
+		legacyJobKey := types.NamespacedName{Name: "legacy-frontend-cachebust", Namespace: ns.Name}
+		secretKey := types.NamespacedName{Name: "akamai-edgerc", Namespace: ns.Name}
+		ginkgo.DeferCleanup(func() {
+			job := &batchv1.Job{}
+			if err := k8sClient.Get(ctx, legacyJobKey, job); err == nil && len(job.Finalizers) > 0 {
+				job.Finalizers = nil
+				_ = k8sClient.Update(ctx, job)
+			}
+			_ = k8sClient.Delete(ctx, frontend)
+			gomega.Eventually(func() bool {
+				return k8serrors.IsNotFound(k8sClient.Get(ctx, frontendKey, &crd.Frontend{}))
+			}, timeout, interval).Should(gomega.BeTrue())
+			for _, object := range []client.Object{&batchv1.Job{}, &apps.Deployment{}, &v1.Service{}, &networking.Ingress{}, &v1.ConfigMap{}, &v1.Secret{}} {
+				gomega.Expect(k8sClient.DeleteAllOf(ctx, object, client.InNamespace(ns.Name))).Should(gomega.Succeed())
+			}
+			gomega.Expect(k8sClient.Delete(ctx, environment)).Should(gomega.Succeed())
+			gomega.Expect(k8sClient.Delete(ctx, ns)).Should(gomega.Succeed())
+		})
+
+		gomega.Eventually(func() error {
+			cachedFrontend := &crd.Frontend{}
+			return k8sManagerClient.Get(ctx, frontendKey, cachedFrontend)
+		}, timeout, interval).Should(gomega.Succeed())
+
+		legacyCM := &v1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: legacyCMKey.Name, Namespace: ns.Name},
+			Data:       map[string]string{"edgerc": "legacy credential material"},
+		}
+		gomega.Expect(k8sClient.Create(ctx, legacyCM)).Should(gomega.Succeed())
+		legacyJob := &batchv1.Job{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       legacyJobKey.Name,
+				Namespace:  legacyJobKey.Namespace,
+				Finalizers: []string{"frontend-operator.test/hold-legacy-job"},
+			},
+			Spec: batchv1.JobSpec{Template: v1.PodTemplateSpec{Spec: v1.PodSpec{
+				RestartPolicy: v1.RestartPolicyNever,
+				Volumes: []v1.Volume{{
+					Name:         "akamai-edgerc",
+					VolumeSource: v1.VolumeSource{ConfigMap: &v1.ConfigMapVolumeSource{LocalObjectReference: v1.LocalObjectReference{Name: legacyCMKey.Name}}},
+				}},
+				Containers: []v1.Container{{Name: "akamai-cache-bust", Image: "quay.io/cachebust:legacy"}},
+			}}},
+		}
+		gomega.Expect(k8sClient.Create(ctx, legacyJob)).Should(gomega.Succeed())
+
+		reconciler := &FrontendReconciler{Client: k8sManagerClient, APIReader: k8sClient, Scheme: scheme}
+		_, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: frontendKey})
+		gomega.Expect(err).Should(gomega.HaveOccurred(), "retirement must wait for legacy Job deletion")
+		gomega.Expect(k8sClient.Get(ctx, legacyCMKey, &v1.ConfigMap{})).Should(gomega.Succeed())
+		gomega.Expect(k8serrors.IsNotFound(k8sClient.Get(ctx, secretKey, &v1.Secret{}))).Should(gomega.BeTrue())
+		gomega.Eventually(func() bool {
+			job := &batchv1.Job{}
+			return k8sClient.Get(ctx, legacyJobKey, job) == nil && !job.GetDeletionTimestamp().IsZero()
+		}, timeout, interval).Should(gomega.BeTrue())
+
+		gomega.Eventually(func() error {
+			job := &batchv1.Job{}
+			if err := k8sClient.Get(ctx, legacyJobKey, job); err != nil {
+				return err
+			}
+			job.Finalizers = nil
+			return k8sClient.Update(ctx, job)
+		}, timeout, interval).Should(gomega.Succeed())
+		gomega.Eventually(func() bool {
+			_, reconcileErr := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: frontendKey})
+			if reconcileErr != nil {
+				return false
+			}
+			return k8serrors.IsNotFound(k8sClient.Get(ctx, legacyCMKey, &v1.ConfigMap{}))
+		}, timeout, interval).Should(gomega.BeTrue())
+
+		gomega.Expect(k8serrors.IsNotFound(k8sClient.Get(ctx, secretKey, &v1.Secret{}))).Should(gomega.BeTrue(), "disabled cache busting must not create a replacement Secret")
+		gomega.Expect(k8serrors.IsNotFound(k8sClient.Get(ctx, legacyJobKey, &batchv1.Job{}))).Should(gomega.BeTrue())
+	})
 })
