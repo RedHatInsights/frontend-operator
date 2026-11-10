@@ -4,6 +4,9 @@ metadata:
   name: controller-manager
   namespace: system
 spec:
+  # Remove old ReplicaSet templates after a successful rollout; historical
+  # templates may contain credentials from pre-secretKeyRef versions.
+  revisionHistoryLimit: 0
   template:
     spec:
       containers:
@@ -14,9 +17,21 @@ spec:
         - --log-level=${LOG_LEVEL}
         env:
         - name: PUSHCACHE_AWS_ACCESS_KEY_ID
-          value: ${PUSHCACHE_AWS_ACCESS_KEY_ID}
+          valueFrom:
+            secretKeyRef:
+              name: ${PUSHCACHE_AWS_SECRET_NAME}
+              key: aws-access-key-id
         - name: PUSHCACHE_AWS_SECRET_ACCESS_KEY
-          value: ${PUSHCACHE_AWS_SECRET_ACCESS_KEY}
+          valueFrom:
+            secretKeyRef:
+              name: ${PUSHCACHE_AWS_SECRET_NAME}
+              key: aws-secret-access-key
+        - name: PUSHCACHE_AWS_SECRET_NAME
+          value: ${PUSHCACHE_AWS_SECRET_NAME}
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
         - name: PUSHCACHE_AWS_BUCKET_NAME
           value: ${PUSHCACHE_AWS_BUCKET_NAME}
         - name: PUSHCACHE_AWS_REGION

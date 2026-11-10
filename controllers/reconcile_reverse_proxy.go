@@ -45,12 +45,13 @@ const (
 
 // ReverseProxyReconciliation handles the reconciliation logic for reverse proxy resources
 type ReverseProxyReconciliation struct {
-	Log                 logr.Logger
-	Recorder            record.EventRecorder
-	Client              client.Client
-	Ctx                 context.Context
-	Namespace           string
-	FrontendEnvironment *crd.FrontendEnvironment
+	Log                      logr.Logger
+	Recorder                 record.EventRecorder
+	Client                   client.Client
+	Ctx                      context.Context
+	Namespace                string
+	FrontendEnvironment      *crd.FrontendEnvironment
+	credentialHistoryPending bool
 }
 
 // run executes the reverse proxy reconciliation logic
@@ -89,8 +90,67 @@ func (r *ReverseProxyReconciliation) reconcileDeployment() error {
 		return err
 	}
 
-	// Deployment exists, ensure it's up to date
-	return r.updateReverseProxyDeployment(deployment)
+	// Deployment exists, ensure it's up to date.
+	if err := r.updateReverseProxyDeployment(deployment); err != nil {
+		return err
+	}
+	if err := r.Client.Get(r.Ctx, deploymentKey, deployment); err != nil {
+		return err
+	}
+	pending, err := r.removeObsoleteCredentialReplicaSets(deployment)
+	r.credentialHistoryPending = pending
+	return err
+}
+
+func (r *ReverseProxyReconciliation) removeObsoleteCredentialReplicaSets(deployment *apps.Deployment) (bool, error) {
+	replicaSets := &apps.ReplicaSetList{}
+	if err := r.Client.List(r.Ctx, replicaSets, client.InNamespace(r.Namespace)); err != nil {
+		return false, err
+	}
+
+	pending := false
+	rolloutComplete := reverseProxyRolloutComplete(deployment)
+	for i := range replicaSets.Items {
+		replicaSet := &replicaSets.Items[i]
+		if !metav1.IsControlledBy(replicaSet, deployment) || !podTemplateHasInlineObjectStoreCredentials(&replicaSet.Spec.Template) {
+			continue
+		}
+
+		if !rolloutComplete || replicaCount(replicaSet.Spec.Replicas) != 0 || replicaSet.Status.Replicas != 0 {
+			pending = true
+			continue
+		}
+		if err := r.Client.Delete(r.Ctx, replicaSet); err != nil && !k8serr.IsNotFound(err) {
+			return true, err
+		}
+	}
+	return pending, nil
+}
+
+func reverseProxyRolloutComplete(deployment *apps.Deployment) bool {
+	desiredReplicas := replicaCount(deployment.Spec.Replicas)
+	return deployment.Status.ObservedGeneration >= deployment.Generation &&
+		deployment.Status.UpdatedReplicas >= desiredReplicas &&
+		deployment.Status.AvailableReplicas >= desiredReplicas &&
+		deployment.Status.Replicas == desiredReplicas
+}
+
+func replicaCount(replicas *int32) int32 {
+	if replicas == nil {
+		return 1
+	}
+	return *replicas
+}
+
+func podTemplateHasInlineObjectStoreCredentials(template *v1.PodTemplateSpec) bool {
+	for _, container := range template.Spec.Containers {
+		for _, env := range container.Env {
+			if (env.Name == "PUSHCACHE_AWS_ACCESS_KEY_ID" || env.Name == "PUSHCACHE_AWS_SECRET_ACCESS_KEY") && env.Value != "" && env.ValueFrom == nil {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // reconcileService ensures the reverse proxy service exists and is up to date
@@ -132,20 +192,71 @@ func (r *ReverseProxyReconciliation) updateReverseProxyDeployment(existing *apps
 	return r.Client.Update(r.Ctx, desired)
 }
 
-// compareEnvVars compares two environment variable slices for equality
+// compareEnvVars compares two environment variable slices for equality.
+// Handles both literal Value and ValueFrom (secretKeyRef) env vars.
 func (r *ReverseProxyReconciliation) compareEnvVars(existing, desired []v1.EnvVar) bool {
 	if len(existing) != len(desired) {
 		return false
 	}
 
-	existingMap := make(map[string]string)
+	existingByName := make(map[string]v1.EnvVar)
 	for _, env := range existing {
-		existingMap[env.Name] = env.Value
+		existingByName[env.Name] = env
 	}
 
-	for _, env := range desired {
-		if value, exists := existingMap[env.Name]; !exists || value != env.Value {
+	for _, d := range desired {
+		e, exists := existingByName[d.Name]
+		if !exists {
 			return false
+		}
+		// Compare literal values
+		if d.Value != e.Value {
+			return false
+		}
+		// Compare ValueFrom references
+		if (d.ValueFrom == nil) != (e.ValueFrom == nil) {
+			return false
+		}
+		if d.ValueFrom != nil && e.ValueFrom != nil {
+			// SecretKeyRef
+			if (d.ValueFrom.SecretKeyRef == nil) != (e.ValueFrom.SecretKeyRef == nil) {
+				return false
+			}
+			if d.ValueFrom.SecretKeyRef != nil && e.ValueFrom.SecretKeyRef != nil {
+				if d.ValueFrom.SecretKeyRef.Name != e.ValueFrom.SecretKeyRef.Name ||
+					d.ValueFrom.SecretKeyRef.Key != e.ValueFrom.SecretKeyRef.Key {
+					return false
+				}
+			}
+			// ConfigMapKeyRef
+			if (d.ValueFrom.ConfigMapKeyRef == nil) != (e.ValueFrom.ConfigMapKeyRef == nil) {
+				return false
+			}
+			if d.ValueFrom.ConfigMapKeyRef != nil && e.ValueFrom.ConfigMapKeyRef != nil {
+				if d.ValueFrom.ConfigMapKeyRef.Name != e.ValueFrom.ConfigMapKeyRef.Name ||
+					d.ValueFrom.ConfigMapKeyRef.Key != e.ValueFrom.ConfigMapKeyRef.Key {
+					return false
+				}
+			}
+			// FieldRef
+			if (d.ValueFrom.FieldRef == nil) != (e.ValueFrom.FieldRef == nil) {
+				return false
+			}
+			if d.ValueFrom.FieldRef != nil && e.ValueFrom.FieldRef != nil {
+				if d.ValueFrom.FieldRef.FieldPath != e.ValueFrom.FieldRef.FieldPath {
+					return false
+				}
+			}
+			// ResourceFieldRef
+			if (d.ValueFrom.ResourceFieldRef == nil) != (e.ValueFrom.ResourceFieldRef == nil) {
+				return false
+			}
+			if d.ValueFrom.ResourceFieldRef != nil && e.ValueFrom.ResourceFieldRef != nil {
+				if d.ValueFrom.ResourceFieldRef.ContainerName != e.ValueFrom.ResourceFieldRef.ContainerName ||
+					d.ValueFrom.ResourceFieldRef.Resource != e.ValueFrom.ResourceFieldRef.Resource {
+					return false
+				}
+			}
 		}
 	}
 
@@ -342,8 +453,26 @@ func (r *ReverseProxyReconciliation) buildReverseProxyDeployment() (*apps.Deploy
 	// Get consistent labels that won't conflict between frontends
 	labels := r.getReverseProxyLabels()
 
+	// Fetch object store configuration once and pass it to the container builder.
+	objectStoreInfo, err := getObjectStoreConfig(r.Ctx, r.Client, r.Namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure the S3 credentials Secret exists so that the Deployment can
+	// reference them via valueFrom.secretKeyRef instead of literal values.
+	if err := ensurePushCacheCredentialsSecret(r.Ctx, r.Client, r.Namespace, *objectStoreInfo.AccessKey, *objectStoreInfo.SecretKey); err != nil {
+		return nil, err
+	}
+
+	// Compute a checksum of the S3 credentials so that a credential rotation
+	// causes the Pod template to change, which triggers a rolling restart.
+	// Without this, Kubernetes does not refresh Secret-backed environment
+	// variables in running containers.
+	credentialChecksum := objectStoreCredentialChecksum(objectStoreInfo)
+
 	// Configure the reverse proxy container
-	container, err := r.createReverseProxyContainer()
+	container, err := r.createReverseProxyContainer(objectStoreInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -362,7 +491,8 @@ func (r *ReverseProxyReconciliation) buildReverseProxyDeployment() (*apps.Deploy
 			},
 		},
 		Spec: apps.DeploymentSpec{
-			Replicas: utils.Int32Ptr(ReverseProxyReplicas),
+			Replicas:             utils.Int32Ptr(ReverseProxyReplicas),
+			RevisionHistoryLimit: utils.Int32Ptr(0),
 			Strategy: apps.DeploymentStrategy{
 				Type: apps.RollingUpdateDeploymentStrategyType,
 				RollingUpdate: &apps.RollingUpdateDeployment{
@@ -376,6 +506,9 @@ func (r *ReverseProxyReconciliation) buildReverseProxyDeployment() (*apps.Deploy
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labels,
+					Annotations: map[string]string{
+						PushCacheCredentialsChecksumAnnotation: credentialChecksum,
+					},
 				},
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{container},
@@ -401,21 +534,15 @@ func (r *ReverseProxyReconciliation) createReverseProxyService() error {
 	return r.Client.Create(r.Ctx, service)
 }
 
-// createReverseProxyContainer configures the reverse proxy container
-func (r *ReverseProxyReconciliation) createReverseProxyContainer() (v1.Container, error) {
-	// Get object store configuration from environment variables (same as push cache)
-	objectStoreInfo, err := ExtractBucketConfigFromEnv()
-	if err != nil {
-		return v1.Container{}, err
-	}
-
+// createReverseProxyContainer configures the reverse proxy container.
+// objectStoreInfo is fetched by the caller (buildReverseProxyDeployment) so that
+// the credential checksum can be computed at the deployment level.
+func (r *ReverseProxyReconciliation) createReverseProxyContainer(objectStoreInfo *ObjectStoreBucket) (v1.Container, error) {
 	// Get default values
 	minioPort := *objectStoreInfo.Port
-	minioEndpoint := *objectStoreInfo.Endpoint    // PUSHCACHE_AWS_ENDPOINT
-	bucketPathPrefix := *objectStoreInfo.Name     // PUSHCACHE_AWS_BUCKET_NAME
-	accessKeyID := *objectStoreInfo.AccessKey     // PUSHCACHE_AWS_ACCESS_KEY_ID
-	secretAccessKey := *objectStoreInfo.SecretKey // PUSHCACHE_AWS_SECRET_ACCESS_KEY
-	region := *objectStoreInfo.Region             // PUSHCACHE_AWS_REGION
+	minioEndpoint := *objectStoreInfo.Endpoint // PUSHCACHE_AWS_ENDPOINT
+	bucketPathPrefix := *objectStoreInfo.Name  // PUSHCACHE_AWS_BUCKET_NAME
+	region := *objectStoreInfo.Region          // PUSHCACHE_AWS_REGION
 	var minioUpstreamURL string
 	var protocol string
 	// Construct upstream URL with appropriate scheme based on port
@@ -464,15 +591,10 @@ func (r *ReverseProxyReconciliation) createReverseProxyContainer() (v1.Container
 			Name:  "LOG_LEVEL",
 			Value: logLevel,
 		},
-		{
-			Name:  "PUSHCACHE_AWS_ACCESS_KEY_ID",
-			Value: accessKeyID,
-		},
-		{
-			Name:  "PUSHCACHE_AWS_SECRET_ACCESS_KEY",
-			Value: secretAccessKey,
-		},
 	}
+
+	// S3 credentials are sourced from Secret via secretKeyRef, not literal values
+	envVars = append(envVars, pushCacheCredentialEnvVars()...)
 
 	// Add SSL environment variables if SSL is enabled (similar to main reconciler)
 	if r.FrontendEnvironment.Spec.SSL {

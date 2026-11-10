@@ -36,8 +36,10 @@ import (
 )
 
 const (
-	RoutePrefixDefault      = "apps"
-	AkamaiSecretNameDefault = "akamai"
+	RoutePrefixDefault                     = "apps"
+	AkamaiSecretNameDefault                = "akamai"
+	PushCacheCredentialsSecretName         = "pushcache-s3-credentials"       //nolint:gosec // G101: not a credential, just the Secret resource name
+	PushCacheCredentialsChecksumAnnotation = "pushcache-credentials-checksum" //nolint:gosec // G101: annotation key, not a credential
 )
 
 type FrontendReconciliation struct {
@@ -122,14 +124,18 @@ func (r *FrontendReconciliation) run() error {
 				if err := r.ensureAkamaiEdgercSecret(); err != nil {
 					return err
 				}
-				if err := r.createOrUpdateJob(CacheBustJob, r.generateCacheBustJobName, r.populateCacheBustContainer); err != nil {
+				if err := r.createOrUpdateJob(CacheBustJob, r.generateCacheBustJobName, r.populateCacheBustContainer, ""); err != nil {
 					return err
 				}
 			}
 		}
 		// If push cache is enabled for the environment, add the push cache container
 		if r.FrontendEnvironment.Spec.EnablePushCache && r.Frontend.Spec.Image != "" {
-			if err := r.createOrUpdateJob(PushCacheJob, r.generatePushCacheJobName, r.populatePushCacheContainer); err != nil {
+			credentialChecksum, err := r.ensurePushCacheCredentials()
+			if err != nil {
+				return err
+			}
+			if err := r.createOrUpdateJob(PushCacheJob, r.generatePushCacheJobName, r.populatePushCacheContainer, credentialChecksum); err != nil {
 				return err
 			}
 		}
@@ -634,8 +640,6 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 	}
 
 	bucketName := objectStoreInfo.Name
-	awsUsername := objectStoreInfo.AccessKey
-	awsPassword := objectStoreInfo.SecretKey
 	hostname := objectStoreInfo.Endpoint
 	port := objectStoreInfo.Port
 
@@ -690,14 +694,17 @@ func (r *FrontendReconciliation) populatePushCacheContainer(j *batchv1.Job) erro
 	}
 	j.Spec.Template.Spec.InitContainers = []v1.Container{initContainer}
 
-	// Construct the pushcache startup command; removing the sleep command will result in the pushcache job being spin up continously, without delay, and uploading the assets to s3
-	command := fmt.Sprintf("valpop populate -r %s -s %s -i %s --valpop-image %s --timeout 172800 --min-asset-records %d --bucket %s --hostname %s --port %s --username %s --password %s", r.Frontend.Name, assetsPath, r.Frontend.Spec.Image, valpopImage, minAssetRecords, *bucketName, *hostname, *port, *awsUsername, *awsPassword)
+	// Construct the pushcache startup command; credentials are injected via env vars
+	// sourced from the pushcache-s3-credentials Secret (not literal values)
+	command := fmt.Sprintf("valpop populate -r %s -s %s -i %s --valpop-image %s --timeout 172800 --min-asset-records %d --bucket %s --hostname %s --port %s --username \"$PUSHCACHE_AWS_ACCESS_KEY_ID\" --password \"$PUSHCACHE_AWS_SECRET_ACCESS_KEY\"", r.Frontend.Name, assetsPath, r.Frontend.Spec.Image, valpopImage, minAssetRecords, *bucketName, *hostname, *port)
 
 	// Modify the object to set the things we care about
 	pushCacheContainer := v1.Container{
 		Name:         "valpop-pushcache",
 		Image:        valpopImage,
 		VolumeMounts: volumeMounts,
+		// Credentials sourced from Secret via env vars, not embedded in the command
+		Env: pushCacheCredentialEnvVars(),
 		// Run the pushcache startup command
 		Command: []string{"/bin/bash", "-c", command},
 		Resources: v1.ResourceRequirements{
@@ -882,9 +889,127 @@ func extractBucketConfigFromSecret(ctx context.Context, c client.Client, namespa
 func getObjectStoreConfig(ctx context.Context, c client.Client, namespace string) (*ObjectStoreBucket, error) {
 	config, err := ExtractBucketConfigFromEnv()
 	if err == nil {
+		// The manager's environment variables are snapshots taken when its Pod
+		// starts. Read the referenced Secret through the API so reconciliations
+		// observe rotations without waiting for an operator restart.
+		if secretName := os.Getenv("PUSHCACHE_AWS_SECRET_NAME"); secretName != "" {
+			secretNamespace := os.Getenv("POD_NAMESPACE")
+			if secretNamespace == "" {
+				secretNamespace = namespace
+			}
+			accessKey, secretKey, err := readObjectStoreCredentials(ctx, c, secretNamespace, secretName, "aws-access-key-id", "aws-secret-access-key")
+			if err != nil {
+				return nil, err
+			}
+			config.AccessKey = &accessKey
+			config.SecretKey = &secretKey
+		}
 		return config, nil
 	}
 	return extractBucketConfigFromSecret(ctx, c, namespace)
+}
+
+func readObjectStoreCredentials(ctx context.Context, c client.Client, namespace, secretName, accessKeyName, secretKeyName string) (string, string, error) {
+	secret := &v1.Secret{}
+	if err := c.Get(ctx, types.NamespacedName{Name: secretName, Namespace: namespace}, secret); err != nil {
+		return "", "", fmt.Errorf("failed to get object store credentials Secret %q in namespace %q: %w", secretName, namespace, err)
+	}
+
+	accessKey := string(secret.Data[accessKeyName])
+	secretKey := string(secret.Data[secretKeyName])
+	if accessKey == "" || secretKey == "" {
+		return "", "", fmt.Errorf("object store credentials Secret %q is missing required keys (%s, %s)", secretName, accessKeyName, secretKeyName)
+	}
+	return accessKey, secretKey, nil
+}
+
+func isObjectStoreCredentialSecret(secret *v1.Secret) bool {
+	if secret == nil {
+		return false
+	}
+
+	if os.Getenv("PUSHCACHE_AWS_SECRET_NAME") != "" {
+		return secret.Name == os.Getenv("PUSHCACHE_AWS_SECRET_NAME") && secret.Namespace == os.Getenv("POD_NAMESPACE")
+	}
+	return secret.Name == "env-"+secret.Namespace+"-minio"
+}
+
+// ensurePushCacheCredentialsSecret creates or updates an opaque Secret containing
+// S3 access credentials so that generated Deployments and Jobs can reference them
+// via valueFrom.secretKeyRef instead of embedding literal values.
+func ensurePushCacheCredentialsSecret(ctx context.Context, c client.Client, namespace, accessKey, secretKey string) error {
+	nn := types.NamespacedName{Name: PushCacheCredentialsSecretName, Namespace: namespace}
+
+	secret := &v1.Secret{}
+	secret.SetName(PushCacheCredentialsSecretName)
+	secret.SetNamespace(namespace)
+	secret.Type = v1.SecretTypeOpaque
+	secret.StringData = map[string]string{
+		"aws-access-key-id":     accessKey,
+		"aws-secret-access-key": secretKey,
+	}
+
+	if err := c.Create(ctx, secret); err != nil {
+		if !k8serr.IsAlreadyExists(err) {
+			return err
+		}
+		existing := &v1.Secret{}
+		if err := c.Get(ctx, nn, existing); err != nil {
+			return err
+		}
+		existing.Data = map[string][]byte{
+			"aws-access-key-id":     []byte(accessKey),
+			"aws-secret-access-key": []byte(secretKey),
+		}
+		existing.StringData = nil
+		if err := c.Update(ctx, existing); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ensurePushCacheCredentials reconciles the managed credential Secret separately
+// from Job population, which may be skipped when an existing Job is unchanged.
+func (r *FrontendReconciliation) ensurePushCacheCredentials() (string, error) {
+	objectStoreInfo, err := getObjectStoreConfig(r.Ctx, r.Client, r.Frontend.Namespace)
+	if err != nil {
+		return "", err
+	}
+	if err := ensurePushCacheCredentialsSecret(r.Ctx, r.Client, r.Frontend.Namespace, *objectStoreInfo.AccessKey, *objectStoreInfo.SecretKey); err != nil {
+		return "", err
+	}
+	return objectStoreCredentialChecksum(objectStoreInfo), nil
+}
+
+func objectStoreCredentialChecksum(info *ObjectStoreBucket) string {
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(*info.AccessKey+"\x00"+*info.SecretKey)))
+}
+
+// pushCacheCredentialEnvVars returns env vars that reference the S3 credentials
+// Secret via valueFrom.secretKeyRef instead of literal values.
+func pushCacheCredentialEnvVars() []v1.EnvVar {
+	return []v1.EnvVar{
+		{
+			Name: "PUSHCACHE_AWS_ACCESS_KEY_ID",
+			ValueFrom: &v1.EnvVarSource{
+				SecretKeyRef: &v1.SecretKeySelector{
+					LocalObjectReference: v1.LocalObjectReference{Name: PushCacheCredentialsSecretName},
+					Key:                  "aws-access-key-id",
+				},
+			},
+		},
+		{
+			Name: "PUSHCACHE_AWS_SECRET_ACCESS_KEY",
+			ValueFrom: &v1.EnvVarSource{
+				SecretKeyRef: &v1.SecretKeySelector{
+					LocalObjectReference: v1.LocalObjectReference{Name: PushCacheCredentialsSecretName},
+					Key:                  "aws-secret-access-key",
+				},
+			},
+		},
+	}
 }
 
 // Add the env vars if eny are set
@@ -1085,6 +1210,36 @@ func (r *FrontendReconciliation) isJobFromCurrentValpopImage(j *batchv1.Job) boo
 	return valpopImage == r.FrontendEnvironment.Spec.ValpopImage
 }
 
+// isJobUsingSecretKeyRef returns true if the Job's pushcache container sources
+// its S3 credential environment variables from a Secret via valueFrom.secretKeyRef.
+// Legacy Jobs created before the secretKeyRef migration use literal values and
+// must be deleted/recreated to stop exposing plaintext credentials.
+func isJobUsingSecretKeyRef(j *batchv1.Job) bool {
+	for _, container := range j.Spec.Template.Spec.Containers {
+		if container.Name != "valpop-pushcache" {
+			continue
+		}
+		credentialRefs := map[string]string{ //nolint:gosec // G101: entries identify Secret refs, not credentials.
+			"PUSHCACHE_AWS_ACCESS_KEY_ID":     "aws-access-key-id",
+			"PUSHCACHE_AWS_SECRET_ACCESS_KEY": "aws-secret-access-key",
+		}
+		for _, env := range container.Env {
+			key, expected := credentialRefs[env.Name]
+			if !expected {
+				continue
+			}
+			if env.ValueFrom == nil || env.ValueFrom.SecretKeyRef == nil ||
+				env.ValueFrom.SecretKeyRef.Name != PushCacheCredentialsSecretName || env.ValueFrom.SecretKeyRef.Key != key {
+				return false
+			}
+			delete(credentialRefs, env.Name)
+		}
+		return len(credentialRefs) == 0
+	}
+	// No valpop-pushcache container found — not a pushcache Job, treat as OK.
+	return true
+}
+
 func (r *FrontendReconciliation) isJobBehindCutoffTimestamp(j *batchv1.Job, jobName, deployCutoffTimestamp string) bool {
 	if deployCutoffTimestamp == "" || !strings.Contains(jobName, "pushcache") {
 		return false
@@ -1097,7 +1252,7 @@ func (r *FrontendReconciliation) isJobBehindCutoffTimestamp(j *batchv1.Job, jobN
 
 // manageExistingJob will delete the existing job if it exists and is not from the current frontend/valpop image
 // It will return true if the job exists and is from the current images
-func (r *FrontendReconciliation) manageExistingJob(jobName string) (bool, error) {
+func (r *FrontendReconciliation) manageExistingJob(jobName string, credentialChecksum string) (bool, error) {
 	j, exists, err := r.getExistingJob(jobName)
 	if err != nil {
 		return false, err
@@ -1114,8 +1269,12 @@ func (r *FrontendReconciliation) manageExistingJob(jobName string) (bool, error)
 		return false, fmt.Errorf("job %s is terminating, will retry", jobName)
 	}
 
+	// If the Job still uses plaintext credential values (legacy, pre-secretKeyRef
+	// migration), it must be deleted and recreated to remove exposed credentials.
 	// If it exists but is not from the current frontend image, valpop image, or is behind the cutoff timestamp, we delete it
-	if !r.isJobFromCurrentFrontendImage(j) || !r.isJobFromCurrentValpopImage(j) || r.isJobBehindCutoffTimestamp(j, jobName, r.FrontendEnvironment.Spec.DeployCutoffTimestampPushCache) {
+	credentialRotationRequired := credentialChecksum != "" &&
+		j.Spec.Template.Annotations[PushCacheCredentialsChecksumAnnotation] != credentialChecksum && !isJobFinished(j)
+	if !isJobUsingSecretKeyRef(j) || !r.isJobFromCurrentFrontendImage(j) || !r.isJobFromCurrentValpopImage(j) || r.isJobBehindCutoffTimestamp(j, jobName, r.FrontendEnvironment.Spec.DeployCutoffTimestampPushCache) || credentialRotationRequired {
 		backgroundDeletion := metav1.DeletePropagationBackground
 		return false, r.Client.Delete(r.Ctx, j, &client.DeleteOptions{
 			PropagationPolicy: &backgroundDeletion,
@@ -1126,16 +1285,25 @@ func (r *FrontendReconciliation) manageExistingJob(jobName string) (bool, error)
 	return true, nil
 }
 
+func isJobFinished(job *batchv1.Job) bool {
+	for _, condition := range job.Status.Conditions {
+		if condition.Status == v1.ConditionTrue && (condition.Type == batchv1.JobComplete || condition.Type == batchv1.JobFailed) {
+			return true
+		}
+	}
+	return false
+}
+
 // createOrUpdateJob will create a new job if it doesn't exist
 // If it does exist and is from the current frontend image it will return
 // If it does exist and is not from the current frontend image it will delete it and create a new one
-func (r *FrontendReconciliation) createOrUpdateJob(ident resCache.ResourceIdentSingle, generateJobName func() string, populateContainer func(*batchv1.Job) error) error {
+func (r *FrontendReconciliation) createOrUpdateJob(ident resCache.ResourceIdentSingle, generateJobName func() string, populateContainer func(*batchv1.Job) error, credentialChecksum string) error {
 	jobName := generateJobName()
 
 	// If the job exists and is from the current frontend image we can return
 	// If the job exists and is not from the current frontend image we delete it
 	// If the job doesn't exist we create it
-	skipUpdate, err := r.manageExistingJob(jobName)
+	skipUpdate, err := r.manageExistingJob(jobName, credentialChecksum)
 	if err != nil {
 		return err
 	}
@@ -1176,6 +1344,9 @@ func (r *FrontendReconciliation) createOrUpdateJob(ident resCache.ResourceIdentS
 	// unconditionally — including the empty string when no valpop image is
 	// configured — so the job is never treated as stale by isJobFromCurrentValpopImage.
 	annotations["valpop-image"] = r.FrontendEnvironment.Spec.ValpopImage
+	if credentialChecksum != "" {
+		annotations[PushCacheCredentialsChecksumAnnotation] = credentialChecksum
+	}
 	annotations["kube-linter.io/ignore-all"] = "we don't need no any checking"
 
 	j.Spec.Template.ObjectMeta.SetAnnotations(annotations)

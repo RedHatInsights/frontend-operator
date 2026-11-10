@@ -1988,6 +1988,15 @@ objects:
     - update
     - watch
   - apiGroups:
+    - apps
+    resources:
+    - replicasets
+    verbs:
+    - delete
+    - get
+    - list
+    - watch
+  - apiGroups:
     - batch
     resources:
     - cronjobs
@@ -2218,6 +2227,7 @@ objects:
     namespace: frontend-operator-system
   spec:
     replicas: 1
+    revisionHistoryLimit: 0
     selector:
       matchLabels:
         control-plane: controller-manager
@@ -2236,9 +2246,21 @@ objects:
           - /manager
           env:
           - name: PUSHCACHE_AWS_ACCESS_KEY_ID
-            value: ${PUSHCACHE_AWS_ACCESS_KEY_ID}
+            valueFrom:
+              secretKeyRef:
+                key: aws-access-key-id
+                name: ${PUSHCACHE_AWS_SECRET_NAME}
           - name: PUSHCACHE_AWS_SECRET_ACCESS_KEY
-            value: ${PUSHCACHE_AWS_SECRET_ACCESS_KEY}
+            valueFrom:
+              secretKeyRef:
+                key: aws-secret-access-key
+                name: ${PUSHCACHE_AWS_SECRET_NAME}
+          - name: PUSHCACHE_AWS_SECRET_NAME
+            value: ${PUSHCACHE_AWS_SECRET_NAME}
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
           - name: PUSHCACHE_AWS_BUCKET_NAME
             value: ${PUSHCACHE_AWS_BUCKET_NAME}
           - name: PUSHCACHE_AWS_REGION
@@ -2284,10 +2306,8 @@ parameters:
   required: true
 - name: IMAGE
   value: quay.io/cloudservices/frontend-operator
-- name: PUSHCACHE_AWS_ACCESS_KEY_ID
-  value: ''
-- name: PUSHCACHE_AWS_SECRET_ACCESS_KEY
-  value: ''
+- name: PUSHCACHE_AWS_SECRET_NAME
+  value: pushcache-aws-credentials
 - name: PUSHCACHE_AWS_BUCKET_NAME
   value: ''
 - name: PUSHCACHE_AWS_REGION

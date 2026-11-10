@@ -18,13 +18,18 @@ package controllers
 
 import (
 	"context"
+	"time"
 
+	v1 "k8s.io/api/core/v1"
 	k8serr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	crd "github.com/RedHatInsights/frontend-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
@@ -40,7 +45,8 @@ type ReverseProxyController struct {
 
 //+kubebuilder:rbac:groups=cloud.redhat.com,resources=frontendenvironments,verbs=get;list;watch
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=apps,resources=replicasets,verbs=get;list;watch;delete
+//+kubebuilder:rbac:groups="",resources=services;secrets,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile handles the reverse proxy reconciliation for a FrontendEnvironment
@@ -86,13 +92,46 @@ func (r *ReverseProxyController) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	log.Info("Successfully reconciled reverse proxy", "namespace", namespace)
+	if reconciliation.credentialHistoryPending {
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	}
 	return ctrl.Result{}, nil
+}
+
+func (r *ReverseProxyController) environmentsToEnqueueUponObjectStoreSecretUpdate() handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		secret, ok := obj.(*v1.Secret)
+		if !ok || !isObjectStoreCredentialSecret(secret) {
+			return nil
+		}
+
+		environments := &crd.FrontendEnvironmentList{}
+		if err := r.Client.List(ctx, environments); err != nil {
+			r.Log.Error(err, "Failed to list FrontendEnvironments for object store Secret update")
+			return nil
+		}
+
+		clowderSecret := secret.Name == "env-"+secret.Namespace+"-minio"
+		requests := make([]reconcile.Request, 0, len(environments.Items))
+		for i := range environments.Items {
+			environment := &environments.Items[i]
+			if !environment.Spec.EnablePushCache || environment.Spec.ReverseProxyImage == "" {
+				continue
+			}
+			if clowderSecret && environment.Name != secret.Namespace {
+				continue
+			}
+			requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: environment.Name}})
+		}
+		return requests
+	}
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ReverseProxyController) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&crd.FrontendEnvironment{}).
+		Watches(&v1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.environmentsToEnqueueUponObjectStoreSecretUpdate())).
 		Named("reverseproxy").
 		Complete(r)
 }
