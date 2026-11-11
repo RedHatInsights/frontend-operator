@@ -1,0 +1,30 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: config-assets-initial-readback
+  namespace: test-config-assets
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 180
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: readback
+          image: python:3.13-alpine
+          command: [python, -c]
+          args:
+            - |
+              import json, urllib.request, urllib.error
+              base = 'http://config-assets-minio:9000/frontend-pushcache/data/config/'
+              with urllib.request.urlopen(base + 'fed-modules.json', timeout=10) as response:
+                  assert response.headers['Cache-Control'] == 'public, max-age=60'
+                  assert json.load(response)['chrome']['config']['publicationTest'] == 'initial'
+              for excluded in ['Caddyfile', 'locales.json']:
+                  try:
+                      urllib.request.urlopen(base + excluded, timeout=10)
+                  except urllib.error.HTTPError as error:
+                      assert error.code == 404
+                  else:
+                      raise AssertionError(excluded + ' must not be uploaded')
+              print('Initial publication and cache headers verified')

@@ -157,6 +157,9 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	isAppMarkedForDeletion := frontend.GetDeletionTimestamp() != nil
 	if isAppMarkedForDeletion {
 		if utils.Contains(frontend.GetFinalizers(), frontendFinalizer) {
+			if result, err := r.pruneOrphanedConfigAssets(ctx, frontend.Namespace); err != nil || result.RequeueAfter > 0 {
+				return result, err
+			}
 			if err := r.finalizeApp(log, &frontend); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -190,6 +193,7 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// against itself (Owns watch triggers, FrontendEnvironment/Bundle fan-out).
 	// Each retry re-fetches resources to get the latest resourceVersion.
 	var cache resCache.ObjectCache
+	var configAssetsReconciliation *FrontendReconciliation
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		// Re-fetch Frontend and FrontendEnvironment on each retry to get the
 		// latest resourceVersion, preventing stale-object 409 loops.
@@ -229,7 +233,11 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			return err
 		}
 
-		return cache.ApplyAll()
+		if err := cache.ApplyAll(); err != nil {
+			return err
+		}
+		configAssetsReconciliation = &reconciliation
+		return nil
 	})
 
 	if retryErr != nil {
@@ -257,6 +265,23 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 	managedFrontendsMetric.Set(float64(len(managedFrontends)))
 
+	// Publishing shared configuration must not prevent pruning resources that a
+	// Frontend no longer needs, even when the upload is misconfigured or fails.
+	orphanResult, configErr := r.pruneOrphanedConfigAssets(ctx, frontend.Namespace)
+	var configAssetsResult ctrl.Result
+	if configErr == nil {
+		configAssetsResult, configErr = configAssetsReconciliation.reconcileConfigAssetsJob()
+	}
+	if configErr != nil {
+		if err := SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, configErr); err != nil {
+			return ctrl.Result{}, fmt.Errorf("error setting status after config publication error: %w", err)
+		}
+		return ctrl.Result{}, configErr
+	}
+	if orphanResult.RequeueAfter > 0 {
+		configAssetsResult = orphanResult
+	}
+
 	log.Info("Reconciliation successful", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
 	if err = SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil); err != nil {
 		return ctrl.Result{Requeue: true}, nil
@@ -264,7 +289,7 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	log.Info("Finished reconcile")
 	r.reconciliationMetrics.stop()
-	return ctrl.Result{}, nil
+	return configAssetsResult, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

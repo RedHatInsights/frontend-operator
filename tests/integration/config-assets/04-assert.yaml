@@ -1,0 +1,14 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-config-assets-environment-config-assets
+  namespace: test-config-assets
+  labels:
+    frontendenv: test-config-assets-environment
+    component: frontend-config
+  ownerReferences:
+    - apiVersion: cloud.redhat.com/v1alpha1
+      kind: FrontendEnvironment
+      name: test-config-assets-environment
+status:
+  succeeded: 1

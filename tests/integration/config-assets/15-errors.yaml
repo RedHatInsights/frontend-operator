@@ -1,0 +1,17 @@
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: chrome
+  namespace: test-config-assets
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-config-assets-environment-config-assets
+  namespace: test-config-assets
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-config-assets-environment-config-assets
+  namespace: test-config-assets

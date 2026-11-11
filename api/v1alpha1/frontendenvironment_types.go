@@ -163,8 +163,8 @@ type FrontendEnvironmentSpec struct {
 	OverwriteCaddyConfig bool `json:"overwriteCaddyConfig,omitempty"`
 	// Enable Push Cache Container
 	EnablePushCache bool `json:"enablePushCache,omitempty"`
-	// Valpop Image for Push Cache Jobs
-	// If not set, falls back to using the frontend container image
+	// Valpop image for push cache and config assets Jobs. Required for config assets;
+	// push cache falls back to the frontend container image when unset.
 	ValpopImage string `json:"valpopImage,omitempty"`
 	// Minimum number of asset records to keep in push cache (default: 3)
 	// Valpop will always preserve at least this many versions of each asset
@@ -182,7 +182,17 @@ type FrontendEnvironmentSpec struct {
 	// Example: "2026-01-13T10:30:00Z"
 	DeployCutoffTimestampPushCache string `json:"deployCutoffTimestampPushCache,omitempty"`
 
-	// Disable creation of Deployments, Services, Jobs, and ServiceMonitors for all Frontends in this environment.
+	// Publish generated base configuration to S3 using ValpopImage, independently of
+	// DisableContainerDeployments. Consumer routing and legacy config merging are separate.
+	EnableConfigAssets bool `json:"enableConfigAssets,omitempty"`
+	// Change this RFC3339 timestamp to force another config upload even if the files
+	// are unchanged. It is part of the upload identity, so valpop cannot skip it.
+	// +kubebuilder:validation:Format=date-time
+	// +kubebuilder:validation:Pattern=`^.*(Z|[+-][0-9]{2}:[0-9]{2})$`
+	DeployCutoffTimestampConfigAssets string `json:"deployCutoffTimestampConfigAssets,omitempty"`
+
+	// Disable creation of Deployments, Services, per-Frontend Jobs, and ServiceMonitors for all Frontends in this environment.
+	// Config assets Jobs remain controlled by EnableConfigAssets.
 	// When disabled, ConfigMaps remain; Ingresses require an explicit Frontend.spec.service because no operator-managed Service exists.
 	DisableContainerDeployments bool `json:"disableContainerDeployments,omitempty"`
 
