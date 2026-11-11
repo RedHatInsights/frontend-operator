@@ -493,7 +493,7 @@ spec:
   enablePushCache: true
 ----
 
-When enabled, the operator creates push cache jobs that upload frontend assets to object storage. Individual Frontend resources must also set `pushCacheEnabled: true` to participate.
+When enabled, the operator uploads frontend assets and generated JSON configuration to object storage using `valpopImage`. Configuration uploads also run when container deployments are disabled. See xref:config-assets-guide.adoc[Publishing generated configuration].
 
 ==== Akamai Cache Busting
 

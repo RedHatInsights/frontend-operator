@@ -157,6 +157,9 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	isAppMarkedForDeletion := frontend.GetDeletionTimestamp() != nil
 	if isAppMarkedForDeletion {
 		if utils.Contains(frontend.GetFinalizers(), frontendFinalizer) {
+			if result, err := r.cleanupConfigAssetsForDeletedFrontend(ctx, &frontend); err != nil || result.RequeueAfter > 0 {
+				return result, err
+			}
 			if err := r.finalizeApp(log, &frontend); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -190,6 +193,7 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// against itself (Owns watch triggers, FrontendEnvironment/Bundle fan-out).
 	// Each retry re-fetches resources to get the latest resourceVersion.
 	var cache resCache.ObjectCache
+	var configAssetsReconciliation *FrontendReconciliation
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		// Re-fetch Frontend and FrontendEnvironment on each retry to get the
 		// latest resourceVersion, preventing stale-object 409 loops.
@@ -229,7 +233,11 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			return err
 		}
 
-		return cache.ApplyAll()
+		if err := cache.ApplyAll(); err != nil {
+			return err
+		}
+		configAssetsReconciliation = &reconciliation
+		return nil
 	})
 
 	if retryErr != nil {
@@ -257,6 +265,15 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 	managedFrontendsMetric.Set(float64(len(managedFrontends)))
 
+	// Publishing shared configuration must not prevent pruning resources that a
+	// Frontend no longer needs, even when the upload is misconfigured or fails.
+	configAssetsResult, configErr := configAssetsReconciliation.reconcileConfigAssetsJob()
+	if configErr != nil {
+		if err := SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationFailed, configErr); err != nil {
+			return ctrl.Result{}, fmt.Errorf("error setting status after config publication error: %w", err)
+		}
+		return ctrl.Result{}, configErr
+	}
 	log.Info("Reconciliation successful", "app", fmt.Sprintf("%s:%s", frontend.Namespace, frontend.Name))
 	if err = SetFrontendConditions(ctx, r.Client, &frontend, crd.ReconciliationSuccessful, nil); err != nil {
 		return ctrl.Result{Requeue: true}, nil
@@ -264,7 +281,7 @@ func (r *FrontendReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	log.Info("Finished reconcile")
 	r.reconciliationMetrics.stop()
-	return ctrl.Result{}, nil
+	return configAssetsResult, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -289,6 +306,18 @@ func (r *FrontendReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&crd.Frontend{}, builder.WithPredicates(defaultPredicate(r.Log, "frontend"))).
+		// Refresh shared configuration after the deleted Frontend leaves the cache.
+		// Status updates must not fan out to peers and trigger a reconcile loop.
+		Watches(
+			&crd.Frontend{},
+			handler.EnqueueRequestsFromMapFunc(r.frontendsToEnqueueUponFrontendDeletion()),
+			builder.WithPredicates(predicate.Funcs{
+				CreateFunc:  func(event.CreateEvent) bool { return false },
+				UpdateFunc:  func(event.UpdateEvent) bool { return false },
+				DeleteFunc:  func(event.DeleteEvent) bool { return true },
+				GenericFunc: func(event.GenericEvent) bool { return false },
+			}),
+		).
 		Watches(
 			&crd.Bundle{},
 			handler.EnqueueRequestsFromMapFunc(r.appsToEnqueueUponBundleUpdate()),
@@ -431,6 +460,31 @@ func (r *FrontendReconciler) appsToEnqueueUponFrontendEnvironmentUpdate() handle
 		}
 
 		return reqs
+	}
+}
+
+func (r *FrontendReconciler) frontendsToEnqueueUponFrontendDeletion() handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		frontend, ok := obj.(*crd.Frontend)
+		if !ok {
+			return nil
+		}
+		// The event retains the environment name even though the object is gone.
+		// Generated configuration includes peers from every namespace in the environment.
+		peers := &crd.FrontendList{}
+		if err := r.Client.List(ctx, peers, client.MatchingFields{"spec.envName": frontend.Spec.EnvName}); err != nil {
+			r.Log.Error(err, "Failed to list Frontends after Frontend deletion")
+			return nil
+		}
+		requests := make([]reconcile.Request, 0, len(peers.Items))
+		for i := range peers.Items {
+			peer := &peers.Items[i]
+			if !peer.DeletionTimestamp.IsZero() {
+				continue
+			}
+			requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(peer)})
+		}
+		return requests
 	}
 }
 

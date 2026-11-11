@@ -161,10 +161,9 @@ type FrontendEnvironmentSpec struct {
 	// OverwriteCaddyConfig determines if the operator should overwrite
 	// frontend container Caddyfiles with a common core Caddyfile
 	OverwriteCaddyConfig bool `json:"overwriteCaddyConfig,omitempty"`
-	// Enable Push Cache Container
+	// Enable push cache for frontend assets and generated configuration.
 	EnablePushCache bool `json:"enablePushCache,omitempty"`
-	// Valpop Image for Push Cache Jobs
-	// If not set, falls back to using the frontend container image
+	// Valpop image for push cache and config assets Jobs.
 	ValpopImage string `json:"valpopImage,omitempty"`
 	// Minimum number of asset records to keep in push cache (default: 3)
 	// Valpop will always preserve at least this many versions of each asset
@@ -182,8 +181,7 @@ type FrontendEnvironmentSpec struct {
 	// Example: "2026-01-13T10:30:00Z"
 	DeployCutoffTimestampPushCache string `json:"deployCutoffTimestampPushCache,omitempty"`
 
-	// Disable creation of Deployments, Services, Jobs, and ServiceMonitors for all Frontends in this environment.
-	// When disabled, ConfigMaps remain; Ingresses require an explicit Frontend.spec.service because no operator-managed Service exists.
+	// Disable Caddy-based frontend containers in this environment.
 	DisableContainerDeployments bool `json:"disableContainerDeployments,omitempty"`
 
 	DefaultReplicas *int32 `json:"defaultReplicas,omitempty" yaml:"defaultReplicas,omitempty"`

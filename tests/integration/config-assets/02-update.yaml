@@ -1,0 +1,8 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |
+      set -eu
+      oc -n test-config-assets patch frontend chrome --type=merge -p '{"spec":{"module":{"config":{"publicationTest":"updated"}}}}'
+      oc -n test-config-assets exec config-assets-check -- python /checks/check.py chrome updated
+      oc -n test-config-assets wait --for=condition=complete job/test-config-assets-environment-config-assets --timeout=180s

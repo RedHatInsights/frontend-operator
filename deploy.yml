@@ -367,17 +367,14 @@ objects:
                     Example: "2026-01-13T10:30:00Z"'
                   type: string
                 disableContainerDeployments:
-                  description: 'Disable creation of Deployments, Services, Jobs, and
-                    ServiceMonitors for all Frontends in this environment.
-
-                    When disabled, ConfigMaps remain; Ingresses require an explicit
-                    Frontend.spec.service because no operator-managed Service exists.'
+                  description: Disable Caddy-based frontend containers in this environment.
                   type: boolean
                 enableAkamaiCacheBust:
                   description: Enable Akamai Cache Bust
                   type: boolean
                 enablePushCache:
-                  description: Enable Push Cache Container
+                  description: Enable push cache for frontend assets and generated
+                    configuration.
                   type: boolean
                 enabledLocales:
                   description: 'Locales that are generated and offered to users, English
@@ -681,9 +678,7 @@ objects:
                     type: string
                   type: array
                 valpopImage:
-                  description: 'Valpop Image for Push Cache Jobs
-
-                    If not set, falls back to using the frontend container image'
+                  description: Valpop image for push cache and config assets Jobs.
                   type: string
                 whitelist:
                   description: Whitelist CIDRs

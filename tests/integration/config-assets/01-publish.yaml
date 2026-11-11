@@ -1,0 +1,15 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |
+      set -eu
+      oc -n test-config-assets wait --for=condition=complete job/config-assets-bucket --timeout=300s
+      oc -n test-config-assets wait --for=condition=Ready pod/config-assets-check --timeout=120s
+      oc -n test-config-assets wait --for=condition=ReconciliationSuccessful frontend/chrome --timeout=60s
+      test -z "$(oc -n test-config-assets get job,configmap -l component=frontend-config -o name)"
+      oc -n test-config-assets exec config-assets-check -- python /checks/check.py absent
+      oc patch frontendenvironment test-config-assets-environment --type=merge -p '{"spec":{"enablePushCache":true}}'
+      oc -n test-config-assets exec config-assets-check -- python /checks/check.py chrome initial
+      oc -n test-config-assets wait --for=condition=complete job/test-config-assets-environment-config-assets --timeout=180s
+      test "$(oc -n test-config-assets get configmap test-config-assets-environment-config-assets -o jsonpath='{.immutable}')" = true
+      test "$(oc -n test-config-assets get job test-config-assets-environment-config-assets -o jsonpath='{.metadata.ownerReferences[0].kind}')" = FrontendEnvironment

@@ -192,7 +192,6 @@ var _ = ginkgo.Describe("Cachebust Job lifecycle", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: "akamai-edgerc", Namespace: ns.Name},
 			Data:       map[string]string{"edgerc": "legacy credential material"},
 		}
-		gomega.Expect(k8sClient.Create(ctx, legacyCM)).Should(gomega.Succeed())
 		legacyJob := &batchv1.Job{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      legacyJobKey.Name,
@@ -217,6 +216,10 @@ var _ = ginkgo.Describe("Cachebust Job lifecycle", func() {
 			}},
 		}
 		gomega.Expect(k8sClient.Create(ctx, legacyJob)).Should(gomega.Succeed())
+		// The manager is already running. Create the Job first so reconciliation
+		// cannot remove the ConfigMap before its legacy consumer exists. The
+		// finalizer keeps the Job present until the test permits deletion.
+		gomega.Expect(k8sClient.Create(ctx, legacyCM)).Should(gomega.Succeed())
 		edgercSecretKey := types.NamespacedName{Name: "akamai-edgerc", Namespace: ns.Name}
 		gomega.Expect(k8sClient.Delete(ctx, &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: edgercSecretKey.Name, Namespace: edgercSecretKey.Namespace}})).Should(gomega.Succeed())
 
@@ -342,7 +345,6 @@ var _ = ginkgo.Describe("Cachebust Job lifecycle", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: legacyCMKey.Name, Namespace: ns.Name},
 			Data:       map[string]string{"edgerc": "legacy credential material"},
 		}
-		gomega.Expect(k8sClient.Create(ctx, legacyCM)).Should(gomega.Succeed())
 		legacyJob := &batchv1.Job{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       legacyJobKey.Name,
@@ -359,6 +361,9 @@ var _ = ginkgo.Describe("Cachebust Job lifecycle", func() {
 			}}},
 		}
 		gomega.Expect(k8sClient.Create(ctx, legacyJob)).Should(gomega.Succeed())
+		// Keep the legacy consumer present before the running manager can see
+		// the ConfigMap, just as in the enabled migration scenario above.
+		gomega.Expect(k8sClient.Create(ctx, legacyCM)).Should(gomega.Succeed())
 
 		reconciler := &FrontendReconciler{Client: k8sManagerClient, APIReader: k8sClient, Scheme: scheme}
 		_, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: frontendKey})
