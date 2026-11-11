@@ -1,0 +1,7 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: config-assets-bucket
+  namespace: test-config-assets
+status:
+  succeeded: 1

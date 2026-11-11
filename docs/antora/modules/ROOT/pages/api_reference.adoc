@@ -231,6 +231,16 @@ Enable the push cache (valpop) container for uploading frontend assets to object
 
 *Note:* Individual Frontend resources must also set `pushCacheEnabled: true` to participate.
 
+| *`enableConfigAssets`* __boolean__ |
+Publish generated base JSON configuration to object storage with valpop. Defaults to `false` and requires `valpopImage`. Independent of `enablePushCache`, per-Frontend `pushCacheEnabled`, and `disableContainerDeployments`.
+
+See xref:config-assets-guide.adoc[Publishing generated configuration] for the file inventory, storage paths, and lifecycle.
+
+| *`deployCutoffTimestampConfigAssets`* __string__ |
+RFC3339 timestamp used to force a config upload. Changing this value changes the upload identity even when the configuration is unchanged, bypassing valpop's deduplication.
+
+*Example:* `2026-11-11T12:00:00Z`
+
 | *`reverseProxyImage`* __string__ |
 Container image for the reverse proxy. Setting this enables the reverse proxy feature for serving frontend assets from object storage.
 

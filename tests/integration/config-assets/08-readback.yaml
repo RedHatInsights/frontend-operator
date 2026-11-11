@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: config-assets-updated-readback
+  namespace: test-config-assets
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 180
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: readback
+          image: python:3.13-alpine
+          command: [python, -c]
+          args:
+            - |
+              import json, time, urllib.request, urllib.error
+              url = 'http://config-assets-minio:9000/frontend-pushcache/data/config/fed-modules.json'
+              deadline = time.monotonic() + 150
+              while time.monotonic() < deadline:
+                  try:
+                      with urllib.request.urlopen(url, timeout=5) as response:
+                          data = json.load(response)
+                          if data['chrome']['config']['publicationTest'] == 'updated':
+                              assert response.headers['Cache-Control'] == 'public, max-age=60'
+                              print('Config-only refresh verified with unchanged images')
+                              break
+                  except (OSError, ValueError):
+                      pass
+                  time.sleep(2)
+              else:
+                  raise AssertionError('Updated registry never reached S3')

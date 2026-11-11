@@ -1,0 +1,59 @@
+name: Config assets integration
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  config-assets:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: '1.26.3'
+      - name: Install cluster and test tools
+        run: |
+          mkdir -p "$RUNNER_TEMP/config-assets-tools"
+          cd "$RUNNER_TEMP/config-assets-tools"
+          curl --fail --location --retry 3 https://storage.googleapis.com/minikube/releases/v1.39.0/minikube-linux-amd64 -o minikube
+          curl --fail --location --retry 3 https://github.com/kudobuilder/kuttl/releases/download/v0.28.0/kubectl-kuttl_0.28.0_linux_x86_64 -o kubectl-kuttl
+          curl --fail --location --retry 3 https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable/openshift-client-linux.tar.gz -o oc.tar.gz
+          tar -xzf oc.tar.gz oc
+          chmod +x minikube kubectl-kuttl oc
+          echo "$RUNNER_TEMP/config-assets-tools" >> "$GITHUB_PATH"
+      - name: Start minikube
+        run: minikube start --driver=docker --kubernetes-version=v1.36.1 --cpus=2 --memory=4096
+      - name: Build and install CRDs
+        run: |
+          test "$(kubectl config current-context)" = minikube
+          make build manifests
+          oc --context=minikube apply -f config/crd/bases -f config/crd/test-resources
+      - name: Run FEO and exercise S3 publication
+        env:
+          PUSHCACHE_AWS_ACCESS_KEY_ID: ''
+          PUSHCACHE_AWS_SECRET_NAME: ''
+        run: |
+          mkdir -p artifacts/config-assets
+          bin/manager --metrics-bind-address :9090 --health-probe-bind-address :9091 --log-level 0 > artifacts/config-assets/manager.log 2>&1 &
+          manager_pid=$!
+          trap 'kill "$manager_pid" 2>/dev/null || true' EXIT
+          curl --fail --retry 30 --retry-delay 1 --retry-connrefused http://localhost:9091/readyz
+          kubectl-kuttl test --config tests/integration/kuttl-config.yaml --test config-assets --delete=none --artifacts-dir artifacts/config-assets
+      - name: Collect cluster diagnostics
+        if: always()
+        run: |
+          mkdir -p artifacts/config-assets
+          oc --context=minikube get jobs,pods -n test-config-assets -o yaml > artifacts/config-assets/resources.yaml || true
+          oc --context=minikube get events -n test-config-assets --sort-by=.lastTimestamp > artifacts/config-assets/events.txt || true
+          for job in config-assets-bucket config-assets-initial-readback config-assets-updated-readback; do
+            oc --context=minikube logs -n test-config-assets "job/$job" > "artifacts/config-assets/$job.log" 2>&1 || true
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: config-assets-integration
+          path: artifacts/config-assets

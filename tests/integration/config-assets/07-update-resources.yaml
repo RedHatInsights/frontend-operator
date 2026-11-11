@@ -1,0 +1,18 @@
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: chrome
+  namespace: test-config-assets
+spec:
+  envName: test-config-assets-environment
+  title: Chrome
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  feoConfigEnabled: true
+  image: quay.io/cloudservices/insights-chrome-frontend:720317c
+  service: unused-frontend-service
+  frontend:
+    paths: [/chrome]
+  module:
+    manifestLocation: /apps/chrome/js/fed-mods.json
+    config:
+      publicationTest: updated

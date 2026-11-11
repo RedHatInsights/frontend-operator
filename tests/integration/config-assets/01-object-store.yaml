@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-assets-minio
+  namespace: test-config-assets
+spec:
+  selector:
+    matchLabels:
+      app: config-assets-minio
+  template:
+    metadata:
+      labels:
+        app: config-assets-minio
+    spec:
+      containers:
+        - name: minio
+          image: docker.io/pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+          args: [server, /data]
+          env:
+            - name: MINIO_ROOT_USER
+              value: minioadmin
+            - name: MINIO_ROOT_PASSWORD
+              value: minioadmin
+          ports:
+            - containerPort: 9000
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: config-assets-minio
+  namespace: test-config-assets
+spec:
+  selector:
+    app: config-assets-minio
+  ports:
+    - port: 9000
+      targetPort: 9000
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: env-test-config-assets-minio
+  namespace: test-config-assets
+stringData:
+  accessKey: minioadmin
+  secretKey: minioadmin
+  hostname: config-assets-minio.test-config-assets.svc.cluster.local
+  port: '9000'
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: config-assets-bucket
+  namespace: test-config-assets
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: create-bucket
+          image: docker.io/pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+          command: [/bin/sh, -ec]
+          args:
+            - |
+              until mc alias set local http://config-assets-minio:9000 minioadmin minioadmin; do sleep 2; done
+              mc mb --ignore-existing local/frontend-pushcache
+              mc anonymous set download local/frontend-pushcache

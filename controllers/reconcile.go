@@ -54,6 +54,8 @@ type FrontendReconciliation struct {
 	APIReader           client.Reader
 	// locales.json entries, set before the base ConfigMaps are populated
 	localesJSON []localeEntry
+	// Generated base configuration; publication selects and validates its own files.
+	configAssets map[string]string
 }
 
 // setupConfigMapWithLabels creates a ConfigMap with the specified name and namespace,
@@ -88,6 +90,9 @@ func (r *FrontendReconciliation) run() error {
 	configMaps, err := r.setupConfigMaps()
 	if err != nil {
 		return err
+	}
+	if r.FrontendEnvironment.Spec.EnableConfigAssets {
+		r.configAssets = configMaps[0].Data
 	}
 
 	var configHashBase []map[string]string

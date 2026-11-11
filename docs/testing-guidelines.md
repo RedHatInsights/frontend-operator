@@ -4,6 +4,7 @@
 
 - **Unit tests**: Ginkgo v2 + Gomega assertions with controller-runtime's `envtest` (provides a real API server and etcd, no mocking)
 - **E2E tests**: [kuttl](https://kuttl.dev/) — declarative YAML-based test suites in `tests/e2e/`
+- **Config upload integration**: `tests/integration/config-assets/` runs valpop and reads objects back from S3. It needs a minikube cluster that can run pods, rather than the API-server-only configuration in `kuttl-config.yml`. See [the integration instructions](../tests/integration/README.md).
 - **Test binary**: `make test` runs unit tests; `make kuttl` runs e2e (requires `make run-local` in a separate terminal)
 
 ## Unit Test Patterns
@@ -80,6 +81,6 @@ kubectl kuttl test --config kuttl-config.yml ./tests/e2e --test pushcache
 
 ## CI Checks
 
-- **GitHub Actions**: `lint.yml` runs `golangci-lint`, unit tests run via `Run Unit Tests` workflow
+- **GitHub Actions**: `lint.yml` runs `golangci-lint`, unit tests run via `Run Unit Tests`, and `Config assets integration` runs the S3 readback and cleanup suite on minikube.
 - **Konflux**: builds container image and runs enterprise contract checks
 - Grype vulnerability scans may fail due to infrastructure issues — these are not code-related
