@@ -78,8 +78,22 @@ make kuttl              # terminal 2
 kubectl kuttl test --config kuttl-config.yml ./tests/e2e --test pushcache
 ```
 
+### Local push cache verification
+
+With minikube running and `oc`/KUTTL on PATH, verify the context and start FEO:
+
+```sh
+test "$(kubectl config current-context)" = minikube
+make manifests build
+oc --context=minikube apply -f config/crd/bases -f config/crd/test-resources
+KUBECONFIG="$HOME/.kube/config" PUSHCACHE_AWS_ACCESS_KEY_ID= PUSHCACHE_AWS_SECRET_NAME= bin/manager --metrics-bind-address :9090 --health-probe-bind-address :9091
+```
+
+In another terminal, run `kubectl kuttl test --config tests/integration/kuttl-config.yaml --test config-assets --delete=all`.
+The local MinIO test checks HTTP content, cache headers, config-only updates, enable/disable, and Frontend deletion. Keep FEO running until KUTTL finishes cleaning up; retain its output if attaching results to a PR.
+
 ## CI Checks
 
-- **GitHub Actions**: `lint.yml` runs `golangci-lint`, unit tests run via `Run Unit Tests` workflow
+- **GitHub Actions**: `lint.yml` runs `golangci-lint`, unit tests run via `Run Unit Tests`.
 - **Konflux**: builds container image and runs enterprise contract checks
 - Grype vulnerability scans may fail due to infrastructure issues — these are not code-related

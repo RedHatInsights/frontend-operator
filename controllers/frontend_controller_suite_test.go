@@ -2646,7 +2646,7 @@ var _ = ginkgo.Describe("DisableContainerDeployments", func() {
 	})
 
 	ginkgo.Context("When DisableContainerDeployments is true with cache bust and push cache enabled", func() {
-		ginkgo.It("Should not create Jobs, Deployment, or Service", func() {
+		ginkgo.It("Should publish config without frontend Jobs, Deployment, or Service", func() {
 			ctx := context.Background()
 
 			const (
@@ -2654,6 +2654,17 @@ var _ = ginkgo.Describe("DisableContainerDeployments", func() {
 				JobsEnvName      = "test-env-jobs"
 				JobsBundleName   = "test-bundle-jobs"
 			)
+
+			minioSecret := &v1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "env-" + FrontendNamespace + "-minio", Namespace: FrontendNamespace},
+				StringData: map[string]string{
+					"accessKey": "test-access-key",
+					"secretKey": "test-secret-key",
+					"hostname":  "minio.default.svc.cluster.local",
+					"port":      "9000",
+				},
+			}
+			gomega.Expect(k8sClient.Create(ctx, minioSecret)).Should(gomega.Succeed())
 
 			frontendEnvironment := &crd.FrontendEnvironment{
 				TypeMeta: metav1.TypeMeta{
@@ -2740,6 +2751,14 @@ var _ = ginkgo.Describe("DisableContainerDeployments", func() {
 				}
 				return false
 			}, timeout, interval).Should(gomega.BeTrue())
+
+			ginkgo.By("Verifying the shared config upload uses enablePushCache")
+			configJob := &batchv1.Job{}
+			gomega.Eventually(func() error {
+				return k8sClient.Get(ctx, types.NamespacedName{Name: configAssetsJobName(JobsEnvName), Namespace: FrontendNamespace}, configJob)
+			}, timeout, interval).Should(gomega.Succeed())
+			gomega.Expect(configJob.Spec.Template.Spec.Containers[0].Name).To(gomega.Equal("valpop-config"))
+			gomega.Expect(configJob.OwnerReferences[0].UID).To(gomega.Equal(frontendEnvironment.UID))
 
 			ginkgo.By("Verifying cache bust Job is NOT created")
 			cacheBustJobKey := types.NamespacedName{Name: JobsFrontendName + "-frontend-cachebust", Namespace: FrontendNamespace}

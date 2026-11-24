@@ -1,0 +1,167 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-config-assets
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-assets-minio
+  namespace: test-config-assets
+spec:
+  selector:
+    matchLabels:
+      app: config-assets-minio
+  template:
+    metadata:
+      labels:
+        app: config-assets-minio
+    spec:
+      containers:
+        - name: minio
+          image: docker.io/pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+          args: [server, /data]
+          env:
+            - name: MINIO_ROOT_USER
+              value: minioadmin
+            - name: MINIO_ROOT_PASSWORD
+              value: minioadmin
+          ports:
+            - containerPort: 9000
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: config-assets-minio
+  namespace: test-config-assets
+spec:
+  selector:
+    app: config-assets-minio
+  ports:
+    - port: 9000
+      targetPort: 9000
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: env-test-config-assets-minio
+  namespace: test-config-assets
+stringData:
+  accessKey: minioadmin
+  secretKey: minioadmin
+  hostname: config-assets-minio.test-config-assets.svc.cluster.local
+  port: '9000'
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: config-assets-bucket
+  namespace: test-config-assets
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: create-bucket
+          image: docker.io/pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+          command: [/bin/sh, -ec]
+          args:
+            - |
+              until mc alias set local http://config-assets-minio:9000 minioadmin minioadmin; do sleep 2; done
+              mc mb --ignore-existing local/frontend-pushcache
+              mc anonymous set download local/frontend-pushcache
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: FrontendEnvironment
+metadata:
+  name: test-config-assets-environment
+spec:
+  hostname: foo.redhat.com
+  sso: https://sso.foo.redhat.com
+  disableContainerDeployments: true
+  valpopImage: quay.io/redhat-services-prod/hcc-platex-services-tenant/valpop:latest
+---
+apiVersion: cloud.redhat.com/v1alpha1
+kind: Frontend
+metadata:
+  name: chrome
+  namespace: test-config-assets
+spec:
+  envName: test-config-assets-environment
+  title: Chrome
+  deploymentRepo: https://github.com/RedHatInsights/insights-chrome
+  feoConfigEnabled: true
+  image: quay.io/cloudservices/insights-chrome-frontend:720317c
+  service: unused-frontend-service
+  frontend:
+    paths: [/chrome]
+  module:
+    manifestLocation: /apps/chrome/js/fed-mods.json
+    config:
+      publicationTest: initial
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-assets-check
+  namespace: test-config-assets
+data:
+  check.py: |
+    import json, sys, time, urllib.error, urllib.request
+
+    base = 'http://config-assets-minio:9000/frontend-pushcache/data/config/'
+    expected = set(sys.argv[1].split(','))
+    last_error = 'no response'
+    deadline = time.monotonic() + 150
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(base + 'fed-modules.json', timeout=5) as response:
+                registry = json.load(response)
+                assert set(registry) == expected, registry
+                assert response.headers['Cache-Control'] == 'public, max-age=60'
+                if len(sys.argv) > 2:
+                    assert registry['chrome']['config']['publicationTest'] == sys.argv[2]
+            break
+        except urllib.error.HTTPError as error:
+            if expected == {'absent'} and error.code == 404:
+                break
+            last_error = str(error)
+        except (OSError, ValueError, AssertionError, KeyError) as error:
+            last_error = str(error)
+        time.sleep(2)
+    else:
+        raise AssertionError(f'Expected {sys.argv[1:]}: {last_error}')
+
+    for excluded in ['Caddyfile', 'locales.json']:
+        try:
+            with urllib.request.urlopen(base + excluded, timeout=5):
+                raise AssertionError(excluded + ' must not be uploaded')
+        except urllib.error.HTTPError as error:
+            assert error.code == 404
+    print('Verified registry, cache headers and exclusions:', sys.argv[1:])
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: config-assets-check
+  namespace: test-config-assets
+spec:
+  containers:
+    - name: check
+      image: python:3.13-alpine
+      command: [sleep, '3600']
+      volumeMounts:
+        - name: check
+          mountPath: /checks
+  volumes:
+    - name: check
+      configMap:
+        name: config-assets-check

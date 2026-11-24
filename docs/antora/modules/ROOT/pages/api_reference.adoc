@@ -225,11 +225,9 @@ If `true`, the operator overwrites frontend container Caddyfiles with a common c
 *Use with caution:* This replaces any custom Caddy configuration in frontend images.
 
 | *`enablePushCache`* __boolean__ |
-Enable the push cache (valpop) container for uploading frontend assets to object storage.
+Upload frontend assets and generated JSON configuration to object storage with valpop. Requires `valpopImage`. Configuration uploads also run when `disableContainerDeployments` is enabled.
 
-*When to use:* Enable for environments using object storage-based asset serving.
-
-*Note:* Individual Frontend resources must also set `pushCacheEnabled: true` to participate.
+See xref:config-assets-guide.adoc[Publishing generated configuration] for the published files and lifecycle.
 
 | *`reverseProxyImage`* __string__ |
 Container image for the reverse proxy. Setting this enables the reverse proxy feature for serving frontend assets from object storage.

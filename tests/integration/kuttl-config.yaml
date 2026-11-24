@@ -1,0 +1,9 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestSuite
+startKIND: false
+startControlPlane: false
+testDirs:
+  - tests/integration
+timeout: 320
+parallel: 1
+reportFormat: JSON

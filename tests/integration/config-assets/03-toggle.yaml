@@ -1,0 +1,19 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |
+      set -eu
+      previous_uid=$(oc -n test-config-assets get job test-config-assets-environment-config-assets -o jsonpath='{.metadata.uid}')
+      oc patch frontendenvironment test-config-assets-environment --type=merge -p '{"spec":{"enablePushCache":false}}'
+      oc -n test-config-assets wait --for=delete job/test-config-assets-environment-config-assets --timeout=90s
+      oc -n test-config-assets wait --for=delete configmap/test-config-assets-environment-config-assets --timeout=90s
+      oc -n test-config-assets exec config-assets-check -- python /checks/check.py chrome updated
+      oc patch frontendenvironment test-config-assets-environment --type=merge -p '{"spec":{"enablePushCache":true}}'
+      # Wait for creation so a retained HTTP object cannot hide a missing upload.
+      for attempt in $(seq 1 60); do
+          if oc -n test-config-assets get job test-config-assets-environment-config-assets >/dev/null 2>&1; then break; fi
+          sleep 2
+      done
+      oc -n test-config-assets wait --for=condition=complete job/test-config-assets-environment-config-assets --timeout=180s
+      test "$(oc -n test-config-assets get job test-config-assets-environment-config-assets -o jsonpath='{.metadata.uid}')" != "$previous_uid"
+      oc -n test-config-assets exec config-assets-check -- python /checks/check.py chrome updated
