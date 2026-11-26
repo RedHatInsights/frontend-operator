@@ -34,20 +34,35 @@ const (
 	configMapMaxBytes = 1 << 20
 )
 
-// Keep this inventory explicit: the base ConfigMap also contains a Caddyfile and
-// a locale manifest whose messages are separate ConfigMaps. Those, widgets and
-// layouts are not part of this base-config publisher.
+// Keep the base inventory explicit; locale messages are generated separately.
+// Caddyfile, widgets and layouts are not part of this publisher.
+var baseConfigAssets = []string{
+	"fed-modules.json", "bundles.json", "search-index.json", "api-specs.json",
+	"service-tiles.json", "sso-config.json", "exports.json", "locales.json",
+}
+
 func selectConfigAssets(data map[string]string) (map[string]string, error) {
 	files := map[string]string{}
-	for _, name := range []string{
-		"fed-modules.json", "bundles.json", "search-index.json", "api-specs.json",
-		"service-tiles.json", "sso-config.json", "exports.json",
-	} {
-		if contents, ok := data[name]; ok {
-			if !json.Valid([]byte(contents)) {
-				return nil, fmt.Errorf("config asset %s contains invalid JSON", name)
+	for name, contents := range data {
+		if !slices.Contains(baseConfigAssets, name) && !isMessagesFile(name) {
+			continue
+		}
+		if !json.Valid([]byte(contents)) {
+			return nil, fmt.Errorf("config asset %s contains invalid JSON", name)
+		}
+		files[name] = contents
+	}
+	if manifest, ok := files["locales.json"]; ok {
+		var entries []localeEntry
+		if err := json.Unmarshal([]byte(manifest), &entries); err != nil {
+			return nil, fmt.Errorf("invalid locale manifest: %w", err)
+		}
+		for _, entry := range entries {
+			if entry.ID != sourceLocale {
+				if entry.File != messagesFileName(entry.ID) || files[entry.File] == "" {
+					return nil, fmt.Errorf("locale %s references missing messages %s", entry.ID, entry.File)
+				}
 			}
-			files[name] = contents
 		}
 	}
 	var registry map[string]json.RawMessage

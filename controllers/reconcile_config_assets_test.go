@@ -69,9 +69,10 @@ func setConfigAssetsJobStatus(t *testing.T, r *FrontendReconciliation, job *batc
 }
 
 func TestSelectConfigAssets(t *testing.T) {
-	input := map[string]string{"fed-modules.json": "{\n}\n", "exports.json": "[ ]\n", "Caddyfile": "not JSON", "locales.json": `[]`}
+	input := map[string]string{"fed-modules.json": "{\n}\n", "exports.json": "[ ]\n", "Caddyfile": "not JSON", "locales.json": `[]`,
+		"messages..json": "not JSON", "messages.fr.txt": "not JSON"}
 	files, err := selectConfigAssets(input)
-	if err != nil || !maps.Equal(files, map[string]string{"fed-modules.json": "{\n}\n", "exports.json": "[ ]\n"}) {
+	if err != nil || !maps.Equal(files, map[string]string{"fed-modules.json": "{\n}\n", "exports.json": "[ ]\n", "locales.json": `[]`}) {
 		t.Fatalf("selected files: %v, error: %v", files, err)
 	}
 	for _, bad := range []map[string]string{
@@ -90,7 +91,6 @@ func TestConfigAssetsContentRefreshAndNoOp(t *testing.T) {
 	setConfigAssetsJobStatus(t, r, first, batchv1.JobComplete)
 	// Changes to files outside the publication inventory must not cause an upload.
 	r.configAssets["Caddyfile"] = "new proxy settings"
-	r.configAssets["locales.json"] = `[{"id":"fr"}]`
 	result, err := r.reconcileConfigAssetsJob()
 	if err != nil || result.RequeueAfter != 0 {
 		t.Fatalf("completed unchanged Job should be a no-op: %+v, %v", result, err)

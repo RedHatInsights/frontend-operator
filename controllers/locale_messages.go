@@ -57,6 +57,13 @@ func messagesFileName(locale string) string {
 	return "messages." + locale + ".json"
 }
 
+// isMessagesFile reports whether name has the messagesFileName shape.
+func isMessagesFile(name string) bool {
+	locale, prefixed := strings.CutPrefix(name, "messages.")
+	locale, suffixed := strings.CutSuffix(locale, ".json")
+	return prefixed && suffixed && locale != ""
+}
+
 // messagesConfigMapName is the name of a locale's ConfigMap next to the base
 // ConfigMap named baseName. ConfigMap names are lowercase, locale ids are not.
 func messagesConfigMapName(baseName, locale string) string {
