@@ -89,8 +89,8 @@ oc --context=minikube apply -f config/crd/bases -f config/crd/test-resources
 KUBECONFIG="$HOME/.kube/config" PUSHCACHE_AWS_ACCESS_KEY_ID= PUSHCACHE_AWS_SECRET_NAME= bin/manager --metrics-bind-address :9090 --health-probe-bind-address :9091
 ```
 
-In another terminal, run `kubectl kuttl test --config tests/integration/kuttl-config.yaml --test config-assets --delete=all`.
-The local MinIO test checks HTTP content, cache headers, config-only updates, enable/disable, and Frontend deletion. Keep FEO running until KUTTL finishes cleaning up; retain its output if attaching results to a PR.
+In another terminal, set `ASSET_PROXY_IMAGE` to a frontend-asset-proxy image available to the local cluster that keeps missing `/config/` files out of SPA fallback (the RHCLOUD-53795 proxy change), then run `kubectl kuttl test --config tests/integration/kuttl-config.yaml --test config-assets --delete=all`.
+The local MinIO test checks HTTP content, cache headers, config-only updates, enable/disable, and Frontend deletion. It also has FEO deploy its own asset proxy and reads the locale manifest and messages through it: translation-only refresh, the unchanged-content no-op, locale disable, the `/apps/config/` alias, HEAD, and that missing config JSON returns 404 while SPA fallback serves HTML for other routes. Keep FEO running until KUTTL finishes cleaning up; retain its output if attaching results to a PR.
 
 ## CI Checks
 

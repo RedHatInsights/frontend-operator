@@ -78,11 +78,13 @@ spec:
               until mc alias set local http://config-assets-minio:9000 minioadmin minioadmin; do sleep 2; done
               mc mb --ignore-existing local/frontend-pushcache
               mc anonymous set download local/frontend-pushcache
+              # SPA entrypoint, so a missing config file could fall back to HTML.
+              echo '<!doctype html><title>spa</title>' | mc pipe --attr "Content-Type=text/html" local/frontend-pushcache/index.html
 ---
 apiVersion: cloud.redhat.com/v1alpha1
 kind: FrontendEnvironment
 metadata:
-  name: test-config-assets-environment
+  name: test-config-assets
 spec:
   hostname: foo.redhat.com
   sso: https://sso.foo.redhat.com
@@ -95,7 +97,7 @@ metadata:
   name: chrome
   namespace: test-config-assets
 spec:
-  envName: test-config-assets-environment
+  envName: test-config-assets
   title: Chrome
   deploymentRepo: https://github.com/RedHatInsights/insights-chrome
   feoConfigEnabled: true
@@ -140,13 +142,71 @@ data:
     else:
         raise AssertionError(f'Expected {sys.argv[1:]}: {last_error}')
 
-    for excluded in ['Caddyfile', 'locales.json']:
+    for excluded in ['Caddyfile']:
         try:
             with urllib.request.urlopen(base + excluded, timeout=5):
                 raise AssertionError(excluded + ' must not be uploaded')
         except urllib.error.HTTPError as error:
             assert error.code == 404
     print('Verified registry, cache headers and exclusions:', sys.argv[1:])
+  locales.py: |
+    import json, sys, time, urllib.error, urllib.request
+
+    # The operator-managed frontend-asset-proxy for this environment.
+    origin = 'http://reverse-proxy:8080'
+    base = origin + '/config/'
+    expected = set(sys.argv[1].split(','))
+    html = {'Accept': 'text/html,application/xhtml+xml'}
+
+    def fetch(url, method='GET', headers=None):
+        request = urllib.request.Request(url, method=method, headers=headers or {})
+        return urllib.request.urlopen(request, timeout=5)
+
+    def assert_json(response):
+        assert response.headers['Cache-Control'] == 'public, max-age=60'
+        assert response.headers['Content-Type'].split(';')[0] == 'application/json'
+
+    deadline = time.monotonic() + 150
+    last_error = 'no response'
+    while time.monotonic() < deadline:
+        try:
+            with fetch(base + 'locales.json') as response:
+                manifest = json.load(response)
+                assert {entry['id'] for entry in manifest} == expected, manifest
+                assert_json(response)
+            for entry in manifest:
+                if entry['id'] == 'en':
+                    continue
+                with fetch(base + entry['file']) as response:
+                    messages = json.load(response)
+                    assert messages['module.chrome.defaultDocumentTitle'] == sys.argv[2], messages
+                    assert_json(response)
+            break
+        except (OSError, ValueError, AssertionError, KeyError) as error:
+            last_error = str(error)
+        time.sleep(2)
+    else:
+        raise AssertionError(f'Locale readback failed: {last_error}')
+
+    # The /apps/config/ alias and HEAD resolve to the same objects.
+    with fetch(origin + '/apps/config/locales.json') as response:
+        assert json.load(response) == manifest
+    for url in [base + 'locales.json', origin + '/apps/config/locales.json']:
+        with fetch(url, method='HEAD') as response:
+            assert response.status == 200, url
+
+    # Control: SPA fallback is active for application routes...
+    with fetch(origin + '/some/app/route', headers=html) as response:
+        assert response.headers['Content-Type'].startswith('text/html'), response.headers
+    # ...but never answers for missing config, even when a browser asks for HTML.
+    for filename in ['messages.missing.json', 'not-published.json']:
+        for url in [base + filename, origin + '/apps/config/' + filename]:
+            try:
+                with fetch(url, headers=html):
+                    raise AssertionError(url + ' returned success/SPA HTML')
+            except urllib.error.HTTPError as error:
+                assert error.code == 404, (url, error.code)
+    print('Verified locale assets through frontend-asset-proxy:', sys.argv[1:])
 ---
 apiVersion: v1
 kind: Pod

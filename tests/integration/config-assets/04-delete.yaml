@@ -10,7 +10,7 @@ commands:
         name: companion
         namespace: test-config-assets
       spec:
-        envName: test-config-assets-environment
+        envName: test-config-assets
         title: Companion
         deploymentRepo: https://github.com/RedHatInsights/insights-chrome
         feoConfigEnabled: true
@@ -22,14 +22,14 @@ commands:
           manifestLocation: /apps/companion/fed-mods.json
       YAML
       oc -n test-config-assets exec config-assets-check -- python /checks/check.py chrome,companion updated
-      oc -n test-config-assets wait --for=condition=complete job/test-config-assets-environment-config-assets --timeout=180s
+      oc -n test-config-assets wait --for=condition=complete job/test-config-assets-config-assets --timeout=180s
       # Drain the 10-second completion poll so it cannot mask a missing deletion trigger.
       sleep 20
       oc -n test-config-assets delete frontend chrome --timeout=90s
       oc -n test-config-assets exec config-assets-check -- python /checks/check.py companion
-      oc -n test-config-assets wait --for=condition=complete job/test-config-assets-environment-config-assets --timeout=180s
+      oc -n test-config-assets wait --for=condition=complete job/test-config-assets-config-assets --timeout=180s
       oc -n test-config-assets delete frontend companion --timeout=90s
-      oc -n test-config-assets wait --for=delete job/test-config-assets-environment-config-assets --timeout=90s
-      oc -n test-config-assets wait --for=delete configmap/test-config-assets-environment-config-assets --timeout=90s
-      oc -n test-config-assets wait --for=delete pods -l job-name=test-config-assets-environment-config-assets --timeout=90s
+      oc -n test-config-assets wait --for=delete job/test-config-assets-config-assets --timeout=90s
+      oc -n test-config-assets wait --for=delete configmap/test-config-assets-config-assets --timeout=90s
+      oc -n test-config-assets wait --for=delete pods -l job-name=test-config-assets-config-assets --timeout=90s
       oc -n test-config-assets exec config-assets-check -- python /checks/check.py companion

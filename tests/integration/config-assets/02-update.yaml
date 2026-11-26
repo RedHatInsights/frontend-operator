@@ -1,8 +1,38 @@
 apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
-  - script: |
+  # Several uploads plus the proxy rollout; the suite's 320s default is too short.
+  - timeout: 900
+    script: |
       set -eu
+      : "${ASSET_PROXY_IMAGE:?Set ASSET_PROXY_IMAGE to the frontend-asset-proxy build under test}"
+      job=job/test-config-assets-config-assets
+      # FEO deploys and configures the proxy itself, with Secret-backed credentials.
+      oc patch frontendenvironment test-config-assets --type=merge -p "{\"spec\":{\"reverseProxyImage\":\"$ASSET_PROXY_IMAGE\",\"reverseProxyHostname\":\"config-assets.foo.redhat.com\"}}"
+      for attempt in $(seq 1 60); do
+          if oc -n test-config-assets get deployment/reverse-proxy >/dev/null 2>&1; then break; fi
+          sleep 2
+      done
+      oc -n test-config-assets rollout status deployment/reverse-proxy --timeout=180s
+      test "$(oc -n test-config-assets get deployment/reverse-proxy -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="PUSHCACHE_AWS_SECRET_ACCESS_KEY")].valueFrom.secretKeyRef.name}')" != ""
+      oc -n test-config-assets patch frontend chrome --type=merge -p '{"spec":{"locales":{"fr":{"module.defaultDocumentTitle":"Console"}}}}'
+      oc patch frontendenvironment test-config-assets --type=merge -p '{"spec":{"enabledLocales":[{"id":"en","name":"English","default":true},{"id":"fr","name":"Français"}]}}'
+      oc -n test-config-assets exec config-assets-check -- python /checks/locales.py en,fr Console
+      oc -n test-config-assets wait --for=condition=complete $job --timeout=180s
+      # Unchanged content is a no-op: reconcile again and keep the completed Job.
+      published_uid=$(oc -n test-config-assets get $job -o jsonpath='{.metadata.uid}')
+      oc -n test-config-assets annotate frontend chrome config-assets-noop="$(date +%s)" --overwrite
+      sleep 25
+      test "$(oc -n test-config-assets get $job -o jsonpath='{.metadata.uid}')" = "$published_uid"
+      # Translation-only change. That it leaves the Deployment's configHash alone is
+      # covered by controllers/locales_output_test.go; deployments are disabled here.
+      oc -n test-config-assets patch frontend chrome --type=merge -p '{"spec":{"locales":{"fr":{"module.defaultDocumentTitle":"Tableau de bord"}}}}'
+      oc -n test-config-assets exec config-assets-check -- python /checks/locales.py en,fr 'Tableau de bord'
+      oc -n test-config-assets wait --for=condition=complete $job --timeout=180s
+      test "$(oc -n test-config-assets get $job -o jsonpath='{.metadata.uid}')" != "$published_uid"
+      oc patch frontendenvironment test-config-assets --type=merge -p '{"spec":{"enabledLocales":[{"id":"en","name":"English","default":true}]}}'
+      oc -n test-config-assets exec config-assets-check -- python /checks/locales.py en
+      oc -n test-config-assets wait --for=condition=complete $job --timeout=180s
       oc -n test-config-assets patch frontend chrome --type=merge -p '{"spec":{"module":{"config":{"publicationTest":"updated"}}}}'
       oc -n test-config-assets exec config-assets-check -- python /checks/check.py chrome updated
-      oc -n test-config-assets wait --for=condition=complete job/test-config-assets-environment-config-assets --timeout=180s
+      oc -n test-config-assets wait --for=condition=complete $job --timeout=180s

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"slices"
 	"strconv"
 	"time"
 
@@ -28,22 +29,40 @@ const (
 	configAssetsPublicationAnnotation = "config-publication"
 	configAssetsImageAnnotation       = "valpop-image"
 	configAssetsComponent             = "frontend-config"
+	configAssetsUploadLabel           = "frontend.cloud.redhat.com/config-upload"
+	// configMapMaxBytes is the API limit on a ConfigMap's data.
+	configMapMaxBytes = 1 << 20
 )
 
-// Keep this inventory explicit: the base ConfigMap also contains a Caddyfile and
-// a locale manifest whose messages are separate ConfigMaps. Those, widgets and
-// layouts are not part of this base-config publisher.
+// Keep the base inventory explicit; locale messages are generated separately.
+// Caddyfile, widgets and layouts are not part of this publisher.
+var baseConfigAssets = []string{
+	"fed-modules.json", "bundles.json", "search-index.json", "api-specs.json",
+	"service-tiles.json", "sso-config.json", "exports.json", "locales.json",
+}
+
 func selectConfigAssets(data map[string]string) (map[string]string, error) {
 	files := map[string]string{}
-	for _, name := range []string{
-		"fed-modules.json", "bundles.json", "search-index.json", "api-specs.json",
-		"service-tiles.json", "sso-config.json", "exports.json",
-	} {
-		if contents, ok := data[name]; ok {
-			if !json.Valid([]byte(contents)) {
-				return nil, fmt.Errorf("config asset %s contains invalid JSON", name)
+	for name, contents := range data {
+		if !slices.Contains(baseConfigAssets, name) && !isMessagesFile(name) {
+			continue
+		}
+		if !json.Valid([]byte(contents)) {
+			return nil, fmt.Errorf("config asset %s contains invalid JSON", name)
+		}
+		files[name] = contents
+	}
+	if manifest, ok := files["locales.json"]; ok {
+		var entries []localeEntry
+		if err := json.Unmarshal([]byte(manifest), &entries); err != nil {
+			return nil, fmt.Errorf("invalid locale manifest: %w", err)
+		}
+		for _, entry := range entries {
+			if entry.ID != sourceLocale {
+				if entry.File != messagesFileName(entry.ID) || files[entry.File] == "" {
+					return nil, fmt.Errorf("locale %s references missing messages %s", entry.ID, entry.File)
+				}
 			}
-			files[name] = contents
 		}
 	}
 	var registry map[string]json.RawMessage
@@ -51,6 +70,67 @@ func selectConfigAssets(data map[string]string) (map[string]string, error) {
 		return nil, fmt.Errorf("config assets require a fed-modules.json object")
 	}
 	return files, nil
+}
+
+// Preserve a single upload Job while keeping each immutable ConfigMap below the
+// API limit. Several valid per-locale ConfigMaps can exceed that limit together.
+func splitConfigAssets(files map[string]string) ([]map[string]string, error) {
+	parts := []map[string]string{{}}
+	size := 0
+	for _, name := range slices.Sorted(maps.Keys(files)) {
+		contents := files[name]
+		n := len(name) + len(contents)
+		if n > configMapMaxBytes {
+			return nil, fmt.Errorf("config asset %s exceeds the ConfigMap size limit", name)
+		}
+		if size+n > configMapMaxBytes {
+			parts = append(parts, map[string]string{})
+			size = 0
+		}
+		parts[len(parts)-1][name] = contents
+		size += n
+	}
+	return parts, nil
+}
+
+func configAssetsSnapshotName(base string, part int) string {
+	if part == 0 {
+		return base
+	}
+	return base + "-part-" + strconv.Itoa(part)
+}
+
+// deleteConfigAssetsSnapshotsFrom deletes this upload's snapshot parts numbered
+// keep and above; keep 0 deletes them all. Called only after the old upload Job
+// and its pods have gone away. Scope the query to this upload, not every
+// publisher resource in the namespace. Labels remain discoverable even if
+// replacement of an immutable part was interrupted.
+func (r *FrontendReconciliation) deleteConfigAssetsSnapshotsFrom(reader client.Reader, nn types.NamespacedName, keep int) error {
+	list := &v1.ConfigMapList{}
+	if err := reader.List(r.Ctx, list, client.InNamespace(nn.Namespace), client.MatchingLabels{configAssetsUploadLabel: nn.Name}); err != nil {
+		return err
+	}
+	// Pre-localization snapshots have no upload label; include that exact name.
+	base := &v1.ConfigMap{}
+	if err := reader.Get(r.Ctx, nn, base); err == nil {
+		if base.Labels[configAssetsUploadLabel] != nn.Name {
+			list.Items = append(list.Items, *base)
+		}
+	} else if !k8serr.IsNotFound(err) {
+		return err
+	}
+	wanted := map[string]bool{}
+	for i := range keep {
+		wanted[configAssetsSnapshotName(nn.Name, i)] = true
+	}
+	for _, cm := range list.Items {
+		if !wanted[cm.Name] && r.ownsConfigAsset(&cm) {
+			if err := r.Client.Delete(r.Ctx, &cm, &client.DeleteOptions{Preconditions: &metav1.Preconditions{UID: &cm.UID}}); client.IgnoreNotFound(err) != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (r *FrontendReconciliation) generateConfigAssetsJobName() string {
@@ -133,7 +213,11 @@ func (r *FrontendReconciliation) reconcileConfigAssetsJob() (ctrl.Result, error)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	desired := r.buildConfigAssetsJob(nn, contentHash, publicationHash, store)
+	snapshots, err := splitConfigAssets(files)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	desired := r.buildConfigAssetsJob(nn, len(snapshots), contentHash, publicationHash, store)
 	if exists {
 		if configAssetsJobIsStale(job, desired) {
 			return wait, r.deleteConfigAssetsJob(job)
@@ -157,9 +241,16 @@ func (r *FrontendReconciliation) reconcileConfigAssetsJob() (ctrl.Result, error)
 		// These Jobs belong to the environment, not the Owns(Job) Frontend watch.
 		return wait, nil
 	}
-	ready, err := r.ensureConfigAssetsSnapshot(nn, files)
-	if err != nil || !ready {
+	// Read through the API: the cache can lag behind recent snapshot writes.
+	if err := r.deleteConfigAssetsSnapshotsFrom(r.configAssetsReader(), nn, len(snapshots)); err != nil {
 		return wait, err
+	}
+	for i, snapshot := range snapshots {
+		key := types.NamespacedName{Name: configAssetsSnapshotName(nn.Name, i), Namespace: nn.Namespace}
+		ready, err := r.ensureConfigAssetsSnapshot(key, snapshot)
+		if err != nil || !ready {
+			return wait, err
+		}
 	}
 	if err := r.Client.Create(r.Ctx, desired); err != nil {
 		if k8serr.IsAlreadyExists(err) {
@@ -197,7 +288,8 @@ func (r *FrontendReconciliation) cleanupConfigAssets() (ctrl.Result, error) {
 		}
 		return wait, r.deleteConfigAssetsJob(job)
 	}
-	return ctrl.Result{}, r.deleteConfigAssetsSnapshot(nn)
+	// This runs on every reconcile of a disabled environment; the cache is enough.
+	return ctrl.Result{}, r.deleteConfigAssetsSnapshotsFrom(r.Client, nn, 0)
 }
 
 func (r *FrontendReconciliation) deleteConfigAssetsJob(job *batchv1.Job) error {
@@ -206,17 +298,6 @@ func (r *FrontendReconciliation) deleteConfigAssetsJob(job *batchv1.Job) error {
 		PropagationPolicy: &propagation, Preconditions: &metav1.Preconditions{UID: &job.UID},
 	})
 	return client.IgnoreNotFound(err)
-}
-
-func (r *FrontendReconciliation) deleteConfigAssetsSnapshot(nn types.NamespacedName) error {
-	cm := &v1.ConfigMap{}
-	if err := r.Client.Get(r.Ctx, nn, cm); err != nil {
-		return client.IgnoreNotFound(err)
-	}
-	if !r.ownsConfigAsset(cm) {
-		return nil
-	}
-	return client.IgnoreNotFound(r.Client.Delete(r.Ctx, cm, &client.DeleteOptions{Preconditions: &metav1.Preconditions{UID: &cm.UID}}))
 }
 
 func (r *FrontendReconciliation) ensureConfigAssetsSnapshot(nn types.NamespacedName, files map[string]string) (bool, error) {
@@ -246,7 +327,8 @@ func (r *FrontendReconciliation) ensureConfigAssetsSnapshot(nn types.NamespacedN
 }
 
 func (r *FrontendReconciliation) configAssetsLabels() map[string]string {
-	return map[string]string{"frontendenv": r.Frontend.Spec.EnvName, "component": configAssetsComponent}
+	return map[string]string{"frontendenv": r.Frontend.Spec.EnvName, "component": configAssetsComponent,
+		configAssetsUploadLabel: r.generateConfigAssetsJobName()}
 }
 
 // Finalization only needs to clean up the deleting Frontend's shared upload.
@@ -277,8 +359,14 @@ func (r *FrontendReconciler) cleanupConfigAssetsForDeletedFrontend(ctx context.C
 	return reconciliation.cleanupConfigAssets()
 }
 
-func (r *FrontendReconciliation) buildConfigAssetsJob(nn types.NamespacedName, contentHash, publicationHash string, store *ObjectStoreBucket) *batchv1.Job {
+func (r *FrontendReconciliation) buildConfigAssetsJob(nn types.NamespacedName, snapshotParts int, contentHash, publicationHash string, store *ObjectStoreBucket) *batchv1.Job {
 	image := r.FrontendEnvironment.Spec.ValpopImage
+	snapshots := make([]v1.VolumeProjection, 0, snapshotParts)
+	for i := range snapshotParts {
+		snapshots = append(snapshots, v1.VolumeProjection{ConfigMap: &v1.ConfigMapProjection{
+			LocalObjectReference: v1.LocalObjectReference{Name: configAssetsSnapshotName(nn.Name, i)},
+		}})
+	}
 	minRecords := 3
 	if r.FrontendEnvironment.Spec.MinAssetRecords != nil {
 		minRecords = *r.FrontendEnvironment.Spec.MinAssetRecords
@@ -302,7 +390,7 @@ func (r *FrontendReconciliation) buildConfigAssetsJob(nn types.NamespacedName, c
 				Spec: v1.PodSpec{
 					RestartPolicy: v1.RestartPolicyNever,
 					Volumes: []v1.Volume{
-						{Name: "config", VolumeSource: v1.VolumeSource{ConfigMap: &v1.ConfigMapVolumeSource{LocalObjectReference: v1.LocalObjectReference{Name: nn.Name}}}},
+						{Name: "config", VolumeSource: v1.VolumeSource{Projected: &v1.ProjectedVolumeSource{Sources: snapshots}}},
 						{Name: "assets", VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{}}},
 					},
 					InitContainers: []v1.Container{{

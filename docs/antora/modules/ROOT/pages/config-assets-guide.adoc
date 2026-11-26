@@ -15,7 +15,7 @@ Pin `valpopImage` to a tested release or digest for deployment. The image must p
 
 == Files and storage
 
-The publisher uploads the following files when generated in the environment's base ConfigMap:
+The publisher uploads the following generated files, reusing the same reconciliation output as the environment's base and locale ConfigMaps:
 
 * `fed-modules.json` (required): the operator-generated module registry.
 * `bundles.json`
@@ -24,6 +24,8 @@ The publisher uploads the following files when generated in the environment's ba
 * `service-tiles.json`
 * `sso-config.json`
 * `exports.json`
+* `locales.json`: enabled locales, including relative message filenames for non-English locales.
+* `messages.<locale>.json`: every generated locale catalog, including translations staged before a locale is enabled.
 
 [cols="1,2,2",options="header"]
 |===
@@ -41,15 +43,34 @@ The publisher uploads the following files when generated in the environment's ba
 
 The publisher does not merge legacy configuration or change consumer URLs. Enabling it preserves the existing Chrome mount at `/srv/dist/operator-generated/fed-modules.json` and its public `/apps/chrome/operator-generated/fed-modules.json` path while Chrome deployments remain enabled. Turning on `disableContainerDeployments` removes those deployments and is a separate rollout decision: any consumer still using the legacy path needs routing or consumer changes first. The object-storage prefix is not an alias for that public URL.
 
-The Caddyfile, widget/layout ConfigMaps, locale messages, and `locales.json` are excluded. The locale manifest is excluded because its referenced messages are not published by this Job. Changes only to excluded files do not trigger an upload.
+The Caddyfile and widget/layout ConfigMaps remain excluded. Every non-English message file referenced by `locales.json` must be present in the publication payload. Translation-only changes participate in the upload identity but stay outside the frontend deployment hash. Changes only to excluded files do not trigger an upload.
+
+Disabling a locale removes it from `locales.json`, not necessarily from object storage. Generated translations may remain staged, and previously uploaded files follow the existing retention policy. Consumers must use the enabled-locale manifest rather than infer availability from stored filenames.
 
 Valpop uses prefix `config`, placing files under `data/config/<filename>` in the configured bucket. JSON objects receive `Cache-Control: public, max-age=60`. Bucket access policy, CDN routing, and switching consumers to these URLs are configured separately. Environments that require isolation must use separate buckets; the `config` prefix is shared within a bucket.
 
 Credentials and destination use the existing push cache configuration, including Secret references. The Job contains `secretKeyRef` environment variables, not literal credentials. For local development, the operator can read the `env-<namespace>-minio` Secret used by existing push cache tests.
 
+== Serving locale assets and changing storage
+
+The frontend-asset-proxy maps `GET /config/locales.json` to `data/config/locales.json` in its configured bucket, and `/config/messages.fr.json` to `data/config/messages.fr.json`. Relative manifest filenames resolve under the same `/config/` base URL, and `/apps/config/` is an alias for the same objects. GET and HEAD use the same mapping. A missing config object returns an error, never SPA HTML, so Chrome can fall back to English. That last guarantee, and HEAD on the `/apps/` alias, need a proxy image that includes the RHCLOUD-53795 change; older images answer missing config with the SPA entrypoint.
+
+FEO runs this proxy when `enablePushCache` and `reverseProxyImage` are both set, in the namespace named after the environment. It configures the proxy from the same object-store settings as the publisher: bucket, region, Secret-referenced credentials, and an upstream URL built from the endpoint and port. The upstream scheme is `https` only for port 443; FEO does not read the TLS setting for it.
+
+Configure console edge routing to send the selected public config prefix to the asset proxy. Publishing objects alone does not establish that route or switch Chrome to it. The public hostname and routing are deployment decisions; enabling publication changes no production routing.
+
+Keep this URL contract and object layout when moving between S3-compatible backends. Change only the existing object-store endpoint, port, bucket, region and credential Secret; the publisher and the proxy both pick them up. For AWS:
+
+* Use the bucket's regional endpoint (`s3.<region>.amazonaws.com`) on port 443. Valpop then connects with TLS (`--secure=true`) and the proxy with `https`.
+* Valpop creates its S3 (minio-go) client without a region, so the client looks the bucket region up itself. Grant its principal `s3:GetBucketLocation` in addition to the existing list, read, write and cleanup permissions.
+* The proxy signs for the configured region and sends path-style requests to the explicit endpoint.
+* A standalone proxy can also take an explicitly empty `MINIO_UPSTREAM_URL` to use AWS SDK regional endpoint resolution. FEO always sets an explicit endpoint.
+
+Do not use local test credentials in AWS. These settings were checked against the valpop and proxy sources and the MinIO integration test, not against live AWS. Bucket provisioning, data copy, permissions and the production cutover are separate operational work. Public URLs need not change when only their storage origin changes.
+
 == Upload lifecycle
 
-There is one config upload Job per environment and namespace. After generated ConfigMaps have been saved, the operator creates an immutable snapshot containing exactly the selected files. An init container copies the projected files into an `emptyDir`, so valpop reads regular files rather than Kubernetes ConfigMap symlinks.
+There is one config upload Job per environment and namespace. After generated ConfigMaps have been saved, the operator creates an immutable snapshot containing exactly the selected files. Large payloads are split into ConfigMaps below the 1 MiB API limit and projected into the same Job volume. Each part has an upload-specific label for cleanup, including recovery when replacement of an immutable part is interrupted. An init container copies the projected files into an `emptyDir`, so valpop reads regular files rather than Kubernetes ConfigMap symlinks.
 
 The upload identity includes the filenames and contents, destination, and cache policy. A configuration change therefore uploads even when the frontend and valpop images stay the same. An unchanged completed Job is retained without another upload. Changing `valpopImage` replaces the Job, although valpop can still skip uploading unchanged content.
 
