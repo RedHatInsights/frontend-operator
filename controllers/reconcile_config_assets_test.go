@@ -303,8 +303,14 @@ func TestConfigAssetsCleanupAfterLastFrontendDeletion(t *testing.T) {
 	c := interceptor.NewClient(r.Client.(client.WithWatch), interceptor.Funcs{
 		List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
 			switch list.(type) {
-			case *batchv1.JobList, *v1.ConfigMapList:
-				t.Fatal("finalization must target the environment's upload, not scan publisher resources")
+			case *batchv1.JobList:
+				t.Fatal("finalization must not scan publisher Jobs")
+			case *v1.ConfigMapList:
+				options := (&client.ListOptions{}).ApplyOptions(opts)
+				value, exact := options.LabelSelector.RequiresExactMatch(configAssetsUploadLabel)
+				if options.Namespace != job.Namespace || !exact || value != job.Name {
+					t.Fatal("snapshot cleanup must be scoped to the exact upload and namespace")
+				}
 			}
 			return c.List(ctx, list, opts...)
 		},
@@ -345,5 +351,103 @@ func TestConfigAssetsCleanupAfterLastFrontendDeletion(t *testing.T) {
 	}
 	if err := r.Client.Get(r.Ctx, client.ObjectKeyFromObject(job), &v1.ConfigMap{}); !k8serr.IsNotFound(err) {
 		t.Fatalf("unused snapshot remains: %v", err)
+	}
+}
+
+// largeConfigAsset is one file of which two cannot share a ConfigMap.
+var largeConfigAsset = `{"key":"` + strings.Repeat("x", 700*1024) + `"}`
+
+func TestConfigAssetsLargeSnapshots(t *testing.T) {
+	r := configAssetsReconciliation(t)
+	r.configAssets["search-index.json"] = largeConfigAsset
+	r.configAssets["api-specs.json"] = largeConfigAsset
+	job := configAssetsJob(t, r)
+	sources := job.Spec.Template.Spec.Volumes[0].Projected.Sources
+	if len(sources) < 2 {
+		t.Fatal("combined files must not overflow a single ConfigMap")
+	}
+	actual := map[string]string{}
+	for _, source := range sources {
+		cm := &v1.ConfigMap{}
+		if err := r.Client.Get(r.Ctx, types.NamespacedName{Name: source.ConfigMap.Name, Namespace: job.Namespace}, cm); err != nil {
+			t.Fatal(err)
+		}
+		size := 0
+		for name, data := range cm.Data {
+			size += len(name) + len(data)
+		}
+		if size > configMapMaxBytes || cm.Immutable == nil || !*cm.Immutable {
+			t.Fatal("snapshot is mutable or exceeds API limit")
+		}
+		maps.Copy(actual, cm.Data)
+	}
+	if !maps.Equal(actual, r.configAssets) {
+		t.Fatal("snapshot parts lost file bytes")
+	}
+	setConfigAssetsJobStatus(t, r, job, batchv1.JobComplete)
+	// Shrinking to one part removes the old extra snapshot.
+	r.configAssets["search-index.json"] = `{}`
+	r.configAssets["api-specs.json"] = `{}`
+	shrunk := configAssetsJob(t, r)
+	if len(shrunk.Spec.Template.Spec.Volumes[0].Projected.Sources) != 1 {
+		t.Fatal("did not shrink snapshots")
+	}
+	list := &v1.ConfigMapList{}
+	if err := r.Client.List(r.Ctx, list, client.InNamespace(job.Namespace), client.MatchingLabels(r.configAssetsLabels())); err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Items) != 1 {
+		t.Fatalf("obsolete snapshots retained: %d", len(list.Items))
+	}
+	r.FrontendEnvironment.Spec.EnablePushCache = false
+	for range 2 {
+		if _, err := r.reconcileConfigAssetsJob(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := r.Client.List(r.Ctx, list, client.InNamespace(job.Namespace), client.MatchingLabels(r.configAssetsLabels())); err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Items) != 0 {
+		t.Fatal("disabled publisher retained snapshots")
+	}
+	if _, err := splitConfigAssets(map[string]string{"search-index.json": strings.Repeat("x", configMapMaxBytes)}); err == nil {
+		t.Fatal("accepted oversized single file")
+	}
+}
+
+func TestConfigAssetsCleanupWithoutBaseSnapshot(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		keep int
+	}{{"disable", 0}, {"shrink", 1}} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := configAssetsReconciliation(t)
+			r.configAssets["search-index.json"] = largeConfigAsset
+			r.configAssets["api-specs.json"] = largeConfigAsset
+			job := configAssetsJob(t, r)
+			if err := r.Client.Delete(r.Ctx, job); err != nil {
+				t.Fatal(err)
+			}
+			// A reconcile can stop after deleting an immutable base part. Neither
+			// cleanup nor a smaller next publication may lose the other parts.
+			base := &v1.ConfigMap{}
+			if err := r.Client.Get(r.Ctx, client.ObjectKeyFromObject(job), base); err != nil {
+				t.Fatal(err)
+			}
+			if err := r.Client.Delete(r.Ctx, base); err != nil {
+				t.Fatal(err)
+			}
+			if err := r.deleteConfigAssetsSnapshotsFrom(r.Client, client.ObjectKeyFromObject(job), tc.keep); err != nil {
+				t.Fatal(err)
+			}
+			list := &v1.ConfigMapList{}
+			if err := r.Client.List(r.Ctx, list, client.MatchingLabels(r.configAssetsLabels())); err != nil {
+				t.Fatal(err)
+			}
+			if len(list.Items) != 0 {
+				t.Fatal("missing base snapshot leaked other parts")
+			}
+		})
 	}
 }
